@@ -61,7 +61,7 @@ jobs:
       - name: Установить зависимости
         run: |
           pip install -r requirements.txt
-          pip install pytest pytest-django pytest-cov psycopg2-binary
+          pip install pytest-cov psycopg2-binary
 
       - name: Запустить миграции
         working-directory: ./backend
