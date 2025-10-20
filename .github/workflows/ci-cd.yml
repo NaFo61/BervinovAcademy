@@ -29,61 +29,61 @@ jobs:
       - name: Запустить pre-commit проверки
         run: pre-commit run --all-files
 
-  tests:
-    name: Запуск тестов
-    runs-on: ubuntu-latest
-    needs: code-quality
+tests:
+  name: Запуск тестов
+  runs-on: ubuntu-latest
+  needs: code-quality
 
-    services:
-      postgres:
-        image: postgres:13
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
+  services:
+    postgres:
+      image: postgres:13
+      env:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+        POSTGRES_DB: test_db
+      options: >-
+        --health-cmd pg_isready
+        --health-interval 10s
+        --health-timeout 5s
+        --health-retries 5
+      ports:
+        - 5432:5432
 
-    steps:
-      - name: Получить код
-        uses: actions/checkout@v3
+  steps:
+    - name: Получить код
+      uses: actions/checkout@v3
 
-      - name: Установить Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+    - name: Установить Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
 
-      - name: Установить зависимости
-        run: |
-          pip install -r requirements.txt
-          pip install pytest pytest-django pytest-cov psycopg2-binary
+    - name: Установить зависимости
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-django pytest-cov psycopg2-binary
 
-      - name: Запустить миграции
-        working-directory: ./backend
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          DEBUG: ${{ secrets.DEBUG }}
-        run: |
-          python manage.py migrate
+    - name: Запустить миграции
+      working-directory: ./backend
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        SECRET_KEY: django-insecure-test-key-12345
+        DEBUG: "False"
+      run: |
+        python manage.py migrate
 
-      - name: Запустить тесты
-        working-directory: ./backend
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          DEBUG: ${{ secrets.DEBUG }}
-        run: |
-          pytest --cov=backend --cov-report=xml -v
+    - name: Запустить тесты
+      working-directory: ./backend
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        SECRET_KEY: django-insecure-test-key-12345
+        DEBUG: "False"
+      run: |
+        pytest --cov=backend --cov-report=xml -v
 
-      - name: Загрузить отчёт покрытия
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella
+    - name: Загрузить отчёт покрытия
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
