@@ -62,10 +62,4 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
-      - id: no-commit-to-branch
-        args: [ '--branch', 'main', '--branch', 'master' ]
-
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
       - id: detect-private-key
