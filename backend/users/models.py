@@ -12,9 +12,6 @@ class CustomUserManager(BaseUserManager):
     def create_user(
         self, email=None, phone=None, password=None, **extra_fields
     ):
-        """
-        Создает пользователя по email ИЛИ phone
-        """
         if not email and not phone:
             raise ValueError("Необходимо указать email или телефон")
 
@@ -29,9 +26,6 @@ class CustomUserManager(BaseUserManager):
     def create_superuser(
         self, email, phone=None, password=None, **extra_fields
     ):
-        """
-        Создает суперпользователя. Для админа обязателен email
-        """
         if not email:
             raise ValueError("Суперпользователь должен иметь email")
 
@@ -45,20 +39,14 @@ class CustomUserManager(BaseUserManager):
         )
 
     def get_by_natural_key(self, login):
-        """
-        Поиск пользователя по email или phone
-        """
-        # Пытаемся найти по email
         user = self.filter(email=login).first()
         if user:
             return user
 
-        # Если не нашли по email, ищем по phone
         user = self.filter(phone=login).first()
         if user:
             return user
 
-        # Если не нашли вообще
         return self.get(email=login)
 
 
@@ -76,14 +64,9 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f"avatars/{user_identifier}/{filename}"
 
     def clean(self):
-        """
-        Валидация: должен быть указан email или phone
-        Для админа обязательны оба поля
-        """
         if not self.email and not self.phone:
             raise ValidationError("Должен быть указан email или телефон")
 
-        # Для админа обязательны и email и phone
         if self.role == "admin" or self.is_superuser:
             if not self.email:
                 raise ValidationError(
@@ -94,7 +77,6 @@ class User(AbstractBaseUser, PermissionsMixin):
                     {"phone": "Для администратора обязателен телефон"}
                 )
 
-        # Проверяем уникальность
         if self.email:
             qs = User.objects.filter(email=self.email)
             if self.pk:
@@ -113,7 +95,6 @@ class User(AbstractBaseUser, PermissionsMixin):
                     {"phone": "Пользователь с таким телефоном уже существует"}
                 )
 
-    # Основные поля
     first_name = models.CharField(
         verbose_name="имя",
         max_length=255,
@@ -139,8 +120,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         unique=True,
         help_text="Почта пользователя",
     )
-
-    # Поля ролей и статусов
     role = models.CharField(
         verbose_name="роль",
         max_length=50,
@@ -160,8 +139,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         default="",
         help_text="Биография пользователя",
     )
-
-    # Даты и временные метки
     date_joined = models.DateTimeField(
         verbose_name="дата регистрации",
         default=timezone.now,
@@ -172,8 +149,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         auto_now=True,
         help_text="Время последнего входа",
     )
-
-    # Флаги статусов
     is_active = models.BooleanField(
         verbose_name="активен",
         default=True,
@@ -187,7 +162,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     objects = CustomUserManager()
 
-    USERNAME_FIELD = "email"  # Для createsuperuser команды
+    USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
 
     def __str__(self):
@@ -195,17 +170,12 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f"{self.get_full_name()} ({identifier})"
 
     def get_full_name(self):
-        """Возвращает полное имя пользователя"""
         return f"{self.first_name} {self.last_name}".strip()
 
     def get_short_name(self):
-        """Возвращает короткое имя пользователя"""
         return self.first_name
 
     def get_username(self):
-        """
-        Возвращает идентификатор для аутентификации (email или phone)
-        """
         return self.email or self.phone
 
     @property
@@ -229,11 +199,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.role == "admin" or self.is_superuser
 
     def save(self, *args, **kwargs):
-        # При создании суперпользователя автоматически ставим роль admin
         if self.is_superuser and self.role != "admin":
             self.role = "admin"
 
-        self.clean()  # Вызываем валидацию
+        self.clean()
         super().save(*args, **kwargs)
 
     class Meta:
