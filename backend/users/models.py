@@ -1,20 +1,22 @@
-import uuid
 from os.path import splitext
+import uuid
 
 from django.contrib.auth.base_user import BaseUserManager
-from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
-from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.db import models
+from django.utils import timezone
 
 
 class CustomUserManager(BaseUserManager):
-    def create_user(self, email=None, phone=None, password=None, **extra_fields):
+    def create_user(
+        self, email=None, phone=None, password=None, **extra_fields
+    ):
         """
         Создает пользователя по email ИЛИ phone
         """
         if not email and not phone:
-            raise ValueError('Необходимо указать email или телефон')
+            raise ValueError("Необходимо указать email или телефон")
 
         if email:
             email = self.normalize_email(email)
@@ -24,19 +26,23 @@ class CustomUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, phone=None, password=None, **extra_fields):
+    def create_superuser(
+        self, email, phone=None, password=None, **extra_fields
+    ):
         """
         Создает суперпользователя. Для админа обязателен email
         """
         if not email:
-            raise ValueError('Суперпользователь должен иметь email')
+            raise ValueError("Суперпользователь должен иметь email")
 
-        extra_fields.setdefault('is_active', True)
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('role', 'admin')
+        extra_fields.setdefault("is_active", True)
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("role", "admin")
 
-        return self.create_user(email=email, phone=phone, password=password, **extra_fields)
+        return self.create_user(
+            email=email, phone=phone, password=password, **extra_fields
+        )
 
     def get_by_natural_key(self, login):
         """
@@ -58,13 +64,13 @@ class CustomUserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = [
-        ('student', 'Student'),
-        ('mentor', 'Mentor'),
-        ('admin', 'Admin'),
+        ("student", "Student"),
+        ("mentor", "Mentor"),
+        ("admin", "Admin"),
     ]
 
     def upload_to(self, filename):
-        user_identifier = self.email or self.phone or 'unknown'
+        user_identifier = self.email or self.phone or "unknown"
         file_name, file_extension = splitext(filename)
         filename = f"{uuid.uuid4().hex}{file_extension}"
         return f"avatars/{user_identifier}/{filename}"
@@ -75,14 +81,18 @@ class User(AbstractBaseUser, PermissionsMixin):
         Для админа обязательны оба поля
         """
         if not self.email and not self.phone:
-            raise ValidationError('Должен быть указан email или телефон')
+            raise ValidationError("Должен быть указан email или телефон")
 
         # Для админа обязательны и email и phone
-        if self.role == 'admin' or self.is_superuser:
+        if self.role == "admin" or self.is_superuser:
             if not self.email:
-                raise ValidationError({'email': 'Для администратора обязателен email'})
+                raise ValidationError(
+                    {"email": "Для администратора обязателен email"}
+                )
             if not self.phone:
-                raise ValidationError({'phone': 'Для администратора обязателен телефон'})
+                raise ValidationError(
+                    {"phone": "Для администратора обязателен телефон"}
+                )
 
         # Проверяем уникальность
         if self.email:
@@ -90,14 +100,18 @@ class User(AbstractBaseUser, PermissionsMixin):
             if self.pk:
                 qs = qs.exclude(pk=self.pk)
             if qs.exists():
-                raise ValidationError({'email': 'Пользователь с таким email уже существует'})
+                raise ValidationError(
+                    {"email": "Пользователь с таким email уже существует"}
+                )
 
         if self.phone:
             qs = User.objects.filter(phone=self.phone)
             if self.pk:
                 qs = qs.exclude(pk=self.pk)
             if qs.exists():
-                raise ValidationError({'phone': 'Пользователь с таким телефоном уже существует'})
+                raise ValidationError(
+                    {"phone": "Пользователь с таким телефоном уже существует"}
+                )
 
     # Основные поля
     first_name = models.CharField(
@@ -131,7 +145,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name="роль",
         max_length=50,
         choices=ROLE_CHOICES,
-        default='student',
+        default="student",
         help_text="Роль пользователя в системе",
     )
     avatar = models.ImageField(
@@ -143,7 +157,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     bio = models.TextField(
         verbose_name="биография",
-        default='',
+        default="",
         help_text="Биография пользователя",
     )
 
@@ -173,11 +187,11 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     objects = CustomUserManager()
 
-    USERNAME_FIELD = 'email'  # Для createsuperuser команды
-    REQUIRED_FIELDS = ['first_name', 'last_name']
+    USERNAME_FIELD = "email"  # Для createsuperuser команды
+    REQUIRED_FIELDS = ["first_name", "last_name"]
 
     def __str__(self):
-        identifier = self.email or self.phone or 'No contact'
+        identifier = self.email or self.phone or "No contact"
         return f"{self.get_full_name()} ({identifier})"
 
     def get_full_name(self):
@@ -204,20 +218,20 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     @property
     def is_student(self):
-        return self.role == 'student'
+        return self.role == "student"
 
     @property
     def is_mentor(self):
-        return self.role == 'mentor'
+        return self.role == "mentor"
 
     @property
     def is_admin(self):
-        return self.role == 'admin' or self.is_superuser
+        return self.role == "admin" or self.is_superuser
 
     def save(self, *args, **kwargs):
         # При создании суперпользователя автоматически ставим роль admin
-        if self.is_superuser and self.role != 'admin':
-            self.role = 'admin'
+        if self.is_superuser and self.role != "admin":
+            self.role = "admin"
 
         self.clean()  # Вызываем валидацию
         super().save(*args, **kwargs)
