@@ -1,4 +1,4 @@
-from os.path import splitext
+import os
 import uuid
 
 from django.contrib.auth.base_user import BaseUserManager
@@ -12,6 +12,7 @@ class CustomUserManager(BaseUserManager):
     def create_user(
         self, email=None, phone=None, password=None, **extra_fields
     ):
+        # Для обычных пользователей: email ИЛИ phone
         if not email and not phone:
             raise ValueError("Необходимо указать email или телефон")
 
@@ -26,8 +27,11 @@ class CustomUserManager(BaseUserManager):
     def create_superuser(
         self, email, phone=None, password=None, **extra_fields
     ):
+        # Для суперпользователя: email И phone ОБЯЗАТЕЛЬНЫ
         if not email:
             raise ValueError("Суперпользователь должен иметь email")
+        if not phone:
+            raise ValueError("Суперпользователь должен иметь телефон")
 
         extra_fields.setdefault("is_active", True)
         extra_fields.setdefault("is_staff", True)
@@ -59,11 +63,12 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def upload_to(self, filename):
         user_identifier = self.email or self.phone or "unknown"
-        file_name, file_extension = splitext(filename)
+        file_name, file_extension = os.path.splitext(filename)
         filename = f"{uuid.uuid4().hex}{file_extension}"
         return f"avatars/{user_identifier}/{filename}"
 
     def clean(self):
+        # Базовая проверка: email ИЛИ phone для всех пользователей
         if not self.email and not self.phone:
             raise ValidationError("Должен быть указан email или телефон")
 
@@ -77,6 +82,7 @@ class User(AbstractBaseUser, PermissionsMixin):
                     {"phone": "Для администратора обязателен телефон"}
                 )
 
+        # Проверка уникальности email
         if self.email:
             qs = User.objects.filter(email=self.email)
             if self.pk:
@@ -86,6 +92,7 @@ class User(AbstractBaseUser, PermissionsMixin):
                     {"email": "Пользователь с таким email уже существует"}
                 )
 
+        # Проверка уникальности phone
         if self.phone:
             qs = User.objects.filter(phone=self.phone)
             if self.pk:
@@ -163,7 +170,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = CustomUserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["first_name", "last_name"]
+    REQUIRED_FIELDS = ["first_name", "last_name", "phone"]  # Добавлен phone
 
     def __str__(self):
         identifier = self.email or self.phone or "No contact"

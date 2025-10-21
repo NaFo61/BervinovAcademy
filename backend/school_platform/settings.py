@@ -2,6 +2,7 @@ from pathlib import Path
 
 from decouple import config
 from django.core.management.utils import get_random_secret_key
+from django.templatetags.static import static
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -17,6 +18,9 @@ CSRF_TRUSTED_ORIGINS = config(
 ).split(",")
 
 INSTALLED_APPS = [
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -31,6 +35,48 @@ INSTALLED_APPS = [
     "content",
     "communication",
 ]
+
+UNFOLD = {
+    "SITE_TITLE": "Bervinov Academy",
+    "SITE_HEADER": "Админ панель",
+    "show_all_applications": False,
+    "SITE_URL": "/",
+    "SITE_ICON": {
+        "light": lambda request: static("icon-light.svg"),
+        "dark": lambda request: static("icon-dark.svg"),
+    },
+    "COLORS": {
+        "primary": {
+            "50": "250 245 255",
+            "100": "243 232 255",
+            "200": "233 213 255",
+            "300": "216 180 254",
+            "400": "192 132 252",
+            "500": "168 85 247",
+            "600": "147 51 234",
+            "700": "126 34 206",
+            "800": "107 33 168",
+            "900": "88 28 135",
+        },
+    },
+    "DARK_MODE": True,
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": "Пользователи",
+                "items": [
+                    {
+                        "title": "Пользователи",
+                        "icon": "person",
+                        "link": "admin:users_user_changelist",
+                    },
+                ],
+            },
+        ],
+    },
+}
 
 AUTH_USER_MODEL = "users.User"
 
