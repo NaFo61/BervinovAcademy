@@ -74,7 +74,7 @@ UNFOLD = {
                     {
                         "title": "Пользователи",
                         "icon": "person",
-                        "link": "admin:users_user_changelist",
+                        "link": "/admin/users/user/",
                     },
                 ],
             },

@@ -1,18 +1,17 @@
-{% extends "unfold/layouts/base_simple.html" %}
+{% extends 'admin/base.html' %}
 
-{% load static %}
-
+{% load i18n %}
 
 {% block title %}
-Dashboard | {{ site_title|default:_("Django site admin") }}
+    {% if subtitle %}
+        {{ subtitle }} |
+    {% endif %}
+
+    {{ title }} | {{ site_title|default:_('Django site admin') }}
 {% endblock %}
 
 {% block branding %}
-<h1 id="site-name">
-    <a href="{% url 'admin:index' %}">
-        {{ site_header|default:_("Django site admin") }}
-    </a>
-</h1>
+    {% include "unfold/helpers/site_branding.html" %}
 {% endblock %}
 
 {% block content %}
