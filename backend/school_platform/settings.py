@@ -41,9 +41,13 @@ UNFOLD = {
     "SITE_HEADER": "Админ панель",
     "show_all_applications": False,
     "SITE_URL": "/",
+    "SITE_LOGO": {
+        "light": lambda request: static("css/logo.svg"),
+        "dark": lambda request: static("css/logo.svg"),
+    },
     "SITE_ICON": {
-        "light": lambda request: static("icon-light.svg"),
-        "dark": lambda request: static("icon-dark.svg"),
+        "light": lambda request: static("css/logo.svg"),
+        "dark": lambda request: static("css/logo.svg"),
     },
     "COLORS": {
         "primary": {
@@ -92,10 +96,12 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "school_platform.urls"
 
+TEMPLATE_DIR = BASE_DIR / "templates"
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [TEMPLATE_DIR],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
