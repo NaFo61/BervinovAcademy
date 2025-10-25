@@ -145,6 +145,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name="биография",
         default="",
         help_text="Биография пользователя",
+        blank=True,
     )
     date_joined = models.DateTimeField(
         verbose_name="дата регистрации",

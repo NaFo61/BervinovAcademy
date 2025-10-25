@@ -21,6 +21,8 @@ INSTALLED_APPS = [
     "unfold",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
+    "crispy_forms",
+    "crispy_bootstrap4",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -35,11 +37,16 @@ INSTALLED_APPS = [
     "content",
     "communication",
 ]
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
+CRISPY_TEMPLATE_PACK = "bootstrap4"
 
 UNFOLD = {
     "SITE_TITLE": "Bervinov Academy",
     "SITE_HEADER": "Админ панель",
     "show_all_applications": False,
+    "STYLES": [
+        "/static/css/admin_custom.css",  # ✅ абсолютный путь
+    ],
     "SITE_URL": "/",
     "SITE_LOGO": {
         "light": lambda request: static("css/logo.svg"),
@@ -62,6 +69,13 @@ UNFOLD = {
             "800": "107 33 168",
             "900": "88 28 135",
         },
+    },
+    "MESSAGES": {
+        "show_messages": True,
+        "position": "top-right",
+        "duration": 4000,
+        "dismissible": True,
+        "theme": "toast",  # (или style: "toast" — обе формы поддерживаются)
     },
     "DARK_MODE": True,
     "SIDEBAR": {
@@ -87,6 +101,7 @@ AUTH_USER_MODEL = "users.User"
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
