@@ -3,6 +3,7 @@ from pathlib import Path
 from decouple import config
 from django.core.management.utils import get_random_secret_key
 from django.templatetags.static import static
+from django.utils.translation import gettext_lazy as _
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -21,6 +22,8 @@ INSTALLED_APPS = [
     "unfold",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
+    "crispy_forms",
+    "crispy_bootstrap4",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -35,51 +38,60 @@ INSTALLED_APPS = [
     "content",
     "communication",
 ]
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
+CRISPY_TEMPLATE_PACK = "bootstrap4"
 
 UNFOLD = {
-    "SITE_TITLE": "Bervinov Academy",
-    "SITE_HEADER": "Админ панель",
-    "show_all_applications": False,
-    "SITE_URL": "/",
-    "SITE_LOGO": {
-        "light": lambda request: static("css/logo.svg"),
-        "dark": lambda request: static("css/logo.svg"),
+    "SHOW_LANGUAGES": True,
+    "LANGUAGES": {
+        "navigation": [
+            {
+                "code": "en",
+                "name": "English",
+                "name_local": "English",
+                "bidi": False,
+            },
+            {
+                "code": "ru",
+                "name": "Russian",
+                "name_local": "Русский",
+                "bidi": False,
+            },
+        ]
     },
+    "SITE_HEADER": _("Bervinov Academy"),
     "SITE_ICON": {
-        "light": lambda request: static("css/logo.svg"),
-        "dark": lambda request: static("css/logo.svg"),
+        "light": lambda request: static("img/logo.ico"),
+        "dark": lambda request: static("img/logo.ico"),
     },
+    "SITE_URL": "/",
+    "STYLES": ["/static/admin/css/base.css"],
     "COLORS": {
         "primary": {
-            "50": "250 245 255",
-            "100": "243 232 255",
-            "200": "233 213 255",
-            "300": "216 180 254",
-            "400": "192 132 252",
             "500": "168 85 247",
             "600": "147 51 234",
             "700": "126 34 206",
-            "800": "107 33 168",
-            "900": "88 28 135",
         },
     },
-    "DARK_MODE": True,
     "SIDEBAR": {
         "show_search": True,
         "show_all_applications": False,
+        "show_navigation": True,
         "navigation": [
             {
-                "title": "Пользователи",
+                "title": _("Users"),
                 "items": [
                     {
-                        "title": "Пользователи",
+                        "title": _("Users"),
                         "icon": "person",
-                        "link": "admin:users_user_changelist",
+                        "link": "/admin/users/user/",
                     },
                 ],
             },
         ],
     },
+    "DARK_MODE": True,
+    "DASHBOARD_CALLBACK": "school_platform.admin.views.dashboard_callback",
 }
 
 AUTH_USER_MODEL = "users.User"
@@ -87,6 +99,7 @@ AUTH_USER_MODEL = "users.User"
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -150,6 +163,15 @@ TIME_ZONE = "Europe/Moscow"
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
+
+LANGUAGES = (
+    ("en", _("English")),
+    ("ru", _("Russian")),
+)
+
+LOCALE_PATHS = [
+    BASE_DIR / "locale",
+]
 
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [
