@@ -41,46 +41,24 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
 CRISPY_TEMPLATE_PACK = "bootstrap4"
 
 UNFOLD = {
-    "SITE_TITLE": "Bervinov Academy",
-    "SITE_HEADER": "Админ панель",
-    "show_all_applications": False,
-    "STYLES": [
-        "/static/css/admin_custom.css",  # ✅ абсолютный путь
-    ],
-    "SITE_URL": "/",
-    "SITE_LOGO": {
-        "light": lambda request: static("css/logo.svg"),
-        "dark": lambda request: static("css/logo.svg"),
-    },
+    "SITE_HEADER": "Bervinov Academy",
     "SITE_ICON": {
-        "light": lambda request: static("css/logo.svg"),
-        "dark": lambda request: static("css/logo.svg"),
+        "light": lambda request: static("css/logo.ico"),
+        "dark": lambda request: static("css/logo.ico"),
     },
+    "SITE_URL": "/",
+    "STYLES": ["/static/css/admin_custom.css"],
     "COLORS": {
         "primary": {
-            "50": "250 245 255",
-            "100": "243 232 255",
-            "200": "233 213 255",
-            "300": "216 180 254",
-            "400": "192 132 252",
             "500": "168 85 247",
             "600": "147 51 234",
             "700": "126 34 206",
-            "800": "107 33 168",
-            "900": "88 28 135",
         },
     },
-    "MESSAGES": {
-        "show_messages": True,
-        "position": "top-right",
-        "duration": 4000,
-        "dismissible": True,
-        "theme": "toast",  # (или style: "toast" — обе формы поддерживаются)
-    },
-    "DARK_MODE": True,
     "SIDEBAR": {
         "show_search": True,
         "show_all_applications": False,
+        "show_navigation": True,  # 👈 чтобы меню появилось
         "navigation": [
             {
                 "title": "Пользователи",
@@ -94,6 +72,7 @@ UNFOLD = {
             },
         ],
     },
+    "DARK_MODE": True,
 }
 
 AUTH_USER_MODEL = "users.User"
