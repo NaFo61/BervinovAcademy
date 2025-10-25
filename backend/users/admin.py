@@ -10,14 +10,26 @@ from unfold.forms import UserChangeForm, UserCreationForm
 User = get_user_model()
 
 
+class CustomUserChangeForm(UserChangeForm):
+    class Meta(UserChangeForm.Meta):
+        model = User
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["password"].help_text = _(
+            "Raw passwords are not stored, so there is no "
+            "way to see this user's password, "
+            "but you can change the password using "
+            '<a href="../password/">this form</a>.'
+        )
+
+
 @admin.register(User)
 class CustomUserAdmin(ModelAdmin):
-    """Красивая и аккуратная админка для управления пользователями."""
-
-    form = UserChangeForm
+    form = CustomUserChangeForm
     add_form = UserCreationForm
 
-    # Отображение в списке
     list_display = (
         "email",
         "phone",
@@ -29,16 +41,17 @@ class CustomUserAdmin(ModelAdmin):
     list_filter = ("role", "is_active")
     search_fields = ("email", "phone", "first_name", "last_name")
     ordering = ("-date_joined",)
+    readonly_fields = ("last_login", "date_joined")
+    icon = "person"
 
-    # Поля на странице редактирования пользователя
     fieldsets = (
-        (_("Основная информация"), {"fields": ("email", "phone", "password")}),
+        (_("Main information"), {"fields": ("email", "phone", "password")}),
         (
-            _("Личная информация"),
+            _("Personal information"),
             {"fields": ("first_name", "last_name", "avatar", "bio")},
         ),
         (
-            _("Права доступа"),
+            _("Permissions"),
             {
                 "fields": (
                     "role",
@@ -50,15 +63,9 @@ class CustomUserAdmin(ModelAdmin):
                 )
             },
         ),
-        (
-            _("Системная информация"),
-            {
-                "fields": ("last_login", "date_joined"),
-            },
-        ),
+        (_("System information"), {"fields": ("last_login", "date_joined")}),
     )
 
-    # Форма добавления пользователя
     add_fieldsets = (
         (
             None,
@@ -77,15 +84,6 @@ class CustomUserAdmin(ModelAdmin):
         ),
     )
 
-    readonly_fields = ("last_login", "date_joined")
-
-    # Красивый значок в боковом меню Unfold
-    icon = "person"
-
-    # =============================
-    #   Поддержка смены пароля 🔐
-    # =============================
-
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -97,18 +95,10 @@ class CustomUserAdmin(ModelAdmin):
         ]
         return custom_urls + urls
 
-    def formfield_for_dbfield(self, db_field, **kwargs):
-        formfield = super().formfield_for_dbfield(db_field, **kwargs)
-        # Полностью убираем подсказку "Raw passwords are not stored..."
-        if db_field.name == "password":
-            formfield.help_text = ""
-            formfield.label = _("Пароль")
-        return formfield
-
     def user_change_password(self, request, id, form_url=""):
         user = self.get_object(request, id)
         if not user:
-            messages.error(request, _("Пользователь не найден."))
+            messages.error(request, _("User not found."))
             return redirect("..")
 
         if request.method == "POST":
@@ -116,22 +106,17 @@ class CustomUserAdmin(ModelAdmin):
             if form.is_valid():
                 form.save()
                 update_session_auth_hash(request, user)
-                messages.success(request, _("Пароль успешно изменён ✅"))
-                return redirect(
-                    reverse("admin:users_user_changelist")
-                )  # ✅ переход в список пользователей
+                messages.success(request, _("Password successfully changed ✅"))
+                return redirect(reverse("admin:users_user_changelist"))
             else:
-                messages.error(request, _("Ошибка при смене пароля."))
+                messages.error(request, _("Error while changing password."))
         else:
             form = AdminPasswordChangeForm(user)
 
         context = {
             **self.admin_site.each_context(request),
-            "title": _("Изменение пароля"),
+            "title": _("Change password"),
             "form": form,
             "user": user,
         }
         return render(request, "admin/auth/user/change_password.html", context)
-
-    class Media:
-        css = {"all": ("css/base.css",)}

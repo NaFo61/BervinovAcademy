@@ -1,6 +1,7 @@
 import random
 
 from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
 
 User = get_user_model()
 
@@ -14,28 +15,28 @@ def dashboard_callback(request, context):
 
     # Фейковые данные для графиков
     months = [
-        "Янв",
-        "Фев",
-        "Мар",
-        "Апр",
-        "Май",
-        "Июн",
-        "Июл",
-        "Авг",
-        "Сен",
-        "Окт",
-        "Ноя",
-        "Дек",
+        _("Jan"),
+        _("Feb"),
+        _("Mar"),
+        _("Apr"),
+        _("May"),
+        _("Jun"),
+        _("Jul"),
+        _("Aug"),
+        _("Sep"),
+        _("Oct"),
+        _("Nov"),
+        _("Dec"),
     ]
     activity_data = [random.randint(20, 100) for _ in months]
     course_names = [
-        "Python",
-        "Django",
-        "JavaScript",
-        "React",
-        "SQL",
-        "ML",
-        "UI/UX",
+        _("Python"),
+        _("Django"),
+        _("JavaScript"),
+        _("React"),
+        _("SQL"),
+        _("ML"),
+        _("UI/UX"),
     ]
     course_counts = [random.randint(30, 150) for _ in course_names]
 

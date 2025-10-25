@@ -3,6 +3,7 @@ from pathlib import Path
 from decouple import config
 from django.core.management.utils import get_random_secret_key
 from django.templatetags.static import static
+from django.utils.translation import gettext_lazy as _
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -41,7 +42,24 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
 CRISPY_TEMPLATE_PACK = "bootstrap4"
 
 UNFOLD = {
-    "SITE_HEADER": "Bervinov Academy",
+    "SHOW_LANGUAGES": True,
+    "LANGUAGES": {
+        "navigation": [
+            {
+                "code": "en",
+                "name": "English",
+                "name_local": "English",
+                "bidi": False,
+            },
+            {
+                "code": "ru",
+                "name": "Russian",
+                "name_local": "Русский",
+                "bidi": False,
+            },
+        ]
+    },
+    "SITE_HEADER": _("Bervinov Academy"),
     "SITE_ICON": {
         "light": lambda request: static("img/logo.ico"),
         "dark": lambda request: static("img/logo.ico"),
@@ -58,13 +76,13 @@ UNFOLD = {
     "SIDEBAR": {
         "show_search": True,
         "show_all_applications": False,
-        "show_navigation": True,  # 👈 чтобы меню появилось
+        "show_navigation": True,
         "navigation": [
             {
-                "title": "Пользователи",
+                "title": _("Users"),
                 "items": [
                     {
-                        "title": "Пользователи",
+                        "title": _("Users"),
                         "icon": "person",
                         "link": "/admin/users/user/",
                     },
@@ -145,6 +163,15 @@ TIME_ZONE = "Europe/Moscow"
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
+
+LANGUAGES = (
+    ("en", _("English")),
+    ("ru", _("Russian")),
+)
+
+LOCALE_PATHS = [
+    BASE_DIR / "locale",
+]
 
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [

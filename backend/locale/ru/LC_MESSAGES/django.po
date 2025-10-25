@@ -1,0 +1,340 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-10-25 08:02+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || "
+"(n%100>=11 && n%100<=14)? 2 : 3);\n"
+
+#: .\backend\school_platform\admin\views.py:18
+msgid "Jan"
+msgstr "Янв"
+
+#: .\backend\school_platform\admin\views.py:19
+msgid "Feb"
+msgstr "Фев"
+
+#: .\backend\school_platform\admin\views.py:20
+msgid "Mar"
+msgstr "Мар"
+
+#: .\backend\school_platform\admin\views.py:21
+msgid "Apr"
+msgstr "Апр"
+
+#: .\backend\school_platform\admin\views.py:22
+msgid "May"
+msgstr "Май"
+
+#: .\backend\school_platform\admin\views.py:23
+msgid "Jun"
+msgstr "Июн"
+
+#: .\backend\school_platform\admin\views.py:24
+msgid "Jul"
+msgstr "Июл"
+
+#: .\backend\school_platform\admin\views.py:25
+msgid "Aug"
+msgstr "Авг"
+
+#: .\backend\school_platform\admin\views.py:26
+msgid "Sep"
+msgstr "Сен"
+
+#: .\backend\school_platform\admin\views.py:27
+msgid "Oct"
+msgstr "Окт"
+
+#: .\backend\school_platform\admin\views.py:28
+msgid "Nov"
+msgstr "Ноя"
+
+#: .\backend\school_platform\admin\views.py:29
+msgid "Dec"
+msgstr "Дек"
+
+#: .\backend\school_platform\admin\views.py:33
+msgid "Python"
+msgstr "Python"
+
+#: .\backend\school_platform\admin\views.py:34
+msgid "Django"
+msgstr "Django"
+
+#: .\backend\school_platform\admin\views.py:35
+msgid "JavaScript"
+msgstr "JavaScript"
+
+#: .\backend\school_platform\admin\views.py:36
+msgid "React"
+msgstr "React"
+
+#: .\backend\school_platform\admin\views.py:37
+msgid "SQL"
+msgstr "SQL"
+
+#: .\backend\school_platform\admin\views.py:38
+msgid "ML"
+msgstr "Машинное обучение"
+
+#: .\backend\school_platform\admin\views.py:39
+msgid "UI/UX"
+msgstr "UI/UX"
+
+#: .\backend\school_platform\settings.py:62
+#: .\backend\templates\admin\index.html:6
+msgid "Bervinov Academy"
+msgstr "Bervinov Academy"
+
+#: .\backend\school_platform\settings.py:82
+#: .\backend\school_platform\settings.py:85 .\backend\users\models.py:221
+msgid "Users"
+msgstr "Пользователи"
+
+#: .\backend\school_platform\settings.py:168
+msgid "English"
+msgstr "Английский"
+
+#: .\backend\school_platform\settings.py:169
+msgid "Russian"
+msgstr "Русский"
+
+#: .\backend\templates\admin\auth\user\change_password.html:5
+#: .\backend\templates\admin\auth\user\change_password.html:15
+msgid "Изменить пароль пользователя"
+msgstr "Change user password"
+
+#: .\backend\templates\admin\auth\user\change_password.html:57
+msgid "Отмена"
+msgstr "Cancel"
+
+#: .\backend\templates\admin\auth\user\change_password.html:58
+msgid "Сохранить пароль"
+msgstr "Save password"
+
+#: .\backend\templates\admin\auth\user\change_password.html:63
+msgid "Изменение пароля для пользователя:"
+msgstr "Password change for user:"
+
+#: .\backend\templates\admin\auth\user\change_password.html:64
+msgid "Логин:"
+msgstr "Username:"
+
+#: .\backend\templates\admin\index.html:15
+msgid "Dashboard"
+msgstr "Панель управления"
+
+#: .\backend\templates\admin\index.html:20
+msgid "Всего пользователей"
+msgstr "Total users"
+
+#: .\backend\templates\admin\index.html:24
+msgid "Курсы"
+msgstr "Courses"
+
+#: .\backend\templates\admin\index.html:28
+msgid "Активные студенты"
+msgstr "Active students"
+
+#: .\backend\templates\admin\index.html:32
+msgid "Завершённые курсы"
+msgstr "Completed courses"
+
+#: .\backend\templates\admin\index.html:40
+msgid "Активность пользователей"
+msgstr "User activity"
+
+#: .\backend\templates\admin\index.html:45
+msgid "Популярные курсы"
+msgstr "Popular courses"
+
+#: .\backend\users\admin.py:22
+msgid ""
+"Raw passwords are not stored, so there is no way to see this user's "
+"password, but you can change the password using <a href=\"../password/"
+"\">this form</a>."
+msgstr ""
+"Пароль не хранится в открытом виде. Его можно изменить с помощью <a href='../password/'>этой формы</a>."
+
+#: .\backend\users\admin.py:40
+msgid "Main information"
+msgstr "Основная информация"
+
+#: .\backend\users\admin.py:41
+msgid "Personal information"
+msgstr "Личная информация"
+
+#: .\backend\users\admin.py:42
+msgid "Permissions"
+msgstr "Права доступа"
+
+#: .\backend\users\admin.py:48
+msgid "System information"
+msgstr "Системная информация"
+
+#: .\backend\users\admin.py:75
+msgid "User not found."
+msgstr "Пользователь не найден."
+
+#: .\backend\users\admin.py:83
+msgid "Password successfully changed ✅"
+msgstr "Пароль успешно изменён ✅"
+
+#: .\backend\users\admin.py:86
+msgid "Error while changing password."
+msgstr "Ошибка при смене пароля."
+
+#: .\backend\users\admin.py:92
+msgid "Change password"
+msgstr "Изменение пароля"
+
+#: .\backend\users\models.py:18
+msgid "Email or phone is required"
+msgstr "Необходимо указать email или телефон"
+
+#: .\backend\users\models.py:33
+msgid "Superuser must have an email"
+msgstr "Суперпользователь должен иметь email"
+
+#: .\backend\users\models.py:35
+msgid "Superuser must have a phone"
+msgstr "Суперпользователь должен иметь телефон"
+
+#: .\backend\users\models.py:60
+msgid "Student"
+msgstr "Студент"
+
+#: .\backend\users\models.py:61
+msgid "Mentor"
+msgstr "Ментор"
+
+#: .\backend\users\models.py:62
+msgid "Admin"
+msgstr "Администратор"
+
+#: .\backend\users\models.py:74
+msgid "Email or phone must be specified"
+msgstr "Должен быть указан email или телефон"
+
+#: .\backend\users\models.py:79
+msgid "Email is required for admin"
+msgstr "Для администратора обязателен email"
+
+#: .\backend\users\models.py:83
+msgid "Phone is required for admin"
+msgstr "Для администратора обязателен телефон"
+
+#: .\backend\users\models.py:93
+msgid "A user with this email already exists"
+msgstr "Пользователь с таким email уже существует"
+
+#: .\backend\users\models.py:103
+msgid "A user with this phone already exists"
+msgstr "Пользователь с таким телефоном уже существует"
+
+#: .\backend\users\models.py:107
+msgid "first name"
+msgstr "имя"
+
+#: .\backend\users\models.py:109
+msgid "User's first name"
+msgstr "Имя пользователя"
+
+#: .\backend\users\models.py:112
+msgid "last name"
+msgstr "фамилия"
+
+#: .\backend\users\models.py:114
+msgid "User's last name"
+msgstr "Фамилия пользователя"
+
+#: .\backend\users\models.py:117
+msgid "phone"
+msgstr "телефон"
+
+#: .\backend\users\models.py:122
+msgid "User phone number"
+msgstr "Номер телефона пользователя"
+
+#: .\backend\users\models.py:125
+msgid "email"
+msgstr "почта"
+
+#: .\backend\users\models.py:129
+msgid "User email"
+msgstr "Почта пользователя"
+
+#: .\backend\users\models.py:132
+msgid "role"
+msgstr "роль"
+
+#: .\backend\users\models.py:136
+msgid "User role in the system"
+msgstr "Роль пользователя в системе"
+
+#: .\backend\users\models.py:139
+msgid "avatar"
+msgstr "аватар"
+
+#: .\backend\users\models.py:143
+msgid "User avatar"
+msgstr "Аватар пользователя"
+
+#: .\backend\users\models.py:146
+msgid "biography"
+msgstr "биография"
+
+#: .\backend\users\models.py:148
+msgid "User biography"
+msgstr "Биография пользователя"
+
+#: .\backend\users\models.py:152
+msgid "registration date"
+msgstr "дата регистрации"
+
+#: .\backend\users\models.py:154
+msgid "User registration date"
+msgstr "Дата регистрации пользователя"
+
+#: .\backend\users\models.py:157
+msgid "last login"
+msgstr "последний вход"
+
+#: .\backend\users\models.py:159
+msgid "Last login time"
+msgstr "Время последнего входа"
+
+#: .\backend\users\models.py:162
+msgid "active"
+msgstr "активен"
+
+#: .\backend\users\models.py:164
+msgid "Is the user active"
+msgstr "Активен ли пользователь"
+
+#: .\backend\users\models.py:167
+msgid "staff"
+msgstr "сотрудник"
+
+#: .\backend\users\models.py:169
+msgid "Is the user a staff member"
+msgstr "Является ли пользователь сотрудником"
+
+#: .\backend\users\models.py:220
+msgid "User"
+msgstr "Пользователь"

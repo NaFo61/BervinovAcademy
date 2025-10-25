@@ -6,6 +6,7 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 
 class CustomUserManager(BaseUserManager):
@@ -14,7 +15,7 @@ class CustomUserManager(BaseUserManager):
     ):
         # Для обычных пользователей: email ИЛИ phone
         if not email and not phone:
-            raise ValueError("Необходимо указать email или телефон")
+            raise ValueError(_("Email or phone is required"))
 
         if email:
             email = self.normalize_email(email)
@@ -29,9 +30,9 @@ class CustomUserManager(BaseUserManager):
     ):
         # Для суперпользователя: email И phone ОБЯЗАТЕЛЬНЫ
         if not email:
-            raise ValueError("Суперпользователь должен иметь email")
+            raise ValueError(_("Superuser must have an email"))
         if not phone:
-            raise ValueError("Суперпользователь должен иметь телефон")
+            raise ValueError(_("Superuser must have a phone"))
 
         extra_fields.setdefault("is_active", True)
         extra_fields.setdefault("is_staff", True)
@@ -56,9 +57,9 @@ class CustomUserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = [
-        ("student", "Student"),
-        ("mentor", "Mentor"),
-        ("admin", "Admin"),
+        ("student", _("Student")),
+        ("mentor", _("Mentor")),
+        ("admin", _("Admin")),
     ]
 
     def upload_to(self, filename):
@@ -70,16 +71,16 @@ class User(AbstractBaseUser, PermissionsMixin):
     def clean(self):
         # Базовая проверка: email ИЛИ phone для всех пользователей
         if not self.email and not self.phone:
-            raise ValidationError("Должен быть указан email или телефон")
+            raise ValidationError(_("Email or phone must be specified"))
 
         if self.role == "admin" or self.is_superuser:
             if not self.email:
                 raise ValidationError(
-                    {"email": "Для администратора обязателен email"}
+                    {"email": _("Email is required for admin")}
                 )
             if not self.phone:
                 raise ValidationError(
-                    {"phone": "Для администратора обязателен телефон"}
+                    {"phone": _("Phone is required for admin")}
                 )
 
         # Проверка уникальности email
@@ -89,7 +90,7 @@ class User(AbstractBaseUser, PermissionsMixin):
                 qs = qs.exclude(pk=self.pk)
             if qs.exists():
                 raise ValidationError(
-                    {"email": "Пользователь с таким email уже существует"}
+                    {"email": _("A user with this email already exists")}
                 )
 
         # Проверка уникальности phone
@@ -99,79 +100,79 @@ class User(AbstractBaseUser, PermissionsMixin):
                 qs = qs.exclude(pk=self.pk)
             if qs.exists():
                 raise ValidationError(
-                    {"phone": "Пользователь с таким телефоном уже существует"}
+                    {"phone": _("A user with this phone already exists")}
                 )
 
     first_name = models.CharField(
-        verbose_name="имя",
+        verbose_name=_("first name"),
         max_length=255,
-        help_text="Имя пользователя",
+        help_text=_("User's first name"),
     )
     last_name = models.CharField(
-        verbose_name="фамилия",
+        verbose_name=_("last name"),
         max_length=255,
-        help_text="Фамилия пользователя",
+        help_text=_("User's last name"),
     )
     phone = models.CharField(
-        verbose_name="телефон",
+        verbose_name=_("phone"),
         max_length=20,
         blank=True,
         null=True,
         unique=True,
-        help_text="Номер телефона пользователя",
+        help_text=_("User phone number"),
     )
     email = models.EmailField(
-        verbose_name="почта",
+        verbose_name=_("email"),
         blank=True,
         null=True,
         unique=True,
-        help_text="Почта пользователя",
+        help_text=_("User email"),
     )
     role = models.CharField(
-        verbose_name="роль",
+        verbose_name=_("role"),
         max_length=50,
         choices=ROLE_CHOICES,
         default="student",
-        help_text="Роль пользователя в системе",
+        help_text=_("User role in the system"),
     )
     avatar = models.ImageField(
-        verbose_name="аватар",
+        verbose_name=_("avatar"),
         upload_to=upload_to,
         blank=True,
         null=True,
-        help_text="Аватар пользователя",
+        help_text=_("User avatar"),
     )
     bio = models.TextField(
-        verbose_name="биография",
+        verbose_name=_("biography"),
         default="",
-        help_text="Биография пользователя",
+        help_text=_("User biography"),
         blank=True,
     )
     date_joined = models.DateTimeField(
-        verbose_name="дата регистрации",
+        verbose_name=_("registration date"),
         default=timezone.now,
-        help_text="Дата регистрации пользователя",
+        help_text=_("User registration date"),
     )
     last_login = models.DateTimeField(
-        verbose_name="последний вход",
+        verbose_name=_("last login"),
         auto_now=True,
-        help_text="Время последнего входа",
+        help_text=_("Last login time"),
     )
     is_active = models.BooleanField(
-        verbose_name="активен",
+        verbose_name=_("active"),
         default=True,
-        help_text="Активен ли пользователь",
+        help_text=_("Is the user active"),
     )
     is_staff = models.BooleanField(
-        verbose_name="сотрудник",
+        verbose_name=_("staff"),
         default=False,
-        help_text="Является ли пользователь сотрудником",
+        help_text=_("Is the user a staff member"),
     )
 
     objects = CustomUserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["first_name", "last_name", "phone"]  # Добавлен phone
+    REQUIRED_FIELDS = ["first_name", "last_name", "phone"]
 
     def __str__(self):
         identifier = self.email or self.phone or "No contact"
@@ -216,5 +217,5 @@ class User(AbstractBaseUser, PermissionsMixin):
     class Meta:
         db_table = "users"
         ordering = ["-date_joined", "email"]
-        verbose_name = "Пользователь"
-        verbose_name_plural = "Пользователи"
+        verbose_name = _("User")
+        verbose_name_plural = _("Users")

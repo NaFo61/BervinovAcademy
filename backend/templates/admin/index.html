@@ -12,24 +12,24 @@
 
 {% block content %}
 <div class="px-8 py-6 bg-background text-foreground">
-  <h1 class="text-2xl font-bold mb-6">📊 Dashboard</h1>
+  <h1 class="text-2xl font-bold mb-6">📊 {% trans "Dashboard" %}</h1>
 
   <!-- === Верхние карточки === -->
   <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
     <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
-      <span class="text-sm text-muted-foreground">Всего пользователей</span>
+      <span class="text-sm text-muted-foreground">{% trans "Всего пользователей" %}</span>
       <span class="text-3xl font-bold mt-2">{{ total_users }}</span>
     </div>
     <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
-      <span class="text-sm text-muted-foreground">Курсы</span>
+      <span class="text-sm text-muted-foreground">{% trans "Курсы" %}</span>
       <span class="text-3xl font-bold mt-2">{{ total_courses }}</span>
     </div>
     <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
-      <span class="text-sm text-muted-foreground">Активные студенты</span>
+      <span class="text-sm text-muted-foreground">{% trans "Активные студенты" %}</span>
       <span class="text-3xl font-bold mt-2">{{ active_students }}</span>
     </div>
     <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
-      <span class="text-sm text-muted-foreground">Завершённые курсы</span>
+      <span class="text-sm text-muted-foreground">{% trans "Завершённые курсы" %}</span>
       <span class="text-3xl font-bold mt-2">{{ completed_courses }}</span>
     </div>
   </div>
@@ -37,12 +37,12 @@
   <!-- === Графики === -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     <div class="bg-card rounded-2xl p-6 shadow-md border border-border">
-      <h2 class="text-lg font-semibold mb-4">📈 Активность пользователей</h2>
+      <h2 class="text-lg font-semibold mb-4">📈 {% trans "Активность пользователей" %}</h2>
       <canvas id="userActivityChart"></canvas>
     </div>
 
     <div class="bg-card rounded-2xl p-6 shadow-md border border-border">
-      <h2 class="text-lg font-semibold mb-4">🎓 Популярные курсы</h2>
+      <h2 class="text-lg font-semibold mb-4">🎓 {% trans "Популярные курсы" %}</h2>
       <canvas id="popularCoursesChart"></canvas>
     </div>
   </div>
