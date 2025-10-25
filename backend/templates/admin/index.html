@@ -1,19 +1,90 @@
-{% extends 'admin/base.html' %}
-
-{% load i18n %}
+{% extends "admin/base.html" %}
+{% load i18n static %}
 
 {% block title %}
-    {% if subtitle %}
-        {{ subtitle }} |
-    {% endif %}
-
-    {{ title }} | {{ site_title|default:_('Django site admin') }}
+  {% if subtitle %}{{ subtitle }} | {% endif %}
+  {{ title }} | {{ site_title|default:_("Bervinov Academy") }}
 {% endblock %}
 
 {% block branding %}
-    {% include "unfold/helpers/site_branding.html" %}
+  {% include "unfold/helpers/site_branding.html" %}
 {% endblock %}
 
 {% block content %}
-hello
+<div class="px-8 py-6 bg-background text-foreground">
+  <h1 class="text-2xl font-bold mb-6">📊 Dashboard</h1>
+
+  <!-- === Верхние карточки === -->
+  <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
+      <span class="text-sm text-muted-foreground">Всего пользователей</span>
+      <span class="text-3xl font-bold mt-2">{{ total_users }}</span>
+    </div>
+    <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
+      <span class="text-sm text-muted-foreground">Курсы</span>
+      <span class="text-3xl font-bold mt-2">{{ total_courses }}</span>
+    </div>
+    <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
+      <span class="text-sm text-muted-foreground">Активные студенты</span>
+      <span class="text-3xl font-bold mt-2">{{ active_students }}</span>
+    </div>
+    <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
+      <span class="text-sm text-muted-foreground">Завершённые курсы</span>
+      <span class="text-3xl font-bold mt-2">{{ completed_courses }}</span>
+    </div>
+  </div>
+
+  <!-- === Графики === -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div class="bg-card rounded-2xl p-6 shadow-md border border-border">
+      <h2 class="text-lg font-semibold mb-4">📈 Активность пользователей</h2>
+      <canvas id="userActivityChart"></canvas>
+    </div>
+
+    <div class="bg-card rounded-2xl p-6 shadow-md border border-border">
+      <h2 class="text-lg font-semibold mb-4">🎓 Популярные курсы</h2>
+      <canvas id="popularCoursesChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- === Подключаем Chart.js === -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const userActivity = document.getElementById("userActivityChart").getContext("2d");
+  new Chart(userActivity, {
+    type: "line",
+    data: {
+      labels: {{ months|safe }},
+      datasets: [{
+        label: "Активные пользователи",
+        data: {{ activity_data|safe }},
+        borderColor: "#8b5cf6",
+        backgroundColor: "rgba(139,92,246,0.3)",
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+
+  const popularCourses = document.getElementById("popularCoursesChart").getContext("2d");
+  new Chart(popularCourses, {
+    type: "bar",
+    data: {
+      labels: {{ course_names|safe }},
+      datasets: [{
+        label: "Записей",
+        data: {{ course_counts|safe }},
+        backgroundColor: "#7c3aed"
+      }]
+    },
+    options: { plugins: { legend: { display: false } } }
+  });
+});
+</script>
 {% endblock %}

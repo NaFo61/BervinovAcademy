@@ -73,6 +73,7 @@ UNFOLD = {
         ],
     },
     "DARK_MODE": True,
+    "DASHBOARD_CALLBACK": "school_platform.admin.views.dashboard_callback",
 }
 
 AUTH_USER_MODEL = "users.User"
