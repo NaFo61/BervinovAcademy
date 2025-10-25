@@ -1,0 +1,9 @@
+.dashboard-container {
+  padding: 2rem;
+}
+.dashboard-card {
+  border-radius: 1rem;
+  background: var(--card-bg, #fff);
+  padding: 1.25rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}

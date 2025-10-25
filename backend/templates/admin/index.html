@@ -48,43 +48,13 @@
   </div>
 </div>
 
-<!-- === Подключаем Chart.js === -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-  const userActivity = document.getElementById("userActivityChart").getContext("2d");
-  new Chart(userActivity, {
-    type: "line",
-    data: {
-      labels: {{ months|safe }},
-      datasets: [{
-        label: "Активные пользователи",
-        data: {{ activity_data|safe }},
-        borderColor: "#8b5cf6",
-        backgroundColor: "rgba(139,92,246,0.3)",
-        fill: true,
-        tension: 0.4
-      }]
-    },
-    options: {
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true } }
-    }
-  });
-
-  const popularCourses = document.getElementById("popularCoursesChart").getContext("2d");
-  new Chart(popularCourses, {
-    type: "bar",
-    data: {
-      labels: {{ course_names|safe }},
-      datasets: [{
-        label: "Записей",
-        data: {{ course_counts|safe }},
-        backgroundColor: "#7c3aed"
-      }]
-    },
-    options: { plugins: { legend: { display: false } } }
-  });
-});
+  // Передаём данные из Django в JS
+  window.months = {{ months|safe }};
+  window.activity_data = {{ activity_data|safe }};
+  window.course_names = {{ course_names|safe }};
+  window.course_counts = {{ course_counts|safe }};
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'admin/js/index.js' %}"></script>
 {% endblock %}

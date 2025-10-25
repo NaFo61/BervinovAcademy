@@ -43,11 +43,11 @@ CRISPY_TEMPLATE_PACK = "bootstrap4"
 UNFOLD = {
     "SITE_HEADER": "Bervinov Academy",
     "SITE_ICON": {
-        "light": lambda request: static("css/logo.ico"),
-        "dark": lambda request: static("css/logo.ico"),
+        "light": lambda request: static("img/logo.ico"),
+        "dark": lambda request: static("img/logo.ico"),
     },
     "SITE_URL": "/",
-    "STYLES": ["/static/css/admin_custom.css"],
+    "STYLES": ["/static/admin/css/base.css"],
     "COLORS": {
         "primary": {
             "500": "168 85 247",

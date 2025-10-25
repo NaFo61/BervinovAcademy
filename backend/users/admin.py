@@ -134,4 +134,4 @@ class CustomUserAdmin(ModelAdmin):
         return render(request, "admin/auth/user/change_password.html", context)
 
     class Media:
-        css = {"all": ("css/admin_custom.css",)}
+        css = {"all": ("css/base.css",)}
