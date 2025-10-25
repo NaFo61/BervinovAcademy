@@ -17,19 +17,19 @@
   <!-- === Верхние карточки === -->
   <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
     <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
-      <span class="text-sm text-muted-foreground">{% trans "Всего пользователей" %}</span>
+      <span class="text-sm text-muted-foreground">{% trans "Total users" %}</span>
       <span class="text-3xl font-bold mt-2">{{ total_users }}</span>
     </div>
     <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
-      <span class="text-sm text-muted-foreground">{% trans "Курсы" %}</span>
+      <span class="text-sm text-muted-foreground">{% trans "Courses" %}</span>
       <span class="text-3xl font-bold mt-2">{{ total_courses }}</span>
     </div>
     <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
-      <span class="text-sm text-muted-foreground">{% trans "Активные студенты" %}</span>
+      <span class="text-sm text-muted-foreground">{% trans "Active students" %}</span>
       <span class="text-3xl font-bold mt-2">{{ active_students }}</span>
     </div>
     <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
-      <span class="text-sm text-muted-foreground">{% trans "Завершённые курсы" %}</span>
+      <span class="text-sm text-muted-foreground">{% trans "Completed courses" %}</span>
       <span class="text-3xl font-bold mt-2">{{ completed_courses }}</span>
     </div>
   </div>
@@ -37,7 +37,7 @@
   <!-- === Графики === -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     <div class="bg-card rounded-2xl p-6 shadow-md border border-border">
-      <h2 class="text-lg font-semibold mb-4">📈 {% trans "Активность пользователей" %}</h2>
+      <h2 class="text-lg font-semibold mb-4">📈 {% trans "User activity" %}</h2>
       <canvas id="userActivityChart"></canvas>
     </div>
 

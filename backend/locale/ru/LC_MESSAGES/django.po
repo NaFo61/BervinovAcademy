@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-25 08:02+0300\n"
+"POT-Creation-Date: 2025-10-25 08:57+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -140,68 +140,85 @@ msgid "Dashboard"
 msgstr "Панель управления"
 
 #: .\backend\templates\admin\index.html:20
-msgid "Всего пользователей"
-msgstr "Total users"
+msgid "Total users"
+msgstr "Всего пользователей"
 
 #: .\backend\templates\admin\index.html:24
-msgid "Курсы"
-msgstr "Courses"
+msgid "Courses"
+msgstr "Курсы"
 
 #: .\backend\templates\admin\index.html:28
-msgid "Активные студенты"
-msgstr "Active students"
+msgid "Active students"
+msgstr "Активные студенты"
 
 #: .\backend\templates\admin\index.html:32
-msgid "Завершённые курсы"
-msgstr "Completed courses"
+msgid "Completed courses"
+msgstr "Завершённые курсы"
 
 #: .\backend\templates\admin\index.html:40
-msgid "Активность пользователей"
-msgstr "User activity"
+msgid "User activity"
+msgstr "Активность пользователей"
 
 #: .\backend\templates\admin\index.html:45
 msgid "Популярные курсы"
-msgstr "Popular courses"
+msgstr ""
 
-#: .\backend\users\admin.py:22
+#: .\backend\users\admin.py:21
 msgid ""
 "Raw passwords are not stored, so there is no way to see this user's "
 "password, but you can change the password using <a href=\"../password/"
 "\">this form</a>."
 msgstr ""
-"Пароль не хранится в открытом виде. Его можно изменить с помощью <a href='../password/'>этой формы</a>."
+"Пароль не хранится в открытом виде. Его можно изменить с помощью <a href='../"
+"password/'>этой формы</a>."
 
-#: .\backend\users\admin.py:40
+#: .\backend\users\admin.py:41
 msgid "Main information"
 msgstr "Основная информация"
 
-#: .\backend\users\admin.py:41
+#: .\backend\users\admin.py:43
 msgid "Personal information"
 msgstr "Личная информация"
 
-#: .\backend\users\admin.py:42
+#: .\backend\users\admin.py:47
 msgid "Permissions"
 msgstr "Права доступа"
 
-#: .\backend\users\admin.py:48
+#: .\backend\users\admin.py:59
 msgid "System information"
 msgstr "Системная информация"
 
-#: .\backend\users\admin.py:75
+#: .\backend\users\admin.py:94
 msgid "User not found."
 msgstr "Пользователь не найден."
 
-#: .\backend\users\admin.py:83
+#: .\backend\users\admin.py:102
 msgid "Password successfully changed ✅"
 msgstr "Пароль успешно изменён ✅"
 
-#: .\backend\users\admin.py:86
+#: .\backend\users\admin.py:105
 msgid "Error while changing password."
 msgstr "Ошибка при смене пароля."
 
-#: .\backend\users\admin.py:92
+#: .\backend\users\admin.py:111
 msgid "Change password"
 msgstr "Изменение пароля"
+
+#: .\backend\users\apps.py:31
+msgid "Current:"
+msgstr "Текущий"
+
+#: .\backend\users\apps.py:32
+msgid "Change:"
+msgstr "Сменить"
+
+#: .\backend\users\apps.py:33
+msgid "Clear"
+msgstr "Очистить"
+
+#: .\backend\users\apps.py:34
+msgid "Choose file to upload"
+msgstr "Выбрать файл"
 
 #: .\backend\users\models.py:18
 msgid "Email or phone is required"
@@ -338,3 +355,6 @@ msgstr "Является ли пользователь сотрудником"
 #: .\backend\users\models.py:220
 msgid "User"
 msgstr "Пользователь"
+
+#~ msgid "Popular courses"
+#~ msgstr "Популярные курсы"
