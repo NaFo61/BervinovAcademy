@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-25 08:57+0300\n"
+"POT-Creation-Date: 2025-10-25 09:17+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -172,53 +172,61 @@ msgstr ""
 "Пароль не хранится в открытом виде. Его можно изменить с помощью <a href='../"
 "password/'>этой формы</a>."
 
-#: .\backend\users\admin.py:41
+#: .\backend\users\admin.py:48
 msgid "Main information"
 msgstr "Основная информация"
 
-#: .\backend\users\admin.py:43
+#: .\backend\users\admin.py:50
 msgid "Personal information"
 msgstr "Личная информация"
 
-#: .\backend\users\admin.py:47
+#: .\backend\users\admin.py:54
 msgid "Permissions"
 msgstr "Права доступа"
 
-#: .\backend\users\admin.py:59
+#: .\backend\users\admin.py:66
 msgid "System information"
 msgstr "Системная информация"
 
-#: .\backend\users\admin.py:94
+#: .\backend\users\admin.py:101
 msgid "User not found."
 msgstr "Пользователь не найден."
 
-#: .\backend\users\admin.py:102
+#: .\backend\users\admin.py:109
 msgid "Password successfully changed ✅"
 msgstr "Пароль успешно изменён ✅"
 
-#: .\backend\users\admin.py:105
+#: .\backend\users\admin.py:112
 msgid "Error while changing password."
 msgstr "Ошибка при смене пароля."
 
-#: .\backend\users\admin.py:111
+#: .\backend\users\admin.py:118
 msgid "Change password"
 msgstr "Изменение пароля"
 
-#: .\backend\users\apps.py:31
+#: .\backend\users\apps.py:36
 msgid "Current:"
 msgstr "Текущий"
 
-#: .\backend\users\apps.py:32
+#: .\backend\users\apps.py:37
 msgid "Change:"
 msgstr "Сменить"
 
-#: .\backend\users\apps.py:33
+#: .\backend\users\apps.py:38
 msgid "Clear"
 msgstr "Очистить"
 
-#: .\backend\users\apps.py:34
+#: .\backend\users\apps.py:40
 msgid "Choose file to upload"
 msgstr "Выбрать файл"
+
+#: .\backend\users\apps.py:62
+msgid "Search apps and models..."
+msgstr "Поиск по приложениям и моделям..."
+
+#: .\backend\users\apps.py:82
+msgid "Filters"
+msgstr "Фильтры"
 
 #: .\backend\users\models.py:18
 msgid "Email or phone is required"
@@ -265,71 +273,71 @@ msgid "A user with this phone already exists"
 msgstr "Пользователь с таким телефоном уже существует"
 
 #: .\backend\users\models.py:107
-msgid "first name"
-msgstr "имя"
+msgid "First name"
+msgstr "Имя"
 
 #: .\backend\users\models.py:109
 msgid "User's first name"
 msgstr "Имя пользователя"
 
 #: .\backend\users\models.py:112
-msgid "last name"
-msgstr "фамилия"
+msgid "Last name"
+msgstr "Фамилия"
 
 #: .\backend\users\models.py:114
 msgid "User's last name"
 msgstr "Фамилия пользователя"
 
 #: .\backend\users\models.py:117
-msgid "phone"
-msgstr "телефон"
+msgid "Phone"
+msgstr "Телефон"
 
 #: .\backend\users\models.py:122
 msgid "User phone number"
 msgstr "Номер телефона пользователя"
 
 #: .\backend\users\models.py:125
-msgid "email"
-msgstr "почта"
+msgid "Email"
+msgstr "Почта"
 
 #: .\backend\users\models.py:129
 msgid "User email"
 msgstr "Почта пользователя"
 
 #: .\backend\users\models.py:132
-msgid "role"
-msgstr "роль"
+msgid "Role"
+msgstr "Роль"
 
 #: .\backend\users\models.py:136
 msgid "User role in the system"
 msgstr "Роль пользователя в системе"
 
 #: .\backend\users\models.py:139
-msgid "avatar"
-msgstr "аватар"
+msgid "Avatar"
+msgstr "Аватар"
 
 #: .\backend\users\models.py:143
 msgid "User avatar"
 msgstr "Аватар пользователя"
 
 #: .\backend\users\models.py:146
-msgid "biography"
-msgstr "биография"
+msgid "Biography"
+msgstr "Биография"
 
 #: .\backend\users\models.py:148
 msgid "User biography"
 msgstr "Биография пользователя"
 
 #: .\backend\users\models.py:152
-msgid "registration date"
-msgstr "дата регистрации"
+msgid "Registration date"
+msgstr "Дата регистрации"
 
 #: .\backend\users\models.py:154
 msgid "User registration date"
 msgstr "Дата регистрации пользователя"
 
 #: .\backend\users\models.py:157
-msgid "last login"
+msgid "Last login"
 msgstr "последний вход"
 
 #: .\backend\users\models.py:159
@@ -337,16 +345,16 @@ msgid "Last login time"
 msgstr "Время последнего входа"
 
 #: .\backend\users\models.py:162
-msgid "active"
-msgstr "активен"
+msgid "Active"
+msgstr "Активен ли"
 
 #: .\backend\users\models.py:164
 msgid "Is the user active"
 msgstr "Активен ли пользователь"
 
 #: .\backend\users\models.py:167
-msgid "staff"
-msgstr "сотрудник"
+msgid "Staff"
+msgstr "Cотрудник ли"
 
 #: .\backend\users\models.py:169
 msgid "Is the user a staff member"

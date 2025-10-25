@@ -104,17 +104,17 @@ class User(AbstractBaseUser, PermissionsMixin):
                 )
 
     first_name = models.CharField(
-        verbose_name=_("first name"),
+        verbose_name=_("First name"),
         max_length=255,
         help_text=_("User's first name"),
     )
     last_name = models.CharField(
-        verbose_name=_("last name"),
+        verbose_name=_("Last name"),
         max_length=255,
         help_text=_("User's last name"),
     )
     phone = models.CharField(
-        verbose_name=_("phone"),
+        verbose_name=_("Phone"),
         max_length=20,
         blank=True,
         null=True,
@@ -122,49 +122,49 @@ class User(AbstractBaseUser, PermissionsMixin):
         help_text=_("User phone number"),
     )
     email = models.EmailField(
-        verbose_name=_("email"),
+        verbose_name=_("Email"),
         blank=True,
         null=True,
         unique=True,
         help_text=_("User email"),
     )
     role = models.CharField(
-        verbose_name=_("role"),
+        verbose_name=_("Role"),
         max_length=50,
         choices=ROLE_CHOICES,
         default="student",
         help_text=_("User role in the system"),
     )
     avatar = models.ImageField(
-        verbose_name=_("avatar"),
+        verbose_name=_("Avatar"),
         upload_to=upload_to,
         blank=True,
         null=True,
         help_text=_("User avatar"),
     )
     bio = models.TextField(
-        verbose_name=_("biography"),
+        verbose_name=_("Biography"),
         default="",
         help_text=_("User biography"),
         blank=True,
     )
     date_joined = models.DateTimeField(
-        verbose_name=_("registration date"),
+        verbose_name=_("Registration date"),
         default=timezone.now,
         help_text=_("User registration date"),
     )
     last_login = models.DateTimeField(
-        verbose_name=_("last login"),
+        verbose_name=_("Last login"),
         auto_now=True,
         help_text=_("Last login time"),
     )
     is_active = models.BooleanField(
-        verbose_name=_("active"),
+        verbose_name=_("Active"),
         default=True,
         help_text=_("Is the user active"),
     )
     is_staff = models.BooleanField(
-        verbose_name=_("staff"),
+        verbose_name=_("Staff"),
         default=False,
         help_text=_("Is the user a staff member"),
     )
