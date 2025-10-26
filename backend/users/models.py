@@ -208,8 +208,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.role == "admin" or self.is_superuser
 
     def save(self, *args, **kwargs):
-        if self.is_superuser and self.role != "admin":
-            self.role = "admin"
+        if self.role == "admin":
+            self.is_staff = True
+            self.is_superuser = True
+        elif self.role == "mentor":
+            self.is_staff = True
+            self.is_superuser = False
+        else:  # student
+            self.is_staff = False
+            self.is_superuser = False
 
         self.clean()
         super().save(*args, **kwargs)
