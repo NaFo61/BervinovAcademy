@@ -1,18 +1,17 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Bervinov Academy Translation File
+# Copyright (C) 2025 Bervinov Academy Team
+# This file is distributed under the same license as the Bervinov Academy package.
+# FIRST AUTHOR <dir_61@bk.ru>, 2025.
 #
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
+"Project-Id-Version: Bervinov Academy 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-25 09:17+0300\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"POT-Creation-Date: 2025-10-26 06:56+0300\n"
+"PO-Revision-Date: 2025-10-26 07:00+0300\n"
+"Last-Translator: Miron Bervinov <dir_61@bk.ru>\n"
+"Language-Team: Russian <translations@bervinovacademy.com>\n"
+"Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -96,21 +95,29 @@ msgstr "Машинное обучение"
 msgid "UI/UX"
 msgstr "UI/UX"
 
-#: .\backend\school_platform\settings.py:62
+#: .\backend\school_platform\settings.py:58
 #: .\backend\templates\admin\index.html:6
 msgid "Bervinov Academy"
 msgstr "Bervinov Academy"
 
-#: .\backend\school_platform\settings.py:82
-#: .\backend\school_platform\settings.py:85 .\backend\users\models.py:221
+#: .\backend\school_platform\settings.py:78
+#: .\backend\school_platform\settings.py:81 .\backend\users\models.py:221
 msgid "Users"
 msgstr "Пользователи"
 
-#: .\backend\school_platform\settings.py:168
+#: .\backend\school_platform\settings.py:86 .\backend\users\models.py:264
+msgid "Mentors"
+msgstr "Менторы"
+
+#: .\backend\school_platform\settings.py:91 .\backend\users\models.py:235
+msgid "Students"
+msgstr "Студенты"
+
+#: .\backend\school_platform\settings.py:174
 msgid "English"
 msgstr "Английский"
 
-#: .\backend\school_platform\settings.py:169
+#: .\backend\school_platform\settings.py:175
 msgid "Russian"
 msgstr "Русский"
 
@@ -160,10 +167,10 @@ msgid "User activity"
 msgstr "Активность пользователей"
 
 #: .\backend\templates\admin\index.html:45
-msgid "Популярные курсы"
-msgstr ""
+msgid "Popularity courses"
+msgstr "Популярные курсы"
 
-#: .\backend\users\admin.py:21
+#: .\backend\users\admin.py:23
 msgid ""
 "Raw passwords are not stored, so there is no way to see this user's "
 "password, but you can change the password using <a href=\"../password/"
@@ -172,37 +179,55 @@ msgstr ""
 "Пароль не хранится в открытом виде. Его можно изменить с помощью <a href='../"
 "password/'>этой формы</a>."
 
-#: .\backend\users\admin.py:48
+#: .\backend\users\admin.py:50 .\backend\users\admin.py:162
 msgid "Main information"
 msgstr "Основная информация"
 
-#: .\backend\users\admin.py:50
+#: .\backend\users\admin.py:52
 msgid "Personal information"
 msgstr "Личная информация"
 
-#: .\backend\users\admin.py:54
+#: .\backend\users\admin.py:56
 msgid "Permissions"
 msgstr "Права доступа"
 
-#: .\backend\users\admin.py:66
+#: .\backend\users\admin.py:68 .\backend\users\admin.py:163
 msgid "System information"
 msgstr "Системная информация"
 
-#: .\backend\users\admin.py:101
+#: .\backend\users\admin.py:103
 msgid "User not found."
 msgstr "Пользователь не найден."
 
-#: .\backend\users\admin.py:109
+#: .\backend\users\admin.py:111
 msgid "Password successfully changed ✅"
 msgstr "Пароль успешно изменён ✅"
 
-#: .\backend\users\admin.py:112
+#: .\backend\users\admin.py:114
 msgid "Error while changing password."
 msgstr "Ошибка при смене пароля."
 
-#: .\backend\users\admin.py:118
+#: .\backend\users\admin.py:120
 msgid "Change password"
 msgstr "Изменение пароля"
+
+#: .\backend\users\admin.py:137 .\backend\users\admin.py:168
+msgid "Full name"
+msgstr "Полное имя"
+
+#: .\backend\users\admin.py:141 .\backend\users\admin.py:172
+#: .\backend\users\models.py:125
+msgid "Email"
+msgstr "Почта"
+
+#: .\backend\users\admin.py:145 .\backend\users\admin.py:176
+#: .\backend\users\models.py:117
+msgid "Phone"
+msgstr "Телефон"
+
+#: .\backend\users\admin.py:149
+msgid "Data joined"
+msgstr "Дата регистрации"
 
 #: .\backend\users\apps.py:36
 msgid "Current:"
@@ -220,13 +245,29 @@ msgstr "Очистить"
 msgid "Choose file to upload"
 msgstr "Выбрать файл"
 
-#: .\backend\users\apps.py:62
+#: .\backend\users\apps.py:67
 msgid "Search apps and models..."
 msgstr "Поиск по приложениям и моделям..."
 
-#: .\backend\users\apps.py:82
+#: .\backend\users\apps.py:71
+msgid "Type to search"
+msgstr "Введите для поиска"
+
+#: .\backend\users\apps.py:93
 msgid "Filters"
 msgstr "Фильтры"
+
+#: .\backend\users\apps.py:94
+msgid "Reset filters"
+msgstr "Сбросить фильтры"
+
+#: .\backend\users\apps.py:95
+msgid "No results found"
+msgstr "Ничего не найдено"
+
+#: .\backend\users\apps.py:98
+msgid "This page yielded into no results. Create a new item or reset your filters."
+msgstr "Ничего не найдено. Создайте новый элемент или сбросьте фильтры."
 
 #: .\backend\users\models.py:18
 msgid "Email or phone is required"
@@ -240,13 +281,13 @@ msgstr "Суперпользователь должен иметь email"
 msgid "Superuser must have a phone"
 msgstr "Суперпользователь должен иметь телефон"
 
-#: .\backend\users\models.py:60
+#: .\backend\users\models.py:60 .\backend\users\models.py:234
 msgid "Student"
-msgstr "Студент"
+msgstr "Студента"
 
-#: .\backend\users\models.py:61
+#: .\backend\users\models.py:61 .\backend\users\models.py:263
 msgid "Mentor"
-msgstr "Ментор"
+msgstr "Ментора"
 
 #: .\backend\users\models.py:62
 msgid "Admin"
@@ -288,17 +329,9 @@ msgstr "Фамилия"
 msgid "User's last name"
 msgstr "Фамилия пользователя"
 
-#: .\backend\users\models.py:117
-msgid "Phone"
-msgstr "Телефон"
-
 #: .\backend\users\models.py:122
 msgid "User phone number"
 msgstr "Номер телефона пользователя"
-
-#: .\backend\users\models.py:125
-msgid "Email"
-msgstr "Почта"
 
 #: .\backend\users\models.py:129
 msgid "User email"
@@ -360,9 +393,23 @@ msgstr "Cотрудник ли"
 msgid "Is the user a staff member"
 msgstr "Является ли пользователь сотрудником"
 
-#: .\backend\users\models.py:220
+#: .\backend\users\models.py:220 .\backend\users\models.py:229
+#: .\backend\users\models.py:246
 msgid "User"
 msgstr "Пользователь"
 
-#~ msgid "Popular courses"
-#~ msgstr "Популярные курсы"
+#: .\backend\users\models.py:249
+msgid "Specialization"
+msgstr "Специализация"
+
+#: .\backend\users\models.py:252
+msgid "Primary specialization"
+msgstr "Специализация"
+
+#: .\backend\users\models.py:255
+msgid "Experience (years)"
+msgstr "Опыт (года)"
+
+#: .\backend\users\models.py:258
+msgid "Years of experience"
+msgstr "Лет опыта"

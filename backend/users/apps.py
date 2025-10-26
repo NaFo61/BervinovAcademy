@@ -66,6 +66,10 @@ class UsersConfig(AppConfig):
                     "Search apps and models...",
                     str(_("Search apps and models...")),
                 )
+                html = html.replace(
+                    "Type to search",
+                    str(_("Type to search")),
+                )
             except Exception:
                 pass
 
@@ -87,6 +91,22 @@ class UsersConfig(AppConfig):
                     else self.content
                 )
                 content = content.replace("Filters", str(_("Filters")))
+                content = content.replace(
+                    "Reset filters", str(_("Reset filters"))
+                )
+                content = content.replace(
+                    "No results found", str(_("No results found"))
+                )
+                content = content.replace(
+                    "This page yielded into no results. "
+                    "Create a new item or reset your filters.",
+                    str(
+                        _(
+                            "This page yielded into no results. "
+                            "Create a new item or reset your filters."
+                        )
+                    ),
+                )
                 self.content = content.encode("utf-8")
             return html
 

@@ -7,6 +7,8 @@ from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 from unfold.forms import UserChangeForm, UserCreationForm
 
+from users.models import Mentor, Student
+
 User = get_user_model()
 
 
@@ -120,3 +122,82 @@ class CustomUserAdmin(ModelAdmin):
             "user": user,
         }
         return render(request, "admin/auth/user/change_password.html", context)
+
+
+@admin.register(Student)
+class StudentAdmin(ModelAdmin):
+    list_display = (
+        "id",
+        "user_full_name",
+        "user_email",
+        "user_phone",
+        "date_joined",
+    )
+    search_fields = (
+        "user__first_name",
+        "user__last_name",
+        "user__email",
+        "user__phone",
+    )
+    list_filter = ("user__is_active",)
+    ordering = ("-user__date_joined",)
+    icon = "graduation-cap"
+
+    @admin.display(description=_("Full name"))
+    def user_full_name(self, obj):
+        return f"{obj.user.first_name} {obj.user.last_name}"
+
+    @admin.display(description=_("Email"))
+    def user_email(self, obj):
+        return obj.user.email
+
+    @admin.display(description=_("Phone"))
+    def user_phone(self, obj):
+        return obj.user.phone
+
+    @admin.display(description=_("Data joined"))
+    def date_joined(self, obj):
+        return obj.user.date_joined
+
+
+# ======================== MENTOR ========================
+@admin.register(Mentor)
+class MentorAdmin(ModelAdmin):
+    list_display = (
+        "id",
+        "user_full_name",
+        "specialization",
+        "experience_years",
+        "user_email",
+        "user_phone",
+    )
+    search_fields = (
+        "user__first_name",
+        "user__last_name",
+        "specialization",
+        "user__email",
+        "user__phone",
+    )
+    list_filter = ("experience_years", "user__is_active")
+    ordering = ("-user__date_joined",)
+    icon = "briefcase"
+
+    fieldsets = (
+        (
+            _("Main information"),
+            {"fields": ("user", "specialization", "experience_years")},
+        ),
+        (_("System information"), {"fields": ()}),
+    )
+
+    @admin.display(description=_("Full name"))
+    def user_full_name(self, obj):
+        return f"{obj.user.first_name} {obj.user.last_name}"
+
+    @admin.display(description=_("Email"))
+    def user_email(self, obj):
+        return obj.user.email
+
+    @admin.display(description=_("Phone"))
+    def user_phone(self, obj):
+        return obj.user.phone
