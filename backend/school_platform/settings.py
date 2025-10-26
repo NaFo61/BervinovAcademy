@@ -189,3 +189,8 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+try:
+    from school_platform.local_settings import *  # noqa: F403, F401
+except ImportError:
+    pass

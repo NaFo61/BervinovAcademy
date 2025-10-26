@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Bervinov Academy 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-26 06:56+0300\n"
+"POT-Creation-Date: 2025-10-26 08:07+0300\n"
 "PO-Revision-Date: 2025-10-26 07:00+0300\n"
 "Last-Translator: Miron Bervinov <dir_61@bk.ru>\n"
 "Language-Team: Russian <translations@bervinovacademy.com>\n"
@@ -122,25 +122,28 @@ msgid "Russian"
 msgstr "Русский"
 
 #: .\backend\templates\admin\auth\user\change_password.html:5
-#: .\backend\templates\admin\auth\user\change_password.html:15
 msgid "Изменить пароль пользователя"
-msgstr "Change user password"
+msgstr ""
+
+#: .\backend\templates\admin\auth\user\change_password.html:15
+msgid "Change user password"
+msgstr "Изменить пароль пользователя"
 
 #: .\backend\templates\admin\auth\user\change_password.html:57
-msgid "Отмена"
-msgstr "Cancel"
+msgid "Cancel"
+msgstr "Отмена"
 
 #: .\backend\templates\admin\auth\user\change_password.html:58
-msgid "Сохранить пароль"
-msgstr "Save password"
+msgid "Save password"
+msgstr "Сохранить пароль"
 
 #: .\backend\templates\admin\auth\user\change_password.html:63
-msgid "Изменение пароля для пользователя:"
-msgstr "Password change for user:"
+msgid "Password change for user:"
+msgstr "Изменение пароля для пользователя:"
 
 #: .\backend\templates\admin\auth\user\change_password.html:64
-msgid "Логин:"
-msgstr "Username:"
+msgid "Username:"
+msgstr "Логин:"
 
 #: .\backend\templates\admin\index.html:15
 msgid "Dashboard"
@@ -174,12 +177,12 @@ msgstr "Популярные курсы"
 msgid ""
 "Raw passwords are not stored, so there is no way to see this user's "
 "password, but you can change the password using <a href=\"../password/"
-"\">this form</a>."
+"\"><strong>this form</strong></a>."
 msgstr ""
 "Пароль не хранится в открытом виде. Его можно изменить с помощью <a href='../"
-"password/'>этой формы</a>."
+"password/'><strong>этой формы</strong></a>."
 
-#: .\backend\users\admin.py:50 .\backend\users\admin.py:162
+#: .\backend\users\admin.py:50 .\backend\users\admin.py:185
 msgid "Main information"
 msgstr "Основная информация"
 
@@ -191,7 +194,7 @@ msgstr "Личная информация"
 msgid "Permissions"
 msgstr "Права доступа"
 
-#: .\backend\users\admin.py:68 .\backend\users\admin.py:163
+#: .\backend\users\admin.py:68
 msgid "System information"
 msgstr "Системная информация"
 
@@ -211,62 +214,67 @@ msgstr "Ошибка при смене пароля."
 msgid "Change password"
 msgstr "Изменение пароля"
 
-#: .\backend\users\admin.py:137 .\backend\users\admin.py:168
+#: .\backend\users\admin.py:146 .\backend\users\admin.py:190
 msgid "Full name"
 msgstr "Полное имя"
 
-#: .\backend\users\admin.py:141 .\backend\users\admin.py:172
+#: .\backend\users\admin.py:150 .\backend\users\admin.py:194
 #: .\backend\users\models.py:125
 msgid "Email"
 msgstr "Почта"
 
-#: .\backend\users\admin.py:145 .\backend\users\admin.py:176
+#: .\backend\users\admin.py:154 .\backend\users\admin.py:198
 #: .\backend\users\models.py:117
 msgid "Phone"
 msgstr "Телефон"
 
-#: .\backend\users\admin.py:149
+#: .\backend\users\admin.py:158
 msgid "Data joined"
 msgstr "Дата регистрации"
 
-#: .\backend\users\apps.py:36
+#: .\backend\users\apps.py:21
 msgid "Current:"
 msgstr "Текущий"
 
-#: .\backend\users\apps.py:37
+#: .\backend\users\apps.py:22
 msgid "Change:"
 msgstr "Сменить"
 
-#: .\backend\users\apps.py:38
+#: .\backend\users\apps.py:23
 msgid "Clear"
 msgstr "Очистить"
 
-#: .\backend\users\apps.py:40
+#: .\backend\users\apps.py:24
 msgid "Choose file to upload"
-msgstr "Выбрать файл"
+msgstr "Выберите файла для загрузки"
 
-#: .\backend\users\apps.py:67
+#: .\backend\users\apps.py:25
+msgid "Select value"
+msgstr "Выбрать значение"
+
+#: .\backend\users\apps.py:56
 msgid "Search apps and models..."
 msgstr "Поиск по приложениям и моделям..."
 
-#: .\backend\users\apps.py:71
+#: .\backend\users\apps.py:60
 msgid "Type to search"
 msgstr "Введите для поиска"
 
-#: .\backend\users\apps.py:93
+#: .\backend\users\apps.py:82
 msgid "Filters"
 msgstr "Фильтры"
 
-#: .\backend\users\apps.py:94
+#: .\backend\users\apps.py:84
 msgid "Reset filters"
 msgstr "Сбросить фильтры"
 
-#: .\backend\users\apps.py:95
+#: .\backend\users\apps.py:87
 msgid "No results found"
 msgstr "Ничего не найдено"
 
-#: .\backend\users\apps.py:98
-msgid "This page yielded into no results. Create a new item or reset your filters."
+#: .\backend\users\apps.py:94
+msgid ""
+"This page yielded into no results. Create a new item or reset your filters."
 msgstr "Ничего не найдено. Создайте новый элемент или сбросьте фильтры."
 
 #: .\backend\users\models.py:18
@@ -404,12 +412,12 @@ msgstr "Специализация"
 
 #: .\backend\users\models.py:252
 msgid "Primary specialization"
-msgstr "Специализация"
+msgstr "Главная специализация"
 
 #: .\backend\users\models.py:255
-msgid "Experience (years)"
-msgstr "Опыт (года)"
+msgid "Experience (in years)"
+msgstr "Опыт (в годах)"
 
 #: .\backend\users\models.py:258
-msgid "Years of experience"
-msgstr "Лет опыта"
+msgid "How many years experience"
+msgstr "Сколько лет опыта"

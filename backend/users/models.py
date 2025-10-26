@@ -252,10 +252,10 @@ class Mentor(models.Model):
         help_text=_("Primary specialization"),
     )
     experience_years = models.PositiveSmallIntegerField(
-        verbose_name=_("Experience (years)"),
+        verbose_name=_("Experience (in years)"),
         null=True,
         blank=True,
-        help_text=_("Years of experience"),
+        help_text=_("How many years experience"),
     )
 
     class Meta:

@@ -23,7 +23,7 @@ class CustomUserChangeForm(UserChangeForm):
             "Raw passwords are not stored, so there is no "
             "way to see this user's password, "
             "but you can change the password using "
-            '<a href="../password/">this form</a>.'
+            '<a href="../password/"><strong>this form</strong></a>.'
         )
 
 
@@ -160,7 +160,6 @@ class StudentAdmin(ModelAdmin):
         return obj.user.date_joined
 
 
-# ======================== MENTOR ========================
 @admin.register(Mentor)
 class MentorAdmin(ModelAdmin):
     list_display = (
@@ -187,7 +186,6 @@ class MentorAdmin(ModelAdmin):
             _("Main information"),
             {"fields": ("user", "specialization", "experience_years")},
         ),
-        (_("System information"), {"fields": ()}),
     )
 
     @admin.display(description=_("Full name"))

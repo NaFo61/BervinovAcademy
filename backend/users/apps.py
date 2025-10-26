@@ -19,28 +19,25 @@ class UsersConfig(AppConfig):
                 self, name, value, attrs, renderer
             )
             if not isinstance(html, str):
-                try:
-                    html = html.decode("utf-8")
-                except Exception:
-                    html = str(html)
+                html = (
+                    html.decode("utf-8")
+                    if hasattr(html, "decode")
+                    else str(html)
+                )
 
-            current_input_text = getattr(self, "input_text", None)
-            if current_input_text:
+            replacements = {
+                "Current:": _("Current:"),
+                "Change:": _("Change:"),
+                "Clear": _("Clear"),
+                "Choose file to upload": _("Choose file to upload"),
+                "Select value": _("Select value"),  # 🆕 Добавлено!
+            }
+
+            for k, v in replacements.items():
                 try:
-                    repl = str(_(current_input_text))
-                    html = html.replace(current_input_text, repl)
+                    html = html.replace(k, str(v))
                 except Exception:
                     pass
-
-            try:
-                html = html.replace("Current:", str(_("Current:")))
-                html = html.replace("Change:", str(_("Change:")))
-                html = html.replace("Clear", str(_("Clear")))
-                html = html.replace(
-                    "Choose file to upload", str(_("Choose file to upload"))
-                )
-            except Exception:
-                pass
 
             return html
 
