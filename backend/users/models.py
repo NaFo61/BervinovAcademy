@@ -208,8 +208,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.role == "admin" or self.is_superuser
 
     def save(self, *args, **kwargs):
-        if self.is_superuser and self.role != "admin":
-            self.role = "admin"
+        if self.role == "admin":
+            self.is_staff = True
+            self.is_superuser = True
+        elif self.role == "mentor":
+            self.is_staff = True
+            self.is_superuser = False
+        else:  # student
+            self.is_staff = False
+            self.is_superuser = False
 
         self.clean()
         super().save(*args, **kwargs)
@@ -219,3 +226,52 @@ class User(AbstractBaseUser, PermissionsMixin):
         ordering = ["-date_joined", "email"]
         verbose_name = _("User")
         verbose_name_plural = _("Users")
+
+
+class Student(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="student_profile",
+        verbose_name=_("User"),
+    )
+
+    class Meta:
+        db_table = "students"
+        verbose_name = _("Student")
+        verbose_name_plural = _("Students")
+
+    def __str__(self):
+        return self.user.get_full_name() or str(self.user)
+
+
+class Mentor(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="mentor_profile",
+        verbose_name=_("User"),
+    )
+    specialization = models.CharField(
+        verbose_name=_("Specialization"),
+        max_length=255,
+        blank=True,
+        help_text=_("Primary specialization"),
+    )
+    experience_years = models.PositiveSmallIntegerField(
+        verbose_name=_("Experience (in years)"),
+        null=True,
+        blank=True,
+        help_text=_("How many years experience"),
+    )
+
+    class Meta:
+        db_table = "mentors"
+        verbose_name = _("Mentor")
+        verbose_name_plural = _("Mentors")
+
+    def __str__(self):
+        return (
+            f"{self.user.get_full_name() or str(self.user)} "
+            f"({self.specialization or '—'})"
+        )
