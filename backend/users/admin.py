@@ -58,8 +58,6 @@ class CustomUserAdmin(ModelAdmin):
                 "fields": (
                     "role",
                     "is_active",
-                    "groups",
-                    "user_permissions",
                 )
             },
         ),
