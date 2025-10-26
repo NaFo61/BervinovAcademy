@@ -50,7 +50,16 @@ class CustomUserAdmin(ModelAdmin):
         (_("Main information"), {"fields": ("email", "phone", "password")}),
         (
             _("Personal information"),
-            {"fields": ("first_name", "last_name", "avatar", "bio")},
+            {
+                "fields": (
+                    "first_name",
+                    "last_name",
+                    "avatar",
+                    "bio",
+                    "bio_ru",
+                    "bio_en",
+                )
+            },
         ),
         (
             _("Permissions"),

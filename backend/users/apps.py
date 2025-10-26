@@ -9,6 +9,8 @@ class UsersConfig(AppConfig):
     name = "users"
 
     def ready(self):
+        import users.signals  # noqa
+
         # Патчим виджет при загрузке приложения
         _original_clearable_render = ClearableFileInput.render
 

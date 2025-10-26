@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "unfold",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
+    "modeltranslation",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -36,6 +37,15 @@ INSTALLED_APPS = [
     "content",
     "communication",
 ]
+MODELTRANSLATION_DEFAULT_LANGUAGE = "ru"
+MODELTRANSLATION_LANGUAGES = ("ru", "en")
+
+# Опция: включать авто-перевод только при явном включении
+ENABLE_AUTO_TRANSLATION = True
+ALLOW_PII_TRANSLATION = False  # по умолчанию запрещаем перевод имен
+
+CELERY_BROKER_URL = "redis://localhost:6379/0"  # или твой брокер
+CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
 
 UNFOLD = {
     "SHOW_LANGUAGES": True,
