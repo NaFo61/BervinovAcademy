@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 from unfold.forms import UserChangeForm, UserCreationForm
 
-from users.models import Mentor, Student
+from users.models import Mentor, Student, Specialization
 
 User = get_user_model()
 
@@ -136,6 +136,37 @@ class CustomUserAdmin(ModelAdmin):
         return render(request, "admin/auth/user/change_password.html", context)
 
 
+@admin.register(Specialization)
+class SpecializationAdmin(ModelAdmin):
+    list_display = (
+        "type",
+        "title",
+        "is_active",
+    )
+    list_filter = ("type", "is_active")
+    search_fields = ("title", "description")
+    list_editable = ("is_active",)
+    ordering = ("type", "title")
+    icon = "tag"
+
+    fieldsets = (
+        (
+            _("Main information"),
+            {
+                "fields": (
+                    "type",
+                    "title",
+                    "description",
+                    "is_active",
+                )
+            },
+        ),
+    )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related()
+
+
 @admin.register(Student)
 class StudentAdmin(ModelAdmin):
     list_display = (
@@ -177,7 +208,7 @@ class MentorAdmin(ModelAdmin):
     list_display = (
         "id",
         "user_full_name",
-        "specialization",
+        "specialization_display",
         "experience_years",
         "user_email",
         "user_phone",
@@ -185,13 +216,18 @@ class MentorAdmin(ModelAdmin):
     search_fields = (
         "user__first_name",
         "user__last_name",
-        "specialization",
+        "specialization__title",
         "user__email",
         "user__phone",
     )
-    list_filter = ("experience_years", "user__is_active")
+    list_filter = (
+        "experience_years",
+        "user__is_active",
+        "specialization__type",
+    )
     ordering = ("-user__date_joined",)
     icon = "briefcase"
+    autocomplete_fields = ("specialization",)
 
     fieldsets = (
         (
@@ -211,3 +247,19 @@ class MentorAdmin(ModelAdmin):
     @admin.display(description=_("Phone"))
     def user_phone(self, obj):
         return obj.user.phone
+
+    @admin.display(description=_("Specialization"))
+    def specialization_display(self, obj):
+        if obj.specialization:
+            return f"{obj.specialization.type}: {obj.specialization.title}"
+        return "—"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'user', 'specialization'
+        )
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "specialization":
+            kwargs["queryset"] = Specialization.objects.filter(is_active=True)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
