@@ -256,18 +256,44 @@ class Specialization(models.Model):
         ("business", _("Business")),
         ("other", _("Other")),
     ]
+    STATUS_CHOICES = [
+        ("pending", _("Pending")),
+        ("completed", _("Completed")),
+        ("failed", _("Failed")),
+    ]
 
     type = models.CharField(
-        verbose_name=_("Specialization Type"),
+        verbose_name=_("Specialization type"),
         max_length=50,
         choices=TYPE_CHOICES,
         default="web",
         help_text=_("Type of specialization")
     )
     title = models.CharField(
-        verbose_name=_("Specialization Title"),
+        verbose_name=_("Specialization title"),
         max_length=255,
         help_text=_("Title of the specialization")
+    )
+    title_ru = models.CharField(
+        verbose_name=_("Russian specialization title"),
+        max_length=255,
+        help_text=_("Title of the specialization in russian"),
+        null=True,
+        blank=True,
+    )
+    title_en = models.CharField(
+        verbose_name=_("English specialization title"),
+        max_length=255,
+        help_text=_("Title of the specialization in english"),
+        null=True,
+        blank=True,
+    )
+    translation_status = models.CharField(
+        verbose_name=_("Translation status"),
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending",
+        help_text=_("Set status of translation")
     )
     description = models.TextField(
         verbose_name=_("Description"),
@@ -279,7 +305,17 @@ class Specialization(models.Model):
         default=True,
         help_text=_("Is this specialization active")
     )
+    updated_at = models.DateTimeField(
+        verbose_name=_("Updated at"),
+        auto_now=True
+    )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._title = self.title
+
+    def has_title_changed(self):
+        return self._title != self.title
 
     class Meta:
         db_table = "specializations"

@@ -145,6 +145,7 @@ class SpecializationAdmin(ModelAdmin):
     )
     list_filter = ("type", "is_active")
     search_fields = ("title", "description")
+    readonly_fields = ("title_ru", "title_en")
     list_editable = ("is_active",)
     ordering = ("type", "title")
     icon = "tag"
@@ -158,6 +159,15 @@ class SpecializationAdmin(ModelAdmin):
                     "title",
                     "description",
                     "is_active",
+                )
+            },
+        ),
+        (
+            _("Lang info"),
+            {
+                "fields": (
+                    "title_ru",
+                    "title_en",
                 )
             },
         ),
