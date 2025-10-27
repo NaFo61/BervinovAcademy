@@ -91,12 +91,12 @@ UNFOLD = {
                     },
                     {
                         "title": _("Students"),
-                        "icon": "person",
+                        "icon": "elderly_woman",
                         "link": "/admin/users/student/",
                     },
                     {
                         "title": _("Specialization"),
-                        "icon": "person",
+                        "icon": "people",
                         "link": "/admin/users/specialization/",
                     },
                 ],
