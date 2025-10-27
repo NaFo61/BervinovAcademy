@@ -76,6 +76,8 @@ UNFOLD = {
         "navigation": [
             {
                 "title": _("Users"),
+                "separator": True,  # Top border
+                "collapsible": True,  # Collapsible group of links
                 "items": [
                     {
                         "title": _("Users"),

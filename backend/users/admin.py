@@ -1,3 +1,4 @@
+# admin.py
 from django.contrib import admin, messages
 from django.contrib.auth import get_user_model, update_session_auth_hash
 from django.contrib.auth.forms import AdminPasswordChangeForm
@@ -81,6 +82,21 @@ class CustomUserAdmin(ModelAdmin):
             },
         ),
     )
+
+    def get_fieldsets(self, request, obj=None):
+        if not obj:
+            return self.add_fieldsets
+        return super().get_fieldsets(request, obj)
+
+    def get_form(self, request, obj=None, **kwargs):
+        """
+        Use special form during user creation
+        """
+        defaults = {}
+        if obj is None:
+            defaults["form"] = self.add_form
+        defaults.update(kwargs)
+        return super().get_form(request, obj, **defaults)
 
     def get_urls(self):
         urls = super().get_urls()
