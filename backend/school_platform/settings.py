@@ -94,6 +94,11 @@ UNFOLD = {
                         "icon": "person",
                         "link": "/admin/users/student/",
                     },
+                    {
+                        "title": _("Specialization"),
+                        "icon": "person",
+                        "link": "/admin/users/specialization/",
+                    },
                 ],
             },
         ],
