@@ -22,7 +22,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile  # путь правильный, менять не нужно
+      dockerfile: backend/Dockerfile
     container_name: bervinov-academy-backend
     command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     volumes:
