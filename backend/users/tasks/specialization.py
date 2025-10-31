@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404
 
 from users.models import Specialization
 
+
 def translate_specialization_title(specialization_id):
     specialization = get_object_or_404(Specialization, id=specialization_id)
     title = specialization.title

@@ -245,7 +245,6 @@ class Student(models.Model):
         return self.user.get_full_name() or str(self.user)
 
 
-
 class Specialization(models.Model):
     TYPE_CHOICES = [
         ("web", _("WEB Development")),
@@ -267,12 +266,12 @@ class Specialization(models.Model):
         max_length=50,
         choices=TYPE_CHOICES,
         default="web",
-        help_text=_("Type of specialization")
+        help_text=_("Type of specialization"),
     )
     title = models.CharField(
         verbose_name=_("Specialization title"),
         max_length=255,
-        help_text=_("Title of the specialization")
+        help_text=_("Title of the specialization"),
     )
     title_ru = models.CharField(
         verbose_name=_("Russian specialization title"),
@@ -293,21 +292,20 @@ class Specialization(models.Model):
         max_length=20,
         choices=STATUS_CHOICES,
         default="pending",
-        help_text=_("Set status of translation")
+        help_text=_("Set status of translation"),
     )
     description = models.TextField(
         verbose_name=_("Description"),
         blank=True,
-        help_text=_("Detailed description of the specialization")
+        help_text=_("Detailed description of the specialization"),
     )
     is_active = models.BooleanField(
         verbose_name=_("Active"),
         default=True,
-        help_text=_("Is this specialization active")
+        help_text=_("Is this specialization active"),
     )
     updated_at = models.DateTimeField(
-        verbose_name=_("Updated at"),
-        auto_now=True
+        verbose_name=_("Updated at"), auto_now=True
     )
 
     def __init__(self, *args, **kwargs):

@@ -10,6 +10,7 @@ class UsersConfig(AppConfig):
 
     def ready(self):
         from . import signals  # noqa
+
         # Патчим виджет при загрузке приложения
         _original_clearable_render = ClearableFileInput.render
 

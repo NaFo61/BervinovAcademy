@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 from unfold.forms import UserChangeForm, UserCreationForm
 
-from users.models import Mentor, Student, Specialization
+from users.models import Mentor, Specialization, Student
 
 User = get_user_model()
 
@@ -265,8 +265,10 @@ class MentorAdmin(ModelAdmin):
         return "—"
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            'user', 'specialization'
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("user", "specialization")
         )
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
