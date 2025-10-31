@@ -1,3 +1,6 @@
+import time
+
+from celery import shared_task
 from django.shortcuts import get_object_or_404
 
 from users.models import Specialization
@@ -16,3 +19,11 @@ def translate_specialization_title(specialization_id):
         specialization.title_en = title
         specialization.title_ru = title_ru
     specialization.save()
+
+
+@shared_task
+def test_task():
+    print("⏳ Запуск тестовой задачи...")
+    time.sleep(3)
+    print("✅ Задача выполнена!")
+    return "done"
