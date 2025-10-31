@@ -1,26 +1,28 @@
+version: "3.8"
+
 services:
   db:
     image: postgres:15-alpine
     container_name: bervinov-academy-db
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"  # внешний:внутренний
     env_file: .env
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
       retries: 5
+      timeout: 5s
 
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: backend/Dockerfile  # путь правильный, менять не нужно
     container_name: bervinov-academy-backend
     command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     volumes:
