@@ -8,6 +8,8 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from translations.mixins import AutoTranslateMixin
+
 
 class CustomUserManager(BaseUserManager):
     def create_user(
@@ -245,7 +247,7 @@ class Student(models.Model):
         return self.user.get_full_name() or str(self.user)
 
 
-class Specialization(models.Model):
+class Specialization(AutoTranslateMixin, models.Model):
     TYPE_CHOICES = [
         ("web", _("WEB Development")),
         ("mobile", _("Mobile Development")),
@@ -273,27 +275,6 @@ class Specialization(models.Model):
         max_length=255,
         help_text=_("Title of the specialization"),
     )
-    title_ru = models.CharField(
-        verbose_name=_("Russian specialization title"),
-        max_length=255,
-        help_text=_("Title of the specialization in russian"),
-        null=True,
-        blank=True,
-    )
-    title_en = models.CharField(
-        verbose_name=_("English specialization title"),
-        max_length=255,
-        help_text=_("Title of the specialization in english"),
-        null=True,
-        blank=True,
-    )
-    translation_status = models.CharField(
-        verbose_name=_("Translation status"),
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default="pending",
-        help_text=_("Set status of translation"),
-    )
     description = models.TextField(
         verbose_name=_("Description"),
         blank=True,
@@ -304,16 +285,7 @@ class Specialization(models.Model):
         default=True,
         help_text=_("Is this specialization active"),
     )
-    updated_at = models.DateTimeField(
-        verbose_name=_("Updated at"), auto_now=True
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._title = self.title
-
-    def has_title_changed(self):
-        return self._title != self.title
+    translatable_fields = ["title", "description"]
 
     class Meta:
         db_table = "specializations"
