@@ -143,38 +143,38 @@ class SpecializationAdmin(ModelAdmin):
         "title",
         "is_active",
     )
-    list_filter = ("type", "is_active")
+    # list_filter = ("type", "is_active")
     search_fields = ("title", "description")
-    readonly_fields = ("title_ru", "title_en")
-    list_editable = ("is_active",)
-    ordering = ("type", "title")
-    icon = "tag"
-
-    fieldsets = (
-        (
-            _("Main information"),
-            {
-                "fields": (
-                    "type",
-                    "title",
-                    "description",
-                    "is_active",
-                )
-            },
-        ),
-        (
-            _("Lang info"),
-            {
-                "fields": (
-                    "title_ru",
-                    "title_en",
-                )
-            },
-        ),
-    )
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related()
+    # readonly_fields = ("title_ru", "title_en")
+    # list_editable = ("is_active",)
+    # ordering = ("type", "title")
+    # icon = "tag"
+    #
+    # fieldsets = (
+    #     (
+    #         _("Main information"),
+    #         {
+    #             "fields": (
+    #                 "type",
+    #                 "title",
+    #                 "description",
+    #                 "is_active",
+    #             )
+    #         },
+    #     ),
+    #     (
+    #         _("Lang info"),
+    #         {
+    #             "fields": (
+    #                 "title_ru",
+    #                 "title_en",
+    #             )
+    #         },
+    #     ),
+    # )
+    #
+    # def get_queryset(self, request):
+    #     return super().get_queryset(request).select_related()
 
 
 @admin.register(Student)
