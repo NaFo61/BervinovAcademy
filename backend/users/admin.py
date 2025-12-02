@@ -120,7 +120,9 @@ class CustomUserAdmin(ModelAdmin):
             if form.is_valid():
                 form.save()
                 update_session_auth_hash(request, user)
-                messages.success(request, _("Password successfully changed ✅"))
+                messages.success(
+                    request, _("Password successfully changed ✅")
+                )
                 return redirect(reverse("admin:users_user_changelist"))
             else:
                 messages.error(request, _("Error while changing password."))

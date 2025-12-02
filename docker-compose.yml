@@ -34,7 +34,10 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: bervinov-academy-backend
-    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    command: >
+      sh -c "python manage.py compilemessages -l ru &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
     volumes:
       - ./backend:/app
     ports:
@@ -51,7 +54,9 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: bervinov-academy-celery
-    command: celery -A school_platform worker --loglevel=info
+    command: >
+      sh -c "python manage.py compilemessages -l ru &&
+             celery -A school_platform worker --loglevel=info"
     volumes:
       - ./backend:/app
     env_file: .env
@@ -64,7 +69,9 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: bervinov-academy-celery-beat
-    command: celery -A school_platform beat --loglevel=info
+    command: >
+      sh -c "python manage.py compilemessages -l ru &&
+             celery -A school_platform beat --loglevel=info"
     volumes:
       - ./backend:/app
     env_file: .env
