@@ -12,3 +12,4 @@ celery==5.5.3
 redis==7.0.1
 googletrans==4.0.0-rc1
 django-modeltranslation
+Faker==38.2.0

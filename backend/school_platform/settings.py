@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "content",
     "communication",
     "translations",
+    "fixture",
 ]
 
 UNFOLD = {
