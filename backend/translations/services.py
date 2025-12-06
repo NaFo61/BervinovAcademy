@@ -12,10 +12,7 @@ class TranslationService:
             context=context,
         ).first()
 
-        if existing and existing.is_approved:
-            return existing.target_text
-
-        if existing and existing.target_text:
+        if existing:
             return existing.target_text
 
         # Если нет перевода — отправляем в Celery

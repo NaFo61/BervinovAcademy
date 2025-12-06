@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from faker import Faker
 
+from translations.models import TranslationMemory
 from users.models import Mentor, Specialization, Student
 
 User = get_user_model()
@@ -38,6 +39,7 @@ class Command(BaseCommand):
     def clear_data(self):
         User.objects.all().delete()
         Specialization.objects.all().delete()
+        TranslationMemory.objects.all().delete()
 
     def create_superuser(self):
         User.objects.create_superuser(

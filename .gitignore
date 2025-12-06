@@ -211,3 +211,8 @@ __marimo__/
 # Django
 /media/
 staticfiles/
+
+
+web_development_logs.py
+web_development_logs.txt
+web_development_logs_w.txt

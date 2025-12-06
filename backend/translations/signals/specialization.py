@@ -6,4 +6,4 @@ from users.models import Specialization
 
 @receiver(post_save, sender=Specialization)
 def auto_translate_specialization(sender, instance, created, **kwargs):
-    instance.auto_translate_fields(created=created)
+    instance.auto_translate_fields()

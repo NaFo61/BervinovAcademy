@@ -141,7 +141,6 @@ class CustomUserAdmin(ModelAdmin):
 @admin.register(Specialization)
 class SpecializationAdmin(ModelAdmin):
     list_display = (
-        "type",
         "title",
         "is_active",
     )

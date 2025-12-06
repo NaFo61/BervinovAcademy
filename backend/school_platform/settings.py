@@ -102,6 +102,11 @@ UNFOLD = {
                         "icon": "people",
                         "link": "/admin/users/specialization/",
                     },
+                    {
+                        "title": _("Translation"),
+                        "icon": "people",
+                        "link": "/admin/translations/translationmemory/",
+                    },
                 ],
             },
         ],

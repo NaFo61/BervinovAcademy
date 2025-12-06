@@ -1,7 +1,11 @@
+import logging
+
 from celery import shared_task
 from googletrans import Translator
 
 from translations.models import TranslationMemory
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task(bind=True, max_retries=3)
@@ -16,9 +20,18 @@ def translate_text(self, source_text, source_lang, target_lang, context=None):
             target_lang=target_lang,
             context=context,
         ).first()
+        logger.info(
+            f"translate_text вызвался {source_text[:30]} ({source_lang}) "
+            f"-> {target_lang}"
+        )
 
         if existing:
+            logger.info(
+                f"translate_text {existing = } | {existing.target_text[:30]}"
+            )
             return existing.target_text
+        else:
+            logger.info(f"translate_text {existing = }")
 
         translated = translator.translate(
             source_text, src=source_lang, dest=target_lang
