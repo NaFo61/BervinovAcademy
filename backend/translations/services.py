@@ -1,3 +1,6 @@
+from django.db import transaction
+
+
 class TranslationService:
     @staticmethod
     def get_translation(text, source_lang, target_lang, context=None):
@@ -16,5 +19,10 @@ class TranslationService:
             return existing.target_text
 
         # Если нет перевода — отправляем в Celery
-        translate_text.delay(text, source_lang, target_lang, context)
-        return None  # можно вернуть "в процессе"
+        # translate_text.delay(text, source_lang, target_lang, context)
+        transaction.on_commit(
+            lambda: translate_text.delay(
+                text, source_lang, target_lang, context
+            )
+        )
+        return "в процессе"  # можно вернуть "в процессе"

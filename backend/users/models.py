@@ -294,7 +294,7 @@ class Specialization(AutoTranslateMixin, models.Model):
         verbose_name_plural = _("Specializations")
 
     def __str__(self):
-        return f"{self.get_type_display()}: {self.title}"
+        return f"{self.title}"
 
 
 class Mentor(models.Model):

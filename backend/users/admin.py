@@ -1,4 +1,3 @@
-# admin.py
 from django.contrib import admin, messages
 from django.contrib.auth import get_user_model, update_session_auth_hash
 from django.contrib.auth.forms import AdminPasswordChangeForm
@@ -140,42 +139,74 @@ class CustomUserAdmin(ModelAdmin):
 
 @admin.register(Specialization)
 class SpecializationAdmin(ModelAdmin):
-    list_display = (
-        "title",
-        "is_active",
+    list_display = ("display_title", "is_active")
+    search_fields = (
+        "title_ru",
+        "title_en",
+        "description_ru",
+        "description_en",
     )
-    # list_filter = ("type", "is_active")
-    search_fields = ("title", "description")
-    # readonly_fields = ("title_ru", "title_en")
-    # list_editable = ("is_active",)
-    # ordering = ("type", "title")
-    # icon = "tag"
-    #
-    # fieldsets = (
-    #     (
-    #         _("Main information"),
-    #         {
-    #             "fields": (
-    #                 "type",
-    #                 "title",
-    #                 "description",
-    #                 "is_active",
-    #             )
-    #         },
-    #     ),
-    #     (
-    #         _("Lang info"),
-    #         {
-    #             "fields": (
-    #                 "title_ru",
-    #                 "title_en",
-    #             )
-    #         },
-    #     ),
-    # )
-    #
-    # def get_queryset(self, request):
-    #     return super().get_queryset(request).select_related()
+    list_filter = ("is_active",)
+
+    @admin.display(description=_("Title"), ordering="title")
+    def display_title(self, obj):
+        lang = getattr(self, "_current_language", "en")
+        if lang == "ru":
+            return obj.title_ru or obj.title or "-"
+        return obj.title_en or obj.title or "-"
+
+    def get_fieldsets(self, request, obj=None):
+        self._current_language = request.LANGUAGE_CODE
+        lang = self._current_language
+
+        # -----------------------------------------------------
+        # 🔥 1. Если создаём новую специализацию — показываем только:
+        # title, description, is_active
+        # -----------------------------------------------------
+        if obj is None:
+            return (
+                (
+                    _("Create specialization"),
+                    {"fields": ["title", "description", "is_active"]},
+                ),
+            )
+
+        # -----------------------------------------------------
+        # 🔥 2. Если редактируем — как раньше
+        # -----------------------------------------------------
+        if lang == "ru":
+            main_fields = ["is_active", "title_ru", "description_ru"]
+        else:
+            main_fields = ["is_active", "title_en", "description_en"]
+
+        main_title = _("Main information")
+
+        fieldsets = (
+            (main_title, {"fields": main_fields}),
+            (
+                _("All language versions (editing)"),
+                {
+                    "fields": [
+                        "title",
+                        "description",
+                        "title_ru",
+                        "title_en",
+                        "description_ru",
+                        "description_en",
+                    ],
+                    "classes": ("collapse",),
+                    "description": _(
+                        "You can edit all language versions here."
+                    ),
+                },
+            ),
+        )
+
+        return fieldsets
+
+    def changelist_view(self, request, extra_context=None):
+        self._current_language = request.LANGUAGE_CODE
+        return super().changelist_view(request, extra_context)
 
 
 @admin.register(Student)

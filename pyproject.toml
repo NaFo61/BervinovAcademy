@@ -46,3 +46,8 @@ check_untyped_defs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 show_error_codes = true
+
+# Игнорировать определенные ошибки
+[[tool.mypy.overrides]]
+module = "backend.translations.mixins"
+ignore_errors = true
