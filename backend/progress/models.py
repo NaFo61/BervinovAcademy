@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils.text import slugify
 from django.conf import settings
-
+from unidecode import unidecode
 
 class Technology(models.Model):
     """Технологии"""
@@ -15,22 +15,20 @@ class Technology(models.Model):
     def __str__(self):
         return self.name
 
-
 class Course(models.Model):
     """Курсы"""
     title = models.CharField(max_length=200, verbose_name="Название курса")
     slug = models.SlugField(max_length=200, unique=True, verbose_name="URL-адрес")
     description = models.TextField(verbose_name="Описание")
-    cover_image = models.ImageField(
+    image = models.ImageField(
         upload_to='courses/covers/',
         verbose_name="Обложка курса",
         null=True,
         blank=True
     )
-    is_public = models.BooleanField(default=False, verbose_name="Опубликован")
     is_active = models.BooleanField(default=True, verbose_name="Активен")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+    # updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
 
     class Meta:
         verbose_name = "Курс"
@@ -42,9 +40,9 @@ class Course(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.title)
+            # Просто создаем slug из названия через unidecode
+            self.slug = slugify(unidecode(self.title))
         super().save(*args, **kwargs)
-
 
 class Module(models.Model):
     """Модули курса"""
@@ -103,7 +101,7 @@ class MentorTechnology(models.Model):
     )
     technology = models.ForeignKey(
         Technology,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name='mentors',
         verbose_name="Технология"
     )
@@ -111,7 +109,6 @@ class MentorTechnology(models.Model):
     class Meta:
         verbose_name = "Технология ментора"
         verbose_name_plural = "Технологии менторов"
-        unique_together = ['mentor', 'technology']  # Один ментор - одна запись по технологии
 
     def __str__(self):
         return f"{self.mentor.username} - {self.technology.name}"
@@ -127,7 +124,7 @@ class CourseTechnology(models.Model):
     )
     technology = models.ForeignKey(
         Technology,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name='courses',
         verbose_name="Технология"
     )
@@ -135,7 +132,6 @@ class CourseTechnology(models.Model):
     class Meta:
         verbose_name = "Технология курса"
         verbose_name_plural = "Технологии курсов"
-        unique_together = ['course', 'technology']  # Один курс - одна запись по технологии
 
     def __str__(self):
         return f"{self.course.title} - {self.technology.name}"
