@@ -1,12 +1,4 @@
 from django.db import models
-from django.contrib.auth import get_user_model
-
-
-class Tecnology(models.Model):
-    id = models.ForeignKey(User, on_delete=models.CASCADE)
-
-
-from django.db import models
 from django.utils.text import slugify
 from django.conf import settings
 
