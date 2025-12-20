@@ -3,6 +3,7 @@ from pathlib import Path
 from decouple import config
 from django.core.management.utils import get_random_secret_key
 from django.templatetags.static import static
+from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -39,7 +40,6 @@ INSTALLED_APPS = [
     "translations",
     "fixture",
 ]
-
 UNFOLD = {
     "SHOW_LANGUAGES": True,
     "LANGUAGES": {
@@ -78,6 +78,18 @@ UNFOLD = {
         "show_navigation": True,
         "navigation": [
             {
+                "title": _("Dashboard"),
+                "separator": True,
+                "collapsible": False,
+                "items": [
+                    {
+                        "title": _("Dashboard"),
+                        "icon": "dashboard",
+                        "link": reverse_lazy("admin:index"),
+                    },
+                ],
+            },
+            {
                 "title": _("Users"),
                 "separator": True,
                 "collapsible": True,
@@ -102,9 +114,43 @@ UNFOLD = {
                         "icon": "people",
                         "link": "/admin/users/specialization/",
                     },
+                ],
+            },
+            {
+                "title": _("Education"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
                     {
-                        "title": _("Translation"),
-                        "icon": "people",
+                        "title": _("Courses"),
+                        "icon": "school",
+                        "link": "/admin/content/course/",
+                    },
+                    {
+                        "title": _("Modules"),
+                        "icon": "list_alt",
+                        "link": "/admin/content/module/",
+                    },
+                    {
+                        "title": _("Lessons"),
+                        "icon": "article",
+                        "link": "/admin/content/lessontheory/",
+                    },
+                    {
+                        "title": _("Technologies"),
+                        "icon": "science",
+                        "link": "/admin/content/technology/",
+                    },
+                ],
+            },
+            {
+                "title": _("Localization"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Translation Memory"),
+                        "icon": "language",
                         "link": "/admin/translations/translationmemory/",
                     },
                 ],
