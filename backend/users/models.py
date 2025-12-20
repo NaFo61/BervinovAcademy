@@ -8,6 +8,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from content.models import Technology
 from translations.mixins import AutoTranslateMixin
 
 
@@ -317,6 +318,12 @@ class Mentor(models.Model):
         null=True,
         blank=True,
         help_text=_("How many years experience"),
+    )
+    technology = models.ManyToManyField(
+        Technology,
+        blank=True,
+        verbose_name=_("Technologies"),
+        related_name="mentors",
     )
 
     class Meta:

@@ -131,9 +131,27 @@ class CourseAdmin(ModelAdmin):
         lessons = LessonTheory.objects.filter(module__course=obj).count()
 
         stats_html = f"""
-        <div style="padding: 10px; background: #f8f9fa; border-radius: 5px;">
-            <div><strong>{_('Modules')}:</strong> {modules}</div>
-            <div><strong>{_('Lessons')}:</strong> {lessons}</div>
+        <div style="
+            padding: 0.75rem;
+            background: var(--primary-bg);
+            border-radius: 0.375rem;
+            border: 1px solid var(--border-color);
+            font-size: 0.875rem;
+        ">
+            <div style="margin-bottom: 0.25rem;">
+                <strong style="color: var(--primary-text);">
+                {_('Modules')}:
+                </strong>
+                <span style="color: var(--secondary-text);">
+                {modules}
+                </span>
+            </div>
+            <div>
+                <strong style="color: var(--primary-text);">
+                {_('Lessons')}:
+                </strong>
+                <span style="color: var(--secondary-text);">{lessons}</span>
+            </div>
         </div>
         """
         return format_html(stats_html)
@@ -435,11 +453,31 @@ class LessonTheoryAdmin(ModelAdmin):
     @admin.display(description=_("Information"))
     def created_info(self, obj):
         info_html = f"""
-        <div style="padding: 10px; background: #f8f9fa; border-radius: 5px;">
-            <div>
-            <strong>{_('Course')}:</strong> {obj.module.course.title}
+        <div style="
+            padding: 0.75rem;
+            background: var(--primary-bg);
+            border-radius: 0.375rem;
+            border: 1px solid var(--border-color);
+            font-size: 0.875rem;
+        ">
+            <div style="margin-bottom: 0.5rem;">
+                <strong style="color: var(--primary-text);">
+                {_('Course')}:
+                </strong>
+                <span style="color:
+                var(--secondary-text); margin-left: 0.25rem;">
+                    {obj.module.course.title}
+                </span>
             </div>
-            <div><strong>{_('Module')}:</strong> {obj.module.title}</div>
+            <div>
+                <strong style="color: var(--primary-text);">
+                {_('Module')}:
+                </strong>
+                <span style="color: var(--secondary-text);
+                margin-left: 0.25rem;">
+                    {obj.module.title}
+                </span>
+            </div>
         </div>
         """
         return format_html(info_html)

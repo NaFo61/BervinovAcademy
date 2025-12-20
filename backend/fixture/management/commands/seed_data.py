@@ -48,11 +48,15 @@ class Command(BaseCommand):
             self.create_specializations()
             specializations = list(Specialization.objects.all())
 
-            self.create_mentors(specializations)
+            # Создаем технологии ДО создания менторов
+            technologies = self.create_technologies()
+
+            self.create_mentors(
+                specializations, technologies
+            )  # ✅ Передаем технологии
             self.create_students()
 
             # Создаем курсы и связанные данные
-            technologies = self.create_technologies()
             self.create_courses(
                 count=options["courses_count"],
                 technologies=technologies,
@@ -136,7 +140,8 @@ class Command(BaseCommand):
             )
         )
 
-    def create_mentors(self, specializations):
+    def create_mentors(self, specializations, technologies):
+        """Создает менторов с технологиями"""
         russian_names = [
             ("Иван", "Иванов"),
             ("Петр", "Петров"),
@@ -149,6 +154,41 @@ class Command(BaseCommand):
             ("Елена", "Еленова"),
             ("Ольга", "Ольгова"),
         ]
+
+        # Маппинг специализаций к соответствующим технологиям
+        specialization_tech_map = {
+            "web": [
+                "JavaScript",
+                "React",
+                "Vue.js",
+                "Node.js",
+                "TypeScript",
+                "HTML/CSS",
+            ],
+            "mobile": ["React Native", "Flutter", "Kotlin", "Swift", "Java"],
+            "data": [
+                "Python",
+                "TensorFlow",
+                "PyTorch",
+                "Pandas",
+                "NumPy",
+                "Scikit-learn",
+            ],
+            "design": [
+                "Figma",
+                "Adobe XD",
+                "Sketch",
+                "Photoshop",
+                "Illustrator",
+            ],
+            "marketing": [
+                "SEO",
+                "Google Analytics",
+                "Facebook Ads",
+                "Email Marketing",
+            ],
+            "business": ["Excel", "SQL", "Tableau", "Power BI", "Python"],
+        }
 
         for i in range(5):
             has_email = random.choice([True, False])
@@ -177,12 +217,64 @@ class Command(BaseCommand):
             specialization = (
                 random.choice(specializations) if specializations else None
             )
-            Mentor.objects.create(
+
+            # Создаем ментора
+            mentor = Mentor.objects.create(
                 user=user,
                 specialization=specialization,
                 experience_years=random.randint(3, 15),
             )
         self.stdout.write(self.style.SUCCESS("Создано 5 менторов"))
+
+            # Добавляем технологии ментору
+            if specialization:
+                # Получаем технологии, связанные со специализацией ментора
+                specialization_type = specialization.type
+                relevant_tech_names = specialization_tech_map.get(
+                    specialization_type, []
+                )
+
+                # Ищем соответствующие объекты Technology
+                relevant_technologies = []
+                for tech_name in relevant_tech_names:
+                    # Пытаемся найти технологию по имени
+                    tech = Technology.objects.filter(name=tech_name).first()
+                    if tech:
+                        relevant_technologies.append(tech)
+                    else:
+                        # Если технологии нет, создаем ее
+                        tech = Technology.objects.create(name=tech_name)
+                        relevant_technologies.append(tech)
+
+                # Добавляем случайные технологии из общих технологий
+                additional_technologies = random.sample(
+                    list(technologies),
+                    k=min(random.randint(1, 3), len(technologies)),
+                )
+
+                # Объединяем и добавляем все технологии ментору
+                all_technologies = list(
+                    set(relevant_technologies + additional_technologies)
+                )
+                mentor.technology.set(all_technologies[: random.randint(2, 5)])
+            else:
+                # Если нет специализации, добавляем случайные технологии
+                mentor_technologies = random.sample(
+                    list(technologies),
+                    k=min(random.randint(2, 5), len(technologies)),
+                )
+                mentor.technology.set(mentor_technologies)
+
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Создан ментор {first_name} {last_name} "
+                    f"с {mentor.technology.count()} технологиями"
+                )
+            )
+
+        self.stdout.write(
+            self.style.SUCCESS("Создано 5 менторов с технологиями")
+        )
 
     def create_students(self):
         russian_names = [
@@ -257,6 +349,28 @@ class Command(BaseCommand):
             "React Native",
             "Go",
             "Rust",
+            # Дополнительные технологии для разных специализаций
+            "HTML/CSS",
+            "Figma",
+            "Adobe XD",
+            "Sketch",
+            "Photoshop",
+            "Illustrator",
+            "SEO",
+            "Google Analytics",
+            "Facebook Ads",
+            "Email Marketing",
+            "Excel",
+            "SQL",
+            "Tableau",
+            "Power BI",
+            "Unity",
+            "C#",
+            "C++",
+            "PHP",
+            "Laravel",
+            "Ruby",
+            "Rails",
         ]
 
         tech_objects = []

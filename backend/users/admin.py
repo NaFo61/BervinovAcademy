@@ -252,6 +252,7 @@ class MentorAdmin(ModelAdmin):
         "user_full_name",
         "specialization_display",
         "experience_years",
+        "technologies_list",
         "user_email",
         "user_phone",
     )
@@ -261,20 +262,30 @@ class MentorAdmin(ModelAdmin):
         "specialization__title",
         "user__email",
         "user__phone",
+        "technology__name",
     )
     list_filter = (
         "experience_years",
         "user__is_active",
         "specialization__type",
+        "technology",
     )
     ordering = ("-user__date_joined",)
     icon = "briefcase"
     autocomplete_fields = ("specialization",)
+    filter_horizontal = ("technology",)
 
     fieldsets = (
         (
             _("Main information"),
-            {"fields": ("user", "specialization", "experience_years")},
+            {
+                "fields": (
+                    "user",
+                    "specialization",
+                    "experience_years",
+                    "technology",
+                )
+            },
         ),
     )
 
@@ -296,11 +307,36 @@ class MentorAdmin(ModelAdmin):
             return f"{obj.specialization.type}: {obj.specialization.title}"
         return "—"
 
+    @admin.display(description=_("Technologies"))
+    def technologies_list(self, obj):
+        technologies = obj.technology.all()
+        if not technologies:
+            return "—"
+
+        from django.urls import reverse
+        from django.utils.html import format_html
+
+        tech_links = []
+        for tech in technologies[:3]:
+            url = reverse("admin:content_technology_change", args=[tech.id])
+            tech_links.append(f'<a href="{url}">{tech.name}</a>')
+
+        result = ", ".join(tech_links)
+        if technologies.count() > 3:
+            result += (
+                '<span style="color: #666;">'
+                f"(+{technologies.count() - 3})"
+                "</span>"
+            )
+
+        return format_html(result)
+
     def get_queryset(self, request):
         return (
             super()
             .get_queryset(request)
             .select_related("user", "specialization")
+            .prefetch_related("technology")
         )
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
