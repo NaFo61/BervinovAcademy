@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Bervinov Academy 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-06 04:47+0300\n"
+"POT-Creation-Date: 2025-12-20 05:06+0300\n"
 "PO-Revision-Date: 2025-10-26 07:00+0300\n"
 "Last-Translator: Miron Bervinov <dir_61@bk.ru>\n"
 "Language-Team: Russian <translations@bervinovacademy.com>\n"
@@ -19,267 +19,450 @@ msgstr ""
 "n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || "
 "(n%100>=11 && n%100<=14)? 2 : 3);\n"
 
-#: .\backend\school_platform\admin\views.py:18
-msgid "Jan"
-msgstr "Янв"
+#: .\content\admin.py:22
+msgid "Number of courses"
+msgstr "Номер курсов"
 
-#: .\backend\school_platform\admin\views.py:19
-msgid "Feb"
-msgstr "Фев"
+#: .\content\admin.py:30
+msgid "Is used"
+msgstr "Использьуется ли"
 
-#: .\backend\school_platform\admin\views.py:20
-msgid "Mar"
-msgstr "Мар"
+#: .\content\admin.py:61 .\content\admin.py:244 .\content\admin.py:355
+#: .\users\admin.py:50 .\users\admin.py:182 .\users\admin.py:276
+msgid "Main information"
+msgstr "Основная информация"
 
-#: .\backend\school_platform\admin\views.py:21
-msgid "Apr"
-msgstr "Апр"
+#: .\content\admin.py:74 .\content\admin.py:117 .\content\admin.py:256
+msgid "Statistics"
+msgstr "Статистики"
 
-#: .\backend\school_platform\admin\views.py:22
-msgid "May"
-msgstr "Май"
+#: .\content\admin.py:81
+msgid "Dates"
+msgstr "Даты"
 
-#: .\backend\school_platform\admin\views.py:23
-msgid "Jun"
-msgstr "Июн"
+#: .\content\admin.py:89 .\content\models.py:19 .\content\models.py:57
+#: .\school_platform\settings.py:140
+msgid "Technologies"
+msgstr "Технологии"
 
-#: .\backend\school_platform\admin\views.py:24
-msgid "Jul"
-msgstr "Июл"
+#: .\content\admin.py:106 .\content\admin.py:124 .\content\models.py:104
+#: .\school_platform\settings.py:130
+msgid "Modules"
+msgstr "Модули"
 
-#: .\backend\school_platform\admin\views.py:25
-msgid "Aug"
-msgstr "Авг"
+#: .\content\admin.py:125 .\content\admin.py:269
+#: .\school_platform\settings.py:135
+msgid "Lessons"
+msgstr "Уроки"
 
-#: .\backend\school_platform\admin\views.py:26
-msgid "Sep"
-msgstr "Сен"
-
-#: .\backend\school_platform\admin\views.py:27
-msgid "Oct"
-msgstr "Окт"
-
-#: .\backend\school_platform\admin\views.py:28
-msgid "Nov"
-msgstr "Ноя"
-
-#: .\backend\school_platform\admin\views.py:29
-msgid "Dec"
-msgstr "Дек"
-
-#: .\backend\school_platform\admin\views.py:33
-msgid "Python"
-msgstr "Python"
-
-#: .\backend\school_platform\admin\views.py:34
-msgid "Django"
-msgstr "Django"
-
-#: .\backend\school_platform\admin\views.py:35
-msgid "JavaScript"
-msgstr "JavaScript"
-
-#: .\backend\school_platform\admin\views.py:36
-msgid "React"
-msgstr "React"
-
-#: .\backend\school_platform\admin\views.py:37
-msgid "SQL"
-msgstr "SQL"
-
-#: .\backend\school_platform\admin\views.py:38
-msgid "ML"
-msgstr "Машинное обучение"
-
-#: .\backend\school_platform\admin\views.py:39
-msgid "UI/UX"
-msgstr "UI/UX"
-
-#: .\backend\school_platform\settings.py:61
-#: .\backend\templates\admin\index.html:6
-msgid "Bervinov Academy"
-msgstr "Bervinov Academy"
-
-#: .\backend\school_platform\settings.py:81
-#: .\backend\school_platform\settings.py:86 .\backend\users\models.py:230
-msgid "Users"
-msgstr "Пользователи"
-
-#: .\backend\school_platform\settings.py:91 .\backend\users\models.py:325
-msgid "Mentors"
-msgstr "Менторы"
-
-#: .\backend\school_platform\settings.py:96 .\backend\users\models.py:244
-msgid "Students"
-msgstr "Студенты"
-
-#: .\backend\school_platform\settings.py:101 .\backend\users\admin.py:271
-#: .\backend\users\models.py:293 .\backend\users\models.py:311
-msgid "Specialization"
-msgstr "Специализация"
-
-#: .\backend\school_platform\settings.py:106
-#: .\backend\translations\models.py:78
+#: .\content\admin.py:130 .\content\admin.py:284 .\content\admin.py:404
 #, fuzzy
-#| msgid "Translation status"
-msgid "Translation"
-msgstr "Статус перевода"
+#| msgid "Education"
+msgid "Actions"
+msgstr "Обучение"
 
-#: .\backend\school_platform\settings.py:189
-msgid "English"
-msgstr "Английский"
+#: .\content\admin.py:145 .\content\admin.py:299 .\content\admin.py:419
+msgid "View"
+msgstr "Посмотреть"
 
-#: .\backend\school_platform\settings.py:190
-msgid "Russian"
-msgstr "Русский"
+#: .\content\admin.py:146 .\content\admin.py:300 .\content\admin.py:420
+msgid "Edit"
+msgstr "Изменить"
 
-#: .\backend\templates\admin\auth\user\change_password.html:5
-msgid "Изменить пароль пользователя"
-msgstr ""
+#: .\content\admin.py:149
+msgid "Activate courses ✅"
+msgstr "Активировать курсы"
 
-#: .\backend\templates\admin\auth\user\change_password.html:15
-msgid "Change user password"
-msgstr "Изменить пароль пользователя"
+#: .\content\admin.py:158
+msgid "Deactivate courses ❌"
+msgstr "Деактивировать курсы"
 
-#: .\backend\templates\admin\auth\user\change_password.html:57
-msgid "Cancel"
-msgstr "Отмена"
+#: .\content\admin.py:167
+msgid "Clone course"
+msgstr "Клонировать курс"
 
-#: .\backend\templates\admin\auth\user\change_password.html:58
-msgid "Save password"
-msgstr "Сохранить пароль"
+#: .\content\admin.py:172
+msgid "Select only one course to clone"
+msgstr "Выберите только один курс для клонирования"
 
-#: .\backend\templates\admin\auth\user\change_password.html:63
-msgid "Password change for user:"
-msgstr "Изменение пароля для пользователя:"
+#: .\content\admin.py:179
+msgid "Copy"
+msgstr "Скопировать"
 
-#: .\backend\templates\admin\auth\user\change_password.html:64
-msgid "Username:"
-msgstr "Логин:"
+#: .\content\admin.py:189
+msgid "Course successfully cloned"
+msgstr "Курс успешно склонирован ✅"
 
-#: .\backend\templates\admin\index.html:15
-msgid "Dashboard"
-msgstr "Панель управления"
+#: .\content\admin.py:210 .\content\admin.py:375
+msgid "Content"
+msgstr "Контент"
 
-#: .\backend\templates\admin\index.html:20
-msgid "Total users"
-msgstr "Всего пользователей"
+#: .\content\admin.py:264 .\content\admin.py:388 .\content\admin.py:398
+#: .\content\models.py:62 .\content\models.py:82
+msgid "Course"
+msgstr "Курс"
 
-#: .\backend\templates\admin\index.html:24
-msgid "Courses"
-msgstr "Курсы"
+#: .\content\admin.py:280
+msgid "Number of lessons"
+msgstr "Позиция уроков"
 
-#: .\backend\templates\admin\index.html:28
-msgid "Active students"
-msgstr "Активные студенты"
+#: .\content\admin.py:303
+msgid "Activate modules ✅"
+msgstr "Активировать модули"
 
-#: .\backend\templates\admin\index.html:32
-msgid "Completed courses"
-msgstr "Завершённые курсы"
+#: .\content\admin.py:312
+msgid "Deactivate modules ❌"
+msgstr "Деактивировать модули"
 
-#: .\backend\templates\admin\index.html:40
-msgid "User activity"
-msgstr "Активность пользователей"
+#: .\content\admin.py:367
+msgid "Additional information"
+msgstr "Дополнительная информация"
 
-#: .\backend\templates\admin\index.html:45
-msgid "Popularity courses"
-msgstr "Популярные курсы"
+#: .\content\admin.py:383 .\content\admin.py:399 .\content\models.py:103
+#: .\content\models.py:118
+msgid "Module"
+msgstr "Модуль"
 
-#: .\backend\translations\admin.py:37
-msgid "Translation info"
-msgstr "Информация о переводе"
+#: .\content\admin.py:394
+msgid "Information"
+msgstr "Информация"
 
-#: .\backend\translations\admin.py:50
-msgid "Timestamps"
-msgstr "Временные метки"
+#: .\content\admin.py:423
+msgid "Activate lessons ✅"
+msgstr "Активировать уроки"
 
-#: .\backend\translations\admin.py:60
-msgid "Source"
-msgstr "Исходный текст"
+#: .\content\admin.py:432
+msgid "Deactivate lessons ❌"
+msgstr "Деактивировать модули"
 
-#: .\backend\translations\admin.py:68
-msgid "Target"
-msgstr "Перевод"
+#: .\content\models.py:14
+msgid "Technology name"
+msgstr "Название технологии"
 
-#: .\backend\translations\admin.py:78
-msgid "Mark as approved ✅"
-msgstr "Подтвердить ✅"
+#: .\content\models.py:18
+msgid "Technology"
+msgstr "Технология"
 
-#: .\backend\translations\admin.py:86
-msgid "Unapprove ❌"
-msgstr "Отменить ❌"
+#: .\content\models.py:30
+msgid "Course title"
+msgstr "Название курса"
 
-#: .\backend\translations\models.py:10
-msgid "Source text"
-msgstr "Исходный текст"
+#: .\content\models.py:35
+msgid "URL address"
+msgstr "Ссылка"
 
-#: .\backend\translations\models.py:11
-msgid "The original text to be translated."
-msgstr "Оригинальный текст для перевода."
+#: .\content\models.py:38 .\users\models.py:279
+msgid "Description"
+msgstr "Описание"
 
-#: .\backend\translations\models.py:15
-msgid "Source language"
-msgstr "Исходный язык"
+#: .\content\models.py:42
+msgid "Course cover"
+msgstr "Изображение курса"
 
-#: .\backend\translations\models.py:16
-msgid "Language of the source text (e.g. 'en', 'ru')."
-msgstr "Язык исходного текста (например, 'en', 'ru')."
+#: .\content\models.py:48 .\content\models.py:99 .\content\models.py:134
+#: .\users\models.py:164 .\users\models.py:284
+msgid "Active"
+msgstr "Активен ли"
 
-#: .\backend\translations\models.py:22
-msgid "Translated text"
-msgstr "Переведённый текст"
-
-#: .\backend\translations\models.py:23
-msgid "The translated version of the text."
-msgstr "Переведённая версия текста."
-
-#: .\backend\translations\models.py:27
-msgid "Target language"
-msgstr "Переведенный язык"
-
-#: .\backend\translations\models.py:29
-msgid "Language to which the text was translated (e.g. 'en', 'ru')."
-msgstr "Язык, на который был переведён текст (например, 'en', 'ru')."
-
-#: .\backend\translations\models.py:37
-msgid "Context"
-msgstr "Контекст"
-
-#: .\backend\translations\models.py:39
-msgid ""
-"Where this translation is used, e.g. 'Specialization.title' or "
-"'Lesson.description'."
-msgstr "Где используется этот перевод, например 'Specialization.title' или 'Lesson.description'."
-
-#: .\backend\translations\models.py:49
-msgid "Last edited by"
-msgstr "Последний редактор"
-
-#: .\backend\translations\models.py:50
-msgid "User who manually edited this translation."
-msgstr "Пользователь, который вручную отредактировал этот перевод."
-
-#: .\backend\translations\models.py:55
-msgid "Approved"
-msgstr "Подтверждён"
-
-#: .\backend\translations\models.py:57
-msgid "Mark as approved if the translation was verified by an administrator."
-msgstr "Отметьте как подтверждённый, если перевод был проверен администратором."
-
-#: .\backend\translations\models.py:64
+#: .\content\models.py:52 .\translations\models.py:64
 msgid "Created at"
 msgstr "Создано"
 
-#: .\backend\translations\models.py:68
+#: .\content\models.py:63 .\school_platform\settings.py:125
+#: .\templates\admin\index.html:24
+msgid "Courses"
+msgstr "Курсы"
+
+#: .\content\models.py:86
+msgid "Module title"
+msgstr "Название модуля"
+
+#: .\content\models.py:89
+msgid "Module description"
+msgstr "Описание модуля"
+
+#: .\content\models.py:95 .\content\models.py:130
+msgid "Order number"
+msgstr "Позиция"
+
+#: .\content\models.py:122
+msgid "Lesson title"
+msgstr "Название урока"
+
+#: .\content\models.py:125
+msgid "Lesson content"
+msgstr "Контент урока"
+
+#: .\content\models.py:138
+msgid "Theory lesson"
+msgstr "Теория урока"
+
+#: .\content\models.py:139
+msgid "Theory lessons"
+msgstr "Теория уроков"
+
+#: .\school_platform\admin\views.py:18
+msgid "Jan"
+msgstr "Янв"
+
+#: .\school_platform\admin\views.py:19
+msgid "Feb"
+msgstr "Фев"
+
+#: .\school_platform\admin\views.py:20
+msgid "Mar"
+msgstr "Мар"
+
+#: .\school_platform\admin\views.py:21
+msgid "Apr"
+msgstr "Апр"
+
+#: .\school_platform\admin\views.py:22
+msgid "May"
+msgstr "Май"
+
+#: .\school_platform\admin\views.py:23
+msgid "Jun"
+msgstr "Июн"
+
+#: .\school_platform\admin\views.py:24
+msgid "Jul"
+msgstr "Июл"
+
+#: .\school_platform\admin\views.py:25
+msgid "Aug"
+msgstr "Авг"
+
+#: .\school_platform\admin\views.py:26
+msgid "Sep"
+msgstr "Сен"
+
+#: .\school_platform\admin\views.py:27
+msgid "Oct"
+msgstr "Окт"
+
+#: .\school_platform\admin\views.py:28
+msgid "Nov"
+msgstr "Ноя"
+
+#: .\school_platform\admin\views.py:29
+msgid "Dec"
+msgstr "Дек"
+
+#: .\school_platform\admin\views.py:33
+msgid "Python"
+msgstr "Python"
+
+#: .\school_platform\admin\views.py:34
+msgid "Django"
+msgstr "Django"
+
+#: .\school_platform\admin\views.py:35
+msgid "JavaScript"
+msgstr "JavaScript"
+
+#: .\school_platform\admin\views.py:36
+msgid "React"
+msgstr "React"
+
+#: .\school_platform\admin\views.py:37
+msgid "SQL"
+msgstr "SQL"
+
+#: .\school_platform\admin\views.py:38
+msgid "ML"
+msgstr "Машинное обучение"
+
+#: .\school_platform\admin\views.py:39
+msgid "UI/UX"
+msgstr "UI/UX"
+
+#: .\school_platform\settings.py:61 .\templates\admin\index.html:6
+msgid "Bervinov Academy"
+msgstr "Bervinov Academy"
+
+#: .\school_platform\settings.py:81 .\school_platform\settings.py:86
+#: .\templates\admin\index.html:15
+msgid "Dashboard"
+msgstr "Панель управления"
+
+#: .\school_platform\settings.py:93 .\school_platform\settings.py:98
+#: .\users\models.py:230
+msgid "Users"
+msgstr "Пользователи"
+
+#: .\school_platform\settings.py:103 .\users\models.py:325
+msgid "Mentors"
+msgstr "Менторы"
+
+#: .\school_platform\settings.py:108 .\users\models.py:244
+msgid "Students"
+msgstr "Студенты"
+
+#: .\school_platform\settings.py:113 .\users\admin.py:293 .\users\models.py:293
+#: .\users\models.py:311
+msgid "Specialization"
+msgstr "Специализация"
+
+#: .\school_platform\settings.py:120
+msgid "Education"
+msgstr "Обучение"
+
+#: .\school_platform\settings.py:147
+msgid "Localization"
+msgstr "Локализация"
+
+#: .\school_platform\settings.py:152
+msgid "Translation Memory"
+msgstr "Перевод"
+
+#: .\school_platform\settings.py:236
+msgid "English"
+msgstr "Английский"
+
+#: .\school_platform\settings.py:237
+msgid "Russian"
+msgstr "Русский"
+
+#: .\templates\admin\auth\user\change_password.html:5
+#: .\templates\admin\auth\user\change_password.html:15
+msgid "Change user password"
+msgstr "Изменить пароль пользователя"
+
+#: .\templates\admin\auth\user\change_password.html:57
+msgid "Cancel"
+msgstr "Отмена"
+
+#: .\templates\admin\auth\user\change_password.html:58
+msgid "Save password"
+msgstr "Сохранить пароль"
+
+#: .\templates\admin\auth\user\change_password.html:63
+msgid "Password change for user:"
+msgstr "Изменение пароля для пользователя:"
+
+#: .\templates\admin\auth\user\change_password.html:64
+msgid "Username:"
+msgstr "Логин:"
+
+#: .\templates\admin\index.html:20
+msgid "Total users"
+msgstr "Всего пользователей"
+
+#: .\templates\admin\index.html:28
+msgid "Active students"
+msgstr "Активные студенты"
+
+#: .\templates\admin\index.html:32
+msgid "Completed courses"
+msgstr "Завершённые курсы"
+
+#: .\templates\admin\index.html:40
+msgid "User activity"
+msgstr "Активность пользователей"
+
+#: .\templates\admin\index.html:45
+msgid "Popularity courses"
+msgstr "Популярные курсы"
+
+#: .\translations\admin.py:37
+msgid "Translation info"
+msgstr "Информация о переводе"
+
+#: .\translations\admin.py:50
+msgid "Timestamps"
+msgstr "Временные метки"
+
+#: .\translations\admin.py:60
+msgid "Source"
+msgstr "Исходный текст"
+
+#: .\translations\admin.py:68
+msgid "Target"
+msgstr "Перевод"
+
+#: .\translations\admin.py:78
+msgid "Mark as approved ✅"
+msgstr "Подтвердить ✅"
+
+#: .\translations\admin.py:86
+msgid "Unapprove ❌"
+msgstr "Отменить ❌"
+
+#: .\translations\models.py:10
+msgid "Source text"
+msgstr "Исходный текст"
+
+#: .\translations\models.py:11
+msgid "The original text to be translated."
+msgstr "Оригинальный текст для перевода."
+
+#: .\translations\models.py:15
+msgid "Source language"
+msgstr "Исходный язык"
+
+#: .\translations\models.py:16
+msgid "Language of the source text (e.g. 'en', 'ru')."
+msgstr "Язык исходного текста (например, 'en', 'ru')."
+
+#: .\translations\models.py:22
+msgid "Translated text"
+msgstr "Переведённый текст"
+
+#: .\translations\models.py:23
+msgid "The translated version of the text."
+msgstr "Переведённая версия текста."
+
+#: .\translations\models.py:27
+msgid "Target language"
+msgstr "Переведенный язык"
+
+#: .\translations\models.py:29
+msgid "Language to which the text was translated (e.g. 'en', 'ru')."
+msgstr "Язык, на который был переведён текст (например, 'en', 'ru')."
+
+#: .\translations\models.py:37
+msgid "Context"
+msgstr "Контекст"
+
+#: .\translations\models.py:39
+msgid ""
+"Where this translation is used, e.g. 'Specialization.title' or "
+"'Lesson.description'."
+msgstr ""
+"Где используется этот перевод, например 'Specialization.title' или "
+"'Lesson.description'."
+
+#: .\translations\models.py:49
+msgid "Last edited by"
+msgstr "Последний редактор"
+
+#: .\translations\models.py:50
+msgid "User who manually edited this translation."
+msgstr "Пользователь, который вручную отредактировал этот перевод."
+
+#: .\translations\models.py:55
+msgid "Approved"
+msgstr "Подтверждён"
+
+#: .\translations\models.py:57
+msgid "Mark as approved if the translation was verified by an administrator."
+msgstr ""
+"Отметьте как подтверждённый, если перевод был проверен администратором."
+
+#: .\translations\models.py:68
 msgid "Updated at"
 msgstr "Обновлено когда"
 
-#: .\backend\translations\models.py:79
+#: .\translations\models.py:78
+msgid "Translation"
+msgstr "Перевод"
+
+#: .\translations\models.py:79
 msgid "Translations"
 msgstr "Переводы"
 
-#: .\backend\users\admin.py:24
+#: .\users\admin.py:23
 msgid ""
 "Raw passwords are not stored, so there is no way to see this user's "
 "password, but you can change the password using <a href=\"../password/"
@@ -288,326 +471,314 @@ msgstr ""
 "Пароль не хранится в открытом виде. Его можно изменить с помощью <a href='../"
 "password/'><strong>этой формы</strong></a>."
 
-#: .\backend\users\admin.py:51 .\backend\users\admin.py:254
-msgid "Main information"
-msgstr "Основная информация"
-
-#: .\backend\users\admin.py:53
+#: .\users\admin.py:52
 msgid "Personal information"
 msgstr "Личная информация"
 
-#: .\backend\users\admin.py:57
+#: .\users\admin.py:56
 msgid "Permissions"
 msgstr "Права доступа"
 
-#: .\backend\users\admin.py:65
+#: .\users\admin.py:64
 msgid "System information"
 msgstr "Системная информация"
 
-#: .\backend\users\admin.py:115
+#: .\users\admin.py:114
 msgid "User not found."
 msgstr "Пользователь не найден."
 
-#: .\backend\users\admin.py:124
+#: .\users\admin.py:123
 msgid "Password successfully changed ✅"
 msgstr "Пароль успешно изменён ✅"
 
-#: .\backend\users\admin.py:128
+#: .\users\admin.py:127
 msgid "Error while changing password."
 msgstr "Ошибка при смене пароля."
 
-#: .\backend\users\admin.py:134
+#: .\users\admin.py:133
 msgid "Change password"
 msgstr "Изменение пароля"
 
-#: .\backend\users\admin.py:149
+#: .\users\admin.py:151
 msgid "Title"
 msgstr "Название"
 
-#: .\backend\users\admin.py:166
-msgid "Main information (English)"
-msgstr "Основная информация (английский)"
+#: .\users\admin.py:169
+msgid "Create specialization"
+msgstr "Создать специализация"
 
-#: .\backend\users\admin.py:172
+#: .\users\admin.py:187
 msgid "All language versions (editing)"
 msgstr "Все языковые версии (редактирование)"
 
-#: .\backend\users\admin.py:179
+#: .\users\admin.py:199
 msgid "You can edit all language versions here."
 msgstr "Здесь можно отредактировать все языковые версии."
 
-#: .\backend\users\admin.py:209 .\backend\users\admin.py:259
+#: .\users\admin.py:231 .\users\admin.py:281
 msgid "Full name"
 msgstr "Полное имя"
 
-#: .\backend\users\admin.py:213 .\backend\users\admin.py:263
-#: .\backend\users\models.py:127
+#: .\users\admin.py:235 .\users\admin.py:285 .\users\models.py:127
 msgid "Email"
 msgstr "Почта"
 
-#: .\backend\users\admin.py:217 .\backend\users\admin.py:267
-#: .\backend\users\models.py:119
+#: .\users\admin.py:239 .\users\admin.py:289 .\users\models.py:119
 msgid "Phone"
 msgstr "Телефон"
 
-#: .\backend\users\admin.py:221
+#: .\users\admin.py:243
 msgid "Data joined"
 msgstr "Дата регистрации"
 
-#: .\backend\users\apps.py:29
+#: .\users\apps.py:29
 msgid "Current:"
 msgstr "Текущий"
 
-#: .\backend\users\apps.py:30
+#: .\users\apps.py:30
 msgid "Change:"
 msgstr "Сменить"
 
-#: .\backend\users\apps.py:31
+#: .\users\apps.py:31
 msgid "Clear"
 msgstr "Очистить"
 
-#: .\backend\users\apps.py:32
+#: .\users\apps.py:32
 msgid "Choose file to upload"
 msgstr "Выберите файла для загрузки"
 
-#: .\backend\users\apps.py:33
+#: .\users\apps.py:33
 msgid "Select value"
 msgstr "Выбрать значение"
 
-#: .\backend\users\apps.py:64
+#: .\users\apps.py:64
 msgid "Search apps and models..."
 msgstr "Поиск по приложениям и моделям..."
 
-#: .\backend\users\apps.py:68
+#: .\users\apps.py:68
 msgid "Type to search"
 msgstr "Введите для поиска"
 
-#: .\backend\users\apps.py:90
+#: .\users\apps.py:90
 msgid "Filters"
 msgstr "Фильтры"
 
-#: .\backend\users\apps.py:92
+#: .\users\apps.py:92
 msgid "Reset filters"
 msgstr "Сбросить фильтры"
 
-#: .\backend\users\apps.py:95
+#: .\users\apps.py:95
 msgid "No results found"
 msgstr "Ничего не найдено"
 
-#: .\backend\users\apps.py:102
+#: .\users\apps.py:102
 msgid ""
 "This page yielded into no results. Create a new item or reset your filters."
 msgstr "Ничего не найдено. Создайте новый элемент или сбросьте фильтры."
 
-#: .\backend\users\models.py:20
+#: .\users\models.py:20
 msgid "Email or phone is required"
 msgstr "Необходимо указать email или телефон"
 
-#: .\backend\users\models.py:35
+#: .\users\models.py:35
 msgid "Superuser must have an email"
 msgstr "Суперпользователь должен иметь email"
 
-#: .\backend\users\models.py:37
+#: .\users\models.py:37
 msgid "Superuser must have a phone"
 msgstr "Суперпользователь должен иметь телефон"
 
-#: .\backend\users\models.py:62 .\backend\users\models.py:243
+#: .\users\models.py:62 .\users\models.py:243
 msgid "Student"
 msgstr "Студента"
 
-#: .\backend\users\models.py:63 .\backend\users\models.py:324
+#: .\users\models.py:63 .\users\models.py:324
 msgid "Mentor"
 msgstr "Ментора"
 
-#: .\backend\users\models.py:64
+#: .\users\models.py:64
 msgid "Admin"
 msgstr "Администратор"
 
-#: .\backend\users\models.py:76
+#: .\users\models.py:76
 msgid "Email or phone must be specified"
 msgstr "Должен быть указан email или телефон"
 
-#: .\backend\users\models.py:81
+#: .\users\models.py:81
 msgid "Email is required for admin"
 msgstr "Для администратора обязателен email"
 
-#: .\backend\users\models.py:85
+#: .\users\models.py:85
 msgid "Phone is required for admin"
 msgstr "Для администратора обязателен телефон"
 
-#: .\backend\users\models.py:95
+#: .\users\models.py:95
 msgid "A user with this email already exists"
 msgstr "Пользователь с таким email уже существует"
 
-#: .\backend\users\models.py:105
+#: .\users\models.py:105
 msgid "A user with this phone already exists"
 msgstr "Пользователь с таким телефоном уже существует"
 
-#: .\backend\users\models.py:109
+#: .\users\models.py:109
 msgid "First name"
 msgstr "Имя"
 
-#: .\backend\users\models.py:111
+#: .\users\models.py:111
 msgid "User's first name"
 msgstr "Имя пользователя"
 
-#: .\backend\users\models.py:114
+#: .\users\models.py:114
 msgid "Last name"
 msgstr "Фамилия"
 
-#: .\backend\users\models.py:116
+#: .\users\models.py:116
 msgid "User's last name"
 msgstr "Фамилия пользователя"
 
-#: .\backend\users\models.py:124
+#: .\users\models.py:124
 msgid "User phone number"
 msgstr "Номер телефона пользователя"
 
-#: .\backend\users\models.py:131
+#: .\users\models.py:131
 msgid "User email"
 msgstr "Почта пользователя"
 
-#: .\backend\users\models.py:134
+#: .\users\models.py:134
 msgid "Role"
 msgstr "Роль"
 
-#: .\backend\users\models.py:138
+#: .\users\models.py:138
 msgid "User role in the system"
 msgstr "Роль пользователя в системе"
 
-#: .\backend\users\models.py:141
+#: .\users\models.py:141
 msgid "Avatar"
 msgstr "Аватар"
 
-#: .\backend\users\models.py:145
+#: .\users\models.py:145
 msgid "User avatar"
 msgstr "Аватар пользователя"
 
-#: .\backend\users\models.py:148
+#: .\users\models.py:148
 msgid "Biography"
 msgstr "Биография"
 
-#: .\backend\users\models.py:150
+#: .\users\models.py:150
 msgid "User biography"
 msgstr "Биография пользователя"
 
-#: .\backend\users\models.py:154
+#: .\users\models.py:154
 msgid "Registration date"
 msgstr "Дата регистрации"
 
-#: .\backend\users\models.py:156
+#: .\users\models.py:156
 msgid "User registration date"
 msgstr "Дата регистрации пользователя"
 
-#: .\backend\users\models.py:159
+#: .\users\models.py:159
 msgid "Last login"
 msgstr "последний вход"
 
-#: .\backend\users\models.py:161
+#: .\users\models.py:161
 msgid "Last login time"
 msgstr "Время последнего входа"
 
-#: .\backend\users\models.py:164 .\backend\users\models.py:284
-msgid "Active"
-msgstr "Активен ли"
-
-#: .\backend\users\models.py:166
+#: .\users\models.py:166
 msgid "Is the user active"
 msgstr "Активен ли пользователь"
 
-#: .\backend\users\models.py:169
+#: .\users\models.py:169
 msgid "Staff"
 msgstr "Cотрудник ли"
 
-#: .\backend\users\models.py:171
+#: .\users\models.py:171
 msgid "Is the user a staff member"
 msgstr "Является ли пользователь сотрудником"
 
-#: .\backend\users\models.py:229 .\backend\users\models.py:238
-#: .\backend\users\models.py:305
+#: .\users\models.py:229 .\users\models.py:238 .\users\models.py:305
 msgid "User"
 msgstr "Пользователь"
 
-#: .\backend\users\models.py:252
+#: .\users\models.py:252
 msgid "WEB Development"
 msgstr "Веб разработка"
 
-#: .\backend\users\models.py:253
+#: .\users\models.py:253
 msgid "Mobile Development"
 msgstr "Мобильная разработка"
 
-#: .\backend\users\models.py:254
+#: .\users\models.py:254
 msgid "Data Science"
 msgstr "Анализ данных"
 
-#: .\backend\users\models.py:255
+#: .\users\models.py:255
 msgid "UI/UX Design"
 msgstr "UI/UX Дизайн"
 
-#: .\backend\users\models.py:256
+#: .\users\models.py:256
 msgid "Digital Marketing"
 msgstr "Цифровой маркетинг"
 
-#: .\backend\users\models.py:257
+#: .\users\models.py:257
 msgid "Business"
 msgstr "Бизнес"
 
-#: .\backend\users\models.py:258
+#: .\users\models.py:258
 msgid "Other"
 msgstr "Другие"
 
-#: .\backend\users\models.py:261
+#: .\users\models.py:261
 msgid "Pending"
 msgstr "В ожидании"
 
-#: .\backend\users\models.py:262
+#: .\users\models.py:262
 msgid "Completed"
 msgstr "Завершенно"
 
-#: .\backend\users\models.py:263
+#: .\users\models.py:263
 msgid "Failed"
 msgstr "Ошибка"
 
-#: .\backend\users\models.py:267
+#: .\users\models.py:267
 msgid "Specialization type"
 msgstr "Тип специализации"
 
-#: .\backend\users\models.py:271
+#: .\users\models.py:271
 msgid "Type of specialization"
 msgstr "Тип специализации"
 
-#: .\backend\users\models.py:274
+#: .\users\models.py:274
 msgid "Specialization title"
 msgstr "Название специализации"
 
-#: .\backend\users\models.py:276
+#: .\users\models.py:276
 msgid "Title of the specialization"
 msgstr "Название специализации"
 
-#: .\backend\users\models.py:279
-msgid "Description"
-msgstr "Описание"
-
-#: .\backend\users\models.py:281
+#: .\users\models.py:281
 msgid "Detailed description of the specialization"
 msgstr "Подробное описание специализации"
 
-#: .\backend\users\models.py:286
+#: .\users\models.py:286
 msgid "Is this specialization active"
 msgstr "Активна ли специализация"
 
-#: .\backend\users\models.py:294
+#: .\users\models.py:294
 msgid "Specializations"
 msgstr "Специализации"
 
-#: .\backend\users\models.py:313
+#: .\users\models.py:313
 msgid "Primary specialization"
 msgstr "Главная специализация"
 
-#: .\backend\users\models.py:316
+#: .\users\models.py:316
 msgid "Experience (in years)"
 msgstr "Опыт (в годах)"
 
-#: .\backend\users\models.py:319
+#: .\users\models.py:319
 msgid "How many years experience"
 msgstr "Сколько лет опыта"
+
+#~ msgid "Main information (English)"
+#~ msgstr "Основная информация (английский)"
