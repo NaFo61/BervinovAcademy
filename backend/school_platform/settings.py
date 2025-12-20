@@ -20,6 +20,7 @@ CSRF_TRUSTED_ORIGINS = config(
 
 INSTALLED_APPS = [
     "unfold",
+    "modeltranslation",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
     "django.contrib.admin",
@@ -35,6 +36,8 @@ INSTALLED_APPS = [
     "mentoring",
     "content",
     "communication",
+    "translations",
+    "fixture",
 ]
 
 UNFOLD = {
@@ -76,6 +79,8 @@ UNFOLD = {
         "navigation": [
             {
                 "title": _("Users"),
+                "separator": True,
+                "collapsible": True,
                 "items": [
                     {
                         "title": _("Users"),
@@ -89,8 +94,18 @@ UNFOLD = {
                     },
                     {
                         "title": _("Students"),
-                        "icon": "person",
+                        "icon": "elderly_woman",
                         "link": "/admin/users/student/",
+                    },
+                    {
+                        "title": _("Specialization"),
+                        "icon": "people",
+                        "link": "/admin/users/specialization/",
+                    },
+                    {
+                        "title": _("Translation"),
+                        "icon": "people",
+                        "link": "/admin/translations/translationmemory/",
                     },
                 ],
             },
@@ -145,6 +160,7 @@ DATABASES = {
         "PORT": config("DB_PORT", default="5432"),
     }
 }
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth."
@@ -189,6 +205,15 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://redis:6379/0")
+CELERY_RESULT_BACKEND = config(
+    "CELERY_RESULT_BACKEND", default="redis://redis:6379/0"
+)
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "Europe/Moscow"
 
 try:
     from school_platform.local_settings import *  # noqa: F403, F401

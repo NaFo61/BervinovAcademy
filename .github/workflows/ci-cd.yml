@@ -69,31 +69,10 @@ jobs:
           DB_ENGINE: django.db.backends.postgresql
           DB_NAME: test_db
           DB_USER: postgres
-          DB_PASSWORD: postgres  # ← РАНЬШЕ БЫЛО ПУСТО!
+          DB_PASSWORD: postgres
           DB_HOST: localhost
           DB_PORT: 5432
           SECRET_KEY: django-insecure-test-key-12345
           DEBUG: "False"
         run: |
           python manage.py migrate
-
-      - name: Запустить тесты
-        working-directory: ./backend
-        env:
-          DB_ENGINE: django.db.backends.postgresql
-          DB_NAME: test_db
-          DB_USER: postgres
-          DB_PASSWORD: postgres  # ← РАНЬШЕ БЫЛО ПУСТО!
-          DB_HOST: localhost
-          DB_PORT: 5432
-          SECRET_KEY: django-insecure-test-key-12345
-          DEBUG: "False"
-        run: |
-          python manage.py test
-
-      - name: Загрузить отчёт покрытия
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella

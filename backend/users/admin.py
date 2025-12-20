@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 from unfold.forms import UserChangeForm, UserCreationForm
 
-from users.models import Mentor, Student
+from users.models import Mentor, Specialization, Student
 
 User = get_user_model()
 
@@ -58,10 +58,6 @@ class CustomUserAdmin(ModelAdmin):
                 "fields": (
                     "role",
                     "is_active",
-                    "is_staff",
-                    "is_superuser",
-                    "groups",
-                    "user_permissions",
                 )
             },
         ),
@@ -86,6 +82,21 @@ class CustomUserAdmin(ModelAdmin):
         ),
     )
 
+    def get_fieldsets(self, request, obj=None):
+        if not obj:
+            return self.add_fieldsets
+        return super().get_fieldsets(request, obj)
+
+    def get_form(self, request, obj=None, **kwargs):
+        """
+        Use special form during user creation
+        """
+        defaults = {}
+        if obj is None:
+            defaults["form"] = self.add_form
+        defaults.update(kwargs)
+        return super().get_form(request, obj, **defaults)
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -108,7 +119,9 @@ class CustomUserAdmin(ModelAdmin):
             if form.is_valid():
                 form.save()
                 update_session_auth_hash(request, user)
-                messages.success(request, _("Password successfully changed ✅"))
+                messages.success(
+                    request, _("Password successfully changed ✅")
+                )
                 return redirect(reverse("admin:users_user_changelist"))
             else:
                 messages.error(request, _("Error while changing password."))
@@ -122,6 +135,78 @@ class CustomUserAdmin(ModelAdmin):
             "user": user,
         }
         return render(request, "admin/auth/user/change_password.html", context)
+
+
+@admin.register(Specialization)
+class SpecializationAdmin(ModelAdmin):
+    list_display = ("display_title", "is_active")
+    search_fields = (
+        "title_ru",
+        "title_en",
+        "description_ru",
+        "description_en",
+    )
+    list_filter = ("is_active",)
+
+    @admin.display(description=_("Title"), ordering="title")
+    def display_title(self, obj):
+        lang = getattr(self, "_current_language", "en")
+        if lang == "ru":
+            return obj.title_ru or obj.title or "-"
+        return obj.title_en or obj.title or "-"
+
+    def get_fieldsets(self, request, obj=None):
+        self._current_language = request.LANGUAGE_CODE
+        lang = self._current_language
+
+        # -----------------------------------------------------
+        # 🔥 1. Если создаём новую специализацию — показываем только:
+        # title, description, is_active
+        # -----------------------------------------------------
+        if obj is None:
+            return (
+                (
+                    _("Create specialization"),
+                    {"fields": ["title", "description", "is_active"]},
+                ),
+            )
+
+        # -----------------------------------------------------
+        # 🔥 2. Если редактируем — как раньше
+        # -----------------------------------------------------
+        if lang == "ru":
+            main_fields = ["is_active", "title_ru", "description_ru"]
+        else:
+            main_fields = ["is_active", "title_en", "description_en"]
+
+        main_title = _("Main information")
+
+        fieldsets = (
+            (main_title, {"fields": main_fields}),
+            (
+                _("All language versions (editing)"),
+                {
+                    "fields": [
+                        "title",
+                        "description",
+                        "title_ru",
+                        "title_en",
+                        "description_ru",
+                        "description_en",
+                    ],
+                    "classes": ("collapse",),
+                    "description": _(
+                        "You can edit all language versions here."
+                    ),
+                },
+            ),
+        )
+
+        return fieldsets
+
+    def changelist_view(self, request, extra_context=None):
+        self._current_language = request.LANGUAGE_CODE
+        return super().changelist_view(request, extra_context)
 
 
 @admin.register(Student)
@@ -165,7 +250,7 @@ class MentorAdmin(ModelAdmin):
     list_display = (
         "id",
         "user_full_name",
-        "specialization",
+        "specialization_display",
         "experience_years",
         "user_email",
         "user_phone",
@@ -173,13 +258,18 @@ class MentorAdmin(ModelAdmin):
     search_fields = (
         "user__first_name",
         "user__last_name",
-        "specialization",
+        "specialization__title",
         "user__email",
         "user__phone",
     )
-    list_filter = ("experience_years", "user__is_active")
+    list_filter = (
+        "experience_years",
+        "user__is_active",
+        "specialization__type",
+    )
     ordering = ("-user__date_joined",)
     icon = "briefcase"
+    autocomplete_fields = ("specialization",)
 
     fieldsets = (
         (
@@ -199,3 +289,21 @@ class MentorAdmin(ModelAdmin):
     @admin.display(description=_("Phone"))
     def user_phone(self, obj):
         return obj.user.phone
+
+    @admin.display(description=_("Specialization"))
+    def specialization_display(self, obj):
+        if obj.specialization:
+            return f"{obj.specialization.type}: {obj.specialization.title}"
+        return "—"
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("user", "specialization")
+        )
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "specialization":
+            kwargs["queryset"] = Specialization.objects.filter(is_active=True)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)

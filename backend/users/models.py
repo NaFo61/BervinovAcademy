@@ -8,6 +8,8 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from translations.mixins import AutoTranslateMixin
+
 
 class CustomUserManager(BaseUserManager):
     def create_user(
@@ -208,8 +210,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.role == "admin" or self.is_superuser
 
     def save(self, *args, **kwargs):
-        if self.is_superuser and self.role != "admin":
-            self.role = "admin"
+        if self.role == "admin":
+            self.is_staff = True
+            self.is_superuser = True
+        elif self.role == "mentor":
+            self.is_staff = True
+            self.is_superuser = False
+        else:  # student
+            self.is_staff = False
+            self.is_superuser = False
 
         self.clean()
         super().save(*args, **kwargs)
@@ -238,6 +247,56 @@ class Student(models.Model):
         return self.user.get_full_name() or str(self.user)
 
 
+class Specialization(AutoTranslateMixin, models.Model):
+    TYPE_CHOICES = [
+        ("web", _("WEB Development")),
+        ("mobile", _("Mobile Development")),
+        ("data", _("Data Science")),
+        ("design", _("UI/UX Design")),
+        ("marketing", _("Digital Marketing")),
+        ("business", _("Business")),
+        ("other", _("Other")),
+    ]
+    STATUS_CHOICES = [
+        ("pending", _("Pending")),
+        ("completed", _("Completed")),
+        ("failed", _("Failed")),
+    ]
+
+    type = models.CharField(
+        verbose_name=_("Specialization type"),
+        max_length=50,
+        choices=TYPE_CHOICES,
+        default="web",
+        help_text=_("Type of specialization"),
+    )
+    title = models.CharField(
+        verbose_name=_("Specialization title"),
+        max_length=255,
+        help_text=_("Title of the specialization"),
+    )
+    description = models.TextField(
+        verbose_name=_("Description"),
+        blank=True,
+        help_text=_("Detailed description of the specialization"),
+    )
+    is_active = models.BooleanField(
+        verbose_name=_("Active"),
+        default=True,
+        help_text=_("Is this specialization active"),
+    )
+    translatable_fields = ["title", "description"]
+
+    class Meta:
+        db_table = "specializations"
+        ordering = ["type", "title"]
+        verbose_name = _("Specialization")
+        verbose_name_plural = _("Specializations")
+
+    def __str__(self):
+        return f"{self.title}"
+
+
 class Mentor(models.Model):
     user = models.OneToOneField(
         User,
@@ -245,9 +304,11 @@ class Mentor(models.Model):
         related_name="mentor_profile",
         verbose_name=_("User"),
     )
-    specialization = models.CharField(
+    specialization = models.ForeignKey(
+        to=Specialization,
+        on_delete=models.SET_NULL,
+        null=True,
         verbose_name=_("Specialization"),
-        max_length=255,
         blank=True,
         help_text=_("Primary specialization"),
     )
