@@ -22,6 +22,7 @@ CSRF_TRUSTED_ORIGINS = config(
 INSTALLED_APPS = [
     "unfold",
     "modeltranslation",
+    "rest_framework",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
     "django.contrib.admin",
