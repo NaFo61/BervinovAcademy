@@ -1,4 +1,6 @@
+from datetime import timedelta
 from pathlib import Path
+from typing import Any
 
 from decouple import config
 from django.core.management.utils import get_random_secret_key
@@ -23,6 +25,8 @@ INSTALLED_APPS = [
     "unfold",
     "modeltranslation",
     "rest_framework",
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
     "django.contrib.admin",
@@ -208,23 +212,26 @@ DATABASES = {
     }
 }
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth."
-        "password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth."
-        "password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth."
-        "password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth."
-        "password_validation.NumericPasswordValidator",
-    },
+AUTH_PASSWORD_VALIDATORS: list[dict[str, Any]] = [
+    # {
+    #     "NAME": "django.contrib.auth."
+    #     "password_validation.UserAttributeSimilarityValidator",
+    # },
+    # {
+    #     "NAME": "django.contrib.auth."
+    #     "password_validation.MinimumLengthValidator",
+    # },
+    # {
+    #     "NAME": "django.contrib.auth."
+    #     "password_validation.CommonPasswordValidator",
+    # },
+    # {
+    #     "NAME": "django.contrib.auth."
+    #     "password_validation.NumericPasswordValidator",
+    # },
+    # {
+    #     "NAME": "users.validators.CustomPasswordValidator",
+    # },
 ]
 
 LANGUAGE_CODE = "ru-ru"
@@ -266,3 +273,45 @@ try:
     from school_platform.local_settings import *  # noqa: F403, F401
 except ImportError:
     pass
+
+# REST Framework settings
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "login": "5/min",
+        "register": "5/min",
+        "token_refresh": "20/min",
+    },
+}
+
+# JWT settings
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    "TOKEN_TYPE_CLAIM": "token_type",
+    "JTI_CLAIM": "jti",
+    # Custom payload
+    "CUSTOM_PAYLOAD": {
+        "email": "email",
+        "phone": "phone",
+        "role": "role",
+        "first_name": "first_name",
+        "last_name": "last_name",
+    },
+}
