@@ -11,6 +11,7 @@ urlpatterns = [
 urlpatterns += i18n_patterns(
     path("admin/", admin.site.urls),
     path("api/", include("users.urls")),
+    path("api/", include("content.urls")),
 )
 
 if settings.DEBUG:
