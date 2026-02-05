@@ -5,9 +5,6 @@ from django.utils.translation import gettext as _
 
 
 class CustomPasswordValidator:
-    """
-    Custom password validator that enforces strong password requirements.
-    """
 
     def validate(self, password, user=None):
         errors = []
