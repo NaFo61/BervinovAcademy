@@ -1,5 +1,3 @@
-Отличная структура! Конечно, напишу подробный README.md для вашего проекта. Вот готовый файл:
-
 # Bervinov Academy - Educational Platform
 
 ![Bervinov Academy](https://via.placeholder.com/800x200/2D3748/FFFFFF?text=Bervinov+Academy+-+Modern+Learning+Platform)
