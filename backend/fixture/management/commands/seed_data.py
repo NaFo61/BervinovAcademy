@@ -224,7 +224,7 @@ class Command(BaseCommand):
                 specialization=specialization,
                 experience_years=random.randint(3, 15),
             )
-        self.stdout.write(self.style.SUCCESS("Создано 5 менторов"))
+            self.stdout.write(self.style.SUCCESS("Создано 5 менторов"))
 
             # Добавляем технологии ментору
             if specialization:
