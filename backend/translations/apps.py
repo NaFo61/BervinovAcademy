@@ -7,4 +7,4 @@ class TranslationsConfig(AppConfig):
 
     def ready(self):
         import translations.signals  # noqa
-        import translations.translation_registry  # noqa
+        import translations.translation_registry.users  # noqa

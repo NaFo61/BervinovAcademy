@@ -9,6 +9,9 @@ class UsersConfig(AppConfig):
     name = "users"
 
     def ready(self):
+        # Import signals to connect them
+        pass
+
         # Патчим виджет при загрузке приложения
         _original_clearable_render = ClearableFileInput.render
 
