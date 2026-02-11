@@ -272,9 +272,9 @@ class Command(BaseCommand):
                 )
             )
 
-        self.stdout.write(
-            self.style.SUCCESS("Создано 5 менторов с технологиями")
-        )
+            self.stdout.write(
+                self.style.SUCCESS("Создано 5 менторов с технологиями")
+            )
 
             # Добавляем технологии ментору
             if specialization:
