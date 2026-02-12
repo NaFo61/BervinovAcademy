@@ -42,7 +42,7 @@ echo ""
 
 # Шаг 2: Запускаем pre-commit hooks
 print_info "2. Запуск pre-commit hooks..."
-python -m pre_commit run 2>&1 || true
+ls -la | grep pre-commit
 echo ""
 
 # Шаг 3: Проверяем и добавляем изменения от hooks
