@@ -14,6 +14,11 @@ print_error() { echo -e "${RED}✗ $1${NC}"; }
 print_warning() { echo -e "${YELLOW}⚠ $1${NC}"; }
 print_info() { echo -e "${BLUE}ℹ $1${NC}"; }
 
+# Сохраняем корневую директорию проекта
+ROOT_DIR=$(git rev-parse --show-toplevel)
+cd "$ROOT_DIR"
+print_info "Корень проекта: $ROOT_DIR"
+
 # Проверка что мы в git репозитории
 if ! git rev-parse --git-dir > /dev/null 2>&1; then
     print_error "Не git репозиторий!"
@@ -24,9 +29,26 @@ fi
 COMMIT_MSG="$*"
 if [ -z "$COMMIT_MSG" ]; then
     print_error "Укажите сообщение коммита!"
-    echo "Использование: ./smart-commit.sh \"ваше сообщение\""
+    echo "Использование: ./scripts/fast-commit.sh \"ваше сообщение\""
     exit 1
 fi
+
+# Проверка наличия pre-commit
+check_pre_commit() {
+    if ! command -v pre-commit &> /dev/null; then
+        print_error "pre-commit не установлен!"
+        print_info "Активируйте виртуальное окружение:"
+        echo "  source .venv/Scripts/activate"
+        exit 1
+    fi
+    
+    if [ ! -f ".pre-commit-config.yaml" ]; then
+        print_error "Файл .pre-commit-config.yaml не найден в корне проекта!"
+        exit 1
+    else
+        print_success "Pre-commit config найден"
+    fi
+}
 
 # Шаг 1: Добавляем все изменения
 print_info "1. Добавление всех изменений..."
@@ -42,7 +64,21 @@ echo ""
 
 # Шаг 2: Запускаем pre-commit hooks
 print_info "2. Запуск pre-commit hooks..."
-ls -la | grep pre-commit
+check_pre_commit
+
+# Получаем список файлов в стейдже
+STAGED_FILES_LIST=$(git diff --cached --name-only)
+
+if [ -n "$STAGED_FILES_LIST" ]; then
+    # Запускаем pre-commit на всех файлах в стейдже
+    if ! pre-commit run --files $STAGED_FILES_LIST; then
+        print_warning "   Pre-commit hooks вернули ошибки"
+    else
+        print_success "   Pre-commit hooks выполнены успешно"
+    fi
+else
+    print_warning "   Нет файлов в стейдже для проверки"
+fi
 echo ""
 
 # Шаг 3: Проверяем и добавляем изменения от hooks
@@ -77,7 +113,7 @@ if git diff --cached --quiet; then
     exit 1
 fi
 
-if git commit --no-verify -m "$COMMIT_MSG"; then
+if git commit -m "$COMMIT_MSG"; then
     print_success "   Коммит создан успешно"
     
     echo ""
