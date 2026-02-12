@@ -1,0 +1,58 @@
+bervinov-academy-db  | The files belonging to this database system will be owned by user "postgres".
+bervinov-academy-db  | This user must also own the server process.
+bervinov-academy-db  | 
+bervinov-academy-db  | The database cluster will be initialized with locale "en_US.utf8".
+bervinov-academy-db  | The default database encoding has accordingly been set to "UTF8".
+bervinov-academy-db  | The default text search configuration will be set to "english".
+bervinov-academy-db  | 
+bervinov-academy-db  | Data page checksums are disabled.
+bervinov-academy-db  | 
+bervinov-academy-db  | fixing permissions on existing directory /var/lib/postgresql/data ... ok
+bervinov-academy-db  | creating subdirectories ... ok
+bervinov-academy-db  | selecting dynamic shared memory implementation ... posix
+bervinov-academy-db  | selecting default max_connections ... 100
+bervinov-academy-db  | selecting default shared_buffers ... 128MB
+bervinov-academy-db  | selecting default time zone ... UTC
+bervinov-academy-db  | creating configuration files ... ok
+bervinov-academy-db  | running bootstrap script ... ok
+bervinov-academy-db  | sh: locale: not found
+bervinov-academy-db  | 2026-02-11 03:26:02.610 UTC [35] WARNING:  no usable system locales were found
+bervinov-academy-db  | performing post-bootstrap initialization ... ok
+bervinov-academy-db  | syncing data to disk ... ok
+bervinov-academy-db  | 
+bervinov-academy-db  | 
+bervinov-academy-db  | Success. You can now start the database server using:
+bervinov-academy-db  | initdb: warning: enabling "trust" authentication for local connections
+bervinov-academy-db  | initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+bervinov-academy-db  | 
+bervinov-academy-db  |     pg_ctl -D /var/lib/postgresql/data -l logfile start
+bervinov-academy-db  | 
+bervinov-academy-db  | waiting for server to start....2026-02-11 03:26:03.421 UTC [41] LOG:  starting PostgreSQL 15.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+bervinov-academy-db  | 2026-02-11 03:26:03.426 UTC [41] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+bervinov-academy-db  | 2026-02-11 03:26:03.443 UTC [44] LOG:  database system was shut down at 2026-02-11 03:26:03 UTC
+bervinov-academy-db  | 2026-02-11 03:26:03.453 UTC [41] LOG:  database system is ready to accept connections
+bervinov-academy-db  |  done
+bervinov-academy-db  | server started
+bervinov-academy-db  | CREATE DATABASE
+bervinov-academy-db  | 
+bervinov-academy-db  | 
+bervinov-academy-db  | /usr/local/bin/docker-entrypoint.sh: ignoring /docker-entrypoint-initdb.d/*
+bervinov-academy-db  | 
+bervinov-academy-db  | waiting for server to shut down...2026-02-11 03:26:03.577 UTC [41] LOG:  received fast shutdown request
+bervinov-academy-db  | .2026-02-11 03:26:03.582 UTC [41] LOG:  aborting any active transactions
+bervinov-academy-db  | 2026-02-11 03:26:03.584 UTC [41] LOG:  background worker "logical replication launcher" (PID 47) exited with exit code 1
+bervinov-academy-db  | 2026-02-11 03:26:03.584 UTC [42] LOG:  shutting down
+bervinov-academy-db  | 2026-02-11 03:26:03.589 UTC [42] LOG:  checkpoint starting: shutdown immediate
+bervinov-academy-db  | 2026-02-11 03:26:04.277 UTC [42] LOG:  checkpoint complete: wrote 921 buffers (5.6%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.026 s, sync=0.643 s, total=0.693 s; sync files=301, longest=0.009 s, average=0.003 s; distance=4239 kB, estimate=4239 kB
+bervinov-academy-db  | 2026-02-11 03:26:04.289 UTC [41] LOG:  database system is shut down
+bervinov-academy-db  |  done
+bervinov-academy-db  | server stopped
+bervinov-academy-db  | 
+bervinov-academy-db  | PostgreSQL init process complete; ready for start up.
+bervinov-academy-db  | 
+bervinov-academy-db  | 2026-02-11 03:26:04.323 UTC [1] LOG:  starting PostgreSQL 15.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+bervinov-academy-db  | 2026-02-11 03:26:04.323 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+bervinov-academy-db  | 2026-02-11 03:26:04.323 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+bervinov-academy-db  | 2026-02-11 03:26:04.334 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+bervinov-academy-db  | 2026-02-11 03:26:04.349 UTC [57] LOG:  database system was shut down at 2026-02-11 03:26:04 UTC
+bervinov-academy-db  | 2026-02-11 03:26:04.359 UTC [1] LOG:  database system is ready to accept connections

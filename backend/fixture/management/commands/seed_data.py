@@ -272,6 +272,56 @@ class Command(BaseCommand):
                 )
             )
 
+            self.stdout.write(
+                self.style.SUCCESS("Создано 5 менторов с технологиями")
+            )
+
+            # Добавляем технологии ментору
+            if specialization:
+                # Получаем технологии, связанные со специализацией ментора
+                specialization_type = specialization.type
+                relevant_tech_names = specialization_tech_map.get(
+                    specialization_type, []
+                )
+
+                # Ищем соответствующие объекты Technology
+                relevant_technologies = []
+                for tech_name in relevant_tech_names:
+                    # Пытаемся найти технологию по имени
+                    tech = Technology.objects.filter(name=tech_name).first()
+                    if tech:
+                        relevant_technologies.append(tech)
+                    else:
+                        # Если технологии нет, создаем ее
+                        tech = Technology.objects.create(name=tech_name)
+                        relevant_technologies.append(tech)
+
+                # Добавляем случайные технологии из общих технологий
+                additional_technologies = random.sample(
+                    list(technologies),
+                    k=min(random.randint(1, 3), len(technologies)),
+                )
+
+                # Объединяем и добавляем все технологии ментору
+                all_technologies = list(
+                    set(relevant_technologies + additional_technologies)
+                )
+                mentor.technology.set(all_technologies[: random.randint(2, 5)])
+            else:
+                # Если нет специализации, добавляем случайные технологии
+                mentor_technologies = random.sample(
+                    list(technologies),
+                    k=min(random.randint(2, 5), len(technologies)),
+                )
+                mentor.technology.set(mentor_technologies)
+
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Создан ментор {first_name} {last_name} "
+                    f"с {mentor.technology.count()} технологиями"
+                )
+            )
+
         self.stdout.write(
             self.style.SUCCESS("Создано 5 менторов с технологиями")
         )

@@ -1,0 +1,92 @@
+bervinov-academy-backend  | File “/app/locale/ru/LC_MESSAGES/django.po” is already compiled and up to date.
+bervinov-academy-backend  | Operations to perform:
+bervinov-academy-backend  |   Apply all migrations: admin, auth, content, contenttypes, sessions, token_blacklist, translations, users
+bervinov-academy-backend  | Running migrations:
+bervinov-academy-backend  |   Applying contenttypes.0001_initial... OK
+bervinov-academy-backend  |   Applying contenttypes.0002_remove_content_type_name... OK
+bervinov-academy-backend  |   Applying auth.0001_initial... OK
+bervinov-academy-backend  |   Applying auth.0002_alter_permission_name_max_length... OK
+bervinov-academy-backend  |   Applying auth.0003_alter_user_email_max_length... OK
+bervinov-academy-backend  |   Applying auth.0004_alter_user_username_opts... OK
+bervinov-academy-backend  |   Applying auth.0005_alter_user_last_login_null... OK
+bervinov-academy-backend  |   Applying auth.0006_require_contenttypes_0002... OK
+bervinov-academy-backend  |   Applying auth.0007_alter_validators_add_error_messages... OK
+bervinov-academy-backend  |   Applying auth.0008_alter_user_username_max_length... OK
+bervinov-academy-backend  |   Applying auth.0009_alter_user_last_name_max_length... OK
+bervinov-academy-backend  |   Applying auth.0010_alter_group_name_max_length... OK
+bervinov-academy-backend  |   Applying auth.0011_update_proxy_permissions... OK
+bervinov-academy-backend  |   Applying auth.0012_alter_user_first_name_max_length... OK
+bervinov-academy-backend  |   Applying users.0001_initial... OK
+bervinov-academy-backend  |   Applying admin.0001_initial... OK
+bervinov-academy-backend  |   Applying admin.0002_logentry_remove_auto_add... OK
+bervinov-academy-backend  |   Applying admin.0003_logentry_add_action_flag_choices... OK
+bervinov-academy-backend  |   Applying content.0001_initial... OK
+bervinov-academy-backend  |   Applying content.0002_alter_course_options_alter_lessontheory_options_and_more... OK
+bervinov-academy-backend  |   Applying sessions.0001_initial... OK
+bervinov-academy-backend  |   Applying token_blacklist.0001_initial... OK
+bervinov-academy-backend  |   Applying token_blacklist.0002_outstandingtoken_jti_hex... OK
+bervinov-academy-backend  |   Applying token_blacklist.0003_auto_20171017_2007... OK
+bervinov-academy-backend  |   Applying token_blacklist.0004_auto_20171017_2013... OK
+bervinov-academy-backend  |   Applying token_blacklist.0005_remove_outstandingtoken_jti... OK
+bervinov-academy-backend  |   Applying token_blacklist.0006_auto_20171017_2113... OK
+bervinov-academy-backend  |   Applying token_blacklist.0007_auto_20171017_2214... OK
+bervinov-academy-backend  |   Applying token_blacklist.0008_migrate_to_bigautofield... OK
+bervinov-academy-backend  |   Applying token_blacklist.0010_fix_migrate_to_bigautofield... OK
+bervinov-academy-backend  |   Applying token_blacklist.0011_linearizes_history... OK
+bervinov-academy-backend  |   Applying token_blacklist.0012_alter_outstandingtoken_user... OK
+bervinov-academy-backend  |   Applying token_blacklist.0013_alter_blacklistedtoken_options_and_more... OK
+bervinov-academy-backend  |   Applying translations.0001_initial... OK
+bervinov-academy-backend  |   Applying users.0002_alter_user_bio... OK
+bervinov-academy-backend  |   Applying users.0003_alter_user_options_alter_user_avatar_alter_user_bio_and_more... OK
+bervinov-academy-backend  |   Applying users.0004_specialization_alter_mentor_experience_years_and_more... OK
+bervinov-academy-backend  |   Applying users.0005_specialization_title_en_specialization_title_ru_and_more... OK
+bervinov-academy-backend  |   Applying users.0006_alter_specialization_type... OK
+bervinov-academy-backend  |   Applying users.0007_remove_specialization_translation_status_and_more... OK
+bervinov-academy-backend  |   Applying users.0008_remove_specialization_title_en_and_more... OK
+bervinov-academy-backend  |   Applying users.0009_specialization_description_en_and_more... OK
+bervinov-academy-backend  |   Applying users.0010_mentor_technology... OK
+bervinov-academy-backend  | Создан суперпользователь
+bervinov-academy-backend  | Создано 6 специализаций
+bervinov-academy-backend  | Создано/найдено 51 технологий
+bervinov-academy-backend  | Создано 5 менторов
+bervinov-academy-backend  | Создан ментор Иван Иванов с 2 технологиями
+bervinov-academy-backend  | Создано 5 менторов с технологиями
+bervinov-academy-backend  | Создан ментор Иван Иванов с 4 технологиями
+bervinov-academy-backend  | Создано 5 менторов
+bervinov-academy-backend  | Создан ментор Петр Петров с 2 технологиями
+bervinov-academy-backend  | Создано 5 менторов с технологиями
+bervinov-academy-backend  | Создан ментор Петр Петров с 2 технологиями
+bervinov-academy-backend  | Создано 5 менторов
+bervinov-academy-backend  | Создан ментор Сергей Сергеев с 5 технологиями
+bervinov-academy-backend  | Создано 5 менторов с технологиями
+bervinov-academy-backend  | Создан ментор Сергей Сергеев с 5 технологиями
+bervinov-academy-backend  | Создано 5 менторов
+bervinov-academy-backend  | Создан ментор Алексей Алексеев с 5 технологиями
+bervinov-academy-backend  | Создано 5 менторов с технологиями
+bervinov-academy-backend  | Создан ментор Алексей Алексеев с 5 технологиями
+bervinov-academy-backend  | Создано 5 менторов
+bervinov-academy-backend  | Создан ментор Дмитрий Дмитриев с 5 технологиями
+bervinov-academy-backend  | Создано 5 менторов с технологиями
+bervinov-academy-backend  | Создан ментор Дмитрий Дмитриев с 3 технологиями
+bervinov-academy-backend  | Создано 5 менторов с технологиями
+bervinov-academy-backend  | Создано 10 студентов
+bervinov-academy-backend  | Создан курс: Полный курс Python-разработчика
+bervinov-academy-backend  | Создан курс: Современная веб-разработка на React
+bervinov-academy-backend  | Создан курс: Data Science и машинное обучение
+bervinov-academy-backend  | Создан курс: Full Stack разработка на Django
+bervinov-academy-backend  | Создан курс: Разработка мобильных приложений на Flutter
+bervinov-academy-backend  | Создан курс: DevOps и облачные вычисления
+bervinov-academy-backend  | Создан курс: Продвинутый JavaScript и Node.js
+bervinov-academy-backend  | Создан курс: Основы UI/UX дизайна
+bervinov-academy-backend  | Создан курс: Основы кибербезопасности
+bervinov-academy-backend  | Создан курс: Разработка Blockchain и Web3
+bervinov-academy-backend  | Данные успешно созданы
+bervinov-academy-backend  | Watching for file changes with StatReloader
+bervinov-academy-backend  | Performing system checks...
+bervinov-academy-backend  | 
+bervinov-academy-backend  | System check identified no issues (0 silenced).
+bervinov-academy-backend  | February 11, 2026 - 06:26:14
+bervinov-academy-backend  | Django version 4.2, using settings 'school_platform.settings'
+bervinov-academy-backend  | Starting development server at http://0.0.0.0:8000/
+bervinov-academy-backend  | Quit the server with CONTROL-C.
+bervinov-academy-backend  | 
