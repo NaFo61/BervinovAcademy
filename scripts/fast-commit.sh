@@ -15,31 +15,36 @@ if [ -z "$COMMIT_MSG" ]; then
     exit 1
 fi
 
-print_info "→ Добавляем изменения..."
+print_info "Добавляем изменения..."
 git add .
-print_success "Добавлено"
+print_success "Готово"
+echo ""
 
 if command -v pre-commit &> /dev/null && [ -f ".pre-commit-config.yaml" ]; then
-    print_info "→ Pre-commit..."
+    print_info "Pre-commit хуки:"
+    echo ""
+    
     STAGED_FILES=$(git diff --cached --name-only)
     if [ -n "$STAGED_FILES" ]; then
-        pre-commit run --files $STAGED_FILES &> /dev/null || true
+        pre-commit run --files $STAGED_FILES
     fi
     
     if ! git diff --quiet; then
+        echo ""
         git add .
         print_success "Исправления добавлены"
     fi
+else
+    print_warning "Pre-commit не настроен"
 fi
+echo ""
 
 if git diff --cached --quiet; then
     print_error "Нет изменений для коммита!"
     exit 1
 fi
 
-if git commit -m "$COMMIT_MSG" &> /dev/null; then
+if git commit -m "$COMMIT_MSG"; then
+    echo ""
     print_success "Коммит: $(git log -1 --oneline)"
-else
-    print_error "Ошибка коммита"
-    exit 1
 fi
