@@ -46,5 +46,8 @@ fi
 
 if git commit -m "$COMMIT_MSG"; then
     echo ""
-    print_success "Коммит: $(git log -1 --oneline)"
+    print_success "Результат:"
+    echo ""
+    git log -1 --stat --pretty=format:"%h %s%nAuthor: %an <%ae>%nDate:   %ad%n%n    %b" --date=local | sed 's/^/     /'
+    echo ""
 fi
