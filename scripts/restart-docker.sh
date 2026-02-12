@@ -55,9 +55,18 @@ docker compose ps
 sleep 20
 
 echo
-echo "[6/6] Сохраняем логи celery в файл..."
-docker compose logs celery > web_development_logs.txt 2>&1 || {
+echo "[6/6] Сохраняем логи в файлы..."
+docker compose logs celery > celery.log 2>&1 || {
     echo "Логи celery могут быть пустыми (сервис еще не запущен)"
+}
+docker compose logs redis > redis.log 2>&1 || {
+    echo "Логи redis могут быть пустыми (сервис еще не запущен)"
+}
+docker compose logs db > db.log 2>&1 || {
+    echo "Логи db могут быть пустыми (сервис еще не запущен)"
+}
+docker compose logs backend > backend.log 2>&1 || {
+    echo "Логи backend могут быть пустыми (сервис еще не запущен)"
 }
 
 echo

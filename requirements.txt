@@ -16,3 +16,11 @@ langdetect==1.0.9
 Unidecode==1.4.0
 djangorestframework==3.16.1
 djangorestframework-simplejwt==5.5.1
+
+
+# Testing
+pytest==8.3.5
+pytest-django==4.9.0
+pytest-cov==6.0.0
+pytest-xdist==3.6.1  # для параллельного запуска
+model-bakery==1.20.0  # для создания тестовых данных

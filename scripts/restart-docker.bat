@@ -55,12 +55,33 @@ docker compose ps
 timeout /t 20 /nobreak >nul
 
 echo.
-echo [6/6] Сохраняем логи celery в файл...
-docker compose logs celery > web_development_logs.txt
+echo [6/6] Сохраняем логи в файлы...
+docker compose logs celery > logs/celery.log
 if %errorlevel% neq 0 (
     echo Логи celery могут быть пустыми (сервис еще не запущен)
 ) else (
-    echo Логи успешно сохранены в web_development_logs.txt
+    echo Логи успешно сохранены в logs/celery.log
+)
+
+docker compose logs redis > logs/redis.log
+if %errorlevel% neq 0 (
+    echo Логи redis могут быть пустыми (сервис еще не запущен)
+) else (
+    echo Логи успешно сохранены в logs/redis.log
+)
+
+docker compose logs db > logs/db.log
+if %errorlevel% neq 0 (
+    echo Логи db могут быть пустыми (сервис еще не запущен)
+) else (
+    echo Логи успешно сохранены в logs/db.log
+)
+
+docker compose logs backend > logs/backend.log
+if %errorlevel% neq 0 (
+    echo Логи backend могут быть пустыми (сервис еще не запущен)
+) else (
+    echo Логи успешно сохранены в logs/backend.log
 )
 
 echo.

@@ -134,6 +134,7 @@ echo.
 for /f "tokens=*" %%i in ('git log -1 --oneline') do echo     %%i
 for /f "skip=1 tokens=*" %%i in ('git log -1 --stat') do echo     %%i
 
+
 echo.
 %SUCCESS_ECHO% Готово!
 echo.
