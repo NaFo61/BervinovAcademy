@@ -1,0 +1,116 @@
+bervinov-academy-celery  | File “/app/locale/ru/LC_MESSAGES/django.po” is already compiled and up to date.
+bervinov-academy-celery  | /usr/local/lib/python3.11/site-packages/celery/platforms.py:841: SecurityWarning: You're running the worker with superuser privileges: this is
+bervinov-academy-celery  | absolutely not recommended!
+bervinov-academy-celery  | 
+bervinov-academy-celery  | Please specify a different user using the --uid option.
+bervinov-academy-celery  | 
+bervinov-academy-celery  | User information: uid=0 euid=0 gid=0 egid=0
+bervinov-academy-celery  | 
+bervinov-academy-celery  |   warnings.warn(SecurityWarning(ROOT_DISCOURAGED.format(
+bervinov-academy-celery  |  
+bervinov-academy-celery  |  -------------- celery@190b98842920 v5.5.3 (immunity)
+bervinov-academy-celery  | --- ***** ----- 
+bervinov-academy-celery  | -- ******* ---- Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41 2026-02-10 23:33:35
+bervinov-academy-celery  | - *** --- * --- 
+bervinov-academy-celery  | - ** ---------- [config]
+bervinov-academy-celery  | - ** ---------- .> app:         school_platform:0x7d37f262d7d0
+bervinov-academy-celery  | - ** ---------- .> transport:   redis://redis:6379/0
+bervinov-academy-celery  | - ** ---------- .> results:     redis://redis:6379/0
+bervinov-academy-celery  | - *** --- * --- .> concurrency: 12 (prefork)
+bervinov-academy-celery  | -- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+bervinov-academy-celery  | --- ***** ----- 
+bervinov-academy-celery  |  -------------- [queues]
+bervinov-academy-celery  |                 .> celery           exchange=celery(direct) key=celery
+bervinov-academy-celery  |                 
+bervinov-academy-celery  | 
+bervinov-academy-celery  | [tasks]
+bervinov-academy-celery  |   . translations.tasks.translate_text
+bervinov-academy-celery  | 
+bervinov-academy-celery  | [2026-02-10 23:33:39,312: INFO/MainProcess] Connected to redis://redis:6379/0
+bervinov-academy-celery  | [2026-02-10 23:33:39,325: INFO/MainProcess] mingle: searching for neighbors
+bervinov-academy-celery  | [2026-02-10 23:33:40,361: INFO/MainProcess] mingle: all alone
+bervinov-academy-celery  | [2026-02-10 23:33:40,393: INFO/MainProcess] celery@190b98842920 ready.
+bervinov-academy-celery  | [2026-02-10 23:33:45,280: INFO/MainProcess] Task translations.tasks.translate_text[c2f9a7e1-27fd-4540-ab74-0afc26ce5757] received
+bervinov-academy-celery  | [2026-02-10 23:33:45,283: INFO/MainProcess] Task translations.tasks.translate_text[95020aac-34e3-495c-a6b4-c649f2c80864] received
+bervinov-academy-celery  | [2026-02-10 23:33:45,286: INFO/MainProcess] Task translations.tasks.translate_text[13552cc2-fb0a-42b1-951d-eb3017943652] received
+bervinov-academy-celery  | [2026-02-10 23:33:45,305: INFO/MainProcess] Task translations.tasks.translate_text[b5310a87-7cb4-49c0-b852-4a87464190f9] received
+bervinov-academy-celery  | [2026-02-10 23:33:45,322: INFO/MainProcess] Task translations.tasks.translate_text[3ee8b8ea-cda3-4124-a1c7-98b45f96f7fc] received
+bervinov-academy-celery  | [2026-02-10 23:33:45,332: INFO/MainProcess] Task translations.tasks.translate_text[ae3b9d21-17f4-495e-9b55-f22217fb3ca9] received
+bervinov-academy-celery  | [2026-02-10 23:33:45,350: INFO/MainProcess] Task translations.tasks.translate_text[931833d8-0795-4fc0-8f75-28fb77ca1e2f] received
+bervinov-academy-celery  | [2026-02-10 23:33:45,354: INFO/MainProcess] Task translations.tasks.translate_text[3c8bed26-d254-45bc-9fd0-cdf80d6377e4] received
+bervinov-academy-celery  | [2026-02-10 23:33:45,359: INFO/MainProcess] Task translations.tasks.translate_text[79035abf-5a11-45b2-988e-4419739a89a3] received
+bervinov-academy-celery  | [2026-02-10 23:33:45,363: INFO/MainProcess] Task translations.tasks.translate_text[d29bda0e-21b8-47fc-9f8e-e26b956b032c] received
+bervinov-academy-celery  | [2026-02-10 23:33:45,380: INFO/MainProcess] Task translations.tasks.translate_text[1ec4949f-a6b8-415f-95d8-5f74c6e486d9] received
+bervinov-academy-celery  | [2026-02-10 23:33:45,392: INFO/MainProcess] Task translations.tasks.translate_text[5060185d-d152-4ce5-aa12-cdd1ee045795] received
+bervinov-academy-celery  | [2026-02-10 23:33:45,523: INFO/ForkPoolWorker-10] translate_text вызвался Data Science (en) -> ru
+bervinov-academy-celery  | [2026-02-10 23:33:45,524: INFO/ForkPoolWorker-10] translate_text existing = None
+bervinov-academy-celery  | [2026-02-10 23:33:45,530: INFO/ForkPoolWorker-1] translate_text вызвался Курсы по созданию современных  (ru) -> en
+bervinov-academy-celery  | [2026-02-10 23:33:45,531: INFO/ForkPoolWorker-1] translate_text existing = None
+bervinov-academy-celery  | [2026-02-10 23:33:45,567: INFO/ForkPoolWorker-2] translate_text вызвался Разработка приложений для iOS  (ru) -> en
+bervinov-academy-celery  | [2026-02-10 23:33:45,569: INFO/ForkPoolWorker-2] translate_text existing = None
+bervinov-academy-celery  | [2026-02-10 23:33:45,571: INFO/ForkPoolWorker-5] translate_text вызвался Интернет-маркетинг и продвижен (ru) -> en
+bervinov-academy-celery  | [2026-02-10 23:33:45,571: INFO/ForkPoolWorker-5] translate_text existing = None
+bervinov-academy-celery  | [2026-02-10 23:33:45,600: INFO/ForkPoolWorker-8] translate_text вызвался Веб-разработка (ru) -> en
+bervinov-academy-celery  | [2026-02-10 23:33:45,600: INFO/ForkPoolWorker-8] translate_text existing = None
+bervinov-academy-celery  | [2026-02-10 23:33:45,636: INFO/ForkPoolWorker-3] translate_text вызвался Анализ данных и машинное обуче (ru) -> en
+bervinov-academy-celery  | [2026-02-10 23:33:45,637: INFO/ForkPoolWorker-3] translate_text existing = None
+bervinov-academy-celery  | [2026-02-10 23:33:45,645: INFO/ForkPoolWorker-9] translate_text вызвался Мобильная разработка (ru) -> en
+bervinov-academy-celery  | [2026-02-10 23:33:45,646: INFO/ForkPoolWorker-9] translate_text existing = None
+bervinov-academy-celery  | [2026-02-10 23:33:45,645: INFO/ForkPoolWorker-11] translate_text вызвался UI/UX дизайн (ru) -> en
+bervinov-academy-celery  | [2026-02-10 23:33:45,646: INFO/ForkPoolWorker-11] translate_text existing = None
+bervinov-academy-celery  | [2026-02-10 23:33:45,647: INFO/ForkPoolWorker-6] translate_text вызвался Бизнес-аналитика (ru) -> en
+bervinov-academy-celery  | [2026-02-10 23:33:45,648: INFO/ForkPoolWorker-6] translate_text existing = None
+bervinov-academy-celery  | [2026-02-10 23:33:45,648: INFO/ForkPoolWorker-7] translate_text вызвался Аналитика данных для бизнес-ре (ru) -> en
+bervinov-academy-celery  | [2026-02-10 23:33:45,649: INFO/ForkPoolWorker-7] translate_text existing = None
+bervinov-academy-celery  | [2026-02-10 23:33:45,672: INFO/ForkPoolWorker-12] translate_text вызвался Digital маркетинг (ru) -> en
+bervinov-academy-celery  | [2026-02-10 23:33:45,673: INFO/ForkPoolWorker-12] translate_text existing = None
+bervinov-academy-celery  | [2026-02-10 23:33:45,698: INFO/ForkPoolWorker-4] translate_text вызвался Дизайн пользовательских интерф (ru) -> en
+bervinov-academy-celery  | [2026-02-10 23:33:45,699: INFO/ForkPoolWorker-4] translate_text existing = None
+bervinov-academy-celery  | [2026-02-10 23:33:46,180: INFO/ForkPoolWorker-1] Нашёл объект по description: Веб-разработка -> обновляю description_en = 'Courses on creating modern web applications'
+bervinov-academy-celery  | [2026-02-10 23:33:46,184: INFO/ForkPoolWorker-1] SIGNAL: frozenset({'description_en'})
+bervinov-academy-celery  | [2026-02-10 23:33:46,185: INFO/ForkPoolWorker-1] Перевод применён к 1 объектам Specialization
+bervinov-academy-celery  | [2026-02-10 23:33:46,193: INFO/ForkPoolWorker-1] Task translations.tasks.translate_text[95020aac-34e3-495c-a6b4-c649f2c80864] succeeded in 0.9010636300008628s: '✅ Переведено: Courses on creating modern web applications'
+bervinov-academy-celery  | [2026-02-10 23:33:46,727: INFO/ForkPoolWorker-2] Нашёл объект по description: Мобильная разработка -> обновляю description_en = 'Application development for iOS and Android'
+bervinov-academy-celery  | [2026-02-10 23:33:46,730: INFO/ForkPoolWorker-5] Нашёл объект по description: Digital маркетинг -> обновляю description_en = 'Internet marketing and promotion'
+bervinov-academy-celery  | [2026-02-10 23:33:46,734: INFO/ForkPoolWorker-2] SIGNAL: frozenset({'description_en'})
+bervinov-academy-celery  | [2026-02-10 23:33:46,734: INFO/ForkPoolWorker-2] Перевод применён к 1 объектам Specialization
+bervinov-academy-celery  | [2026-02-10 23:33:46,739: INFO/ForkPoolWorker-5] SIGNAL: frozenset({'description_en'})
+bervinov-academy-celery  | [2026-02-10 23:33:46,739: INFO/ForkPoolWorker-5] Перевод применён к 1 объектам Specialization
+bervinov-academy-celery  | [2026-02-10 23:33:46,740: INFO/ForkPoolWorker-4] Нашёл объект по description: UI/UX дизайн -> обновляю description_en = 'User Interface and Experience Design'
+bervinov-academy-celery  | [2026-02-10 23:33:46,747: INFO/ForkPoolWorker-4] SIGNAL: frozenset({'description_en'})
+bervinov-academy-celery  | [2026-02-10 23:33:46,747: INFO/ForkPoolWorker-4] Перевод применён к 1 объектам Specialization
+bervinov-academy-celery  | [2026-02-10 23:33:46,749: INFO/ForkPoolWorker-9] Нашёл объект по title: Мобильная разработка -> обновляю title_en = 'Mobile development'
+bervinov-academy-celery  | [2026-02-10 23:33:46,754: INFO/ForkPoolWorker-2] Task translations.tasks.translate_text[b5310a87-7cb4-49c0-b852-4a87464190f9] succeeded in 1.4446833949987195s: '✅ Переведено: Application development for iOS and Android'
+bervinov-academy-celery  | [2026-02-10 23:33:46,755: INFO/ForkPoolWorker-9] SIGNAL: frozenset({'title_en'})
+bervinov-academy-celery  | [2026-02-10 23:33:46,756: INFO/ForkPoolWorker-9] Перевод применён к 1 объектам Specialization
+bervinov-academy-celery  | [2026-02-10 23:33:46,757: INFO/ForkPoolWorker-5] Task translations.tasks.translate_text[d29bda0e-21b8-47fc-9f8e-e26b956b032c] succeeded in 1.391580793002504s: '✅ Переведено: Internet marketing and promotion'
+bervinov-academy-celery  | [2026-02-10 23:33:46,767: INFO/ForkPoolWorker-4] Task translations.tasks.translate_text[3c8bed26-d254-45bc-9fd0-cdf80d6377e4] succeeded in 1.4050975049976842s: '✅ Переведено: User Interface and Experience Design'
+bervinov-academy-celery  | [2026-02-10 23:33:46,769: INFO/ForkPoolWorker-9] Task translations.tasks.translate_text[13552cc2-fb0a-42b1-951d-eb3017943652] succeeded in 1.4773393279974698s: '✅ Переведено: Mobile development'
+bervinov-academy-celery  | [2026-02-10 23:33:46,798: INFO/ForkPoolWorker-8] Нашёл объект по title: Веб-разработка -> обновляю title_en = 'Web development'
+bervinov-academy-celery  | [2026-02-10 23:33:46,808: INFO/ForkPoolWorker-8] SIGNAL: frozenset({'title_en'})
+bervinov-academy-celery  | [2026-02-10 23:33:46,808: INFO/ForkPoolWorker-8] Перевод применён к 1 объектам Specialization
+bervinov-academy-celery  | [2026-02-10 23:33:46,819: INFO/ForkPoolWorker-6] Нашёл объект по title: Бизнес-аналитика -> обновляю title_en = 'Business Analytics'
+bervinov-academy-celery  | [2026-02-10 23:33:46,825: INFO/ForkPoolWorker-6] SIGNAL: frozenset({'title_en'})
+bervinov-academy-celery  | [2026-02-10 23:33:46,826: INFO/ForkPoolWorker-6] Перевод применён к 1 объектам Specialization
+bervinov-academy-celery  | [2026-02-10 23:33:46,829: INFO/ForkPoolWorker-8] Task translations.tasks.translate_text[c2f9a7e1-27fd-4540-ab74-0afc26ce5757] succeeded in 1.5464187079996918s: '✅ Переведено: Web development'
+bervinov-academy-celery  | [2026-02-10 23:33:46,855: INFO/ForkPoolWorker-6] Task translations.tasks.translate_text[1ec4949f-a6b8-415f-95d8-5f74c6e486d9] succeeded in 1.4582086040027207s: '✅ Переведено: Business Analytics'
+bervinov-academy-celery  | [2026-02-10 23:33:46,893: INFO/ForkPoolWorker-3] Нашёл объект по description: Data Science -> обновляю description_en = 'Data Analysis and Machine Learning'
+bervinov-academy-celery  | [2026-02-10 23:33:46,900: INFO/ForkPoolWorker-3] SIGNAL: frozenset({'description_en'})
+bervinov-academy-celery  | [2026-02-10 23:33:46,900: INFO/ForkPoolWorker-3] Перевод применён к 1 объектам Specialization
+bervinov-academy-celery  | [2026-02-10 23:33:46,914: INFO/ForkPoolWorker-12] Нашёл объект по title: Digital маркетинг -> обновляю title_en = 'Digital marketing'
+bervinov-academy-celery  | [2026-02-10 23:33:46,916: INFO/ForkPoolWorker-11] Нашёл объект по title: UI/UX дизайн -> обновляю title_en = 'UI/UX design'
+bervinov-academy-celery  | [2026-02-10 23:33:46,919: INFO/ForkPoolWorker-3] Task translations.tasks.translate_text[ae3b9d21-17f4-495e-9b55-f22217fb3ca9] succeeded in 1.58144062700012s: '✅ Переведено: Data Analysis and Machine Learning'
+bervinov-academy-celery  | [2026-02-10 23:33:46,922: INFO/ForkPoolWorker-7] Нашёл объект по description: Бизнес-аналитика -> обновляю description_en = 'Data analytics for business solutions'
+bervinov-academy-celery  | [2026-02-10 23:33:46,923: INFO/ForkPoolWorker-12] SIGNAL: frozenset({'title_en'})
+bervinov-academy-celery  | [2026-02-10 23:33:46,924: INFO/ForkPoolWorker-12] Перевод применён к 1 объектам Specialization
+bervinov-academy-celery  | [2026-02-10 23:33:46,927: INFO/ForkPoolWorker-11] SIGNAL: frozenset({'title_en'})
+bervinov-academy-celery  | [2026-02-10 23:33:46,933: INFO/ForkPoolWorker-11] Перевод применён к 1 объектам Specialization
+bervinov-academy-celery  | [2026-02-10 23:33:46,948: INFO/ForkPoolWorker-7] SIGNAL: frozenset({'description_en'})
+bervinov-academy-celery  | [2026-02-10 23:33:46,949: INFO/ForkPoolWorker-7] Перевод применён к 1 объектам Specialization
+bervinov-academy-celery  | [2026-02-10 23:33:46,952: INFO/ForkPoolWorker-12] Task translations.tasks.translate_text[79035abf-5a11-45b2-988e-4419739a89a3] succeeded in 1.5875774020023528s: '✅ Переведено: Digital marketing'
+bervinov-academy-celery  | [2026-02-10 23:33:46,974: INFO/ForkPoolWorker-11] Task translations.tasks.translate_text[931833d8-0795-4fc0-8f75-28fb77ca1e2f] succeeded in 1.6175633820021176s: '✅ Переведено: UI/UX design'
+bervinov-academy-celery  | [2026-02-10 23:33:46,976: INFO/ForkPoolWorker-7] Task translations.tasks.translate_text[5060185d-d152-4ce5-aa12-cdd1ee045795] succeeded in 1.571565164005733s: '✅ Переведено: Data analytics for business solutions'
+bervinov-academy-celery  | [2026-02-10 23:33:47,040: INFO/ForkPoolWorker-10] Нашёл объект по title: Data Science -> обновляю title_ru = 'Наука о данных'
+bervinov-academy-celery  | [2026-02-10 23:33:47,045: INFO/ForkPoolWorker-10] SIGNAL: frozenset({'title_ru'})
+bervinov-academy-celery  | [2026-02-10 23:33:47,045: INFO/ForkPoolWorker-10] Перевод применён к 1 объектам Specialization
+bervinov-academy-celery  | [2026-02-10 23:33:47,055: INFO/ForkPoolWorker-10] Task translations.tasks.translate_text[3ee8b8ea-cda3-4124-a1c7-98b45f96f7fc] succeeded in 1.7291895469970768s: '✅ Переведено: Наука о данных'
