@@ -1,40 +1,24 @@
-"""
-Тесты полей и свойств модели User
-==================================
-Покрывает публичный интерфейс экземпляра пользователя:
-
-  - __str__ / get_full_name / get_short_name / get_username
-  - has_email / has_phone
-  - is_student / is_mentor / is_admin
-  - role по умолчанию
-"""
-
 import pytest
 
 from users.models import User
-
 from .conftest import make_user
-
-# ─────────────────────────────────────────────
-# __str__ и методы имени
-# ─────────────────────────────────────────────
 
 
 @pytest.mark.django_db
 def test_str_with_email(student_user):
     result = str(student_user)
     assert "Иван Иванов" in result
-    assert "ivan@example.com" in result
+    assert "test@academy.com" in result
 
 
 @pytest.mark.django_db
 def test_str_with_phone_only():
-    user = make_user(email=None, phone="+79001110000")
-    assert "+79001110000" in str(user)
+    user = make_user(email=None, phone="+79123456789")
+    assert "+79123456789" in str(user)
 
 
 def test_str_no_contact_fallback():
-    user = User(first_name="Икс", last_name="Игрек")
+    user = User(first_name="Иван", last_name="Иванов")
     assert "No contact" in str(user)
 
 
@@ -48,26 +32,16 @@ def test_get_short_name(student_user):
     assert student_user.get_short_name() == "Иван"
 
 
-# ─────────────────────────────────────────────
-# get_username
-# ─────────────────────────────────────────────
-
-
 @pytest.mark.django_db
 def test_get_username_prefers_email():
-    user = make_user(phone="+79001234567")
-    assert user.get_username() == "ivan@example.com"
+    user = make_user(phone="+79123456789")
+    assert user.get_username() == "test@academy.com"
 
 
 @pytest.mark.django_db
 def test_get_username_falls_back_to_phone():
-    user = make_user(email=None, phone="+79001112233")
-    assert user.get_username() == "+79001112233"
-
-
-# ─────────────────────────────────────────────
-# has_email / has_phone
-# ─────────────────────────────────────────────
+    user = make_user(email=None, phone="+79123456789")
+    assert user.get_username() == "+79123456789"
 
 
 @pytest.mark.django_db
@@ -77,24 +51,19 @@ def test_has_email_true(student_user):
 
 @pytest.mark.django_db
 def test_has_email_false():
-    user = make_user(email=None, phone="+79002223344")
+    user = make_user(email=None, phone="+79123456789")
     assert not user.has_email
 
 
 @pytest.mark.django_db
 def test_has_phone_true():
-    user = make_user(phone="+79003334455")
+    user = make_user(phone="+79123456789")
     assert user.has_phone
 
 
 @pytest.mark.django_db
 def test_has_phone_false(student_user):
     assert not student_user.has_phone
-
-
-# ─────────────────────────────────────────────
-# Роли-свойства
-# ─────────────────────────────────────────────
 
 
 @pytest.mark.django_db
