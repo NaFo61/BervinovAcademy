@@ -1,20 +1,7 @@
-"""
-Тесты профильных моделей: Student, Mentor, Specialization
-==========================================================
-Student       — OneToOne с User, каскадное удаление, мета
-Specialization — choices, дефолты, translatable_fields, мета
-Mentor        — OneToOne, FK с SET_NULL, M2M технологий, мета
-"""
-
 import pytest
 
 from users.models import Mentor, Specialization, Student
-
 from .conftest import make_user
-
-# ─────────────────────────────────────────────
-# Фикстуры
-# ─────────────────────────────────────────────
 
 
 @pytest.fixture
@@ -34,11 +21,6 @@ def mentor(mentor_user, specialization):
         specialization=specialization,
         experience_years=5,
     )
-
-
-# ─────────────────────────────────────────────
-# Student
-# ─────────────────────────────────────────────
 
 
 @pytest.mark.django_db
@@ -68,11 +50,6 @@ def test_student_verbose_name():
 
 def test_student_verbose_name_plural():
     assert str(Student._meta.verbose_name_plural) == "Students"
-
-
-# ─────────────────────────────────────────────
-# Specialization
-# ─────────────────────────────────────────────
 
 
 @pytest.mark.django_db
@@ -136,11 +113,6 @@ def test_specialization_verbose_name_plural():
     assert str(Specialization._meta.verbose_name_plural) == "Specializations"
 
 
-# ─────────────────────────────────────────────
-# Mentor
-# ─────────────────────────────────────────────
-
-
 @pytest.mark.django_db
 def test_mentor_str_with_specialization(mentor):
     result = str(mentor)
@@ -181,7 +153,7 @@ def test_mentor_technology_m2m_empty_by_default(mentor):
 @pytest.mark.django_db
 def test_mentor_experience_years_optional():
     user = make_user(
-        email="noexp@example.com", phone="+79020202020", role="mentor"
+        email="test@academy.com", phone="+79123456789", role="mentor"
     )
     mentor = Mentor.objects.create(user=user)
     assert mentor.experience_years is None
