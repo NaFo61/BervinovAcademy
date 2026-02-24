@@ -64,7 +64,7 @@ source .venv/bin/activate
 
 3. **Установка зависимостей**
 ```bash
-pip install -r requirements.txt
+pip install -e .
 ```
 
 4. **Настройка окружения**

@@ -1,3 +1,47 @@
+[project]
+name = "bervinov-academy"
+version = "0.1.0"
+description = "Online education platform"
+requires-python = ">=3.11"
+dependencies = [
+    "django==4.2",
+    "python-decouple==3.8",
+    "psycopg2-binary==2.9.10",
+    "pillow==12.0.0",
+    "django-unfold==0.68.0",
+    "celery==5.5.3",
+    "redis==7.0.1",
+    "googletrans==4.0.0-rc1",
+    "django-modeltranslation",
+    "Faker==38.2.0",
+    "langdetect==1.0.9",
+    "Unidecode==1.4.0",
+    "djangorestframework==3.16.1",
+    "djangorestframework-simplejwt==5.5.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit>=3.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+]
+test = [
+    "pytest==8.3.5",
+    "pytest-django==4.9.0",
+    "pytest-cov==6.0.0",
+    "pytest-xdist==3.6.1",
+    "model-bakery==1.20.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["backend"]
+
 [tool.black]
 line-length = 79
 target-version = ['py311']
@@ -51,3 +95,34 @@ show_error_codes = true
 [[tool.mypy.overrides]]
 module = "backend.translations.mixins"
 ignore_errors = true
+
+# Секция для pytest
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "school_platform.settings"
+python_files = ["test_*.py", "*_tests.py", "tests.py"]
+pythonpath = ["backend"]
+django_find_project = true
+addopts = [
+    "--reuse-db",
+    "--nomigrations",
+    "--strict-markers",
+    "-v",
+]
+testpaths = [
+    "backend/users/tests",
+    "backend/content/tests",
+    "backend/education/tests",
+    "backend/progress/tests",
+    "backend/mentoring/tests",
+    "backend/communication/tests",
+    "backend/translations/tests",
+]
+
+# Определение пользовательских маркеров
+markers = [
+    "smoke: дымовые тесты для быстрой проверки критического функционала",
+    "fast: быстрые тесты, которые выполняются за секунды",
+    "slow: медленные тесты (интеграционные, с БД и т.д.)",
+    "unit: модульные тесты",
+    "integration: интеграционные тесты",
+]
