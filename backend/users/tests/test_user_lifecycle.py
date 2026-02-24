@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 import pytest
 
 from users.models import User
+
 from .conftest import make_user
 
 
@@ -15,7 +16,7 @@ def test_student_role_clears_staff_and_superuser():
 @pytest.mark.django_db
 def test_mentor_role_sets_staff_only():
     user = make_user(
-        email="test@academy.com", phone="+79123456789", role="mentor"
+        email="ivan@academy.com", phone="+79123456789", role="mentor"
     )
     assert user.is_staff
     assert not user.is_superuser
@@ -30,7 +31,7 @@ def test_admin_role_sets_staff_and_superuser(admin_user):
 @pytest.mark.django_db
 def test_changing_role_from_mentor_to_student_resets_flags():
     user = make_user(
-        email="test@academy.com", phone="+79123456789", role="mentor"
+        email="ivan@academy.com", phone="+79123456789", role="mentor"
     )
     assert user.is_staff
 
@@ -51,7 +52,10 @@ def test_clean_raises_if_no_email_and_no_phone():
 @pytest.mark.django_db
 def test_clean_passes_with_email_only():
     user = User(
-        first_name="Иван", last_name="Иванов", email="test@academy.com", role="student"
+        first_name="Иван",
+        last_name="Иванов",
+        email="ivan@academy.com",
+        role="student",
     )
     user.clean()
 
@@ -59,7 +63,10 @@ def test_clean_passes_with_email_only():
 @pytest.mark.django_db
 def test_clean_passes_with_phone_only():
     user = User(
-        first_name="Иван", last_name="Иванов", phone="+79123456789", role="student"
+        first_name="Иван",
+        last_name="Иванов",
+        phone="+79123456789",
+        role="student",
     )
     user.clean()
 
@@ -67,7 +74,10 @@ def test_clean_passes_with_phone_only():
 @pytest.mark.django_db
 def test_clean_admin_without_email_raises():
     user = User(
-        first_name="Иван", last_name="Иванов", phone="+79123456789", role="admin"
+        first_name="Иван",
+        last_name="Иванов",
+        phone="+79123456789",
+        role="admin",
     )
     with pytest.raises(ValidationError) as exc_info:
         user.clean()
@@ -76,7 +86,10 @@ def test_clean_admin_without_email_raises():
 
 def test_clean_admin_without_phone_raises():
     user = User(
-        first_name="Иван", last_name="Иванов", email="test@academy.com", role="admin"
+        first_name="Иван",
+        last_name="Иванов",
+        email="ivan@academy.com",
+        role="admin",
     )
     with pytest.raises(ValidationError) as exc_info:
         user.clean()
@@ -98,9 +111,12 @@ def test_clean_superuser_flag_also_requires_email():
 
 @pytest.mark.django_db
 def test_clean_duplicate_email_raises():
-    make_user(email="test@academy.com")
+    make_user(email="ivan@academy.com")
     duplicate = User(
-        first_name="Иван", last_name="Иванов", email="test@academy.com", role="student"
+        first_name="Иван",
+        last_name="Иванов",
+        email="ivan@academy.com",
+        role="student",
     )
     with pytest.raises(ValidationError) as exc_info:
         duplicate.clean()
@@ -111,7 +127,10 @@ def test_clean_duplicate_email_raises():
 def test_clean_duplicate_phone_raises():
     make_user(phone="+79123456789")
     duplicate = User(
-        first_name="Иван", last_name="Иванов", phone="+79123456789", role="student"
+        first_name="Иван",
+        last_name="Иванов",
+        phone="+79123456789",
+        role="student",
     )
     with pytest.raises(ValidationError) as exc_info:
         duplicate.clean()
@@ -120,7 +139,7 @@ def test_clean_duplicate_phone_raises():
 
 @pytest.mark.django_db
 def test_clean_update_own_email_does_not_raise():
-    user = make_user(email="test@academy.com")
+    user = make_user(email="ivan@academy.com")
     user.first_name = "Пётр"
     user.clean()
 

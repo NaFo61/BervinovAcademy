@@ -15,11 +15,11 @@ def make_user(**kwargs) -> User:
     defaults = {
         "first_name": "Иван",
         "last_name": "Иванов",
-        "email": "ivan@example.com",
+        "email": "ivan@academy.com",
         "role": "student",
     }
     defaults.update(kwargs)
-    return User.objects.create_user(password="strongpass123", **defaults)
+    return User.objects.create_user(password="password", **defaults)
 
 
 @pytest.fixture
@@ -30,7 +30,7 @@ def student_user(db):
 @pytest.fixture
 def mentor_user(db):
     return make_user(
-        email="test@academy.com",
+        email="ivan@academy.com",
         phone="+79010101010",
         role="mentor",
     )
@@ -39,9 +39,9 @@ def mentor_user(db):
 @pytest.fixture
 def admin_user(db):
     return User.objects.create_superuser(
-        email="test@academy.com",
+        email="ivan@academy.com",
         phone="+70000000001",
-        password="adminpass",
+        password="password",
         first_name="Админ",
         last_name="Тестов",
     )

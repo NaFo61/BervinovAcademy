@@ -1,6 +1,7 @@
 import pytest
 
 from users.models import User
+
 from .conftest import make_user
 
 
@@ -8,7 +9,7 @@ from .conftest import make_user
 def test_str_with_email(student_user):
     result = str(student_user)
     assert "Иван Иванов" in result
-    assert "test@academy.com" in result
+    assert "ivan@academy.com" in result
 
 
 @pytest.mark.django_db
@@ -35,7 +36,7 @@ def test_get_short_name(student_user):
 @pytest.mark.django_db
 def test_get_username_prefers_email():
     user = make_user(phone="+79123456789")
-    assert user.get_username() == "test@academy.com"
+    assert user.get_username() == "ivan@academy.com"
 
 
 @pytest.mark.django_db

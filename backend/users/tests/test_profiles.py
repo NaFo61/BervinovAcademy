@@ -1,6 +1,7 @@
 import pytest
 
 from users.models import Mentor, Specialization, Student
+
 from .conftest import make_user
 
 
@@ -153,7 +154,7 @@ def test_mentor_technology_m2m_empty_by_default(mentor):
 @pytest.mark.django_db
 def test_mentor_experience_years_optional():
     user = make_user(
-        email="test@academy.com", phone="+79123456789", role="mentor"
+        email="ivan@academy.com", phone="+79123456789", role="mentor"
     )
     mentor = Mentor.objects.create(user=user)
     assert mentor.experience_years is None

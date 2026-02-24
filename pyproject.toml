@@ -42,7 +42,6 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 packages = ["backend"]
 
-# Остальные секции без изменений
 [tool.black]
 line-length = 79
 target-version = ['py311']
@@ -96,3 +95,34 @@ show_error_codes = true
 [[tool.mypy.overrides]]
 module = "backend.translations.mixins"
 ignore_errors = true
+
+# Секция для pytest
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "school_platform.settings"
+python_files = ["test_*.py", "*_tests.py", "tests.py"]
+pythonpath = ["backend"]
+django_find_project = true
+addopts = [
+    "--reuse-db",
+    "--nomigrations",
+    "--strict-markers",
+    "-v",
+]
+testpaths = [
+    "backend/users/tests",
+    "backend/content/tests",
+    "backend/education/tests",
+    "backend/progress/tests",
+    "backend/mentoring/tests",
+    "backend/communication/tests",
+    "backend/translations/tests",
+]
+
+# Определение пользовательских маркеров
+markers = [
+    "smoke: дымовые тесты для быстрой проверки критического функционала",
+    "fast: быстрые тесты, которые выполняются за секунды",
+    "slow: медленные тесты (интеграционные, с БД и т.д.)",
+    "unit: модульные тесты",
+    "integration: интеграционные тесты",
+]
