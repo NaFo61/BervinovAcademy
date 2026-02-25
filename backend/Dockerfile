@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Добавил 'curl' и 'vim' для дебага
+# Добавляем curl и vim для дебага
 RUN apt-get update && apt-get install -y \
     postgresql-client \
     gcc \
@@ -16,12 +16,20 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
 
-# Отдельный слой для зависимостей (лучшее кэширование)
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Копируем pyproject.toml в корень
+COPY pyproject.toml /app/
 
-# Копируем код
-COPY ./backend .
+# Копируем весь backend со всеми поддиректориями
+COPY backend/ /app/backend/
+
+# Проверяем наличие manage.py после копирования (для отладки)
+RUN ls -la /app/backend/
+
+# Устанавливаем зависимости
+RUN pip install --upgrade pip \
+    && pip install -e .[dev,test]
+
+WORKDIR /app/backend
 
 # Healthcheck для мониторинга
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

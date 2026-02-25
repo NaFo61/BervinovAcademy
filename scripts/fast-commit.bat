@@ -69,6 +69,17 @@ if defined STAGED_FILES (
 )
 echo.
 
+%INFO_ECHO% 4. Запуск быстрых тестов...
+echo.
+pytest -m "fast" -v --reuse-db --nomigrations
+if errorlevel 1 (
+    %ERROR_ECHO% Быстрые тесты не пройдены!
+    pause
+    exit /b 1
+)
+%SUCCESS_ECHO% Быстрые тесты пройдены
+echo.
+
 :: Шаг 2: Запускаем pre-commit hooks
 %INFO_ECHO% 2. Запуск pre-commit hooks...
 echo.

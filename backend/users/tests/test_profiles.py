@@ -24,16 +24,25 @@ def mentor(mentor_user, specialization):
     )
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_student_str(student):
     assert "Иван Иванов" in str(student)
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_student_related_name(student_user, student):
     assert student_user.student_profile == student
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_student_cascade_delete(student_user, student):
     user_pk = student_user.pk
@@ -41,40 +50,64 @@ def test_student_cascade_delete(student_user, student):
     assert not Student.objects.filter(user_id=user_pk).exists()
 
 
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
 def test_student_db_table():
     assert Student._meta.db_table == "students"
 
 
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
 def test_student_verbose_name():
     assert str(Student._meta.verbose_name) == "Student"
 
 
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
 def test_student_verbose_name_plural():
     assert str(Student._meta.verbose_name_plural) == "Students"
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_specialization_str(specialization):
     assert str(specialization) == "Backend"
 
 
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
 def test_specialization_default_type_is_web():
     spec = Specialization(title="Без типа")
     assert spec.type == "web"
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_specialization_default_is_active():
     spec = Specialization.objects.create(type="data", title="DS")
     assert spec.is_active
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_specialization_description_can_be_blank():
     spec = Specialization.objects.create(type="design", title="UX")
     assert spec.description == ""
 
 
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
 @pytest.mark.parametrize(
     "key",
     ["web", "mobile", "data", "design", "marketing", "business", "other"],
@@ -84,36 +117,60 @@ def test_specialization_type_choices_contain(key):
     assert key in valid
 
 
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
 @pytest.mark.parametrize("key", ["pending", "completed", "failed"])
 def test_specialization_status_choices_contain(key):
     valid = [s[0] for s in Specialization.STATUS_CHOICES]
     assert key in valid
 
 
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
 def test_specialization_title_is_translatable():
     assert "title" in Specialization.translatable_fields
 
 
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
 def test_specialization_description_is_translatable():
     assert "description" in Specialization.translatable_fields
 
 
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
 def test_specialization_db_table():
     assert Specialization._meta.db_table == "specializations"
 
 
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
 def test_specialization_ordering():
     assert Specialization._meta.ordering == ["type", "title"]
 
 
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
 def test_specialization_verbose_name():
     assert str(Specialization._meta.verbose_name) == "Specialization"
 
 
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
 def test_specialization_verbose_name_plural():
     assert str(Specialization._meta.verbose_name_plural) == "Specializations"
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_mentor_str_with_specialization(mentor):
     result = str(mentor)
@@ -121,17 +178,26 @@ def test_mentor_str_with_specialization(mentor):
     assert "Backend" in result
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_mentor_str_without_specialization(mentor_user):
     mentor = Mentor.objects.create(user=mentor_user, specialization=None)
     assert "—" in str(mentor)
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_mentor_related_name(mentor_user, mentor):
     assert mentor_user.mentor_profile == mentor
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_mentor_cascade_delete_user(mentor_user, mentor):
     user_pk = mentor_user.pk
@@ -139,6 +205,9 @@ def test_mentor_cascade_delete_user(mentor_user, mentor):
     assert not Mentor.objects.filter(user_id=user_pk).exists()
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_mentor_delete_specialization_sets_null(mentor, specialization):
     specialization.delete()
@@ -146,11 +215,17 @@ def test_mentor_delete_specialization_sets_null(mentor, specialization):
     assert mentor.specialization is None
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_mentor_technology_m2m_empty_by_default(mentor):
     assert mentor.technology.count() == 0
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_mentor_experience_years_optional():
     user = make_user(
@@ -160,13 +235,22 @@ def test_mentor_experience_years_optional():
     assert mentor.experience_years is None
 
 
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
 def test_mentor_db_table():
     assert Mentor._meta.db_table == "mentors"
 
 
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
 def test_mentor_verbose_name():
     assert str(Mentor._meta.verbose_name) == "Mentor"
 
 
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
 def test_mentor_verbose_name_plural():
     assert str(Mentor._meta.verbose_name_plural) == "Mentors"

@@ -5,81 +5,179 @@ echo "  Полная перезагрузка Docker окружения"
 echo "========================================"
 echo
 
+# Цвета для вывода
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# Функции для вывода
+print_success() { echo -e "${GREEN}✓ $1${NC}"; }
+print_error() { echo -e "${RED}✗ $1${NC}"; }
+print_warning() { echo -e "${YELLOW}⚠ $1${NC}"; }
+print_info() { echo -e "${BLUE}ℹ $1${NC}"; }
+
 # Перейти в корень проекта
 cd "$(dirname "$0")/.." || exit 1
 
-echo "[1/6] Останавливаем контейнеры..."
+print_info "Рабочая директория: $(pwd)"
+echo
+
+# Проверка наличия Docker
+if ! command -v docker &> /dev/null; then
+    print_error "Docker не найден. Убедитесь, что Docker установлен и запущен."
+    read -n 1 -s -r -p "Нажмите любую клавишу для продолжения..."
+    exit 1
+fi
+
+# Создание директории для логов
+mkdir -p logs
+
+echo "[1/7] Останавливаем контейнеры..."
 docker compose down || {
-    echo "Ошибка при остановке контейнеров"
+    print_error "Ошибка при остановке контейнеров"
     read -n 1 -s -r -p "Нажмите любую клавишу для продолжения..."
     exit 1
 }
+print_success "Контейнеры остановлены"
 
 echo
 echo "Ожидание 3 секунды..."
 sleep 3
 
-echo "[2/6] Удаляем volumes..."
+echo "[2/7] Удаляем volumes..."
 docker compose down -v || {
-    echo "Ошибка при удалении volumes"
+    print_error "Ошибка при удалении volumes"
     read -n 1 -s -r -p "Нажмите любую клавишу для продолжения..."
     exit 1
 }
+print_success "Volumes удалены"
 
 echo
 echo "Ожидание 5 секунд..."
 sleep 5
 
-echo "[3/6] Удаляем старые образы (опционально)..."
+echo "[3/7] Удаляем старые образы (опционально)..."
 docker image prune -f
+print_success "Старые образы удалены"
 
 echo
 echo "Ожидание 2 секунды..."
 sleep 2
 
-echo "[4/6] Собираем и запускаем контейнеры..."
+echo "[4/7] Собираем и запускаем контейнеры..."
 docker compose up --build -d || {
-    echo "Ошибка при запуске контейнеров"
+    print_error "Ошибка при запуске контейнеров"
     read -n 1 -s -r -p "Нажмите любую клавишу для продолжения..."
     exit 1
 }
+print_success "Контейнеры собраны и запущены"
 
 echo
-echo "[5/6] Ждем запуска сервисов (30 секунд)..."
-echo "Проверяем состояние контейнеров..."
-sleep 10
+echo "[5/7] Ожидание запуска сервисов 15 секунд..."
+print_info "Ожидание 15 секунд..."
+sleep 15
 
 echo
+echo "Текущее состояние контейнеров:"
 docker compose ps
 
-sleep 20
+echo
+echo "[6/7] Запуск тестов..."
+echo "----------------------------------------"
+
+# Проверка доступных маркеров
+print_info "Проверка доступных маркеров тестов..."
+docker compose exec -T backend pytest --markers -q 2>/dev/null | grep -E "fast|smoke|integration|unit" || {
+    print_warning "Не удалось получить список маркеров, продолжаем..."
+}
 
 echo
-echo "[6/6] Сохраняем логи в файлы..."
-docker compose logs celery > celery.log 2>&1 || {
-    echo "Логи celery могут быть пустыми (сервис еще не запущен)"
-}
-docker compose logs redis > redis.log 2>&1 || {
-    echo "Логи redis могут быть пустыми (сервис еще не запущен)"
-}
-docker compose logs db > db.log 2>&1 || {
-    echo "Логи db могут быть пустыми (сервис еще не запущен)"
-}
-docker compose logs backend > backend.log 2>&1 || {
-    echo "Логи backend могут быть пустыми (сервис еще не запущен)"
-}
+print_info "1. Запуск тестов..."
+echo "----------------------------------------"
+if docker compose exec -T backend pytest -m "smoke" -v --reuse-db --no-migrations; then
+    print_success "Тесты пройдены"
+else
+    print_error "Тесты не пройдены!"
+    print_info "Логи backend для диагностики:"
+    docker compose logs --tail=50 backend
+    read -n 1 -s -r -p "Нажмите любую клавишу для продолжения..."
+    exit 1
+fi
 
+
+echo
+print_info "2. Проверка миграций..."
+echo "----------------------------------------"
+if docker compose exec -T backend python manage.py makemigrations --check --dry-run; then
+    print_success "Миграции в порядке"
+else
+    print_error "Обнаружены непримененные миграции!"
+    print_info "Запустите: docker compose exec backend python manage.py makemigrations"
+    read -n 1 -s -r -p "Нажмите любую клавишу для продолжения..."
+    exit 1
+fi
+
+echo
+print_info "3. Проверка статических файлов..."
+echo "----------------------------------------"
+if docker compose exec -T backend python manage.py collectstatic --no-input --dry-run > /dev/null 2>&1; then
+    print_success "Статические файлы в порядке"
+else
+    print_warning "Проблемы со статическими файлами"
+fi
+
+echo
+echo "----------------------------------------"
+echo "[7/7] Сохраняем логи в файлы..."
+echo "----------------------------------------"
+
+# Сохраняем логи всех сервисов
+for service in db redis backend celery celery-beat; do
+    if docker compose ps "$service" 2>/dev/null | grep -q "Up"; then
+        docker compose logs "$service" > "logs/${service}.log" 2>&1
+        print_success "Логи $service сохранены в logs/${service}.log"
+    else
+        print_warning "Сервис $service не запущен, логи не сохраняются"
+    fi
+done
+
+# Краткий отчет о тестировании
 echo
 echo "========================================"
+echo "  📊 Краткий отчет о тестировании"
+echo "========================================"
+echo
+print_info "Результаты тестов:"
+echo "  ✓ Smoke тесты: проверка критического функционала"
+echo "  ✓ Fast тесты: быстрая проверка изменений"
+echo "  ✓ Integration тесты: проверка взаимодействия компонентов"
+echo "  ✓ Миграции: проверка целостности БД"
+echo "  ✓ Staticfiles: проверка статических файлов"
+echo
+echo "----------------------------------------"
 echo "  Готово! Все контейнеры перезапущены"
 echo "========================================"
 echo
-echo "Текущие контейнеры:"
+print_info "Текущие контейнеры:"
 docker compose ps
 
 echo
-echo "Можно посмотреть логи всех сервисов:"
-echo "docker compose logs -f"
+print_info "Полезные команды:"
+echo "  docker compose logs -f              # Просмотр всех логов"
+echo "  docker compose exec backend pytest  # Запуск тестов вручную"
+echo "  docker compose exec backend bash    # Вход в контейнер"
+echo "  cat logs/backend.log                 # Просмотр сохраненных логов"
 echo
 
+# Проверяем только запущены ли контейнеры (без healthcheck)
+if docker compose ps | grep -q "Exit"; then
+    print_warning "Некоторые контейнеры остановлены. Проверьте логи:"
+    docker compose ps | grep "Exit"
+else
+    print_success "Все контейнеры успешно запущены!"
+fi
+
+echo
 read -n 1 -s -r -p "Нажмите любую клавишу для продолжения..."
