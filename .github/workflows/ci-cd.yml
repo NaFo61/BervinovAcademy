@@ -39,12 +39,12 @@ jobs:
       
       - name: Установить зависимости
         run: |
-          pip install -r requirements.txt
-          pip install pytest pytest-django pytest-xdist model-bakery pre-commit
-      
+          pip install --upgrade pip
+          pip install -e .[dev,test]  # Устанавливаем проект с dev и test зависимостями
+
       - name: Pre-commit проверки
         run: pre-commit run --all-files || true
-      
+
       - name: Миграции
         working-directory: ./backend
         env:
@@ -56,7 +56,7 @@ jobs:
           DB_PORT: 5432
           SECRET_KEY: django-insecure-test-key-12345
         run: python manage.py migrate
-      
+
       - name: Запустить тесты
         working-directory: ./backend
         env:

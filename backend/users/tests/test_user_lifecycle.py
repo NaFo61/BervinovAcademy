@@ -6,6 +6,9 @@ from users.models import User
 from .conftest import make_user
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_student_role_clears_staff_and_superuser():
     user = make_user(role="student")
@@ -13,6 +16,9 @@ def test_student_role_clears_staff_and_superuser():
     assert not user.is_superuser
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_mentor_role_sets_staff_only():
     user = make_user(
@@ -22,12 +28,19 @@ def test_mentor_role_sets_staff_only():
     assert not user.is_superuser
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
+@pytest.mark.smoke
 @pytest.mark.django_db
 def test_admin_role_sets_staff_and_superuser(admin_user):
     assert admin_user.is_staff
     assert admin_user.is_superuser
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_changing_role_from_mentor_to_student_resets_flags():
     user = make_user(
@@ -42,6 +55,9 @@ def test_changing_role_from_mentor_to_student_resets_flags():
     assert not user.is_superuser
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_clean_raises_if_no_email_and_no_phone():
     user = User(first_name="Иван", last_name="Иванов", role="student")
@@ -49,6 +65,9 @@ def test_clean_raises_if_no_email_and_no_phone():
         user.clean()
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_clean_passes_with_email_only():
     user = User(
@@ -60,6 +79,9 @@ def test_clean_passes_with_email_only():
     user.clean()
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_clean_passes_with_phone_only():
     user = User(
@@ -71,6 +93,9 @@ def test_clean_passes_with_phone_only():
     user.clean()
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_clean_admin_without_email_raises():
     user = User(
@@ -84,6 +109,10 @@ def test_clean_admin_without_email_raises():
     assert "email" in exc_info.value.message_dict
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
+@pytest.mark.django_db
 def test_clean_admin_without_phone_raises():
     user = User(
         first_name="Иван",
@@ -96,6 +125,10 @@ def test_clean_admin_without_phone_raises():
     assert "phone" in exc_info.value.message_dict
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
+@pytest.mark.django_db
 def test_clean_superuser_flag_also_requires_email():
     user = User(
         first_name="Иван",
@@ -109,6 +142,9 @@ def test_clean_superuser_flag_also_requires_email():
     assert "email" in exc_info.value.message_dict
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_clean_duplicate_email_raises():
     make_user(email="ivan@academy.com")
@@ -123,6 +159,9 @@ def test_clean_duplicate_email_raises():
     assert "email" in exc_info.value.message_dict
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_clean_duplicate_phone_raises():
     make_user(phone="+79123456789")
@@ -137,6 +176,9 @@ def test_clean_duplicate_phone_raises():
     assert "phone" in exc_info.value.message_dict
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_clean_update_own_email_does_not_raise():
     user = make_user(email="ivan@academy.com")
@@ -144,6 +186,9 @@ def test_clean_update_own_email_does_not_raise():
     user.clean()
 
 
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
 @pytest.mark.django_db
 def test_clean_update_own_phone_does_not_raise():
     user = make_user(phone="+79123456789")
