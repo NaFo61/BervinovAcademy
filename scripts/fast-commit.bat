@@ -37,13 +37,18 @@ if %errorlevel% neq 0 (
 )
 
 :: Переходим в корень репозитория
-for /f "tokens=*" %%i in ('git rev-parse --show-toplevel') do set "GIT_ROOT=%%i"
+for /f "tokens=*" %%i in ('git rev-parse --show-toplevel 2^>nul') do set "GIT_ROOT=%%i"
+if "%GIT_ROOT%"=="" (
+    call :print_error "Не удалось найти корень git репозитория!"
+    exit /b 1
+)
 cd /d "%GIT_ROOT%"
 
 :: Проверяем наличие сообщения коммита
 set "COMMIT_MSG=%*"
 if "%COMMIT_MSG%"=="" (
     call :print_error "Укажите сообщение коммита!"
+    echo Использование: %~nx0 "Ваше сообщение коммита"
     exit /b 1
 )
 
@@ -59,11 +64,8 @@ if %errorlevel% equ 0 (
         call :print_info "Pre-commit хуки:"
         echo.
 
-        :: Получаем список staged файлов
-        for /f "tokens=*" %%i in ('git diff --cached --name-only') do set "STAGED_FILES=%%i"
-        if not "!STAGED_FILES!"=="" (
-            pre-commit run --files !STAGED_FILES!
-        )
+        :: Запускаем pre-commit на всех staged файлах
+        pre-commit run
 
         :: Проверяем были ли изменения после pre-commit
         git diff --quiet >nul 2>nul
@@ -94,9 +96,15 @@ if %errorlevel% equ 0 (
     call :print_success "Результат:"
     echo.
 
-    :: Показываем последний коммит
-    git log -1 --stat --pretty=format:"%%h %%s%%nAuthor: %%an <%%ae>%%nDate:   %%ad%%n%%n    %%b" --date=local | findstr /v "^$" | sed -e s/^/     /
+    :: Показываем последний коммит (без sed)
+    echo Последний коммит:
+    echo --------------------------------
+    git log -1 --pretty=format:"%%h %%s%%nAuthor: %%an <%%ae>%%nDate: %%ad%%n%%n%%b" --date=local
+    echo --------------------------------
     echo.
+
+    :: Показываем статистику изменений
+    git show --stat --pretty=format:""
 )
 
 exit /b 0
