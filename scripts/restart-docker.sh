@@ -84,28 +84,21 @@ echo "Текущее состояние контейнеров:"
 docker compose ps
 
 echo
-echo "[6/7] Запуск тестов..."
+echo "[6/7] Запуск всех тестов..."
 echo "----------------------------------------"
 
-# Проверка доступных маркеров
-print_info "Проверка доступных маркеров тестов..."
-docker compose exec -T backend pytest --markers -q 2>/dev/null | grep -E "fast|smoke|integration|unit" || {
-    print_warning "Не удалось получить список маркеров, продолжаем..."
-}
-
-echo
-print_info "1. Запуск тестов..."
+# Запуск всех тестов без маркеров
+print_info "1. Запуск всех тестов..."
 echo "----------------------------------------"
-if docker compose exec -T backend pytest -m "smoke" -v --reuse-db --no-migrations; then
-    print_success "Тесты пройдены"
+if docker compose exec -T backend pytest -v --reuse-db --no-migrations; then
+    print_success "Все тесты успешно пройдены"
 else
-    print_error "Тесты не пройдены!"
+    print_error "Некоторые тесты не пройдены!"
     print_info "Логи backend для диагностики:"
     docker compose logs --tail=50 backend
     read -n 1 -s -r -p "Нажмите любую клавишу для продолжения..."
     exit 1
 fi
-
 
 echo
 print_info "2. Проверка миграций..."
@@ -150,9 +143,7 @@ echo "  📊 Краткий отчет о тестировании"
 echo "========================================"
 echo
 print_info "Результаты тестов:"
-echo "  ✓ Smoke тесты: проверка критического функционала"
-echo "  ✓ Fast тесты: быстрая проверка изменений"
-echo "  ✓ Integration тесты: проверка взаимодействия компонентов"
+echo "  ✓ Все тесты: проверка всего функционала"
 echo "  ✓ Миграции: проверка целостности БД"
 echo "  ✓ Staticfiles: проверка статических файлов"
 echo

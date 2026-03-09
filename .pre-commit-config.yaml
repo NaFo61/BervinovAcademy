@@ -61,13 +61,3 @@ repos:
       - id: eslint
         files: ^frontend/
         args: [--fix]
-
-  - repo: local
-    hooks:
-      - id: pytest-fast
-        name: pytest
-        entry: pytest -v
-        language: system
-        types: [python]
-        pass_filenames: false
-        stages: [commit]

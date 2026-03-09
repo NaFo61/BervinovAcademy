@@ -1,152 +1,110 @@
 @echo off
-chcp 65001 >nul
+setlocal enabledelayedexpansion
 
-:: Цвета для вывода (используем ANSI escape codes для Windows 10+)
-if not defined NOCOLOR (
-    if exist "%SystemRoot%\System32\findstr.exe" (
-        "%SystemRoot%\System32\findstr.exe" /R /C:"^" 2>nul && (
-            set "RED=[91m"
-            set "GREEN=[92m"
-            set "YELLOW=[93m"
-            set "BLUE=[94m"
-            set "NC=[0m"
-            set "COLOR_ECHO=echo.[%BLUE%]ℹ %NC%"
-        ) || (
-            set "RED="
-            set "GREEN="
-            set "YELLOW="
-            set "BLUE="
-            set "NC="
-            set "COLOR_ECHO=echo.ℹ"
-        )
-    )
-)
+:: Цвета для Windows
+set "RED=[91m"
+set "GREEN=[92m"
+set "YELLOW=[93m"
+set "BLUE=[94m"
+set "NC=[0m"
 
-:: Функции для вывода
-set "SUCCESS_ECHO=echo.[%GREEN%]✓ %NC%"
-set "ERROR_ECHO=echo.[%RED%]✗ %NC%"
-set "WARNING_ECHO=echo.[%YELLOW%]⚠ %NC%"
-set "INFO_ECHO=echo.[%BLUE%]ℹ %NC%"
+:: Функции для вывода сообщений
+goto :main
 
-echo.
-echo ========================================
-echo    Smart Commit - Windows Version
-echo ========================================
-echo.
+:print_success
+echo %GREEN%✓ %~1%NC%
+exit /b 0
 
-:: Проверка что мы в git репозитории
-git rev-parse --git-dir >nul 2>&1
-if errorlevel 1 (
-    %ERROR_ECHO% Не git репозиторий!
-    pause
+:print_error
+echo %RED%✗ %~1%NC%
+exit /b 0
+
+:print_warning
+echo %YELLOW%⚠ %~1%NC%
+exit /b 0
+
+:print_info
+echo %BLUE%ℹ %~1%NC%
+exit /b 0
+
+:main
+
+:: Проверяем наличие git
+where git >nul 2>nul
+if %errorlevel% neq 0 (
+    call :print_error "Git не установлен или не добавлен в PATH!"
     exit /b 1
 )
 
-:: Получаем сообщение коммита
-if "%~1"=="" (
-    %ERROR_ECHO% Укажите сообщение коммита!
-    echo Использование: smart-commit.bat "ваше сообщение"
-    pause
+:: Переходим в корень репозитория
+for /f "tokens=*" %%i in ('git rev-parse --show-toplevel 2^>nul') do set "GIT_ROOT=%%i"
+if "%GIT_ROOT%"=="" (
+    call :print_error "Не удалось найти корень git репозитория!"
     exit /b 1
 )
+cd /d "%GIT_ROOT%"
 
+:: Проверяем наличие сообщения коммита
 set "COMMIT_MSG=%*"
+if "%COMMIT_MSG%"=="" (
+    call :print_error "Укажите сообщение коммита!"
+    echo Использование: %~nx0 "Ваше сообщение коммита"
+    exit /b 1
+)
 
-:: Шаг 1: Добавляем все изменения
-%INFO_ECHO% 1. Добавление всех изменений...
+call :print_info "Добавляем изменения..."
 git add .
-if errorlevel 1 (
-    %ERROR_ECHO% Ошибка при добавлении файлов!
-    pause
-    exit /b 1
-)
-%SUCCESS_ECHO% Все изменения добавлены
-
-for /f "delims=" %%i in ('git diff --cached --name-only') do set "STAGED_FILES=%%i"
-if defined STAGED_FILES (
-    %INFO_ECHO% Файлы:
-    git diff --cached --name-only | sed "s/^/     /"
-)
+call :print_success "Готово"
 echo.
 
-%INFO_ECHO% 4. Запуск быстрых тестов...
-echo.
-pytest -m "fast" -v --reuse-db --nomigrations
-if errorlevel 1 (
-    %ERROR_ECHO% Быстрые тесты не пройдены!
-    pause
-    exit /b 1
-)
-%SUCCESS_ECHO% Быстрые тесты пройдены
-echo.
+:: Проверяем наличие pre-commit и его конфига
+where pre-commit >nul 2>nul
+if %errorlevel% equ 0 (
+    if exist ".pre-commit-config.yaml" (
+        call :print_info "Pre-commit хуки:"
+        echo.
 
-:: Шаг 2: Запускаем pre-commit hooks
-%INFO_ECHO% 2. Запуск pre-commit hooks...
-echo.
-call pre-commit run 2>&1
-echo.
+        :: Запускаем pre-commit на всех staged файлах
+        pre-commit run
 
-:: Шаг 3: Проверяем и добавляем изменения от hooks
-%INFO_ECHO% 3. Проверка изменений от hooks...
-echo.
-
-:: Проверяем есть ли unstaged изменения
-git diff --quiet
-if errorlevel 1 (
-    %WARNING_ECHO% Файлы изменены hooks:
-    echo.
-    git diff --name-only | sed "s/^/     /"
-    echo.
-    
-    %INFO_ECHO% Изменения:
-    echo.
-    git diff --stat | sed "s/^/     /"
-    echo.
-    
-    %INFO_ECHO% Добавляем исправления...
-    git add .
-    if errorlevel 1 (
-        %ERROR_ECHO% Ошибка при добавлении исправлений!
-        pause
-        exit /b 1
+        :: Проверяем были ли изменения после pre-commit
+        git diff --quiet >nul 2>nul
+        if %errorlevel% neq 0 (
+            echo.
+            git add .
+            call :print_success "Исправления добавлены"
+        )
+    ) else (
+        call :print_warning "Файл .pre-commit-config.yaml не найден"
     )
-    %SUCCESS_ECHO% Исправления добавлены
 ) else (
-    %SUCCESS_ECHO% Файлы не изменились
+    call :print_warning "Pre-commit не установлен"
 )
 echo.
 
-:: Шаг 4: Создаем коммит
-%INFO_ECHO% 4. Создание коммита: "%COMMIT_MSG%"
-echo.
-
-:: Проверяем есть ли staged изменения
+:: Проверяем есть ли изменения для коммита
 git diff --cached --quiet
-if not errorlevel 1 (
-    %ERROR_ECHO% Нет изменений для коммита!
-    pause
+if %errorlevel% equ 0 (
+    call :print_error "Нет изменений для коммита!"
     exit /b 1
 )
 
-:: Создаем коммит
-git commit --no-verify -m "%COMMIT_MSG%"
-if errorlevel 1 (
-    %ERROR_ECHO% Не удалось создать коммит!
-    pause
-    exit /b 1
+:: Выполняем коммит
+git commit -m "%COMMIT_MSG%"
+if %errorlevel% equ 0 (
+    echo.
+    call :print_success "Результат:"
+    echo.
+
+    :: Показываем последний коммит (без sed)
+    echo Последний коммит:
+    echo --------------------------------
+    git log -1 --pretty=format:"%%h %%s%%nAuthor: %%an <%%ae>%%nDate: %%ad%%n%%n%%b" --date=local
+    echo --------------------------------
+    echo.
+
+    :: Показываем статистику изменений
+    git show --stat --pretty=format:""
 )
 
-%SUCCESS_ECHO% Коммит создан успешно
-echo.
-
-:: Показываем результат
-%INFO_ECHO% Результат:
-echo.
-for /f "tokens=*" %%i in ('git log -1 --oneline') do echo     %%i
-for /f "skip=1 tokens=*" %%i in ('git log -1 --stat') do echo     %%i
-
-
-echo.
-%SUCCESS_ECHO% Готово!
-echo.
-pause
+exit /b 0
