@@ -52,6 +52,9 @@ if "%COMMIT_MSG%"=="" (
     exit /b 1
 )
 
+:: Убираем внешние кавычки, если они есть
+set "COMMIT_MSG=!COMMIT_MSG:"=!"
+
 call :print_info "Добавляем изменения..."
 git add .
 call :print_success "Готово"
@@ -89,8 +92,8 @@ if %errorlevel% equ 0 (
     exit /b 1
 )
 
-:: Выполняем коммит
-git commit -m "%COMMIT_MSG%"
+:: Выполняем коммит (используем !COMMIT_MSG! с enabledelayedexpansion)
+git commit -m "!COMMIT_MSG!"
 if %errorlevel% equ 0 (
     echo.
     call :print_success "Результат:"
@@ -105,6 +108,9 @@ if %errorlevel% equ 0 (
 
     :: Показываем статистику изменений
     git show --stat --pretty=format:""
+) else (
+    call :print_error "Ошибка при создании коммита!"
+    exit /b 1
 )
 
 exit /b 0

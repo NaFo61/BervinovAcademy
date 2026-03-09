@@ -285,8 +285,8 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.ScopedRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "login": "5/min",
-        "register": "5/min",
+        "login": "25/min",
+        "register": "25/min",
         "token_refresh": "20/min",
     },
 }
