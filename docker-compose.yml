@@ -40,7 +40,8 @@ services:
              python manage.py seed_data --clear &&
              python manage.py runserver 0.0.0.0:8000"
     volumes:
-      - ./backend:/app
+      - ./backend:/app/backend
+      - ./pyproject.toml:/app/pyproject.toml
     ports:
       - "8000:8000"
     env_file: .env
@@ -56,14 +57,17 @@ services:
       dockerfile: backend/Dockerfile
     container_name: bervinov-academy-celery
     command: >
-      sh -c "python manage.py compilemessages -l ru &&
+      sh -c "cd /app/backend &&
+             python manage.py compilemessages -l ru &&
              celery -A school_platform worker --loglevel=info"
     volumes:
-      - ./backend:/app
+      - ./backend:/app/backend
+      - ./pyproject.toml:/app/pyproject.toml
     env_file: .env
     depends_on:
       - backend
       - redis
+    working_dir: /app/backend  # Явно указываем рабочую директорию
 
   celery-beat:
     build:
@@ -71,14 +75,17 @@ services:
       dockerfile: backend/Dockerfile
     container_name: bervinov-academy-celery-beat
     command: >
-      sh -c "python manage.py compilemessages -l ru &&
+      sh -c "cd /app/backend &&
+             python manage.py compilemessages -l ru &&
              celery -A school_platform beat --loglevel=info"
     volumes:
-      - ./backend:/app
+      - ./backend:/app/backend
+      - ./pyproject.toml:/app/pyproject.toml
     env_file: .env
     depends_on:
       - backend
       - redis
+    working_dir: /app/backend  # Явно указываем рабочую директорию
 
 volumes:
   postgres_data:

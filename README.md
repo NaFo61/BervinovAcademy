@@ -1,10 +1,6 @@
-Отличная структура! Конечно, напишу подробный README.md для вашего проекта. Вот готовый файл:
-
 # Bervinov Academy - Educational Platform
 
 ![Bervinov Academy](https://via.placeholder.com/800x200/2D3748/FFFFFF?text=Bervinov+Academy+-+Modern+Learning+Platform)
-
-## 📋 О проекте
 
 Bervinov Academy - это современная образовательная платформа с менторской поддержкой, построенная по принципам Stepik. Платформа предоставляет интерактивные курсы по программированию с автоматической проверкой заданий и персональными менторами.
 
@@ -68,7 +64,7 @@ source .venv/bin/activate
 
 3. **Установка зависимостей**
 ```bash
-pip install -r requirements.txt
+pip install -e .
 ```
 
 4. **Настройка окружения**

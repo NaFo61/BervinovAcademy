@@ -1,0 +1,60 @@
+import pytest
+
+from users.models import User
+
+
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
+def test_uses_email_as_folder_identifier():
+    user = User(email="ivan@academy.com")
+    path = user.upload_to("photo.jpg")
+    assert "ivan@academy.com" in path
+
+
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
+@pytest.mark.parametrize("ext", ["jpg", "jpeg", "png", "webp"])
+def test_preserves_file_extension(ext):
+    user = User(email="ivan@academy.com")
+    path = user.upload_to(f"file.{ext}")
+    assert path.endswith(f".{ext}")
+
+
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
+def test_falls_back_to_phone_when_no_email():
+    user = User(phone="+79123456789")
+    path = user.upload_to("avatar.png")
+    assert "+79123456789" in path
+    assert "unknown" not in path
+
+
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
+def test_falls_back_to_unknown_when_no_contact():
+    user = User()
+    path = user.upload_to("pic.jpeg")
+    assert "unknown" in path
+
+
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
+def test_uuid_filename_is_unique_per_call():
+    user = User(email="ivan@academy.com")
+    path1 = user.upload_to("file.png")
+    path2 = user.upload_to("file.png")
+    assert path1 != path2
+
+
+@pytest.mark.fast
+@pytest.mark.unit
+@pytest.mark.models
+def test_path_starts_with_avatars_prefix():
+    user = User(email="ivan@academy.com")
+    path = user.upload_to("img.png")
+    assert path.startswith("avatars/")
