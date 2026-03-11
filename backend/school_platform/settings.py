@@ -137,9 +137,19 @@ UNFOLD = {
                         "link": "/admin/content/module/",
                     },
                     {
-                        "title": _("Lessons"),
+                        "title": _("Theory Lessons"),
                         "icon": "article",
                         "link": "/admin/content/lessontheory/",
+                    },
+                    {
+                        "title": _("Radio Questions"),
+                        "icon": "radio_button_checked",
+                        "link": "/admin/content/lessonradioquestion/",
+                    },
+                    {
+                        "title": _("Checkbox Questions"),
+                        "icon": "check_box",
+                        "link": "/admin/content/lessoncheckboxquestion/",
                     },
                     {
                         "title": _("Technologies"),

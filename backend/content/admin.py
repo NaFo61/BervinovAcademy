@@ -5,7 +5,16 @@ from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import action, display
 
-from .models import Course, LessonTheory, Module, Technology
+from content.models import (
+    AnswerOption,
+    CheckBoxAnswerOption,
+    Course,
+    LessonCheckBoxQuestion,
+    LessonRadioQuestion,
+    LessonTheory,
+    Module,
+    Technology,
+)
 
 
 @admin.register(Technology)
@@ -253,6 +262,68 @@ class LessonTheoryInline(TabularInline):
         return format_html('<span title="{}">{}</span>', obj.content, preview)
 
 
+class LessonRadioQuestionInline(TabularInline):
+    """Inline for radio questions in module"""
+
+    model = LessonRadioQuestion
+    extra = 1
+    ordering = ("order_index",)
+    show_change_link = True
+    fields = (
+        "title",
+        "question_preview",
+        "points",
+        "order_index",
+        "is_active",
+    )
+    readonly_fields = ("question_preview",)
+    classes = ["collapse"]
+
+    @admin.display(description=_("Question"))
+    def question_preview(self, obj):
+        if not obj.question_text:
+            return "—"
+        preview = (
+            obj.question_text[:100] + "..."
+            if len(obj.question_text) > 100
+            else obj.question_text
+        )
+        return format_html(
+            '<span title="{}">{}</span>', obj.question_text, preview
+        )
+
+
+class LessonCheckBoxQuestionInline(TabularInline):
+    """Inline for checkbox questions in module"""
+
+    model = LessonCheckBoxQuestion
+    extra = 1
+    ordering = ("order_index",)
+    show_change_link = True
+    fields = (
+        "title",
+        "question_preview",
+        "points",
+        "order_index",
+        "is_active",
+    )
+    readonly_fields = ("question_preview",)
+    classes = ["collapse"]
+
+    @admin.display(description=_("Question"))
+    def question_preview(self, obj):
+        if not obj.question_text:
+            return "—"
+        preview = (
+            obj.question_text[:100] + "..."
+            if len(obj.question_text) > 100
+            else obj.question_text
+        )
+        return format_html(
+            '<span title="{}">{}</span>', obj.question_text, preview
+        )
+
+
 @admin.register(Module)
 class ModuleAdmin(ModelAdmin):
     """Admin for modules"""
@@ -275,7 +346,11 @@ class ModuleAdmin(ModelAdmin):
     readonly_fields = ("lessons_count_display",)
     icon = "list_alt"
 
-    inlines = [LessonTheoryInline]
+    inlines = [
+        LessonTheoryInline,
+        LessonRadioQuestionInline,
+        LessonCheckBoxQuestionInline,
+    ]
 
     fieldsets = (
         (
@@ -320,9 +395,62 @@ class ModuleAdmin(ModelAdmin):
         )  # Исправлено
         return format_html('<a href="{}">{}</a>', url, count)
 
-    @admin.display(description=_("Number of lessons"))
+    @admin.display(description=_("Statistics"))
     def lessons_count_display(self, obj):
-        return obj.lessons_theories.count()
+        theory_count = obj.lessons_theories.count()
+        radio_count = obj.lessons_radio_questions.count()
+        checkbox_count = obj.lessons_checkbox_questions.count()
+        total = theory_count + radio_count + checkbox_count
+
+        stats_html = f"""
+            <div style="
+                padding: 0.75rem;
+                background: var(--primary-bg);
+                border-radius: 0.375rem;
+                border: 1px solid var(--border-color);
+                font-size: 0.875rem;
+            ">
+                <div style="margin-bottom: 0.25rem;">
+                    <span style="
+                        display: inline-block;
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 50%;
+                        background: #0d6efd;
+                        margin-right: 0.5rem;
+                    "></span>
+                    <strong>{_('Theory')}:</strong> {theory_count}
+                </div>
+                <div style="margin-bottom: 0.25rem;">
+                    <span style="
+                        display: inline-block;
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 50%;
+                        background: #198754;
+                        margin-right: 0.5rem;
+                    "></span>
+                    <strong>{_('Radio')}:</strong> {radio_count}
+                </div>
+                <div>
+                    <span style="
+                        display: inline-block;
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 50%;
+                        background: #ffc107;
+                        margin-right: 0.5rem;
+                    "></span>
+                    <strong>{_('Checkbox')}:</strong> {checkbox_count}
+                </div>
+                <hr style="margin: 0.5rem 0;
+                border-color: var(--border-color);">
+                <div>
+                    <strong>{_('Total')}:</strong> {total}
+                </div>
+            </div>
+            """
+        return format_html(stats_html)
 
     @display(description=_("Actions"), label=True)
     def actions_column(self, obj):
@@ -528,3 +656,585 @@ class LessonTheoryAdmin(ModelAdmin):
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         return queryset.select_related("module", "module__course")
+
+
+class AnswerOptionInline(TabularInline):
+    """Inline for radio question answers"""
+
+    model = AnswerOption
+    extra = 2
+    max_num = 10
+    ordering = ("order_index",)
+    fields = ("text", "is_correct", "order_index")
+    classes = ["collapse"]
+
+    def get_extra(self, request, obj=None, **kwargs):
+        """Show 4 extra forms if no object exists"""
+        if not obj:
+            return 4
+        return self.extra
+
+
+class CheckBoxAnswerOptionInline(TabularInline):
+    """Inline for checkbox question answers"""
+
+    model = CheckBoxAnswerOption
+    extra = 2
+    max_num = 10
+    ordering = ("order_index",)
+    fields = ("text", "is_correct", "order_index")
+    classes = ["collapse"]
+
+    def get_extra(self, request, obj=None, **kwargs):
+        """Show 4 extra forms if no object exists"""
+        if not obj:
+            return 4
+        return self.extra
+
+
+@admin.register(LessonRadioQuestion)
+class LessonRadioQuestionAdmin(ModelAdmin):
+    """Admin for radio button questions"""
+
+    list_display = (
+        "title",
+        "module_link",
+        "course_link",
+        "answers_count",
+        "correct_answer_preview",
+        "points",
+        "order_index",
+        "is_active",
+        "actions_column",
+    )
+    list_filter = (
+        "is_active",
+        "module__course",
+        "module",
+    )
+    search_fields = (
+        "title",
+        "question_text",
+        "explanation",
+        "module__title",
+        "module__course__title",
+    )
+    list_per_page = 20
+    ordering = ("module", "order_index")
+    readonly_fields = ("question_stats", "created_info")
+    icon = "radio_button_checked"
+
+    fieldsets = (
+        (
+            _("Main information"),
+            {
+                "fields": (
+                    "module",
+                    "title",
+                    "question_text",
+                    "explanation",
+                    "points",
+                ),
+            },
+        ),
+        (
+            _("Order and status"),
+            {
+                "fields": (
+                    "order_index",
+                    "is_active",
+                ),
+            },
+        ),
+        (
+            _("Statistics"),
+            {
+                "fields": ("question_stats",),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            _("Additional information"),
+            {
+                "fields": ("created_info",),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    inlines = [AnswerOptionInline]
+
+    @admin.display(description=_("Module"), ordering="module__title")
+    def module_link(self, obj):
+        url = reverse("admin:content_module_change", args=[obj.module.id])
+        return format_html('<a href="{}">{}</a>', url, obj.module.title)
+
+    @admin.display(description=_("Course"), ordering="module__course__title")
+    def course_link(self, obj):
+        url = reverse(
+            "admin:content_course_change", args=[obj.module.course.id]
+        )
+        return format_html('<a href="{}">{}</a>', url, obj.module.course.title)
+
+    @admin.display(description=_("Answers"))
+    def answers_count(self, obj):
+        count = obj.answers.count()
+        if count == 0:
+            return format_html(
+                '<span style="color: #dc3545; font-weight: 500;">⚠️ {}</span>',
+                _("No answers"),
+            )
+
+        correct = obj.answers.filter(is_correct=True).count()
+        if correct == 0:
+            return format_html(
+                '<span style="color: #ffc107;">{} {} (⚠️ {})</span>',
+                count,
+                _("answers"),
+                _("no correct"),
+            )
+        elif correct > 1:
+            return format_html(
+                '<span style="color: #ffc107;">{} {} (⚠️ {} {})</span>',
+                count,
+                _("answers"),
+                correct,
+                _("correct"),
+            )
+
+        return format_html(
+            '<span style="color: #198754;">{} {}</span>', count, _("answers")
+        )
+
+    @admin.display(description=_("Correct answer"))
+    def correct_answer_preview(self, obj):
+        correct = obj.get_correct_answer()
+        if not correct:
+            return format_html(
+                '<span style="color: #dc3545;">❌ {}</span>',
+                _("No correct answer"),
+            )
+
+        preview = (
+            correct.text[:50] + "..."
+            if len(correct.text) > 50
+            else correct.text
+        )
+        return format_html(
+            '<span style="color: #198754;">✅ {}</span>', preview
+        )
+
+    @admin.display(description=_("Statistics"))
+    def question_stats(self, obj):
+        total_answers = obj.answers.count()
+        correct_answers = obj.answers.filter(is_correct=True).count()
+
+        stats_html = f"""
+        <div style="
+            padding: 0.75rem;
+            background: var(--primary-bg);
+            border-radius: 0.375rem;
+            border: 1px solid var(--border-color);
+            font-size: 0.875rem;
+        ">
+            <div style="margin-bottom: 0.5rem; display: flex;
+            align-items: center;">
+                <span style="
+                    display: inline-block;
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: #0d6efd;
+                    margin-right: 0.5rem;
+                "></span>
+                <strong style="color: var(--primary-text);">
+                {_('Total answers')}:</strong>
+                <span style="color: var(--secondary-text);
+                margin-left: 0.25rem;">
+                    {total_answers}
+                </span>
+            </div>
+            <div style="display: flex; align-items: center;">
+                <span style="
+                    display: inline-block;
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: #198754;
+                    margin-right: 0.5rem;
+                "></span>
+                <strong style="color: var(--primary-text);">
+                {_('Correct answers')}:</strong>
+                <span style="color: var(--secondary-text);
+                margin-left: 0.25rem;">
+                    {correct_answers}
+                </span>
+            </div>
+        </div>
+        """
+        return format_html(stats_html)
+
+    @admin.display(description=_("Information"))
+    def created_info(self, obj):
+        info_html = f"""
+        <div style="
+            padding: 0.75rem;
+            background: var(--primary-bg);
+            border-radius: 0.375rem;
+            border: 1px solid var(--border-color);
+            font-size: 0.875rem;
+        ">
+            <div style="margin-bottom: 0.5rem;">
+                <strong style="color: var(--primary-text);">
+                {_('Course')}:
+                </strong>
+                <span style="color: var(--secondary-text);
+                margin-left: 0.25rem;">
+                    {obj.module.course.title}
+                </span>
+            </div>
+            <div>
+                <strong style="color: var(--primary-text);">
+                {_('Module')}:
+                </strong>
+                <span style="color: var(--secondary-text);
+                margin-left: 0.25rem;">
+                    {obj.module.title}
+                </span>
+            </div>
+        </div>
+        """
+        return format_html(info_html)
+
+    @display(description=_("Actions"), label=True)
+    def actions_column(self, obj):
+        return format_html(
+            """
+            <div style="display: flex; gap: 5px;">
+                <a href="{view}" style="color: #0d6efd;" title="{view_title}">
+                    👁️
+                </a>
+                <a href="{edit}" style="color: #198754;" title="{edit_title}">
+                    ✏️
+                </a>
+            </div>
+            """,
+            view=reverse(
+                "admin:content_lessonradioquestion_change", args=[obj.id]
+            ),
+            edit=reverse(
+                "admin:content_lessonradioquestion_change", args=[obj.id]
+            ),
+            view_title=_("View"),
+            edit_title=_("Edit"),
+        )
+
+    @action(description=_("Activate questions ✅"), permissions=["change"])
+    def activate_questions(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(
+            request,
+            _(f"{updated} radio questions activated ✅"),
+            messages.SUCCESS,
+        )
+
+    @action(description=_("Deactivate questions ❌"), permissions=["change"])
+    def deactivate_questions(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(
+            request,
+            _(f"{updated} radio questions deactivated ❌"),
+            messages.WARNING,
+        )
+
+    @action(description=_("Set points to 1"), permissions=["change"])
+    def set_points_one(self, request, queryset):
+        updated = queryset.update(points=1)
+        self.message_user(
+            request,
+            _(f"{updated} questions updated to 1 point"),
+            messages.SUCCESS,
+        )
+
+    @action(description=_("Set points to 5"), permissions=["change"])
+    def set_points_five(self, request, queryset):
+        updated = queryset.update(points=5)
+        self.message_user(
+            request,
+            _(f"{updated} questions updated to 5 points"),
+            messages.SUCCESS,
+        )
+
+    actions = [
+        "activate_questions",
+        "deactivate_questions",
+        "set_points_one",
+        "set_points_five",
+    ]
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.select_related(
+            "module", "module__course"
+        ).prefetch_related("answers")
+
+
+@admin.register(LessonCheckBoxQuestion)
+class LessonCheckBoxQuestionAdmin(ModelAdmin):
+    """Admin for checkbox questions"""
+
+    list_display = (
+        "title",
+        "module_link",
+        "course_link",
+        "answers_count",
+        "correct_answers_count",
+        "points",
+        "order_index",
+        "is_active",
+        "actions_column",
+    )
+    list_filter = (
+        "is_active",
+        "module__course",
+        "module",
+    )
+    search_fields = (
+        "title",
+        "question_text",
+        "explanation",
+        "module__title",
+        "module__course__title",
+    )
+    list_per_page = 20
+    ordering = ("module", "order_index")
+    readonly_fields = ("question_stats", "created_info")
+    icon = "check_box"
+
+    fieldsets = (
+        (
+            _("Main information"),
+            {
+                "fields": (
+                    "module",
+                    "title",
+                    "question_text",
+                    "explanation",
+                    "points",
+                ),
+            },
+        ),
+        (
+            _("Order and status"),
+            {
+                "fields": (
+                    "order_index",
+                    "is_active",
+                ),
+            },
+        ),
+        (
+            _("Statistics"),
+            {
+                "fields": ("question_stats",),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            _("Additional information"),
+            {
+                "fields": ("created_info",),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    inlines = [CheckBoxAnswerOptionInline]
+
+    @admin.display(description=_("Module"), ordering="module__title")
+    def module_link(self, obj):
+        url = reverse("admin:content_module_change", args=[obj.module.id])
+        return format_html('<a href="{}">{}</a>', url, obj.module.title)
+
+    @admin.display(description=_("Course"), ordering="module__course__title")
+    def course_link(self, obj):
+        url = reverse(
+            "admin:content_course_change", args=[obj.module.course.id]
+        )
+        return format_html('<a href="{}">{}</a>', url, obj.module.course.title)
+
+    @admin.display(description=_("Answers"))
+    def answers_count(self, obj):
+        count = obj.answers.count()
+        if count == 0:
+            return format_html(
+                '<span style="color: #dc3545; font-weight: 500;">⚠️ {}</span>',
+                _("No answers"),
+            )
+
+        return format_html(
+            '<span style="color: #0d6efd;">{} {}</span>', count, _("answers")
+        )
+
+    @admin.display(description=_("Correct"))
+    def correct_answers_count(self, obj):
+        correct = obj.answers.filter(is_correct=True).count()
+
+        if correct == 0:
+            return format_html('<span style="color: #dc3545;">❌ 0</span>')
+        elif correct == 1:
+            return format_html('<span style="color: #ffc107;">⚠️ 1</span>')
+
+        return format_html(
+            '<span style="color: #198754;">✅ {}</span>', correct
+        )
+
+    @admin.display(description=_("Statistics"))
+    def question_stats(self, obj):
+        total_answers = obj.answers.count()
+        correct_answers = obj.answers.filter(is_correct=True).count()
+        incorrect_answers = total_answers - correct_answers
+
+        stats_html = f"""
+        <div style="
+            padding: 0.75rem;
+            background: var(--primary-bg);
+            border-radius: 0.375rem;
+            border: 1px solid var(--border-color);
+            font-size: 0.875rem;
+        ">
+            <div style="margin-bottom: 0.5rem; display: flex;
+            align-items: center;">
+                <span style="
+                    display: inline-block;
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: #0d6efd;
+                    margin-right: 0.5rem;
+                "></span>
+                <strong style="color: var(--primary-text);">
+                {_('Total answers')}:
+                </strong>
+                <span style="color: var(--secondary-text);
+                margin-left: 0.25rem;">
+                    {total_answers}
+                </span>
+            </div>
+            <div style="margin-bottom: 0.5rem; display: flex;
+            align-items: center;">
+                <span style="
+                    display: inline-block;
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: #198754;
+                    margin-right: 0.5rem;
+                "></span>
+                <strong style="color: var(--primary-text);">{_('Correct')}:
+                </strong>
+                <span style="color: var(--secondary-text);
+                margin-left: 0.25rem;">
+                    {correct_answers}
+                </span>
+            </div>
+            <div style="display: flex; align-items: center;">
+                <span style="
+                    display: inline-block;
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: #dc3545;
+                    margin-right: 0.5rem;
+                "></span>
+                <strong style="color: var(--primary-text);">
+                {_('Incorrect')}:</strong>
+                <span style="color: var(--secondary-text);
+                margin-left: 0.25rem;">
+                    {incorrect_answers}
+                </span>
+            </div>
+        </div>
+        """
+        return format_html(stats_html)
+
+    @admin.display(description=_("Information"))
+    def created_info(self, obj):
+        info_html = f"""
+        <div style="
+            padding: 0.75rem;
+            background: var(--primary-bg);
+            border-radius: 0.375rem;
+            border: 1px solid var(--border-color);
+            font-size: 0.875rem;
+        ">
+            <div style="margin-bottom: 0.5rem;">
+                <strong style="color: var(--primary-text);">
+                {_('Course')}:
+                </strong>
+                <span style="color: var(--secondary-text);
+                margin-left: 0.25rem;">
+                    {obj.module.course.title}
+                </span>
+            </div>
+            <div>
+                <strong style="color: var(--primary-text);">
+                {_('Module')}:
+                </strong>
+                <span style="color: var(--secondary-text);
+                margin-left: 0.25rem;">
+                    {obj.module.title}
+                </span>
+            </div>
+        </div>
+        """
+        return format_html(info_html)
+
+    @display(description=_("Actions"), label=True)
+    def actions_column(self, obj):
+        return format_html(
+            """
+            <div style="display: flex; gap: 5px;">
+                <a href="{view}" style="color: #0d6efd;" title="{view_title}">
+                    👁️
+                </a>
+                <a href="{edit}" style="color: #198754;" title="{edit_title}">
+                    ✏️
+                </a>
+            </div>
+            """,
+            view=reverse(
+                "admin:content_lessoncheckboxquestion_change", args=[obj.id]
+            ),
+            edit=reverse(
+                "admin:content_lessoncheckboxquestion_change", args=[obj.id]
+            ),
+            view_title=_("View"),
+            edit_title=_("Edit"),
+        )
+
+    @action(description=_("Activate questions ✅"), permissions=["change"])
+    def activate_questions(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(
+            request,
+            _(f"{updated} checkbox questions activated ✅"),
+            messages.SUCCESS,
+        )
+
+    @action(description=_("Deactivate questions ❌"), permissions=["change"])
+    def deactivate_questions(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(
+            request,
+            _(f"{updated} checkbox questions deactivated ❌"),
+            messages.WARNING,
+        )
+
+    actions = ["activate_questions", "deactivate_questions"]
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.select_related(
+            "module", "module__course"
+        ).prefetch_related("answers")
