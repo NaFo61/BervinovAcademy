@@ -152,6 +152,7 @@ class LessonTheory(models.Model):
                 })
 
 
+
 class LessonRadioQuestion(models.Model):
     module = models.ForeignKey(
         Module,
@@ -270,21 +271,7 @@ class LessonCheckBoxQuestion(models.Model):
             "Number of points for fully correct answer"
         ),
     )
-    min_correct_answers = models.PositiveIntegerField(
-        default=1,
-        verbose_name=_("Minimum correct answers"),
-        help_text=_(
-            "Minimum number of correct answers allowed"
-        ),
-        validators=[MinValueValidator(1)]
-    )
-    max_correct_answers = models.PositiveIntegerField(
-        default=10,
-        verbose_name=_("Maximum correct answers"),
-        help_text=_(
-            "Maximum number of correct answers allowed"
-        ),
-    )
+
     indexes = [
         models.Index(fields=['module', 'order_index']),
     ]
@@ -300,46 +287,8 @@ class LessonCheckBoxQuestion(models.Model):
     def __str__(self):
         return f"{self.module.title} - {self.title}"
 
-    def clean(self):
-        if hasattr(self, 'min_correct_answers') and hasattr(
-                self, 'max_correct_answers'
-        ):
-            if self.min_correct_answers > self.max_correct_answers:
-                raise ValidationError({
-                    'max_correct_answers': _(
-                        'Maximum correct answers must be '
-                        'greater than or equal to minimum '
-                        'correct answers'
-                    )
-                })
-
     def get_correct_answers(self):
         return self.answers.filter(is_correct=True)
-
-    def get_correct_answers_count(self):
-        return self.answers.filter(is_correct=True).count()
-
-    def validate_answers_count(self):
-        correct_count = self.get_correct_answers_count()
-
-        if correct_count < self.min_correct_answers:
-            raise ValidationError(
-                _('Question must have at least %(min)d '
-                  'correct answer(s). Currently has %(current)d.') % {
-                    'min': self.min_correct_answers,
-                    'current': correct_count
-                }
-            )
-
-        if correct_count > self.max_correct_answers:
-            raise ValidationError(
-                _('Question cannot have more than %(max)d '
-                  'correct answer(s). Currently has %(current)d.') % {
-                    'max': self.max_correct_answers,
-                    'current': correct_count
-                }
-            )
-        return True
 
     def delete(self, *args, **kwargs):
         module = self.module
@@ -385,47 +334,3 @@ class CheckBoxAnswerOption(models.Model):
             f"{self.question.title[:50]} - "
             f"{self.text[:50]}"
         )
-
-    def clean(self):
-        if self.pk:
-            correct_count = (
-                self.question.answers
-                .filter(is_correct=True)
-                .count()
-            )
-            if (not self.is_correct and
-                    self._original_is_correct and
-                    correct_count == 1):
-                raise ValidationError({
-                    'is_correct': _(
-                        'At least one correct answer must '
-                        'remain. Set another answer as '
-                        'correct first.'
-                    )
-                })
-
-    def save(self, *args, **kwargs):
-        if self.pk:
-            self._original_is_correct = (
-                CheckBoxAnswerOption.objects
-                .get(pk=self.pk).is_correct
-            )
-        else:
-            self._original_is_correct = False
-
-            if self.is_correct:
-                current_correct = (
-                    self.question.answers
-                    .filter(is_correct=True)
-                    .count()
-                )
-                if current_correct >= self.question.max_correct_answers:
-                    raise ValidationError(
-                        _('Cannot add more correct answers. '
-                          'Maximum allowed is %(max)d.') % {
-                            'max': self.question.max_correct_answers
-                        }
-                    )
-
-        super().save(*args, **kwargs)
-        self.question.validate_answers_count()
