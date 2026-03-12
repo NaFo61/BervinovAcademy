@@ -22,9 +22,6 @@ COPY pyproject.toml /app/
 # Копируем весь backend со всеми поддиректориями
 COPY backend/ /app/backend/
 
-# Проверяем наличие manage.py после копирования (для отладки)
-RUN ls -la /app/backend/
-
 # Устанавливаем зависимости
 RUN pip install --upgrade pip \
     && pip install -e .[dev,test]

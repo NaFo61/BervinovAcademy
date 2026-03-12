@@ -214,23 +214,9 @@ class AnswerOption(models.Model):
         verbose_name_plural = _("Answer options")
         ordering = ("order_index",)
         unique_together = ("question", "order_index")
-        constraints = (
-            models.UniqueConstraint(
-                fields=("question",),
-                condition=models.Q(is_correct=True),
-                name="unique_correct_answer_per_radio_question",
-            ),
-        )
 
     def __str__(self):
         return f"{self.question.title[:50]} - {self.text[:50]}"
-
-    def save(self, *args, **kwargs):
-        if self.is_correct:
-            AnswerOption.objects.filter(
-                question=self.question, is_correct=True
-            ).exclude(pk=self.pk).update(is_correct=False)
-        super().save(*args, **kwargs)
 
 
 class LessonCheckBoxQuestion(models.Model):

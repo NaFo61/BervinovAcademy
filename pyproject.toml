@@ -131,3 +131,7 @@ markers = [
     "services: тестирование бизнес-логики",
     "tasks: тестирование задач",
 ]
+
+filterwarnings = [
+    "ignore::DeprecationWarning:httpx._models:",
+]
