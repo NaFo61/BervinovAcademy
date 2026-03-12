@@ -8,12 +8,12 @@ from unidecode import unidecode
 
 class Technology(models.Model):
     name = models.CharField(
-        max_length=100, unique=True, verbose_name=_("Technology name")
+        max_length=100, unique=True, verbose_name=_("Название технологии")
     )
 
     class Meta:
-        verbose_name = _("Technology")
-        verbose_name_plural = _("Technologies")
+        verbose_name = _("Технология")
+        verbose_name_plural = _("Технологии")
         ordering = ("name",)
 
     def __str__(self):
@@ -21,31 +21,31 @@ class Technology(models.Model):
 
 
 class Course(models.Model):
-    title = models.CharField(max_length=200, verbose_name=_("Course title"))
+    title = models.CharField(max_length=200, verbose_name=_("Название курса"))
     slug = models.SlugField(
-        max_length=200, unique=True, verbose_name=_("URL address")
+        max_length=200, unique=True, verbose_name=_("URL адрес")
     )
-    description = models.TextField(verbose_name=_("Description"))
+    description = models.TextField(verbose_name=_("Описание"))
     image = models.ImageField(
         upload_to="courses/images/",
-        verbose_name=_("Course cover"),
+        verbose_name=_("Обложка курса"),
         null=True,
         blank=True,
     )
-    is_active = models.BooleanField(default=True, verbose_name=_("Active"))
+    is_active = models.BooleanField(default=True, verbose_name=_("Активен"))
     created_at = models.DateTimeField(
-        auto_now_add=True, verbose_name=_("Created at")
+        auto_now_add=True, verbose_name=_("Дата создания")
     )
     technology = models.ManyToManyField(
         Technology,
         blank=True,
-        verbose_name=_("Technologies"),
+        verbose_name=_("Технологии"),
         related_name="courses",
     )
 
     class Meta:
-        verbose_name = _("Course")
-        verbose_name_plural = _("Courses")
+        verbose_name = _("Курс")
+        verbose_name_plural = _("Курсы")
         ordering = ("-created_at",)
 
     def __str__(self):
@@ -62,25 +62,25 @@ class Module(models.Model):
         Course,
         on_delete=models.CASCADE,
         related_name="modules",
-        verbose_name=_("Course"),
+        verbose_name=_("Курс"),
     )
-    title = models.CharField(max_length=200, verbose_name=_("Module title"))
+    title = models.CharField(max_length=200, verbose_name=_("Название модуля"))
     description = models.TextField(
-        verbose_name=_("Module description"), blank=True
+        verbose_name=_("Описание модуля"), blank=True
     )
     order_index = models.PositiveIntegerField(
         default=1,
         validators=[MinValueValidator(1)],
-        verbose_name=_("Order number"),
+        verbose_name=_("Порядковый номер"),
     )
-    is_active = models.BooleanField(default=True, verbose_name=_("Active"))
+    is_active = models.BooleanField(default=True, verbose_name=_("Активен"))
     indexes = [
-        models.Index(fields=['course', 'order_index']),
+        models.Index(fields=["course", "order_index"]),
     ]
 
     class Meta:
-        verbose_name = _("Module")
-        verbose_name_plural = _("Modules")
+        verbose_name = _("Модуль")
+        verbose_name_plural = _("Модули")
         ordering = ("order_index",)
         unique_together = ("course", "order_index")
 
@@ -92,8 +92,7 @@ class Module(models.Model):
         deleted_index = self.order_index
         super().delete(*args, **kwargs)
         affected_modules = Module.objects.filter(
-            course=course,
-            order_index__gt=deleted_index
+            course=course, order_index__gt=deleted_index
         )
         for module in affected_modules:
             module.order_index -= 1
@@ -105,23 +104,23 @@ class LessonTheory(models.Model):
         Module,
         on_delete=models.CASCADE,
         related_name="lessons_theories",
-        verbose_name=_("Module"),
+        verbose_name=_("Модуль"),
     )
-    title = models.CharField(max_length=200, verbose_name=_("Lesson title"))
-    content = models.TextField(verbose_name=_("Lesson content"))
+    title = models.CharField(max_length=200, verbose_name=_("Название урока"))
+    content = models.TextField(verbose_name=_("Содержание урока"))
     order_index = models.PositiveIntegerField(
         default=1,
         validators=[MinValueValidator(1)],
-        verbose_name=_("Order number"),
+        verbose_name=_("Порядковый номер"),
     )
-    is_active = models.BooleanField(default=True, verbose_name=_("Active"))
+    is_active = models.BooleanField(default=True, verbose_name=_("Активен"))
     indexes = [
-        models.Index(fields=['module', 'order_index']),
+        models.Index(fields=["module", "order_index"]),
     ]
 
     class Meta:
-        verbose_name = _("Theory lesson")
-        verbose_name_plural = _("Theory lessons")
+        verbose_name = _("Теоретический урок")
+        verbose_name_plural = _("Теоретические уроки")
         ordering = ("order_index",)
         unique_together = ("module", "order_index")
 
@@ -133,24 +132,26 @@ class LessonTheory(models.Model):
         deleted_index = self.order_index
         super().delete(*args, **kwargs)
         LessonTheory.objects.filter(
-            module=module,
-            order_index__gt=deleted_index
+            module=module, order_index__gt=deleted_index
         ).update(order_index=models.F("order_index") - 1)
 
     def clean(self):
         if not self.pk:
             max_order = LessonTheory.objects.filter(
                 module=self.module
-            ).aggregate(models.Max('order_index'))['order_index__max']
+            ).aggregate(models.Max("order_index"))["order_index__max"]
 
             if max_order and self.order_index > max_order + 1:
-                raise ValidationError({
-                    'order_index': _(
-                        'Order index cannot be more than '
-                        '%(max)d (next available position)'
-                    ) % {'max': max_order + 1}
-                })
-
+                raise ValidationError(
+                    {
+                        "order_index": _(
+                            "Порядковый номер не "
+                            "может быть больше %(max)d "
+                            "(следующая доступная позиция)"
+                        )
+                        % {"max": max_order + 1}
+                    }
+                )
 
 
 class LessonRadioQuestion(models.Model):
@@ -158,30 +159,32 @@ class LessonRadioQuestion(models.Model):
         Module,
         on_delete=models.CASCADE,
         related_name="lessons_radio_questions",
-        verbose_name=_("Module"),
+        verbose_name=_("Модуль"),
     )
-    title = models.CharField(max_length=200, verbose_name=_("Question title"))
-    question_text = models.TextField(verbose_name=_("Question text"))
+    title = models.CharField(
+        max_length=200, verbose_name=_("Название вопроса")
+    )
+    question_text = models.TextField(verbose_name=_("Текст вопроса"))
     explanation = models.TextField(
-        verbose_name=_("Explanation"),
+        verbose_name=_("Пояснение"),
         blank=True,
-        help_text=_("Explanation of the correct answer shown after answering"),
+        help_text=_("Пояснение правильного ответа, показываемое после ответа"),
     )
     order_index = models.PositiveIntegerField(
         default=1,
         validators=[MinValueValidator(1)],
-        verbose_name=_("Order number"),
+        verbose_name=_("Порядковый номер"),
     )
-    is_active = models.BooleanField(default=True, verbose_name=_("Active"))
+    is_active = models.BooleanField(default=True, verbose_name=_("Активен"))
     points = models.PositiveIntegerField(
         default=1,
-        verbose_name=_("Points"),
-        help_text=_("Number of points for correct answer"),
+        verbose_name=_("Баллы"),
+        help_text=_("Количество баллов за правильный ответ"),
     )
 
     class Meta:
-        verbose_name = _("Radio question lesson")
-        verbose_name_plural = _("Radio question lessons")
+        verbose_name = _("Урок с радио-кнопками")
+        verbose_name_plural = _("Уроки с радио-кнопками")
         ordering = ("order_index",)
         unique_together = ("module", "order_index")
 
@@ -197,21 +200,21 @@ class AnswerOption(models.Model):
         LessonRadioQuestion,
         on_delete=models.CASCADE,
         related_name="answers",
-        verbose_name=_("Question"),
+        verbose_name=_("Вопрос"),
     )
-    text = models.CharField(max_length=500, verbose_name=_("Answer text"))
+    text = models.CharField(max_length=500, verbose_name=_("Текст ответа"))
     is_correct = models.BooleanField(
-        default=False, verbose_name=_("Is correct answer")
+        default=False, verbose_name=_("Правильный ответ")
     )
     order_index = models.PositiveIntegerField(
         default=1,
         validators=[MinValueValidator(1)],
-        verbose_name=_("Order number"),
+        verbose_name=_("Порядковый номер"),
     )
 
     class Meta:
-        verbose_name = _("Answer option")
-        verbose_name_plural = _("Answer options")
+        verbose_name = _("Вариант ответа")
+        verbose_name_plural = _("Варианты ответов")
         ordering = ("order_index",)
         unique_together = ("question", "order_index")
 
@@ -224,49 +227,36 @@ class LessonCheckBoxQuestion(models.Model):
         Module,
         on_delete=models.CASCADE,
         related_name="lessons_checkbox_questions",
-        verbose_name=_("Module"),
+        verbose_name=_("Модуль"),
     )
     title = models.CharField(
-        max_length=200,
-        verbose_name=_("Question title")
+        max_length=200, verbose_name=_("Название вопроса")
     )
-    question_text = models.TextField(
-        verbose_name=_("Question text")
-    )
+    question_text = models.TextField(verbose_name=_("Текст вопроса"))
     explanation = models.TextField(
-        verbose_name=_("Explanation"),
+        verbose_name=_("Пояснение"),
         blank=True,
-        help_text=_(
-            "Explanation of the correct answers shown "
-            "after answering"
-        ),
+        help_text=_("Пояснение правильных ответов, показываемое после ответа"),
     )
     order_index = models.PositiveIntegerField(
         default=1,
         validators=[MinValueValidator(1)],
-        verbose_name=_("Order number"),
+        verbose_name=_("Порядковый номер"),
     )
-    is_active = models.BooleanField(
-        default=True,
-        verbose_name=_("Active")
-    )
+    is_active = models.BooleanField(default=True, verbose_name=_("Активен"))
     points = models.PositiveIntegerField(
         default=1,
-        verbose_name=_("Points"),
-        help_text=_(
-            "Number of points for fully correct answer"
-        ),
+        verbose_name=_("Баллы"),
+        help_text=_("Количество баллов за полностью правильный ответ"),
     )
 
     indexes = [
-        models.Index(fields=['module', 'order_index']),
+        models.Index(fields=["module", "order_index"]),
     ]
 
     class Meta:
-        verbose_name = _("Checkbox question lesson")
-        verbose_name_plural = _(
-            "Checkbox question lessons"
-        )
+        verbose_name = _("Урок с чекбоксами")
+        verbose_name_plural = _("Уроки с чекбоксами")
         ordering = ("order_index",)
         unique_together = ("module", "order_index")
 
@@ -281,8 +271,7 @@ class LessonCheckBoxQuestion(models.Model):
         deleted_index = self.order_index
         super().delete(*args, **kwargs)
         LessonCheckBoxQuestion.objects.filter(
-            module=module,
-            order_index__gt=deleted_index
+            module=module, order_index__gt=deleted_index
         ).update(order_index=models.F("order_index") - 1)
 
 
@@ -291,32 +280,23 @@ class CheckBoxAnswerOption(models.Model):
         LessonCheckBoxQuestion,
         on_delete=models.CASCADE,
         related_name="answers",
-        verbose_name=_("Question"),
+        verbose_name=_("Вопрос"),
     )
-    text = models.CharField(
-        max_length=500,
-        verbose_name=_("Answer text")
-    )
+    text = models.CharField(max_length=500, verbose_name=_("Текст ответа"))
     is_correct = models.BooleanField(
-        default=False,
-        verbose_name=_("Is correct answer")
+        default=False, verbose_name=_("Правильный ответ")
     )
     order_index = models.PositiveIntegerField(
         default=1,
         validators=[MinValueValidator(1)],
-        verbose_name=_("Order number"),
+        verbose_name=_("Порядковый номер"),
     )
 
     class Meta:
-        verbose_name = _("Checkbox answer option")
-        verbose_name_plural = _(
-            "Checkbox answer options"
-        )
+        verbose_name = _("Вариант ответа для чекбокса")
+        verbose_name_plural = _("Варианты ответов для чекбоксов")
         ordering = ("order_index",)
         unique_together = ("question", "order_index")
 
     def __str__(self):
-        return (
-            f"{self.question.title[:50]} - "
-            f"{self.text[:50]}"
-        )
+        return f"{self.question.title[:50]} - {self.text[:50]}"

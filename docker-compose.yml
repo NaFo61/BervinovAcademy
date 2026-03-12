@@ -35,7 +35,8 @@ services:
       dockerfile: backend/Dockerfile
     container_name: bervinov-academy-backend
     command: >
-      sh -c "python manage.py compilemessages -l ru &&
+      sh -c "cd /app/backend &&
+             python manage.py compilemessages -l en &&
              python manage.py migrate &&
              python manage.py seed_data --clear &&
              python manage.py runserver 0.0.0.0:8000"
@@ -49,6 +50,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    working_dir: /app/backend  # Важно! Рабочая директория должна быть /app/backend
 
   celery:
     build:
@@ -57,15 +59,17 @@ services:
     container_name: bervinov-academy-celery
     command: >
       sh -c "cd /app/backend &&
-             python manage.py compilemessages -l ru &&
+             python manage.py compilemessages -l en &&
              celery -A school_platform worker --loglevel=info"
     volumes:
-      - ./backend:/app/backend
+      - .:/app
     env_file: .env
     depends_on:
-      - backend
-      - redis
-    working_dir: /app/backend
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    working_dir: /app/backend  # Рабочая директория /app/backend
 
   celery-beat:
     build:
@@ -74,15 +78,17 @@ services:
     container_name: bervinov-academy-celery-beat
     command: >
       sh -c "cd /app/backend &&
-             python manage.py compilemessages -l ru &&
+             python manage.py compilemessages -l en &&
              celery -A school_platform beat --loglevel=info"
     volumes:
       - .:/app
     env_file: .env
     depends_on:
-      - backend
-      - redis
-    working_dir: /app/backend
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    working_dir: /app/backend  # Рабочая директория /app/backend
 
 volumes:
   postgres_data:

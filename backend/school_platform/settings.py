@@ -63,7 +63,7 @@ UNFOLD = {
             },
         ]
     },
-    "SITE_HEADER": _("Bervinov Academy"),
+    "SITE_HEADER": _("Академия Бервинова"),
     "SITE_ICON": {
         "light": lambda request: static("img/logo.ico"),
         "dark": lambda request: static("img/logo.ico"),
@@ -83,88 +83,88 @@ UNFOLD = {
         "show_navigation": True,
         "navigation": [
             {
-                "title": _("Dashboard"),
+                "title": _("Главная"),
                 "separator": True,
                 "collapsible": False,
                 "items": [
                     {
-                        "title": _("Dashboard"),
+                        "title": _("Главная панель"),
                         "icon": "dashboard",
                         "link": reverse_lazy("admin:index"),
                     },
                 ],
             },
             {
-                "title": _("Users"),
+                "title": _("Пользователи"),
                 "separator": True,
                 "collapsible": True,
                 "items": [
                     {
-                        "title": _("Users"),
+                        "title": _("Пользователи"),
                         "icon": "person",
                         "link": "/admin/users/user/",
                     },
                     {
-                        "title": _("Mentors"),
+                        "title": _("Наставники"),
                         "icon": "person",
                         "link": "/admin/users/mentor/",
                     },
                     {
-                        "title": _("Students"),
+                        "title": _("Студенты"),
                         "icon": "elderly_woman",
                         "link": "/admin/users/student/",
                     },
                     {
-                        "title": _("Specialization"),
+                        "title": _("Специализации"),
                         "icon": "people",
                         "link": "/admin/users/specialization/",
                     },
                 ],
             },
             {
-                "title": _("Education"),
+                "title": _("Обучение"),
                 "separator": True,
                 "collapsible": True,
                 "items": [
                     {
-                        "title": _("Courses"),
+                        "title": _("Курсы"),
                         "icon": "school",
                         "link": "/admin/content/course/",
                     },
                     {
-                        "title": _("Modules"),
+                        "title": _("Модули"),
                         "icon": "list_alt",
                         "link": "/admin/content/module/",
                     },
                     {
-                        "title": _("Theory Lessons"),
+                        "title": _("Теоретические уроки"),
                         "icon": "article",
                         "link": "/admin/content/lessontheory/",
                     },
                     {
-                        "title": _("Radio Questions"),
+                        "title": _("Вопросы с выбором одного ответа"),
                         "icon": "radio_button_checked",
                         "link": "/admin/content/lessonradioquestion/",
                     },
                     {
-                        "title": _("Checkbox Questions"),
+                        "title": _("Вопросы с выбором нескольких ответов"),
                         "icon": "check_box",
                         "link": "/admin/content/lessoncheckboxquestion/",
                     },
                     {
-                        "title": _("Technologies"),
+                        "title": _("Технологии"),
                         "icon": "science",
                         "link": "/admin/content/technology/",
                     },
                 ],
             },
             {
-                "title": _("Localization"),
+                "title": _("Локализация"),
                 "separator": True,
                 "collapsible": True,
                 "items": [
                     {
-                        "title": _("Translation Memory"),
+                        "title": _("Память переводов"),
                         "icon": "language",
                         "link": "/admin/translations/translationmemory/",
                     },
@@ -224,34 +224,18 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS: list[dict[str, Any]] = [
     # {
-    #     "NAME": "django.contrib.auth."
-    #     "password_validation.UserAttributeSimilarityValidator",
-    # },
-    # {
-    #     "NAME": "django.contrib.auth."
-    #     "password_validation.MinimumLengthValidator",
-    # },
-    # {
-    #     "NAME": "django.contrib.auth."
-    #     "password_validation.CommonPasswordValidator",
-    # },
-    # {
-    #     "NAME": "django.contrib.auth."
-    #     "password_validation.NumericPasswordValidator",
-    # },
-    # {
     #     "NAME": "users.validators.CustomPasswordValidator",
     # },
 ]
 
-LANGUAGE_CODE = "ru-ru"
+LANGUAGE_CODE = "ru"
 TIME_ZONE = "Europe/Moscow"
 USE_I18N = True
 USE_TZ = True
 
 LANGUAGES = (
-    ("en", _("English")),
-    ("ru", _("Russian")),
+    ("en", _("Английский")),
+    ("ru", _("Русский")),
 )
 
 LOCALE_PATHS = [
@@ -277,11 +261,6 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Europe/Moscow"
-
-try:
-    from school_platform.local_settings import *  # noqa: F403, F401
-except ImportError:
-    pass
 
 # REST Framework settings
 REST_FRAMEWORK = {
@@ -315,7 +294,6 @@ SIMPLE_JWT = {
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
     "TOKEN_TYPE_CLAIM": "token_type",
     "JTI_CLAIM": "jti",
-    # Custom payload
     "CUSTOM_PAYLOAD": {
         "email": "email",
         "phone": "phone",
@@ -324,3 +302,8 @@ SIMPLE_JWT = {
         "last_name": "last_name",
     },
 }
+
+try:
+    from school_platform.local_settings import *  # noqa: F403, F401
+except ImportError:
+    pass

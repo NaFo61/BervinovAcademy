@@ -19,8 +19,6 @@ from content.models import (
 
 @admin.register(Technology)
 class TechnologyAdmin(ModelAdmin):
-    """Admin for technologies"""
-
     list_display = ("name", "courses_count", "is_used")
     search_fields = ("name",)
     list_per_page = 20
@@ -28,24 +26,24 @@ class TechnologyAdmin(ModelAdmin):
     icon = "science"
 
     @admin.display(
-        description=_("Number of courses"), ordering="courses_count"
+        description=_("Количество курсов"), ordering="courses_count"
     )
     def courses_count(self, obj):
         count = obj.courses.count()
         url = (
             reverse("admin:content_course_changelist")
             + f"?technology__id__exact={obj.id}"
-        )  # Исправлено
+        )
         return format_html('<a href="{}">{}</a>', url, count)
 
-    @admin.display(description=_("Is used"), boolean=True)
+    @admin.display(description=_("Используется"), boolean=True)
     def is_used(self, obj):
         return obj.courses.exists()
 
 
 @admin.register(Course)
 class CourseAdmin(ModelAdmin):
-    """Admin for courses"""
+    """Админка для курсов"""
 
     list_display = (
         "title",
@@ -70,7 +68,7 @@ class CourseAdmin(ModelAdmin):
 
     fieldsets = (
         (
-            _("Main information"),
+            _("Основная информация"),
             {
                 "fields": (
                     "title",
@@ -83,14 +81,14 @@ class CourseAdmin(ModelAdmin):
             },
         ),
         (
-            _("Statistics"),
+            _("Статистика"),
             {
                 "fields": ("courses_stats",),
                 "classes": ("collapse",),
             },
         ),
         (
-            _("Dates"),
+            _("Даты"),
             {
                 "fields": ("created_at",),
                 "classes": ("collapse",),
@@ -98,17 +96,15 @@ class CourseAdmin(ModelAdmin):
         ),
     )
 
-    @admin.display(description=_("Technologies"))
+    @admin.display(description=_("Технологии"))
     def technologies_list(self, obj):
         technologies = obj.technology.all()
         if not technologies:
             return "—"
 
         tech_links = []
-        for tech in technologies[:3]:  # Show only first 3 technologies
-            url = reverse(
-                "admin:content_technology_change", args=[tech.id]
-            )  # Исправлено
+        for tech in technologies[:3]:
+            url = reverse("admin:content_technology_change", args=[tech.id])
             tech_links.append(f'<a href="{url}">{tech.name}</a>')
 
         result = ", ".join(tech_links)
@@ -120,7 +116,7 @@ class CourseAdmin(ModelAdmin):
 
         return format_html(result)
 
-    @admin.display(description=_("Modules"))
+    @admin.display(description=_("Модули"))
     def modules_count(self, obj):
         count = obj.modules.count()
         if count == 0:
@@ -131,10 +127,10 @@ class CourseAdmin(ModelAdmin):
         url = (
             reverse("admin:content_module_changelist")
             + f"?course__id__exact={obj.id}"
-        )  # Исправлено
+        )
         return format_html('<a href="{}">{}</a>', url, count)
 
-    @admin.display(description=_("Statistics"))
+    @admin.display(description=_("Статистика"))
     def courses_stats(self, obj):
         modules = obj.modules.count()
         lessons = LessonTheory.objects.filter(module__course=obj).count()
@@ -149,7 +145,7 @@ class CourseAdmin(ModelAdmin):
         ">
             <div style="margin-bottom: 0.25rem;">
                 <strong style="color: var(--primary-text);">
-                {_('Modules')}:
+                {_('Модули')}:
                 </strong>
                 <span style="color: var(--secondary-text);">
                 {modules}
@@ -157,7 +153,7 @@ class CourseAdmin(ModelAdmin):
             </div>
             <div>
                 <strong style="color: var(--primary-text);">
-                {_('Lessons')}:
+                {_('Уроки')}:
                 </strong>
                 <span style="color: var(--secondary-text);">{lessons}</span>
             </div>
@@ -165,7 +161,7 @@ class CourseAdmin(ModelAdmin):
         """
         return format_html(stats_html)
 
-    @display(description=_("Actions"), label=True)
+    @display(description=_("Действия"), label=True)
     def actions_column(self, obj):
         return format_html(
             """
@@ -178,57 +174,52 @@ class CourseAdmin(ModelAdmin):
                 </a>
             </div>
             """,
-            view=reverse(
-                "admin:content_course_change", args=[obj.id]
-            ),  # Исправлено
-            edit=reverse(
-                "admin:content_course_change", args=[obj.id]
-            ),  # Исправлено
-            view_title=_("View"),
-            edit_title=_("Edit"),
+            view=reverse("admin:content_course_change", args=[obj.id]),
+            edit=reverse("admin:content_course_change", args=[obj.id]),
+            view_title=_("Просмотр"),
+            edit_title=_("Редактировать"),
         )
 
-    @action(description=_("Activate courses ✅"), permissions=["change"])
+    @action(description=_("Активировать курсы ✅"), permissions=["change"])
     def activate_courses(self, request, queryset):
         updated = queryset.update(is_active=True)
         self.message_user(
             request,
-            _(f"{updated} courses activated ✅"),
+            _(f"{updated} курсов активировано ✅"),
             messages.SUCCESS,
         )
 
-    @action(description=_("Deactivate courses ❌"), permissions=["change"])
+    @action(description=_("Деактивировать курсы ❌"), permissions=["change"])
     def deactivate_courses(self, request, queryset):
         updated = queryset.update(is_active=False)
         self.message_user(
             request,
-            _(f"{updated} courses deactivated ❌"),
+            _(f"{updated} курсов деактивировано ❌"),
             messages.WARNING,
         )
 
-    @action(description=_("Clone course"), permissions=["add"])
+    @action(description=_("Клонировать курс"), permissions=["add"])
     def clone_course(self, request, queryset):
         if queryset.count() > 1:
             self.message_user(
                 request,
-                _("Select only one course to clone"),
+                _("Выберите только один курс для клонирования"),
                 messages.ERROR,
             )
             return
 
         course = queryset.first()
         course.pk = None
-        course.title = f"{course.title} ({_('Copy')})"
+        course.title = f"{course.title} ({_('Копия')})"
         course.slug = f"{course.slug}-copy"
         course.is_active = False
         course.save()
 
-        # Copy technologies
         course.technology.set(course.technology.all())
 
         self.message_user(
             request,
-            _("Course successfully cloned"),
+            _("Курс успешно клонирован"),
             messages.SUCCESS,
         )
 
@@ -240,7 +231,7 @@ class CourseAdmin(ModelAdmin):
 
 
 class LessonTheoryInline(TabularInline):
-    """Inline for theory lessons"""
+    """Инлайн для теоретических уроков"""
 
     model = LessonTheory
     extra = 1
@@ -250,7 +241,7 @@ class LessonTheoryInline(TabularInline):
     fields = ("title", "content_preview", "order_index", "is_active")
     readonly_fields = ("content_preview",)
 
-    @admin.display(description=_("Content"))
+    @admin.display(description=_("Содержание"))
     def content_preview(self, obj):
         if not obj.content:
             return "—"
@@ -263,7 +254,7 @@ class LessonTheoryInline(TabularInline):
 
 
 class LessonRadioQuestionInline(TabularInline):
-    """Inline for radio questions in module"""
+    """Инлайн для радио-вопросов в модуле"""
 
     model = LessonRadioQuestion
     extra = 1
@@ -279,7 +270,7 @@ class LessonRadioQuestionInline(TabularInline):
     readonly_fields = ("question_preview",)
     classes = ["collapse"]
 
-    @admin.display(description=_("Question"))
+    @admin.display(description=_("Вопрос"))
     def question_preview(self, obj):
         if not obj.question_text:
             return "—"
@@ -294,7 +285,7 @@ class LessonRadioQuestionInline(TabularInline):
 
 
 class LessonCheckBoxQuestionInline(TabularInline):
-    """Inline for checkbox questions in module"""
+    """Инлайн для чекбокс-вопросов в модуле"""
 
     model = LessonCheckBoxQuestion
     extra = 1
@@ -310,7 +301,7 @@ class LessonCheckBoxQuestionInline(TabularInline):
     readonly_fields = ("question_preview",)
     classes = ["collapse"]
 
-    @admin.display(description=_("Question"))
+    @admin.display(description=_("Вопрос"))
     def question_preview(self, obj):
         if not obj.question_text:
             return "—"
@@ -326,7 +317,7 @@ class LessonCheckBoxQuestionInline(TabularInline):
 
 @admin.register(Module)
 class ModuleAdmin(ModelAdmin):
-    """Admin for modules"""
+    """Админка для модулей"""
 
     list_display = (
         "title",
@@ -354,7 +345,7 @@ class ModuleAdmin(ModelAdmin):
 
     fieldsets = (
         (
-            _("Main information"),
+            _("Основная информация"),
             {
                 "fields": (
                     "course",
@@ -366,7 +357,7 @@ class ModuleAdmin(ModelAdmin):
             },
         ),
         (
-            _("Statistics"),
+            _("Статистика"),
             {
                 "fields": ("lessons_count_display",),
                 "classes": ("collapse",),
@@ -374,14 +365,12 @@ class ModuleAdmin(ModelAdmin):
         ),
     )
 
-    @admin.display(description=_("Course"), ordering="course__title")
+    @admin.display(description=_("Курс"), ordering="course__title")
     def course_link(self, obj):
-        url = reverse(
-            "admin:content_course_change", args=[obj.course.id]
-        )  # Исправлено
+        url = reverse("admin:content_course_change", args=[obj.course.id])
         return format_html('<a href="{}">{}</a>', url, obj.course.title)
 
-    @admin.display(description=_("Lessons"))
+    @admin.display(description=_("Уроки"))
     def lessons_count(self, obj):
         count = obj.lessons_theories.count()
         if count == 0:
@@ -392,10 +381,10 @@ class ModuleAdmin(ModelAdmin):
         url = (
             reverse("admin:content_lessontheory_changelist")
             + f"?module__id__exact={obj.id}"
-        )  # Исправлено
+        )
         return format_html('<a href="{}">{}</a>', url, count)
 
-    @admin.display(description=_("Statistics"))
+    @admin.display(description=_("Статистика"))
     def lessons_count_display(self, obj):
         theory_count = obj.lessons_theories.count()
         radio_count = obj.lessons_radio_questions.count()
@@ -419,7 +408,7 @@ class ModuleAdmin(ModelAdmin):
                         background: #0d6efd;
                         margin-right: 0.5rem;
                     "></span>
-                    <strong>{_('Theory')}:</strong> {theory_count}
+                    <strong>{_('Теория')}:</strong> {theory_count}
                 </div>
                 <div style="margin-bottom: 0.25rem;">
                     <span style="
@@ -430,7 +419,7 @@ class ModuleAdmin(ModelAdmin):
                         background: #198754;
                         margin-right: 0.5rem;
                     "></span>
-                    <strong>{_('Radio')}:</strong> {radio_count}
+                    <strong>{_('Радио')}:</strong> {radio_count}
                 </div>
                 <div>
                     <span style="
@@ -441,18 +430,18 @@ class ModuleAdmin(ModelAdmin):
                         background: #ffc107;
                         margin-right: 0.5rem;
                     "></span>
-                    <strong>{_('Checkbox')}:</strong> {checkbox_count}
+                    <strong>{_('Чекбоксы')}:</strong> {checkbox_count}
                 </div>
                 <hr style="margin: 0.5rem 0;
                 border-color: var(--border-color);">
                 <div>
-                    <strong>{_('Total')}:</strong> {total}
+                    <strong>{_('Всего')}:</strong> {total}
                 </div>
             </div>
             """
         return format_html(stats_html)
 
-    @display(description=_("Actions"), label=True)
+    @display(description=_("Действия"), label=True)
     def actions_column(self, obj):
         return format_html(
             """
@@ -465,31 +454,27 @@ class ModuleAdmin(ModelAdmin):
                 </a>
             </div>
             """,
-            view=reverse(
-                "admin:content_module_change", args=[obj.id]
-            ),  # Исправлено
-            edit=reverse(
-                "admin:content_module_change", args=[obj.id]
-            ),  # Исправлено
-            view_title=_("View"),
-            edit_title=_("Edit"),
+            view=reverse("admin:content_module_change", args=[obj.id]),
+            edit=reverse("admin:content_module_change", args=[obj.id]),
+            view_title=_("Просмотр"),
+            edit_title=_("Редактировать"),
         )
 
-    @action(description=_("Activate modules ✅"), permissions=["change"])
+    @action(description=_("Активировать модули ✅"), permissions=["change"])
     def activate_modules(self, request, queryset):
         updated = queryset.update(is_active=True)
         self.message_user(
             request,
-            _(f"{updated} modules activated ✅"),
+            _(f"{updated} модулей активировано ✅"),
             messages.SUCCESS,
         )
 
-    @action(description=_("Deactivate modules ❌"), permissions=["change"])
+    @action(description=_("Деактивировать модули ❌"), permissions=["change"])
     def deactivate_modules(self, request, queryset):
         updated = queryset.update(is_active=False)
         self.message_user(
             request,
-            _(f"{updated} modules deactivated ❌"),
+            _(f"{updated} модулей деактивировано ❌"),
             messages.WARNING,
         )
 
@@ -504,7 +489,7 @@ class ModuleAdmin(ModelAdmin):
 
 @admin.register(LessonTheory)
 class LessonTheoryAdmin(ModelAdmin):
-    """Admin for theory lessons"""
+    """Админка для теоретических уроков"""
 
     list_display = (
         "title",
@@ -533,7 +518,7 @@ class LessonTheoryAdmin(ModelAdmin):
 
     fieldsets = (
         (
-            _("Main information"),
+            _("Основная информация"),
             {
                 "fields": (
                     "module",
@@ -545,7 +530,7 @@ class LessonTheoryAdmin(ModelAdmin):
             },
         ),
         (
-            _("Additional information"),
+            _("Дополнительная информация"),
             {
                 "fields": ("created_info",),
                 "classes": ("collapse",),
@@ -553,7 +538,7 @@ class LessonTheoryAdmin(ModelAdmin):
         ),
     )
 
-    @admin.display(description=_("Content"))
+    @admin.display(description=_("Содержание"))
     def content_preview(self, obj):
         if not obj.content:
             return "—"
@@ -564,21 +549,19 @@ class LessonTheoryAdmin(ModelAdmin):
         )
         return format_html('<span title="{}">{}</span>', obj.content, preview)
 
-    @admin.display(description=_("Module"), ordering="module__title")
+    @admin.display(description=_("Модуль"), ordering="module__title")
     def module_link(self, obj):
-        url = reverse(
-            "admin:content_module_change", args=[obj.module.id]
-        )  # Исправлено
+        url = reverse("admin:content_module_change", args=[obj.module.id])
         return format_html('<a href="{}">{}</a>', url, obj.module.title)
 
-    @admin.display(description=_("Course"), ordering="module__course__title")
+    @admin.display(description=_("Курс"), ordering="module__course__title")
     def course_link(self, obj):
         url = reverse(
             "admin:content_course_change", args=[obj.module.course.id]
-        )  # Исправлено
+        )
         return format_html('<a href="{}">{}</a>', url, obj.module.course.title)
 
-    @admin.display(description=_("Information"))
+    @admin.display(description=_("Информация"))
     def created_info(self, obj):
         info_html = f"""
         <div style="
@@ -590,7 +573,7 @@ class LessonTheoryAdmin(ModelAdmin):
         ">
             <div style="margin-bottom: 0.5rem;">
                 <strong style="color: var(--primary-text);">
-                {_('Course')}:
+                {_('Курс')}:
                 </strong>
                 <span style="color:
                 var(--secondary-text); margin-left: 0.25rem;">
@@ -599,7 +582,7 @@ class LessonTheoryAdmin(ModelAdmin):
             </div>
             <div>
                 <strong style="color: var(--primary-text);">
-                {_('Module')}:
+                {_('Модуль')}:
                 </strong>
                 <span style="color: var(--secondary-text);
                 margin-left: 0.25rem;">
@@ -610,7 +593,7 @@ class LessonTheoryAdmin(ModelAdmin):
         """
         return format_html(info_html)
 
-    @display(description=_("Actions"), label=True)
+    @display(description=_("Действия"), label=True)
     def actions_column(self, obj):
         return format_html(
             """
@@ -623,31 +606,27 @@ class LessonTheoryAdmin(ModelAdmin):
                 </a>
             </div>
             """,
-            view=reverse(
-                "admin:content_lessontheory_change", args=[obj.id]
-            ),  # Исправлено
-            edit=reverse(
-                "admin:content_lessontheory_change", args=[obj.id]
-            ),  # Исправлено
-            view_title=_("View"),
-            edit_title=_("Edit"),
+            view=reverse("admin:content_lessontheory_change", args=[obj.id]),
+            edit=reverse("admin:content_lessontheory_change", args=[obj.id]),
+            view_title=_("Просмотр"),
+            edit_title=_("Редактировать"),
         )
 
-    @action(description=_("Activate lessons ✅"), permissions=["change"])
+    @action(description=_("Активировать уроки ✅"), permissions=["change"])
     def activate_lessons(self, request, queryset):
         updated = queryset.update(is_active=True)
         self.message_user(
             request,
-            _(f"{updated} lessons activated ✅"),
+            _(f"{updated} уроков активировано ✅"),
             messages.SUCCESS,
         )
 
-    @action(description=_("Deactivate lessons ❌"), permissions=["change"])
+    @action(description=_("Деактивировать уроки ❌"), permissions=["change"])
     def deactivate_lessons(self, request, queryset):
         updated = queryset.update(is_active=False)
         self.message_user(
             request,
-            _(f"{updated} lessons deactivated ❌"),
+            _(f"{updated} уроков деактивировано ❌"),
             messages.WARNING,
         )
 
@@ -659,8 +638,6 @@ class LessonTheoryAdmin(ModelAdmin):
 
 
 class AnswerOptionInline(TabularInline):
-    """Inline for radio question answers"""
-
     model = AnswerOption
     extra = 2
     max_num = 10
@@ -669,15 +646,12 @@ class AnswerOptionInline(TabularInline):
     classes = ["collapse"]
 
     def get_extra(self, request, obj=None, **kwargs):
-        """Show 4 extra forms if no object exists"""
         if not obj:
             return 4
         return self.extra
 
 
 class CheckBoxAnswerOptionInline(TabularInline):
-    """Inline for checkbox question answers"""
-
     model = CheckBoxAnswerOption
     extra = 2
     max_num = 10
@@ -686,7 +660,6 @@ class CheckBoxAnswerOptionInline(TabularInline):
     classes = ["collapse"]
 
     def get_extra(self, request, obj=None, **kwargs):
-        """Show 4 extra forms if no object exists"""
         if not obj:
             return 4
         return self.extra
@@ -694,8 +667,6 @@ class CheckBoxAnswerOptionInline(TabularInline):
 
 @admin.register(LessonRadioQuestion)
 class LessonRadioQuestionAdmin(ModelAdmin):
-    """Admin for radio button questions"""
-
     list_display = (
         "title",
         "module_link",
@@ -726,7 +697,7 @@ class LessonRadioQuestionAdmin(ModelAdmin):
 
     fieldsets = (
         (
-            _("Main information"),
+            _("Основная информация"),
             {
                 "fields": (
                     "module",
@@ -738,7 +709,7 @@ class LessonRadioQuestionAdmin(ModelAdmin):
             },
         ),
         (
-            _("Order and status"),
+            _("Порядок и статус"),
             {
                 "fields": (
                     "order_index",
@@ -747,14 +718,14 @@ class LessonRadioQuestionAdmin(ModelAdmin):
             },
         ),
         (
-            _("Statistics"),
+            _("Статистика"),
             {
                 "fields": ("question_stats",),
                 "classes": ("collapse",),
             },
         ),
         (
-            _("Additional information"),
+            _("Дополнительная информация"),
             {
                 "fields": ("created_info",),
                 "classes": ("collapse",),
@@ -764,25 +735,25 @@ class LessonRadioQuestionAdmin(ModelAdmin):
 
     inlines = [AnswerOptionInline]
 
-    @admin.display(description=_("Module"), ordering="module__title")
+    @admin.display(description=_("Модуль"), ordering="module__title")
     def module_link(self, obj):
         url = reverse("admin:content_module_change", args=[obj.module.id])
         return format_html('<a href="{}">{}</a>', url, obj.module.title)
 
-    @admin.display(description=_("Course"), ordering="module__course__title")
+    @admin.display(description=_("Курс"), ordering="module__course__title")
     def course_link(self, obj):
         url = reverse(
             "admin:content_course_change", args=[obj.module.course.id]
         )
         return format_html('<a href="{}">{}</a>', url, obj.module.course.title)
 
-    @admin.display(description=_("Answers"))
+    @admin.display(description=_("Ответы"))
     def answers_count(self, obj):
         count = obj.answers.count()
         if count == 0:
             return format_html(
                 '<span style="color: #dc3545; font-weight: 500;">⚠️ {}</span>',
-                _("No answers"),
+                _("Нет ответов"),
             )
 
         correct = obj.answers.filter(is_correct=True).count()
@@ -790,29 +761,29 @@ class LessonRadioQuestionAdmin(ModelAdmin):
             return format_html(
                 '<span style="color: #ffc107;">{} {} (⚠️ {})</span>',
                 count,
-                _("answers"),
-                _("no correct"),
+                _("ответов"),
+                _("нет правильных"),
             )
         elif correct > 1:
             return format_html(
                 '<span style="color: #ffc107;">{} {} (⚠️ {} {})</span>',
                 count,
-                _("answers"),
+                _("ответов"),
                 correct,
-                _("correct"),
+                _("правильных"),
             )
 
         return format_html(
-            '<span style="color: #198754;">{} {}</span>', count, _("answers")
+            '<span style="color: #198754;">{} {}</span>', count, _("ответов")
         )
 
-    @admin.display(description=_("Correct answer"))
+    @admin.display(description=_("Правильный ответ"))
     def correct_answer_preview(self, obj):
         correct = obj.get_correct_answer()
         if not correct:
             return format_html(
                 '<span style="color: #dc3545;">❌ {}</span>',
-                _("No correct answer"),
+                _("Нет правильного ответа"),
             )
 
         preview = (
@@ -824,7 +795,7 @@ class LessonRadioQuestionAdmin(ModelAdmin):
             '<span style="color: #198754;">✅ {}</span>', preview
         )
 
-    @admin.display(description=_("Statistics"))
+    @admin.display(description=_("Статистика"))
     def question_stats(self, obj):
         total_answers = obj.answers.count()
         correct_answers = obj.answers.filter(is_correct=True).count()
@@ -848,7 +819,7 @@ class LessonRadioQuestionAdmin(ModelAdmin):
                     margin-right: 0.5rem;
                 "></span>
                 <strong style="color: var(--primary-text);">
-                {_('Total answers')}:</strong>
+                {_('Всего ответов')}:</strong>
                 <span style="color: var(--secondary-text);
                 margin-left: 0.25rem;">
                     {total_answers}
@@ -864,7 +835,7 @@ class LessonRadioQuestionAdmin(ModelAdmin):
                     margin-right: 0.5rem;
                 "></span>
                 <strong style="color: var(--primary-text);">
-                {_('Correct answers')}:</strong>
+                {_('Правильных ответов')}:</strong>
                 <span style="color: var(--secondary-text);
                 margin-left: 0.25rem;">
                     {correct_answers}
@@ -874,7 +845,7 @@ class LessonRadioQuestionAdmin(ModelAdmin):
         """
         return format_html(stats_html)
 
-    @admin.display(description=_("Information"))
+    @admin.display(description=_("Информация"))
     def created_info(self, obj):
         info_html = f"""
         <div style="
@@ -886,7 +857,7 @@ class LessonRadioQuestionAdmin(ModelAdmin):
         ">
             <div style="margin-bottom: 0.5rem;">
                 <strong style="color: var(--primary-text);">
-                {_('Course')}:
+                {_('Курс')}:
                 </strong>
                 <span style="color: var(--secondary-text);
                 margin-left: 0.25rem;">
@@ -895,7 +866,7 @@ class LessonRadioQuestionAdmin(ModelAdmin):
             </div>
             <div>
                 <strong style="color: var(--primary-text);">
-                {_('Module')}:
+                {_('Модуль')}:
                 </strong>
                 <span style="color: var(--secondary-text);
                 margin-left: 0.25rem;">
@@ -906,7 +877,7 @@ class LessonRadioQuestionAdmin(ModelAdmin):
         """
         return format_html(info_html)
 
-    @display(description=_("Actions"), label=True)
+    @display(description=_("Действия"), label=True)
     def actions_column(self, obj):
         return format_html(
             """
@@ -925,43 +896,43 @@ class LessonRadioQuestionAdmin(ModelAdmin):
             edit=reverse(
                 "admin:content_lessonradioquestion_change", args=[obj.id]
             ),
-            view_title=_("View"),
-            edit_title=_("Edit"),
+            view_title=_("Просмотр"),
+            edit_title=_("Редактировать"),
         )
 
-    @action(description=_("Activate questions ✅"), permissions=["change"])
+    @action(description=_("Активировать вопросы ✅"), permissions=["change"])
     def activate_questions(self, request, queryset):
         updated = queryset.update(is_active=True)
         self.message_user(
             request,
-            _(f"{updated} radio questions activated ✅"),
+            _(f"{updated} радио-вопросов активировано ✅"),
             messages.SUCCESS,
         )
 
-    @action(description=_("Deactivate questions ❌"), permissions=["change"])
+    @action(description=_("Деактивировать вопросы ❌"), permissions=["change"])
     def deactivate_questions(self, request, queryset):
         updated = queryset.update(is_active=False)
         self.message_user(
             request,
-            _(f"{updated} radio questions deactivated ❌"),
+            _(f"{updated} радио-вопросов деактивировано ❌"),
             messages.WARNING,
         )
 
-    @action(description=_("Set points to 1"), permissions=["change"])
+    @action(description=_("Установить 1 балл"), permissions=["change"])
     def set_points_one(self, request, queryset):
         updated = queryset.update(points=1)
         self.message_user(
             request,
-            _(f"{updated} questions updated to 1 point"),
+            _(f"{updated} вопросов обновлено до 1 балла"),
             messages.SUCCESS,
         )
 
-    @action(description=_("Set points to 5"), permissions=["change"])
+    @action(description=_("Установить 5 баллов"), permissions=["change"])
     def set_points_five(self, request, queryset):
         updated = queryset.update(points=5)
         self.message_user(
             request,
-            _(f"{updated} questions updated to 5 points"),
+            _(f"{updated} вопросов обновлено до 5 баллов"),
             messages.SUCCESS,
         )
 
@@ -981,7 +952,7 @@ class LessonRadioQuestionAdmin(ModelAdmin):
 
 @admin.register(LessonCheckBoxQuestion)
 class LessonCheckBoxQuestionAdmin(ModelAdmin):
-    """Admin for checkbox questions"""
+    """Админка для чекбокс-вопросов"""
 
     list_display = (
         "title",
@@ -1013,7 +984,7 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
 
     fieldsets = (
         (
-            _("Main information"),
+            _("Основная информация"),
             {
                 "fields": (
                     "module",
@@ -1025,7 +996,7 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
             },
         ),
         (
-            _("Order and status"),
+            _("Порядок и статус"),
             {
                 "fields": (
                     "order_index",
@@ -1034,14 +1005,14 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
             },
         ),
         (
-            _("Statistics"),
+            _("Статистика"),
             {
                 "fields": ("question_stats",),
                 "classes": ("collapse",),
             },
         ),
         (
-            _("Additional information"),
+            _("Дополнительная информация"),
             {
                 "fields": ("created_info",),
                 "classes": ("collapse",),
@@ -1051,32 +1022,32 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
 
     inlines = [CheckBoxAnswerOptionInline]
 
-    @admin.display(description=_("Module"), ordering="module__title")
+    @admin.display(description=_("Модуль"), ordering="module__title")
     def module_link(self, obj):
         url = reverse("admin:content_module_change", args=[obj.module.id])
         return format_html('<a href="{}">{}</a>', url, obj.module.title)
 
-    @admin.display(description=_("Course"), ordering="module__course__title")
+    @admin.display(description=_("Курс"), ordering="module__course__title")
     def course_link(self, obj):
         url = reverse(
             "admin:content_course_change", args=[obj.module.course.id]
         )
         return format_html('<a href="{}">{}</a>', url, obj.module.course.title)
 
-    @admin.display(description=_("Answers"))
+    @admin.display(description=_("Ответы"))
     def answers_count(self, obj):
         count = obj.answers.count()
         if count == 0:
             return format_html(
                 '<span style="color: #dc3545; font-weight: 500;">⚠️ {}</span>',
-                _("No answers"),
+                _("Нет ответов"),
             )
 
         return format_html(
-            '<span style="color: #0d6efd;">{} {}</span>', count, _("answers")
+            '<span style="color: #0d6efd;">{} {}</span>', count, _("ответов")
         )
 
-    @admin.display(description=_("Correct"))
+    @admin.display(description=_("Правильные"))
     def correct_answers_count(self, obj):
         correct = obj.answers.filter(is_correct=True).count()
 
@@ -1089,7 +1060,7 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
             '<span style="color: #198754;">✅ {}</span>', correct
         )
 
-    @admin.display(description=_("Statistics"))
+    @admin.display(description=_("Статистика"))
     def question_stats(self, obj):
         total_answers = obj.answers.count()
         correct_answers = obj.answers.filter(is_correct=True).count()
@@ -1114,7 +1085,7 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
                     margin-right: 0.5rem;
                 "></span>
                 <strong style="color: var(--primary-text);">
-                {_('Total answers')}:
+                {_('Всего ответов')}:
                 </strong>
                 <span style="color: var(--secondary-text);
                 margin-left: 0.25rem;">
@@ -1131,7 +1102,7 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
                     background: #198754;
                     margin-right: 0.5rem;
                 "></span>
-                <strong style="color: var(--primary-text);">{_('Correct')}:
+                <strong style="color: var(--primary-text);">{_('Правильные')}:
                 </strong>
                 <span style="color: var(--secondary-text);
                 margin-left: 0.25rem;">
@@ -1148,7 +1119,7 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
                     margin-right: 0.5rem;
                 "></span>
                 <strong style="color: var(--primary-text);">
-                {_('Incorrect')}:</strong>
+                {_('Неправильные')}:</strong>
                 <span style="color: var(--secondary-text);
                 margin-left: 0.25rem;">
                     {incorrect_answers}
@@ -1158,7 +1129,7 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
         """
         return format_html(stats_html)
 
-    @admin.display(description=_("Information"))
+    @admin.display(description=_("Информация"))
     def created_info(self, obj):
         info_html = f"""
         <div style="
@@ -1170,7 +1141,7 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
         ">
             <div style="margin-bottom: 0.5rem;">
                 <strong style="color: var(--primary-text);">
-                {_('Course')}:
+                {_('Курс')}:
                 </strong>
                 <span style="color: var(--secondary-text);
                 margin-left: 0.25rem;">
@@ -1179,7 +1150,7 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
             </div>
             <div>
                 <strong style="color: var(--primary-text);">
-                {_('Module')}:
+                {_('Модуль')}:
                 </strong>
                 <span style="color: var(--secondary-text);
                 margin-left: 0.25rem;">
@@ -1190,7 +1161,7 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
         """
         return format_html(info_html)
 
-    @display(description=_("Actions"), label=True)
+    @display(description=_("Действия"), label=True)
     def actions_column(self, obj):
         return format_html(
             """
@@ -1209,25 +1180,25 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
             edit=reverse(
                 "admin:content_lessoncheckboxquestion_change", args=[obj.id]
             ),
-            view_title=_("View"),
-            edit_title=_("Edit"),
+            view_title=_("Просмотр"),
+            edit_title=_("Редактировать"),
         )
 
-    @action(description=_("Activate questions ✅"), permissions=["change"])
+    @action(description=_("Активировать вопросы ✅"), permissions=["change"])
     def activate_questions(self, request, queryset):
         updated = queryset.update(is_active=True)
         self.message_user(
             request,
-            _(f"{updated} checkbox questions activated ✅"),
+            _(f"{updated} чекбокс-вопросов активировано ✅"),
             messages.SUCCESS,
         )
 
-    @action(description=_("Deactivate questions ❌"), permissions=["change"])
+    @action(description=_("Деактивировать вопросы ❌"), permissions=["change"])
     def deactivate_questions(self, request, queryset):
         updated = queryset.update(is_active=False)
         self.message_user(
             request,
-            _(f"{updated} checkbox questions deactivated ❌"),
+            _(f"{updated} чекбокс-вопросов деактивировано ❌"),
             messages.WARNING,
         )
 
