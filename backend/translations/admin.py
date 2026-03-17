@@ -34,7 +34,7 @@ class TranslationMemoryAdmin(ModelAdmin):
 
     fieldsets = (
         (
-            _("Translation info"),
+            _("Информация о переводе"),
             {
                 "fields": (
                     "source_text",
@@ -47,7 +47,7 @@ class TranslationMemoryAdmin(ModelAdmin):
             },
         ),
         (
-            _("Timestamps"),
+            _("Временные метки"),
             {
                 "fields": (
                     "created_at",
@@ -57,7 +57,7 @@ class TranslationMemoryAdmin(ModelAdmin):
         ),
     )
 
-    @admin.display(description=_("Source"))
+    @admin.display(description=_("Исходный текст"))
     def short_source(self, obj: TranslationMemory):
         return (
             (obj.source_text[:60] + "…")
@@ -65,7 +65,7 @@ class TranslationMemoryAdmin(ModelAdmin):
             else obj.source_text
         )
 
-    @admin.display(description=_("Target"))
+    @admin.display(description=_("Перевод"))
     def short_target(self, obj: TranslationMemory):
         if not obj.target_text:
             return "—"
@@ -75,20 +75,20 @@ class TranslationMemoryAdmin(ModelAdmin):
             else obj.target_text
         )
 
-    @action(description=_("Mark as approved ✅"))
+    @action(description=_("Отметить как одобрено ✅"))
     def mark_as_approved(self, request: Any, queryset: Any) -> None:
         updated = queryset.update(is_approved=True)
         self.message_user(
             request,
-            _(f"{updated} translations marked as approved ✅"),
+            _(f"{updated} переводов отмечено как одобрено ✅"),
         )
 
-    @action(description=_("Unapprove ❌"))
+    @action(description=_("Снять одобрение ❌"))
     def unapprove(self, request: Any, queryset: Any) -> None:
         updated = queryset.update(is_approved=False)
         self.message_user(
             request,
-            _(f"{updated} translations unapproved ❌"),
+            _(f"{updated} переводов снято с одобрения ❌"),
         )
 
     actions = ("mark_as_approved", "unapprove")

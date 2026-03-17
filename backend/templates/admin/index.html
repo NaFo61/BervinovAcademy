@@ -3,7 +3,7 @@
 
 {% block title %}
   {% if subtitle %}{{ subtitle }} | {% endif %}
-  {{ title }} | {{ site_title|default:_("Bervinov Academy") }}
+  {{ title }} | {{ site_title|default:_("Академия Бервинова") }}
 {% endblock %}
 
 {% block branding %}
@@ -12,24 +12,24 @@
 
 {% block content %}
 <div class="px-8 py-6 bg-background text-foreground">
-  <h1 class="text-2xl font-bold mb-6">📊 {% trans "Dashboard" %}</h1>
+  <h1 class="text-2xl font-bold mb-6">📊 {% trans "Панель управления" %}</h1>
 
   <!-- === Верхние карточки === -->
   <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
     <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
-      <span class="text-sm text-muted-foreground">{% trans "Total users" %}</span>
+      <span class="text-sm text-muted-foreground">{% trans "Всего пользователей" %}</span>
       <span class="text-3xl font-bold mt-2">{{ total_users }}</span>
     </div>
     <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
-      <span class="text-sm text-muted-foreground">{% trans "Courses" %}</span>
+      <span class="text-sm text-muted-foreground">{% trans "Всего курсов" %}</span>
       <span class="text-3xl font-bold mt-2">{{ total_courses }}</span>
     </div>
     <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
-      <span class="text-sm text-muted-foreground">{% trans "Active students" %}</span>
+      <span class="text-sm text-muted-foreground">{% trans "Активных студентов" %}</span>
       <span class="text-3xl font-bold mt-2">{{ active_students }}</span>
     </div>
     <div class="bg-card rounded-2xl p-5 shadow-md border border-border flex flex-col items-start">
-      <span class="text-sm text-muted-foreground">{% trans "Completed courses" %}</span>
+      <span class="text-sm text-muted-foreground">{% trans "Завершенных курсов" %}</span>
       <span class="text-3xl font-bold mt-2">{{ completed_courses }}</span>
     </div>
 </div>
@@ -37,12 +37,12 @@
   <!-- === Графики === -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     <div class="bg-card rounded-2xl p-6 shadow-md border border-border">
-      <h2 class="text-lg font-semibold mb-4">📈 {% trans "User activity" %}</h2>
+      <h2 class="text-lg font-semibold mb-4">📈 {% trans "Активность пользователей" %}</h2>
       <canvas id="userActivityChart"></canvas>
     </div>
 
     <div class="bg-card rounded-2xl p-6 shadow-md border border-border">
-      <h2 class="text-lg font-semibold mb-4">🎓 {% trans "Popularity courses" %}</h2>
+      <h2 class="text-lg font-semibold mb-4">🎓 {% trans "Популярность курсов" %}</h2>
       <canvas id="popularCoursesChart"></canvas>
     </div>
   </div>

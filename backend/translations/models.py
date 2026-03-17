@@ -7,26 +7,26 @@ User = get_user_model()
 
 class TranslationMemory(models.Model):
     source_text = models.TextField(
-        verbose_name=_("Source text"),
-        help_text=_("The original text to be translated."),
+        verbose_name=_("Исходный текст"),
+        help_text=_("Оригинальный текст для перевода."),
     )
     source_lang = models.CharField(
         max_length=10,
-        verbose_name=_("Source language"),
-        help_text=_("Language of the source text (e.g. 'en', 'ru')."),
+        verbose_name=_("Исходный язык"),
+        help_text=_("Язык исходного текста (например, 'en', 'ru')."),
     )
 
     target_text = models.TextField(
         blank=True,
         null=True,
-        verbose_name=_("Translated text"),
-        help_text=_("The translated version of the text."),
+        verbose_name=_("Переведенный текст"),
+        help_text=_("Переведенная версия текста."),
     )
     target_lang = models.CharField(
         max_length=10,
-        verbose_name=_("Target language"),
+        verbose_name=_("Целевой язык"),
         help_text=_(
-            "Language to which the text was translated (e.g. 'en', 'ru')."
+            "Язык, на который был переведен текст (например, 'en', 'ru')."
         ),
     )
 
@@ -34,10 +34,10 @@ class TranslationMemory(models.Model):
         max_length=255,
         blank=True,
         null=True,
-        verbose_name=_("Context"),
+        verbose_name=_("Контекст"),
         help_text=_(
-            "Where this translation is used, e.g. "
-            "'Specialization.title' or 'Lesson.description'."
+            "Где используется этот перевод, например: "
+            "'Specialization.title' или 'Lesson.description'."
         ),
     )
 
@@ -46,26 +46,28 @@ class TranslationMemory(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        verbose_name=_("Last edited by"),
-        help_text=_("User who manually edited this translation."),
+        verbose_name=_("Последний редактор"),
+        help_text=_(
+            "Пользователь, который вручную отредактировал этот перевод."
+        ),
     )
 
     is_approved = models.BooleanField(
         default=False,
-        verbose_name=_("Approved"),
+        verbose_name=_("Одобрено"),
         help_text=_(
-            "Mark as approved if the translation "
-            "was verified by an administrator."
+            "Отметьте как одобрено, если перевод "
+            "был проверен администратором."
         ),
     )
 
     created_at = models.DateTimeField(
         auto_now_add=True,
-        verbose_name=_("Created at"),
+        verbose_name=_("Дата создания"),
     )
     updated_at = models.DateTimeField(
         auto_now=True,
-        verbose_name=_("Updated at"),
+        verbose_name=_("Дата обновления"),
     )
 
     class Meta:
@@ -75,8 +77,8 @@ class TranslationMemory(models.Model):
             "target_lang",
             "context",
         )
-        verbose_name = _("Translation")
-        verbose_name_plural = _("Translations")
+        verbose_name = _("Перевод")
+        verbose_name_plural = _("Переводы")
         ordering = ("-updated_at",)
 
     def __str__(self):

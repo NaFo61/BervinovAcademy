@@ -8,25 +8,25 @@ User = get_user_model()
 
 def dashboard_callback(request, context):
     # Фейковые числовые показатели
-    total_users = 1843
-    total_courses = 27
-    active_students = 1560
-    completed_courses = 820
+    total_users = 1843  # Всего пользователей
+    total_courses = 27  # Всего курсов
+    active_students = 1560  # Активных студентов
+    completed_courses = 820  # Завершенных курсов
 
     # Фейковые данные для графиков
     months = [
-        _("Jan"),
-        _("Feb"),
-        _("Mar"),
-        _("Apr"),
-        _("May"),
-        _("Jun"),
-        _("Jul"),
-        _("Aug"),
-        _("Sep"),
-        _("Oct"),
-        _("Nov"),
-        _("Dec"),
+        _("Янв"),
+        _("Фев"),
+        _("Мар"),
+        _("Апр"),
+        _("Май"),
+        _("Июн"),
+        _("Июл"),
+        _("Авг"),
+        _("Сен"),
+        _("Окт"),
+        _("Ноя"),
+        _("Дек"),
     ]
     activity_data = [random.randint(20, 100) for _ in months]
     course_names = [
@@ -35,8 +35,8 @@ def dashboard_callback(request, context):
         _("JavaScript"),
         _("React"),
         _("SQL"),
-        _("ML"),
-        _("UI/UX"),
+        _("Машинное обучение"),
+        _("UI/UX дизайн"),
     ]
     course_counts = [random.randint(30, 150) for _ in course_names]
 

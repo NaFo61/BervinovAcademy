@@ -9,7 +9,7 @@ class UsersConfig(AppConfig):
     name = "users"
 
     def ready(self):
-        # Import signals to connect them
+        # Импорт сигналов для их подключения
         pass
 
         # Патчим виджет при загрузке приложения
@@ -29,11 +29,11 @@ class UsersConfig(AppConfig):
                 )
 
             replacements = {
-                "Current:": _("Current:"),
-                "Change:": _("Change:"),
-                "Clear": _("Clear"),
-                "Choose file to upload": _("Choose file to upload"),
-                "Select value": _("Select value"),  # 🆕 Добавлено!
+                "Current:": _("Текущий:"),
+                "Change:": _("Изменить:"),
+                "Clear": _("Очистить"),
+                "Choose file to upload": _("Выберите файл для загрузки"),
+                "Select value": _("Выберите значение"),
             }
 
             for k, v in replacements.items():
@@ -64,11 +64,11 @@ class UsersConfig(AppConfig):
             try:
                 html = html.replace(
                     "Search apps and models...",
-                    str(_("Search apps and models...")),
+                    str(_("Поиск приложений и моделей...")),
                 )
                 html = html.replace(
                     "Type to search",
-                    str(_("Type to search")),
+                    str(_("Введите текст для поиска")),
                 )
             except Exception:
                 pass
@@ -90,20 +90,20 @@ class UsersConfig(AppConfig):
                     if isinstance(self.content, bytes)
                     else self.content
                 )
-                content = content.replace("Filters", str(_("Filters")))
+                content = content.replace("Filters", str(_("Фильтры")))
                 content = content.replace(
-                    "Reset filters", str(_("Reset filters"))
+                    "Reset filters", str(_("Сбросить фильтры"))
                 )
                 content = content.replace(
-                    "No results found", str(_("No results found"))
+                    "No results found", str(_("Ничего не найдено"))
                 )
                 content = content.replace(
                     "This page yielded into no results. "
                     "Create a new item or reset your filters.",
                     str(
                         _(
-                            "This page yielded into no results. "
-                            "Create a new item or reset your filters."
+                            "На этой странице ничего не найдено. "
+                            "Создайте новый элемент или сбросьте фильтры."
                         )
                     ),
                 )
