@@ -119,6 +119,79 @@ class LessonTheory(models.Model):
         return f"{self.module.title} - {self.title}"
 
 
+class AbstractTask(models.Model):
+    title = models.CharField(max_length=200, verbose_name=_("Task title"))
+    task_text = models.TextField(verbose_name=_("Task text"))
+    submissions_count = models.PositiveIntegerField(
+        default=0, verbose_name=_("Submissions count")
+    )
+    solved_count = models.PositiveIntegerField(
+        default=0, verbose_name=_("Solved count")
+    )
+
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        return self.title
+
+
+class CodeTask(AbstractTask):
+    module = models.ForeignKey(
+        Module,
+        on_delete=models.CASCADE,
+        related_name="lessons_code_tasks",
+        verbose_name=_("Module"),
+    )
+    order_index = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        verbose_name=_("Order number"),
+    )
+    is_active = models.BooleanField(default=True, verbose_name=_("Active"))
+    correct_code = models.TextField(verbose_name=_("Correct code"))
+    created_at = models.DateTimeField(
+        auto_now_add=True, verbose_name=_("Created at")
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True, verbose_name=_("Updated at")
+    )
+
+    class Meta:
+        verbose_name = _("Code task lesson")
+        verbose_name_plural = _("Code task lessons")
+        ordering = ["order_index"]
+        unique_together = ["module", "order_index"]
+
+    def __str__(self):
+        return f"{self.module.title} - {self.title}"
+
+
+class CodeTaskTestCase(models.Model):
+    code_task = models.ForeignKey(
+        CodeTask,
+        on_delete=models.CASCADE,
+        related_name="tests",
+        verbose_name=_("Code task"),
+    )
+    input_data = models.TextField(verbose_name=_("Input data"))
+    expected_output = models.TextField(verbose_name=_("Expected output"))
+    order_index = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        verbose_name=_("Order number"),
+    )
+
+    class Meta:
+        verbose_name = _("Code task test case")
+        verbose_name_plural = _("Code task test cases")
+        ordering = ["order_index"]
+        unique_together = ["code_task", "order_index"]
+
+    def __str__(self):
+        return f"{self.code_task.title[:50]} - {self.order_index}"
+
+
 class LessonRadioQuestion(models.Model):
     module = models.ForeignKey(
         Module,
