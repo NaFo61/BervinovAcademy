@@ -159,6 +159,45 @@ UNFOLD = {
                 ],
             },
             {
+                "title": _("Программирование"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Задачи"),
+                        "icon": "code",
+                        "link": "/admin/content/codingchallenge/",
+                    },
+                    {
+                        "title": _("Тестовые случаи"),
+                        "icon": "fact_check",
+                        "link": "/admin/content/testcase/",
+                    },
+                ],
+            },
+            {
+                "title": _("Прогресс"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Ответы на radio-вопросы"),
+                        "icon": "radio_button_checked",
+                        "link": "/admin/progress/useranswerradio/",
+                    },
+                    {
+                        "title": _("Ответы на checkbox-вопросы"),
+                        "icon": "check_box",
+                        "link": "/admin/progress/useranswercheckbox/",
+                    },
+                    {
+                        "title": _("Отправки решений"),
+                        "icon": "terminal",
+                        "link": "/admin/progress/codesubmission/",
+                    },
+                ],
+            },
+            {
                 "title": _("Локализация"),
                 "separator": True,
                 "collapsible": True,

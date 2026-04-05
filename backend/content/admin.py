@@ -6,14 +6,16 @@ from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import action, display
 
 from content.models import (
-    AnswerOption,
     CheckBoxAnswerOption,
+    CodingChallenge,
     Course,
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
     LessonTheory,
     Module,
+    RadioAnswerOption,
     Technology,
+    TestCase,
 )
 
 
@@ -637,8 +639,8 @@ class LessonTheoryAdmin(ModelAdmin):
         return queryset.select_related("module", "module__course")
 
 
-class AnswerOptionInline(TabularInline):
-    model = AnswerOption
+class RadioAnswerOptionInline(TabularInline):
+    model = RadioAnswerOption
     extra = 2
     max_num = 10
     ordering = ("order_index",)
@@ -733,7 +735,7 @@ class LessonRadioQuestionAdmin(ModelAdmin):
         ),
     )
 
-    inlines = [AnswerOptionInline]
+    inlines = [RadioAnswerOptionInline]
 
     @admin.display(description=_("Модуль"), ordering="module__title")
     def module_link(self, obj):
@@ -1209,3 +1211,241 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
         return queryset.select_related(
             "module", "module__course"
         ).prefetch_related("answers")
+
+
+@admin.register(CodingChallenge)
+class CodingChallengeAdmin(ModelAdmin):
+    """Админка для задач по программированию"""
+
+    list_display = (
+        "title",
+        "difficulty_badge",
+        "points",
+        "course_link",
+        "module_link",
+        "solved_count",
+        "is_active",
+        "order_index",
+    )
+    list_filter = (
+        "difficulty",
+        "is_active",
+        "course",
+        "module",
+    )
+    search_fields = ("title", "description", "instructions")
+    list_per_page = 20
+    ordering = ("order_index", "difficulty", "title")
+    prepopulated_fields = {"slug": ("title",)}
+    readonly_fields = ("created_at", "updated_at", "stats_display")
+    icon = "code"
+
+    fieldsets = (
+        (
+            _("Основная информация"),
+            {
+                "fields": (
+                    "title",
+                    "slug",
+                    "description",
+                    "instructions",
+                    "difficulty",
+                    "points",
+                ),
+            },
+        ),
+        (
+            _("Код и ограничения"),
+            {
+                "fields": (
+                    "initial_code",
+                    "solution_template",
+                    "time_limit_ms",
+                    "memory_limit_mb",
+                ),
+            },
+        ),
+        (
+            _("Привязка к курсу"),
+            {
+                "fields": (
+                    "course",
+                    "module",
+                    "order_index",
+                    "is_active",
+                ),
+            },
+        ),
+        (
+            _("Статистика"),
+            {
+                "fields": ("stats_display",),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            _("Даты"),
+            {
+                "fields": ("created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    @display(description=_("Сложность"))
+    def difficulty_badge(self, obj):
+        colors = {
+            "beginner": "#6c757d",  # серый
+            "easy": "#198754",  # зеленый
+            "medium": "#ffc107",  # желтый
+            "hard": "#fd7e14",  # оранжевый
+            "expert": "#dc3545",  # красный
+        }
+        names = {
+            "beginner": _("Начинающий"),
+            "easy": _("Легкий"),
+            "medium": _("Средний"),
+            "hard": _("Сложный"),
+            "expert": _("Эксперт"),
+        }
+        return format_html(
+            '<span style="background: {}; color: white; padding: 2px 8px; '
+            'border-radius: 12px; font-size: 0.75rem;">{}</span>',
+            colors.get(obj.difficulty, "#6c757d"),
+            names.get(obj.difficulty, obj.difficulty),
+        )
+
+    @display(description=_("Курс"), ordering="course__title")
+    def course_link(self, obj):
+        if not obj.course:
+            return "—"
+        url = reverse("admin:content_course_change", args=[obj.course.id])
+        return format_html('<a href="{}">{}</a>', url, obj.course.title)
+
+    @display(description=_("Модуль"), ordering="module__title")
+    def module_link(self, obj):
+        if not obj.module:
+            return "—"
+        url = reverse("admin:content_module_change", args=[obj.module.id])
+        return format_html('<a href="{}">{}</a>', url, obj.module.title)
+
+    @display(description=_("Решено"))
+    def solved_count(self, obj):
+        count = obj.submissions.filter(status="completed").count()
+        if count == 0:
+            return "—"
+        url = (
+            reverse("admin:progress_codesubmission_changelist")
+            + f"?challenge__id__exact={obj.id}"
+        )
+        return format_html('<a href="{}">{}</a>', url, count)
+
+    @display(description=_("Статистика"))
+    def stats_display(self, obj):
+        total = obj.submissions.count()
+        completed = obj.submissions.filter(status="completed").count()
+        success_rate = obj.success_rate
+
+        stats_html = f"""
+        <div style="
+            padding: 0.75rem;
+            background: var(--primary-bg);
+            border-radius: 0.375rem;
+            border: 1px solid var(--border-color);
+            font-size: 0.875rem;
+        ">
+            <div style="margin-bottom: 0.5rem;">
+                <strong>{_('Всего отправок')}:</strong> {total}
+            </div>
+            <div style="margin-bottom: 0.5rem;">
+                <strong>{_('Успешных отправок')}:</strong> {completed}
+            </div>
+            <div>
+                <strong>{_('Процент успеха')}:</strong> 
+                <span style="color: {'#198754' if success_rate >= 50 else '#ffc107' if success_rate > 0 else '#dc3545'}">
+                    {success_rate}%
+                </span>
+            </div>
+        </div>
+        """
+        return format_html(stats_html)
+
+    @action(description=_("Активировать"), permissions=["change"])
+    def activate_challenges(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(
+            request, _(f"{updated} задач активировано ✅"), messages.SUCCESS
+        )
+
+    @action(description=_("Деактивировать"), permissions=["change"])
+    def deactivate_challenges(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(
+            request, _(f"{updated} задач деактивировано ❌"), messages.WARNING
+        )
+
+    actions = ["activate_challenges", "deactivate_challenges"]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("submissions")
+
+
+class TestCaseInline(TabularInline):
+    """Инлайн для тестовых случаев"""
+
+    model = TestCase
+    extra = 1
+    ordering = ("order_index",)
+    fields = ("input_data", "expected_output", "is_hidden", "order_index")
+    classes = ["collapse"]
+
+
+# Добавляем inlines в CodingChallengeAdmin
+CodingChallengeAdmin.inlines = [TestCaseInline]
+
+
+@admin.register(TestCase)
+class TestCaseAdmin(ModelAdmin):
+    """Админка для тестовых случаев"""
+
+    list_display = (
+        "challenge_link",
+        "input_preview",
+        "output_preview",
+        "is_hidden",
+        "order_index",
+    )
+    list_filter = ("is_hidden", "challenge")
+    search_fields = ("challenge__title", "input_data", "expected_output")
+    list_per_page = 20
+    ordering = ("challenge", "order_index")
+    icon = "fact_check"
+
+    @display(description=_("Задача"), ordering="challenge__title")
+    def challenge_link(self, obj):
+        url = reverse(
+            "admin:content_codingchallenge_change", args=[obj.challenge.id]
+        )
+        return format_html('<a href="{}">{}</a>', url, obj.challenge.title)
+
+    @display(description=_("Входные данные"))
+    def input_preview(self, obj):
+        preview = (
+            obj.input_data[:50] + "..."
+            if len(obj.input_data) > 50
+            else obj.input_data
+        )
+        return format_html(
+            '<code title="{}">{}</code>', obj.input_data, preview
+        )
+
+    @display(description=_("Ожидаемый вывод"))
+    def output_preview(self, obj):
+        preview = (
+            obj.expected_output[:50] + "..."
+            if len(obj.expected_output) > 50
+            else obj.expected_output
+        )
+        return format_html(
+            '<code title="{}">{}</code>', obj.expected_output, preview
+        )

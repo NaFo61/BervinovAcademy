@@ -1,10 +1,7 @@
 import logging
 
-from langdetect import DetectorFactory
-
 from translations.services import TranslationService
 
-DetectorFactory.seed = 0
 logger = logging.getLogger(__name__)
 
 
@@ -12,25 +9,8 @@ class AutoTranslateMixin:
     languages = ["ru", "en"]
     translatable_fields: list[str] = []
 
-    # def detect_lang(self, text):
-    #     """Определяем язык только исходного текста"""
-    #     if not text:
-    #         return None
-    #
-    #     try:
-    #         lang = detect(text)
-    #         if lang in ["ru", "uk", "be"]:
-    #             return "ru"
-    #         return "en"
-    #     except LangDetectException:
-    #         if any(ch in "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"
-    #         for ch in text.lower()):
-    #             return "ru"
-    #         return "en"
-
     def detect_lang(self, text):
         """Определение языка без ошибок langdetect"""
-
         if not text or not text.strip():
             return "en"
 
@@ -44,8 +24,6 @@ class AutoTranslateMixin:
         if any("a" <= ch <= "z" for ch in text_lower):
             return "en"
 
-        # Фолбэк, если ни кириллицы, ни латиницы
-        # (редко, но пусть будет)
         return "en"
 
     def auto_translate_fields(self):
@@ -54,10 +32,7 @@ class AutoTranslateMixin:
         - Если пользователь изменил title → переводим только title_ru/title_en
         - НЕ переводим обратно, НЕ переведём перевод снова.
         """
-        logger.info("1")
         for base_field in self.translatable_fields:
-            logger.info("2")
-            # какие именно поля существуют: base_ru, base_en
             ru_field = f"{base_field}_ru"
             en_field = f"{base_field}_en"
 
@@ -66,11 +41,12 @@ class AutoTranslateMixin:
             val_en = getattr(self, en_field, None)
             original = getattr(self, base_field, None)
 
-            # 1) Если пользователь изменил base_field → определяем язык
+            # Если пользователь изменил base_field → определяем язык
             logger.info(
                 f"auto_translate_fields вызвал для {base_field} | "
                 f"{original}, {getattr(self, f'__{base_field}_old', None)}"
             )
+
             if not original or original == getattr(
                 self, f"__{base_field}_old", None
             ):
@@ -84,9 +60,7 @@ class AutoTranslateMixin:
             # копируем в source_field и ПЕРСИСТИРУЕМ это значение в БД
             try:
                 if source_lang == "ru":
-                    logger.info(
-                        f"ru source_lang = {source_lang} | " f"{original}"
-                    )
+                    logger.info(f"ru source_lang = {source_lang} | {original}")
                     setattr(self, ru_field, original)
                     # сохраняем только это поле (update_fields) —
                     # безопасно, сигнал пропустит
@@ -97,25 +71,26 @@ class AutoTranslateMixin:
                     self.save(update_fields=[en_field])
             except Exception as e:
                 logger.exception(
-                    "Не удалось сохранить source-field " "перед переводом: %s",
+                    "Не удалось сохранить source-field перед переводом: %s",
                     e,
                 )
-                # продолжаем — но дальше поиск в apply_translation
-                # сможет найти по base_field тоже
 
             # Переводим в target_field (создаст TranslationMemory и
             # запустит apply_translation_to_model)
+            # Используем синхронную обертку для асинхронного метода
             translated = TranslationService.get_translation(
                 original,
                 source_lang,
                 target_lang,
                 context=f"{self.__class__.__name__}.{base_field}",
             )
+
             logger.info(
                 f"auto_translate_fields вызвал для {base_field} "
                 f"| {original} -> {translated}"
             )
-            if translated:
+
+            if translated and translated != "в процессе":
                 if target_lang == "ru":
                     if val_ru != translated:
                         logger.info(
@@ -124,6 +99,13 @@ class AutoTranslateMixin:
                             f"{translated})"
                         )
                         setattr(self, ru_field, translated)
+                        # Сохраняем перевод в БД
+                        try:
+                            self.save(update_fields=[ru_field])
+                        except Exception as e:
+                            logger.exception(
+                                f"Не удалось сохранить перевод: {e}"
+                            )
                 elif target_lang == "en":
                     if val_en != translated:
                         logger.info(
@@ -132,6 +114,12 @@ class AutoTranslateMixin:
                             f"{translated})"
                         )
                         setattr(self, en_field, translated)
+                        try:
+                            self.save(update_fields=[en_field])
+                        except Exception as e:
+                            logger.exception(
+                                f"Не удалось сохранить перевод: {e}"
+                            )
 
             # обновляем старое значение
             setattr(self, f"__{base_field}_old", original)

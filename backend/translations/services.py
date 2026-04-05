@@ -1,13 +1,18 @@
-from django.db import transaction
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TranslationService:
     @staticmethod
     def get_translation(text, source_lang, target_lang, context=None):
-        from translations.models import TranslationMemory  # noqa
-        from translations.tasks import translate_text  # noqa
+        """Синхронное получение перевода"""
+        from translations.models import TranslationMemory
+        from translations.tasks import translate_text
 
         text = text.strip()
+
+        # Проверяем кэш
         existing = TranslationMemory.objects.filter(
             source_text=text,
             source_lang=source_lang,
@@ -18,11 +23,13 @@ class TranslationService:
         if existing:
             return existing.target_text
 
-        # Если нет перевода — отправляем в Celery
-        # translate_text.delay(text, source_lang, target_lang, context)
-        transaction.on_commit(
-            lambda: translate_text.delay(
-                text, source_lang, target_lang, context
-            )
-        )
-        return "в процессе"  # можно вернуть "в процессе"
+        # Отправляем задачу в Celery и ждем результат
+        result = translate_text.delay(text, source_lang, target_lang, context)
+
+        try:
+            # Ждем результат до 10 секунд
+            translated = result.get(timeout=10)
+            return translated
+        except Exception as e:
+            logger.error(f"Ошибка получения перевода: {e}")
+            return "в процессе"  # или вернуть оригинал

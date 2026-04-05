@@ -1,9 +1,15 @@
-import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
+import pytest
+
 from content.models import (
-    Technology, Course, Module, LessonTheory,
-    LessonRadioQuestion, AnswerOption,
-    LessonCheckBoxQuestion, CheckBoxAnswerOption
+    CheckBoxAnswerOption,
+    Course,
+    LessonCheckBoxQuestion,
+    LessonRadioQuestion,
+    LessonTheory,
+    Module,
+    RadioAnswerOption,
+    Technology,
 )
 
 
@@ -18,7 +24,7 @@ def course(db, technology):
         title="Test Course",
         description="Test Description",
         slug="test-course",
-        is_active=True
+        is_active=True,
     )
     course.technology.add(technology)
     return course
@@ -31,7 +37,7 @@ def module(db, course):
         title="Test Module",
         description="Module Description",
         order_index=1,
-        is_active=True
+        is_active=True,
     )
 
 
@@ -42,7 +48,7 @@ def theory_lesson(db, module):
         title="Test Theory Lesson",
         content="This is test content for theory lesson",
         order_index=1,
-        is_active=True
+        is_active=True,
     )
 
 
@@ -55,24 +61,21 @@ def radio_question(db, module):
         explanation="Basic math",
         order_index=1,
         points=5,
-        is_active=True
+        is_active=True,
     )
 
 
 @pytest.fixture
 def radio_answers(db, radio_question):
     answers = []
-    for i, (text, is_correct) in enumerate([
-        ("3", False),
-        ("4", True),
-        ("5", False),
-        ("22", False)
-    ], start=1):
-        answer = AnswerOption.objects.create(
+    for i, (text, is_correct) in enumerate(
+        [("3", False), ("4", True), ("5", False), ("22", False)], start=1
+    ):
+        answer = RadioAnswerOption.objects.create(
             question=radio_question,
             text=text,
             is_correct=is_correct,
-            order_index=i
+            order_index=i,
         )
         answers.append(answer)
     return answers
@@ -87,25 +90,22 @@ def checkbox_question(db, module):
         explanation="Numbers divisible by 2",
         order_index=2,
         points=10,
-        is_active=True
+        is_active=True,
     )
 
 
 @pytest.fixture
 def checkbox_answers(db, checkbox_question):
     answers = []
-    for i, (text, is_correct) in enumerate([
-        ("1", False),
-        ("2", True),
-        ("3", False),
-        ("4", True),
-        ("5", False)
-    ], start=1):
+    for i, (text, is_correct) in enumerate(
+        [("1", False), ("2", True), ("3", False), ("4", True), ("5", False)],
+        start=1,
+    ):
         answer = CheckBoxAnswerOption.objects.create(
             question=checkbox_question,
             text=text,
             is_correct=is_correct,
-            order_index=i
+            order_index=i,
         )
         answers.append(answer)
     return answers
@@ -114,9 +114,7 @@ def checkbox_answers(db, checkbox_question):
 @pytest.fixture
 def image_file():
     return SimpleUploadedFile(
-        "test_image.jpg",
-        b"file_content",
-        content_type="image/jpeg"
+        "test_image.jpg", b"file_content", content_type="image/jpeg"
     )
 
 
@@ -126,7 +124,7 @@ def inactive_course(db, technology):
         title="Inactive Course",
         description="This course is inactive",
         slug="inactive-course",
-        is_active=False
+        is_active=False,
     )
     course.technology.add(technology)
     return course

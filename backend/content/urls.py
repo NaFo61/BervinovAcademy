@@ -1,7 +1,12 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .viewsets import CourseViewSet, LessonTheoryViewSet, ModuleViewSet
+from .viewsets import (
+    CodingChallengeViewSet,
+    CourseViewSet,
+    LessonTheoryViewSet,
+    ModuleViewSet,
+)
 
 router = DefaultRouter()
 router.register(r"courses", CourseViewSet, basename="courses")
@@ -11,6 +16,9 @@ router.register(
     LessonTheoryViewSet,
     basename="lessons-theory",
 )
+router.register(
+    r"challenges", CodingChallengeViewSet, basename="challenges"
+)  # добавить
 
 app_name = "content"
 

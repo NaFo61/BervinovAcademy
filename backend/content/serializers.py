@@ -134,3 +134,104 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             "modules",
         )
         read_only_fields = fields
+
+
+# content/serializers.py (добавить в существующий файл)
+
+from .models import CodingChallenge, TestCase
+
+
+class TestCaseSerializer(serializers.ModelSerializer):
+    """Сериализатор для тестовых случаев"""
+
+    class Meta:
+        model = TestCase
+        fields = (
+            "id",
+            "input_data",
+            "expected_output",
+            "is_hidden",
+            "order_index",
+        )
+        read_only_fields = ("id",)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Скрытые тесты не показываем пользователям
+        if instance.is_hidden and not self.context.get("is_admin", False):
+            data["input_data"] = "[Скрытый тест]"
+            data["expected_output"] = "[Скрытый тест]"
+        return data
+
+
+class CodingChallengeListSerializer(serializers.ModelSerializer):
+    """Сериализатор для списка задач"""
+
+    difficulty_display = serializers.CharField(
+        source="get_difficulty_display", read_only=True
+    )
+
+    class Meta:
+        model = CodingChallenge
+        fields = (
+            "id",
+            "title",
+            "slug",
+            "difficulty",
+            "difficulty_display",
+            "points",
+            "is_active",
+            "order_index",
+        )
+
+
+class CodingChallengeDetailSerializer(serializers.ModelSerializer):
+    """Детальный сериализатор задачи"""
+
+    difficulty_display = serializers.CharField(
+        source="get_difficulty_display", read_only=True
+    )
+    test_cases = serializers.SerializerMethodField()
+    user_solved = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CodingChallenge
+        fields = (
+            "id",
+            "title",
+            "slug",
+            "description",
+            "instructions",
+            "initial_code",
+            "difficulty",
+            "difficulty_display",
+            "points",
+            "time_limit_ms",
+            "memory_limit_mb",
+            "test_cases",
+            "user_solved",
+            "created_at",
+        )
+
+    def get_test_cases(self, obj):
+        """Показываем только не скрытые тесты"""
+        request = self.context.get("request")
+        is_admin = request and request.user and request.user.is_staff
+
+        test_cases = obj.test_cases.filter(is_hidden=False)
+        if is_admin:
+            test_cases = obj.test_cases.all()
+
+        return TestCaseSerializer(
+            test_cases, many=True, context={"is_admin": is_admin}
+        ).data
+
+    def get_user_solved(self, obj):
+        """Проверяет, решил ли пользователь задачу"""
+        request = self.context.get("request")
+        if not request or not request.user or request.user.is_anonymous:
+            return False
+
+        return obj.submissions.filter(
+            user=request.user, status="completed"
+        ).exists()
