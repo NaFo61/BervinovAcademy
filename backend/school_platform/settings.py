@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
+    "corsheaders",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -44,6 +45,8 @@ INSTALLED_APPS = [
     "communication",
     "translations",
     "fixture",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
 ]
 UNFOLD = {
     "SHOW_LANGUAGES": True,
@@ -152,18 +155,6 @@ UNFOLD = {
                         "link": "/admin/content/lessoncheckboxquestion/",
                     },
                     {
-                        "title": _("Технологии"),
-                        "icon": "science",
-                        "link": "/admin/content/technology/",
-                    },
-                ],
-            },
-            {
-                "title": _("Программирование"),
-                "separator": True,
-                "collapsible": True,
-                "items": [
-                    {
                         "title": _("Задачи"),
                         "icon": "code",
                         "link": "/admin/content/codingchallenge/",
@@ -172,6 +163,11 @@ UNFOLD = {
                         "title": _("Тестовые случаи"),
                         "icon": "fact_check",
                         "link": "/admin/content/testcase/",
+                    },
+                    {
+                        "title": _("Технологии"),
+                        "icon": "science",
+                        "link": "/admin/content/technology/",
                     },
                 ],
             },
@@ -218,6 +214,7 @@ UNFOLD = {
 AUTH_USER_MODEL = "users.User"
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -226,6 +223,21 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
 ]
 
 ROOT_URLCONF = "school_platform.urls"
@@ -317,6 +329,29 @@ REST_FRAMEWORK = {
         "register": "25/min",
         "token_refresh": "20/min",
     },
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+SPECTACULAR_SETTINGS = {
+    "TITLE": _("Академия Бервинова API"),
+    "DESCRIPTION": _("API для онлайн-школы Академия Бервинова"),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
+    "COMPONENT_SPLIT_REQUEST": True,
+    "AUTHENTICATION_WHITELIST": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+    "SECURITY": [
+        {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+            }
+        }
+    ],
 }
 
 # JWT settings
@@ -341,6 +376,10 @@ SIMPLE_JWT = {
         "last_name": "last_name",
     },
 }
+
+MODELTRANSLATION_AUTO_POPULATE = False
+MODELTRANSLATION_GOOGLE_TRANSLATE_API_KEY = None
+MODELTRANSLATION_TRANSLATION_FILES = ()
 
 try:
     from school_platform.local_settings import *  # noqa: F403, F401

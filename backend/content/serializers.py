@@ -25,7 +25,7 @@ class LessonTheoryShortSerializer(serializers.ModelSerializer):
 
 
 class LessonTheorySerializer(serializers.ModelSerializer):
-    module_id = serializers.IntegerField(source="module_id", read_only=True)
+    module_id = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = LessonTheory
@@ -62,7 +62,7 @@ class ModuleShortSerializer(serializers.ModelSerializer):
 
 
 class ModuleListSerializer(serializers.ModelSerializer):
-    course_id = serializers.IntegerField(source="course_id", read_only=True)
+    course_id = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Module
@@ -78,7 +78,7 @@ class ModuleListSerializer(serializers.ModelSerializer):
 
 
 class ModuleDetailSerializer(serializers.ModelSerializer):
-    course_id = serializers.IntegerField(source="course_id", read_only=True)
+    course_id = serializers.IntegerField(read_only=True)
     lessons_theories = LessonTheoryShortSerializer(many=True, read_only=True)
 
     class Meta:
@@ -176,7 +176,6 @@ class CodingChallengeListSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "title",
-            "slug",
             "difficulty",
             "difficulty_display",
             "points",
@@ -199,7 +198,6 @@ class CodingChallengeDetailSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "title",
-            "slug",
             "description",
             "instructions",
             "initial_code",

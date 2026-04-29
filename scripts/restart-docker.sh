@@ -127,7 +127,7 @@ echo "[7/7] Сохраняем логи в файлы..."
 echo "----------------------------------------"
 
 # Сохраняем логи всех сервисов
-for service in db redis backend celery celery-beat; do
+for service in db redis backend celery celery-beat frontend; do
     if docker compose ps "$service" 2>/dev/null | grep -q "Up"; then
         docker compose logs "$service" > "logs/${service}.log" 2>&1
         print_success "Логи $service сохранены в logs/${service}.log"

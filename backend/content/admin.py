@@ -1236,7 +1236,6 @@ class CodingChallengeAdmin(ModelAdmin):
     search_fields = ("title", "description", "instructions")
     list_per_page = 20
     ordering = ("order_index", "difficulty", "title")
-    prepopulated_fields = {"slug": ("title",)}
     readonly_fields = ("created_at", "updated_at", "stats_display")
     icon = "code"
 
@@ -1246,7 +1245,6 @@ class CodingChallengeAdmin(ModelAdmin):
             {
                 "fields": (
                     "title",
-                    "slug",
                     "description",
                     "instructions",
                     "difficulty",

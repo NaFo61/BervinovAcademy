@@ -123,7 +123,7 @@ echo ----------------------------------------
 :: Сохраняем логи всех сервисов
 setlocal enabledelayedexpansion
 
-for %%s in (db redis backend celery celery-beat) do (
+for %%s in (db redis backend celery celery-beat frontend) do (
     docker compose ps %%s 2>nul | findstr /C:"Up" >nul
     if !errorlevel! equ 0 (
         docker compose logs %%s > logs\%%s.log 2>&1

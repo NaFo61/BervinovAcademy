@@ -50,7 +50,44 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    working_dir: /app/backend  # Важно! Рабочая директория должна быть /app/backend
+    working_dir: /app/backend
+    healthcheck:  # Добавлен healthcheck для backend
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bervinov-academy-frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    working_dir: /app
+    command: >
+      sh -c "npm run build"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: bervinov-academy-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
 
   celery:
     build:
@@ -69,7 +106,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    working_dir: /app/backend  # Рабочая директория /app/backend
+    working_dir: /app/backend
 
   celery-beat:
     build:
@@ -88,7 +125,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    working_dir: /app/backend  # Рабочая директория /app/backend
+    working_dir: /app/backend
 
 volumes:
   postgres_data:

@@ -6,6 +6,7 @@ from django.db import transaction
 
 from content.models import (
     CheckBoxAnswerOption,
+    CodingChallenge,
     Course,
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
@@ -13,6 +14,7 @@ from content.models import (
     Module,
     RadioAnswerOption,
     Technology,
+    TestCase,
 )
 from translations.models import TranslationMemory
 from users.models import Mentor, Specialization, Student
@@ -103,6 +105,8 @@ class Command(BaseCommand):
         RadioAnswerOption.objects.all().delete()
         LessonCheckBoxQuestion.objects.all().delete()
         CheckBoxAnswerOption.objects.all().delete()
+        CodingChallenge.objects.all().delete()
+        TestCase.objects.all().delete()
 
     def create_superuser(self):
         User.objects.create_superuser(
@@ -507,6 +511,7 @@ class Command(BaseCommand):
         lessons_per_module=5,
         radio_questions_per_module=2,
         checkbox_questions_per_module=2,
+        challenges_per_module=2,
     ):
         module_titles = [
             "Введение и основы",
@@ -736,6 +741,180 @@ class Command(BaseCommand):
             },
         ]
 
+        # Данные для задач программирования
+        coding_challenges_data = [
+            {
+                "title": "Сумма двух чисел",
+                "slug": "sum-of-two-numbers",
+                "description": "Напишите функцию, которая принимает два числа и возвращает их сумму.",
+                "instructions": "Реализуйте функцию `add(a, b)`, которая принимает два числа и возвращает их сумму.",
+                "initial_code": "def add(a, b):\n    # Напишите ваш код здесь\n    pass",
+                "solution_template": "def add(a, b):\n    return a + b",
+                "difficulty": "beginner",
+                "points": 5,
+                "time_limit_ms": 1000,
+                "memory_limit_mb": 128,
+                "test_cases": [
+                    {
+                        "input_data": "1\n2",
+                        "expected_output": "3",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "-1\n1",
+                        "expected_output": "0",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "0\n0",
+                        "expected_output": "0",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "100\n200",
+                        "expected_output": "300",
+                        "is_hidden": True,
+                    },
+                ],
+            },
+            {
+                "title": "Проверка на четность",
+                "slug": "is-even",
+                "description": "Напишите функцию, которая проверяет, является ли число четным.",
+                "instructions": "Реализуйте функцию `is_even(n)`, которая возвращает True, если число четное, и False в противном случае.",
+                "initial_code": "def is_even(n):\n    # Напишите ваш код здесь\n    pass",
+                "solution_template": "def is_even(n):\n    return n % 2 == 0",
+                "difficulty": "beginner",
+                "points": 5,
+                "time_limit_ms": 1000,
+                "memory_limit_mb": 128,
+                "test_cases": [
+                    {
+                        "input_data": "2",
+                        "expected_output": "True",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "3",
+                        "expected_output": "False",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "0",
+                        "expected_output": "True",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "101",
+                        "expected_output": "False",
+                        "is_hidden": True,
+                    },
+                ],
+            },
+            {
+                "title": "Поиск максимума",
+                "slug": "find-maximum",
+                "description": "Напишите функцию, которая находит максимальное число в списке.",
+                "instructions": "Реализуйте функцию `find_max(arr)`, которая принимает список чисел и возвращает максимальное значение.",
+                "initial_code": "def find_max(arr):\n    # Напишите ваш код здесь\n    pass",
+                "solution_template": "def find_max(arr):\n    if not arr:\n        return None\n    return max(arr)",
+                "difficulty": "easy",
+                "points": 10,
+                "time_limit_ms": 1000,
+                "memory_limit_mb": 128,
+                "test_cases": [
+                    {
+                        "input_data": "[1, 2, 3, 4, 5]",
+                        "expected_output": "5",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "[-1, -5, -2, -3]",
+                        "expected_output": "-1",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "[42]",
+                        "expected_output": "42",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "[10, 20, 30, 5, 25]",
+                        "expected_output": "30",
+                        "is_hidden": True,
+                    },
+                ],
+            },
+            {
+                "title": "Факториал числа",
+                "slug": "factorial",
+                "description": "Напишите рекурсивную функцию для вычисления факториала числа.",
+                "instructions": "Реализуйте функцию `factorial(n)`, которая возвращает факториал числа n (n!).",
+                "initial_code": "def factorial(n):\n    # Напишите ваш код здесь\n    pass",
+                "solution_template": "def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)",
+                "difficulty": "easy",
+                "points": 10,
+                "time_limit_ms": 1000,
+                "memory_limit_mb": 128,
+                "test_cases": [
+                    {
+                        "input_data": "5",
+                        "expected_output": "120",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "0",
+                        "expected_output": "1",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "1",
+                        "expected_output": "1",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "7",
+                        "expected_output": "5040",
+                        "is_hidden": True,
+                    },
+                ],
+            },
+            {
+                "title": "Палиндром",
+                "slug": "palindrome",
+                "description": "Напишите функцию, которая проверяет, является ли строка палиндромом.",
+                "instructions": "Реализуйте функцию `is_palindrome(s)`, которая возвращает True, если строка читается одинаково слева направо и справа налево.",
+                "initial_code": "def is_palindrome(s):\n    # Напишите ваш код здесь\n    pass",
+                "solution_template": "def is_palindrome(s):\n    s = s.lower().replace(' ', '')\n    return s == s[::-1]",
+                "difficulty": "medium",
+                "points": 15,
+                "time_limit_ms": 1000,
+                "memory_limit_mb": 128,
+                "test_cases": [
+                    {
+                        "input_data": "racecar",
+                        "expected_output": "True",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "hello",
+                        "expected_output": "False",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "A man a plan a canal panama",
+                        "expected_output": "True",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "Was it a car or a cat I saw",
+                        "expected_output": "True",
+                        "is_hidden": True,
+                    },
+                ],
+            },
+        ]
+
         for module_index in range(count):
             if module_index < len(module_titles):
                 title = module_titles[module_index]
@@ -749,7 +928,7 @@ class Command(BaseCommand):
                 title=title,
                 description=description,
                 order_index=module_index + 1,
-                is_active=random.choice([True, False, True]),  # Чаще активные
+                is_active=random.choice([True, False, True]),
             )
 
             # Создаем теоретические уроки для модуля
@@ -767,7 +946,6 @@ class Command(BaseCommand):
                 if radio_index < len(radio_questions_data):
                     question_data = radio_questions_data[radio_index]
                 else:
-                    # Если не хватает данных, создаем случайный вопрос
                     question_data = {
                         "title": f"Radio вопрос {radio_index + 1}",
                         "question": f"Текст вопроса {radio_index + 1}?",
@@ -780,12 +958,10 @@ class Command(BaseCommand):
                             ("Вариант 4", random.choice([True, False])),
                         ],
                     }
-                    # Убеждаемся, что только один ответ правильный
                     correct_count = sum(
                         1 for a in question_data["answers"] if a[1]
                     )
                     if correct_count != 1:
-                        # Сбрасываем все и делаем первый правильным
                         question_data["answers"] = [
                             (text, i == 0)
                             for i, (text, _) in enumerate(
@@ -803,7 +979,6 @@ class Command(BaseCommand):
                     points=random.randint(1, 3),
                 )
 
-                # Создаем варианты ответов для radio-вопроса
                 for answer_index, (answer_text, is_correct) in enumerate(
                     question_data["answers"]
                 ):
@@ -819,7 +994,6 @@ class Command(BaseCommand):
                 if checkbox_index < len(checkbox_questions_data):
                     question_data = checkbox_questions_data[checkbox_index]
                 else:
-                    # Если не хватает данных, создаем случайный вопрос
                     num_answers = random.randint(3, 5)
                     correct_count = random.randint(1, 3)
                     answers = []
@@ -845,7 +1019,6 @@ class Command(BaseCommand):
                     points=question_data.get("points", random.randint(2, 5)),
                 )
 
-                # Создаем варианты ответов для checkbox-вопроса
                 for answer_index, (answer_text, is_correct) in enumerate(
                     question_data["answers"]
                 ):
@@ -856,11 +1029,73 @@ class Command(BaseCommand):
                         order_index=answer_index + 1,
                     )
 
+            # Создаем задачи программирования для модуля
+            for challenge_index in range(challenges_per_module):
+                if challenge_index < len(coding_challenges_data):
+                    challenge_data = coding_challenges_data[challenge_index]
+                else:
+                    # Случайная задача
+                    difficulties = ["beginner", "easy", "medium", "hard"]
+                    challenge_data = {
+                        "title": f"Задача {challenge_index + 1}",
+                        "description": f"Описание задачи {challenge_index + 1}",
+                        "instructions": f"Инструкция для задачи {challenge_index + 1}",
+                        "initial_code": "def solve():\n    pass",
+                        "solution_template": "def solve():\n    return True",
+                        "difficulty": random.choice(difficulties),
+                        "points": random.randint(5, 30),
+                        "time_limit_ms": random.choice([1000, 2000, 3000]),
+                        "memory_limit_mb": random.choice([128, 256, 512]),
+                        "test_cases": [
+                            {
+                                "input_data": f"input_{i}",
+                                "expected_output": f"output_{i}",
+                                "is_hidden": i > 0,
+                            }
+                            for i in range(1, 4)
+                        ],
+                    }
+
+                challenge = CodingChallenge.objects.create(
+                    course=course,
+                    module=module,
+                    title=challenge_data["title"],
+                    description=challenge_data["description"],
+                    instructions=challenge_data["instructions"],
+                    initial_code=challenge_data["initial_code"],
+                    solution_template=challenge_data["solution_template"],
+                    difficulty=challenge_data["difficulty"],
+                    points=challenge_data["points"],
+                    time_limit_ms=challenge_data["time_limit_ms"],
+                    memory_limit_mb=challenge_data["memory_limit_mb"],
+                    order_index=challenge_index + 1,
+                    is_active=random.choice([True, False, True]),
+                )
+
+                # Создаем тестовые случаи для задачи
+                for test_index, test_data in enumerate(
+                    challenge_data["test_cases"]
+                ):
+                    TestCase.objects.create(
+                        challenge=challenge,
+                        input_data=test_data["input_data"],
+                        expected_output=test_data["expected_output"],
+                        is_hidden=test_data["is_hidden"],
+                        order_index=test_index + 1,
+                    )
+
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"Создана задача: {challenge.title} с {challenge.test_cases.count()} тестами"
+                    )
+                )
+
             self.stdout.write(
                 self.style.SUCCESS(
                     f"Создан модуль {module.title} с "
                     f"{lessons_per_module} уроками, "
-                    f"{radio_questions_per_module} radio-вопросами и "
-                    f"{checkbox_questions_per_module} checkbox-вопросами"
+                    f"{radio_questions_per_module} radio-вопросами, "
+                    f"{checkbox_questions_per_module} checkbox-вопросами и "
+                    f"{challenges_per_module} задачами"
                 )
             )

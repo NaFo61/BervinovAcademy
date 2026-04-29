@@ -228,3 +228,4 @@ ALLOWED_HOSTS = ['your-domain.com']
 ---
 
 **Bervinov Academy** © 2024 - Modern Education Platform
+docker run --rm -v "C:\Users\Dir\PycharmProjects\BervinovAcademy:/app" -v "C:\Users\Dir\PycharmProjects\BervinovAcademy\wheels:/wheels" python:3.11-slim bash -c "pip install --upgrade pip wheel && cd /app && pip wheel --wheel-dir=/wheels -r requirements.txt"

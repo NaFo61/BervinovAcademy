@@ -314,9 +314,6 @@ class CodingChallenge(models.Model):
     ]
 
     title = models.CharField(max_length=200, verbose_name=_("Название задачи"))
-    slug = models.SlugField(
-        max_length=200, unique=True, verbose_name=_("URL адрес")
-    )
     description = models.TextField(verbose_name=_("Описание задачи"))
     instructions = models.TextField(
         verbose_name=_("Инструкция по выполнению"),
@@ -388,6 +385,7 @@ class CodingChallenge(models.Model):
         verbose_name = _("Задача")
         verbose_name_plural = _("Задачи")
         ordering = ("order_index", "difficulty", "title")
+        unique_together = ("module", "order_index")
         indexes = [
             models.Index(fields=["course", "order_index"]),
             models.Index(fields=["module", "order_index"]),
@@ -396,11 +394,6 @@ class CodingChallenge(models.Model):
 
     def __str__(self):
         return self.title
-
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = slugify(unidecode(self.title))
-        super().save(*args, **kwargs)
 
     def get_max_score(self):
         """Максимальный возможный балл за задачу"""
@@ -416,6 +409,16 @@ class CodingChallenge(models.Model):
             status="completed", passed_tests_percent=100.0
         ).count()
         return round((successful / total) * 100, 1)
+
+    def delete(self, *args, **kwargs):
+        """Переопределяем delete для пересчета order_index (как в других моделях)"""
+        module = self.module
+        deleted_index = self.order_index
+        super().delete(*args, **kwargs)
+        if module:
+            CodingChallenge.objects.filter(
+                module=module, order_index__gt=deleted_index
+            ).update(order_index=models.F("order_index") - 1)
 
 
 class TestCase(models.Model):
