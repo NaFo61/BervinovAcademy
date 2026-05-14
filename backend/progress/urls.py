@@ -7,19 +7,21 @@ from progress.viewsets import (
     UserCodeSubmissionViewSet,
 )
 
-router = DefaultRouter()
-router.register(
-    r"radio-answers", UserAnswerRadioViewSet, basename="radio-answers"
+answers_router = DefaultRouter()
+answers_router.register(
+    r"radio", UserAnswerRadioViewSet, basename="answers-radio"
 )
-router.register(
-    r"checkbox-answers", UserAnswerCheckBoxViewSet, basename="checkbox-answers"
+answers_router.register(
+    r"checkbox",
+    UserAnswerCheckBoxViewSet,
+    basename="answers-checkbox",
 )
-router.register(
-    r"code-submissions", UserCodeSubmissionViewSet, basename="code-submissions"
+answers_router.register(
+    r"code", UserCodeSubmissionViewSet, basename="answers-code"
 )
 
 app_name = "progress"
 
 urlpatterns = [
-    path("progress/", include(router.urls)),
+    path("progress/", include(answers_router.urls)),
 ]

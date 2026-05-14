@@ -22,7 +22,7 @@ COPY requirements.txt /app/
 COPY wheels /wheels
 
 RUN pip install --upgrade pip \
-    && pip install --no-index --find-links=/wheels -r requirements.txt
+    && pip install --prefer-binary --find-links=/wheels -r requirements.txt
 
 # --- Код приложения (после зависимостей) ---
 COPY backend/ /app/backend/

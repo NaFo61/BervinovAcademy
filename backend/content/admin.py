@@ -1219,6 +1219,7 @@ class CodingChallengeAdmin(ModelAdmin):
 
     list_display = (
         "title",
+        "public_id",
         "difficulty_badge",
         "points",
         "course_link",
@@ -1236,7 +1237,12 @@ class CodingChallengeAdmin(ModelAdmin):
     search_fields = ("title", "description", "instructions")
     list_per_page = 20
     ordering = ("order_index", "difficulty", "title")
-    readonly_fields = ("created_at", "updated_at", "stats_display")
+    readonly_fields = (
+        "public_id",
+        "created_at",
+        "updated_at",
+        "stats_display",
+    )
     icon = "code"
 
     fieldsets = (
@@ -1244,6 +1250,7 @@ class CodingChallengeAdmin(ModelAdmin):
             _("Основная информация"),
             {
                 "fields": (
+                    "public_id",
                     "title",
                     "description",
                     "instructions",

@@ -1,12 +1,22 @@
+from common.models import UUIDPublicIdMixin
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models import F
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from unidecode import unidecode
 
 
-class Technology(models.Model):
+def _next_order_index(model_cls, **filters):
+    """Следующий порядковый номер в рамках queryset (для авто-нумерации при создании)."""
+    max_val = model_cls.objects.filter(**filters).aggregate(
+        m=models.Max("order_index")
+    )["m"]
+    return (max_val or 0) + 1
+
+
+class Technology(UUIDPublicIdMixin, models.Model):
     name = models.CharField(
         max_length=100, unique=True, verbose_name=_("Название технологии")
     )
@@ -20,7 +30,7 @@ class Technology(models.Model):
         return self.name
 
 
-class Course(models.Model):
+class Course(UUIDPublicIdMixin, models.Model):
     title = models.CharField(max_length=200, verbose_name=_("Название курса"))
     slug = models.SlugField(
         max_length=200, unique=True, verbose_name=_("URL адрес")
@@ -57,7 +67,7 @@ class Course(models.Model):
         super().save(*args, **kwargs)
 
 
-class Module(models.Model):
+class Module(UUIDPublicIdMixin, models.Model):
     course = models.ForeignKey(
         Course,
         on_delete=models.CASCADE,
@@ -87,6 +97,13 @@ class Module(models.Model):
     def __str__(self):
         return f"{self.course.title} - {self.title}"
 
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.order_index = _next_order_index(
+                Module, course_id=self.course_id
+            )
+        super().save(*args, **kwargs)
+
     def delete(self, *args, **kwargs):
         course = self.course
         deleted_index = self.order_index
@@ -99,7 +116,7 @@ class Module(models.Model):
             module.save()
 
 
-class LessonTheory(models.Model):
+class LessonTheory(UUIDPublicIdMixin, models.Model):
     module = models.ForeignKey(
         Module,
         on_delete=models.CASCADE,
@@ -126,6 +143,13 @@ class LessonTheory(models.Model):
 
     def __str__(self):
         return f"{self.module.title} - {self.title}"
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.order_index = _next_order_index(
+                LessonTheory, module_id=self.module_id
+            )
+        super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         module = self.module
@@ -154,7 +178,7 @@ class LessonTheory(models.Model):
                 )
 
 
-class LessonRadioQuestion(models.Model):
+class LessonRadioQuestion(UUIDPublicIdMixin, models.Model):
     module = models.ForeignKey(
         Module,
         on_delete=models.CASCADE,
@@ -191,11 +215,18 @@ class LessonRadioQuestion(models.Model):
     def __str__(self):
         return f"{self.module.title} - {self.title}"
 
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.order_index = _next_order_index(
+                LessonRadioQuestion, module_id=self.module_id
+            )
+        super().save(*args, **kwargs)
+
     def get_correct_answer(self):
         return self.answers.filter(is_correct=True).first()
 
 
-class RadioAnswerOption(models.Model):
+class RadioAnswerOption(UUIDPublicIdMixin, models.Model):
     question = models.ForeignKey(
         LessonRadioQuestion,
         on_delete=models.CASCADE,
@@ -221,8 +252,15 @@ class RadioAnswerOption(models.Model):
     def __str__(self):
         return f"{self.question.title[:50]} - {self.text[:50]}"
 
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.order_index = _next_order_index(
+                RadioAnswerOption, question_id=self.question_id
+            )
+        super().save(*args, **kwargs)
 
-class LessonCheckBoxQuestion(models.Model):
+
+class LessonCheckBoxQuestion(UUIDPublicIdMixin, models.Model):
     module = models.ForeignKey(
         Module,
         on_delete=models.CASCADE,
@@ -263,6 +301,13 @@ class LessonCheckBoxQuestion(models.Model):
     def __str__(self):
         return f"{self.module.title} - {self.title}"
 
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.order_index = _next_order_index(
+                LessonCheckBoxQuestion, module_id=self.module_id
+            )
+        super().save(*args, **kwargs)
+
     def get_correct_answers(self):
         return self.answers.filter(is_correct=True)
 
@@ -275,7 +320,7 @@ class LessonCheckBoxQuestion(models.Model):
         ).update(order_index=models.F("order_index") - 1)
 
 
-class CheckBoxAnswerOption(models.Model):
+class CheckBoxAnswerOption(UUIDPublicIdMixin, models.Model):
     question = models.ForeignKey(
         LessonCheckBoxQuestion,
         on_delete=models.CASCADE,
@@ -301,8 +346,15 @@ class CheckBoxAnswerOption(models.Model):
     def __str__(self):
         return f"{self.question.title[:50]} - {self.text[:50]}"
 
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.order_index = _next_order_index(
+                CheckBoxAnswerOption, question_id=self.question_id
+            )
+        super().save(*args, **kwargs)
 
-class CodingChallenge(models.Model):
+
+class CodingChallenge(UUIDPublicIdMixin, models.Model):
     """Задача по программированию"""
 
     DIFFICULTY_CHOICES = [
@@ -395,6 +447,15 @@ class CodingChallenge(models.Model):
     def __str__(self):
         return self.title
 
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            if self.module_id:
+                filters = {"module_id": self.module_id}
+            else:
+                filters = {"module__isnull": True}
+            self.order_index = _next_order_index(CodingChallenge, **filters)
+        super().save(*args, **kwargs)
+
     def get_max_score(self):
         """Максимальный возможный балл за задачу"""
         return self.points
@@ -406,7 +467,9 @@ class CodingChallenge(models.Model):
         if total == 0:
             return 0
         successful = self.submissions.filter(
-            status="completed", passed_tests_percent=100.0
+            status="completed",
+            tests_passed=F("total_tests"),
+            total_tests__gt=0,
         ).count()
         return round((successful / total) * 100, 1)
 
@@ -421,7 +484,7 @@ class CodingChallenge(models.Model):
             ).update(order_index=models.F("order_index") - 1)
 
 
-class TestCase(models.Model):
+class TestCase(UUIDPublicIdMixin, models.Model):
 
     challenge = models.ForeignKey(
         CodingChallenge,
@@ -456,6 +519,13 @@ class TestCase(models.Model):
 
     def __str__(self):
         return f"{self.challenge.title} - Тест {self.order_index}"
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.order_index = _next_order_index(
+                TestCase, challenge_id=self.challenge_id
+            )
+        super().save(*args, **kwargs)
 
     def clean(self):
         if self.pk:

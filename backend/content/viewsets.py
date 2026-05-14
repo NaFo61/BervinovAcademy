@@ -1,20 +1,29 @@
-from django.utils.translation import gettext_lazy as _
-from rest_framework import mixins, status, viewsets
-from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from common.drf import UUID_LOOKUP_REGEX
+from rest_framework import mixins, viewsets
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from content.models import CodingChallenge, Course, LessonTheory, Module
+from content.models import (
+    CodingChallenge,
+    Course,
+    LessonCheckBoxQuestion,
+    LessonRadioQuestion,
+    LessonTheory,
+    Module,
+)
 from content.serializers import (
     CodingChallengeDetailSerializer,
     CodingChallengeListSerializer,
     CourseDetailSerializer,
     CourseListSerializer,
+    LessonCheckBoxDetailSerializer,
+    LessonCheckBoxListSerializer,
+    LessonRadioDetailSerializer,
+    LessonRadioListSerializer,
     LessonTheorySerializer,
     ModuleDetailSerializer,
     ModuleListSerializer,
 )
-from progress.models import CodeSubmission
 
 
 class CourseViewSet(
@@ -27,7 +36,7 @@ class CourseViewSet(
 
     Доступные действия:
     - list — получение списка всех активных курсов
-    - retrieve — получение детальной информации о конкретном курсе по slug
+    - retrieve — детальная информация о курсе по public_id (UUID)
 
     Особенности:
     - Доступен без авторизации (AllowAny)
@@ -39,7 +48,8 @@ class CourseViewSet(
 
     Поля курса:
     - title — название курса
-    - slug — уникальный URL-идентификатор
+    - public_id — публичный UUID
+    - slug — человекочитаемый URL-идентификатор
     - description — полное описание
     - image — обложка курса
     - is_active — статус активности
@@ -49,7 +59,8 @@ class CourseViewSet(
     """
 
     permission_classes = [AllowAny]
-    lookup_field = "slug"
+    lookup_field = "public_id"
+    lookup_value_regex = UUID_LOOKUP_REGEX
 
     def get_queryset(self):
         """
@@ -62,6 +73,10 @@ class CourseViewSet(
                 "technology",
                 "modules",
                 "modules__lessons_theories",
+                "modules__lessons_radio_questions",
+                "modules__lessons_radio_questions__answers",
+                "modules__lessons_checkbox_questions",
+                "modules__lessons_checkbox_questions__answers",
             )
             .order_by("-created_at")
         )
@@ -102,23 +117,33 @@ class ModuleViewSet(
     - description — описание модуля
     - order_index — порядковый номер в курсе
     - is_active — статус активности
-    - course_id — идентификатор родительского курса
+    - course_public_id — UUID родительского курса
+    - Фильтр списка: query-параметр course_public_id=
     - lessons_theories — теоретические уроки модуля
     """
 
     permission_classes = [AllowAny]
+    lookup_field = "public_id"
+    lookup_value_regex = UUID_LOOKUP_REGEX
 
     def get_queryset(self):
         """
         Возвращает queryset активных модулей активных курсов.
         Оптимизирует запросы к связанным моделям.
         """
-        return (
-            Module.objects.filter(is_active=True, course__is_active=True)
-            .select_related("course")
-            .prefetch_related("lessons_theories")
-            .order_by("course_id", "order_index")
-        )
+        queryset = Module.objects.filter(
+            is_active=True, course__is_active=True
+        ).select_related("course")
+        course_pub = self.request.query_params.get("course_public_id")
+        if course_pub:
+            queryset = queryset.filter(course__public_id=course_pub)
+        return queryset.prefetch_related(
+            "lessons_theories",
+            "lessons_radio_questions",
+            "lessons_radio_questions__answers",
+            "lessons_checkbox_questions",
+            "lessons_checkbox_questions__answers",
+        ).order_by("course_id", "order_index")
 
     def get_serializer_class(self):
         """
@@ -155,29 +180,92 @@ class LessonTheoryViewSet(
     - content — HTML-содержание урока
     - order_index — порядковый номер в модуле
     - is_active — статус активности
-    - module_id — идентификатор родительского модуля
+    - module_public_id — UUID родительского модуля
+    - Фильтр списка: query-параметр module_public_id=
     """
 
     permission_classes = [AllowAny]
+    lookup_field = "public_id"
+    lookup_value_regex = UUID_LOOKUP_REGEX
 
     def get_queryset(self):
         """
         Возвращает queryset активных уроков из активных модулей и курсов.
         Оптимизирует загрузку связанных модулей и курсов.
         """
-        return (
-            LessonTheory.objects.filter(
-                is_active=True,
-                module__is_active=True,
-                module__course__is_active=True,
-            )
-            .select_related("module", "module__course")
-            .order_by("module_id", "order_index")
-        )
+        queryset = LessonTheory.objects.filter(
+            is_active=True,
+            module__is_active=True,
+            module__course__is_active=True,
+        ).select_related("module", "module__course")
+        module_pub = self.request.query_params.get("module_public_id")
+        if module_pub:
+            queryset = queryset.filter(module__public_id=module_pub)
+        return queryset.order_by("module_id", "order_index")
 
     def get_serializer_class(self):
         """Возвращает единый сериализатор для всех действий."""
         return LessonTheorySerializer
+
+
+class LessonRadioQuestionViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Публичный каталог вопросов с одним вариантом ответа (radio)."""
+
+    permission_classes = [AllowAny]
+    lookup_field = "public_id"
+    lookup_value_regex = UUID_LOOKUP_REGEX
+
+    def get_queryset(self):
+        queryset = LessonRadioQuestion.objects.filter(
+            is_active=True,
+            module__is_active=True,
+            module__course__is_active=True,
+        ).select_related("module", "module__course")
+        module_pub = self.request.query_params.get("module_public_id")
+        if module_pub:
+            queryset = queryset.filter(module__public_id=module_pub)
+        return queryset.prefetch_related("answers").order_by(
+            "module_id", "order_index"
+        )
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return LessonRadioDetailSerializer
+        return LessonRadioListSerializer
+
+
+class LessonCheckBoxQuestionViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Публичный каталог вопросов с несколькими вариантами (checkbox)."""
+
+    permission_classes = [AllowAny]
+    lookup_field = "public_id"
+    lookup_value_regex = UUID_LOOKUP_REGEX
+
+    def get_queryset(self):
+        queryset = LessonCheckBoxQuestion.objects.filter(
+            is_active=True,
+            module__is_active=True,
+            module__course__is_active=True,
+        ).select_related("module", "module__course")
+        module_pub = self.request.query_params.get("module_public_id")
+        if module_pub:
+            queryset = queryset.filter(module__public_id=module_pub)
+        return queryset.prefetch_related("answers").order_by(
+            "module_id", "order_index"
+        )
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return LessonCheckBoxDetailSerializer
+        return LessonCheckBoxListSerializer
 
 
 class CodingChallengeViewSet(
@@ -191,18 +279,19 @@ class CodingChallengeViewSet(
     Доступные действия:
     - list — получение списка задач с возможностью фильтрации
     - retrieve — получение детальной информации о задаче
-    - submit — отправка решения задачи (POST)
-    - my_submissions — получение истории отправок пользователя (GET)
 
     Особенности:
     - Просмотр задач доступен без авторизации
-    - Отправка решений требует авторизации (IsAuthenticated)
+    - Отправка кода и история решений — в API прогресса:
+      ``POST /api/progress/code/`` (тело: ``challenge`` = этот
+      ``public_id``, поле ``code``). Список своих попыток по задаче:
+      ``GET /api/progress/code/?challenge_public_id=…``
     - Поддерживается фильтрация по курсу, модулю и сложности
     - Сортировка по порядковому номеру и сложности
     - В детальном просмотре показываются только не скрытые тесты
-    - Автоматическая проверка решений (заглушка, требует доработки)
 
     Поля задачи:
+    - public_id — публичный UUID (retrieve; тот же id передаётся в progress как challenge)
     - title — название задачи
     - description — описание задачи
     - instructions — инструкция по выполнению
@@ -215,31 +304,30 @@ class CodingChallengeViewSet(
     - user_solved — флаг, решил ли пользователь задачу
 
     Методы фильтрации (через query-параметры):
-    - course_id — ID курса
-    - module_id — ID модуля
+    - course_public_id — UUID курса
+    - module_public_id — UUID модуля
     - difficulty — уровень сложности (beginner, easy, medium, hard, expert)
     """
 
     permission_classes = [AllowAny]
-    lookup_field = "slug"
+    lookup_field = "public_id"
+    lookup_value_regex = UUID_LOOKUP_REGEX
 
     def get_queryset(self):
         """
         Возвращает queryset активных задач с поддержкой фильтрации.
-        Фильтры: course_id, module_id, difficulty.
+        Фильтры: course_public_id, module_public_id, difficulty.
         Сортировка: сначала по order_index, затем по difficulty.
         """
         queryset = CodingChallenge.objects.filter(is_active=True)
 
-        # Фильтрация по курсу
-        course_id = self.request.query_params.get("course_id")
-        if course_id:
-            queryset = queryset.filter(course_id=course_id)
+        course_pub = self.request.query_params.get("course_public_id")
+        if course_pub:
+            queryset = queryset.filter(course__public_id=course_pub)
 
-        # Фильтрация по модулю
-        module_id = self.request.query_params.get("module_id")
-        if module_id:
-            queryset = queryset.filter(module_id=module_id)
+        module_pub = self.request.query_params.get("module_public_id")
+        if module_pub:
+            queryset = queryset.filter(module__public_id=module_pub)
 
         # Фильтрация по сложности
         difficulty = self.request.query_params.get("difficulty")
@@ -268,159 +356,3 @@ class CodingChallengeViewSet(
             instance, context={"request": request}
         )
         return Response(serializer.data)
-
-    @action(
-        detail=True,
-        methods=["post"],
-        permission_classes=[IsAuthenticated],
-        url_path="submit",
-    )
-    def submit(self, request, slug=None):
-        """
-        Отправка решения задачи пользователем.
-
-        Процесс:
-        1. Получение кода из запроса
-        2. Создание записи о попытке (статус pending)
-        3. Выполнение кода на тестах
-        4. Обновление статуса и результатов
-        5. Возврат результата проверки
-
-        Требования:
-        - Пользователь должен быть авторизован
-        - Код не может быть пустым
-        - Задача должна быть активной
-
-        Возвращаемые данные:
-        - submission_id — уникальный идентификатор попытки
-        - status — статус проверки
-        - tests_passed — количество пройденных тестов
-        - total_tests — общее количество тестов
-        - error_message — сообщение об ошибке (если есть)
-        - test_results — детальные результаты тестов
-        """
-        challenge = self.get_object()
-
-        code = request.data.get("code", "").strip()
-        if not code:
-            return Response(
-                {"error": _("Код не может быть пустым")},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Создаем отправку
-        submission = CodeSubmission.objects.create(
-            user=request.user, challenge=challenge, code=code, status="pending"
-        )
-
-        # Здесь должна быть логика выполнения кода
-        # Для минимальной версии просто помечаем как успешное
-        # В реальном проекте нужно добавить очередь задач (Celery) и выполнение в Docker
-
-        # Временная заглушка - выполняем тесты синхронно
-        result = self._execute_code(submission)
-
-        # Обновляем отправку
-        for key, value in result.items():
-            setattr(submission, key, value)
-        submission.save()
-
-        # Сериализуем ответ
-        return Response(
-            {
-                "submission_id": submission.submission_id,
-                "status": submission.status,
-                "tests_passed": submission.tests_passed,
-                "total_tests": submission.total_tests,
-                "error_message": submission.error_message,
-                "test_results": submission.test_results,
-            }
-        )
-
-    def _execute_code(self, submission):
-        """
-        Выполнение кода на тестовых случаях.
-
-        ВНИМАНИЕ: Это временная заглушка!
-        В реальной реализации необходимо:
-        1. Использовать Celery для асинхронного выполнения
-        2. Запускать код в изолированном Docker-контейнере
-        3. Ограничивать ресурсы (время, память)
-        4. Безопасно обрабатывать пользовательский код
-        5. Поддерживать разные языки программирования
-
-        Текущая заглушка:
-        - Считает все тесты пройденными
-        - Не выполняет реальный код
-        - Не проверяет корректность решения
-        """
-        challenge = submission.challenge
-        test_cases = challenge.test_cases.all()
-
-        result = {
-            "status": "completed",
-            "tests_passed": 0,
-            "total_tests": test_cases.count(),
-            "error_message": "",
-            "test_results": {},
-        }
-
-        if result["total_tests"] == 0:
-            result["status"] = "error"
-            result["error_message"] = _("Нет тестов для проверки")
-            return result
-
-        # Заглушка - всегда проходит тесты
-        # В реальной реализации здесь должен быть код выполнения в Docker
-        result["tests_passed"] = result["total_tests"]
-
-        for idx, test in enumerate(test_cases, 1):
-            result["test_results"][f"test_{idx}"] = {
-                "passed": True,
-                "input": test.input_data,
-                "expected": test.expected_output,
-            }
-
-        return result
-
-    @action(
-        detail=True,
-        methods=["get"],
-        permission_classes=[IsAuthenticated],
-        url_path="my-submissions",
-    )
-    def my_submissions(self, request, slug=None):
-        """
-        Получение истории отправок текущего пользователя по задаче.
-
-        Особенности:
-        - Требуется авторизация пользователя
-        - Возвращает последние 20 отправок
-        - Сортировка от новых к старым
-        - Не включает код решения (только мета-информацию)
-
-        Возвращаемые данные для каждой отправки:
-        - submission_id — уникальный идентификатор
-        - status — статус проверки
-        - tests_passed — количество пройденных тестов
-        - total_tests — общее количество тестов
-        - submitted_at — дата и время отправки
-        """
-        challenge = self.get_object()
-
-        submissions = challenge.submissions.filter(user=request.user).order_by(
-            "-submitted_at"
-        )[:20]
-
-        return Response(
-            [
-                {
-                    "submission_id": s.submission_id,
-                    "status": s.status,
-                    "tests_passed": s.tests_passed,
-                    "total_tests": s.total_tests,
-                    "submitted_at": s.submitted_at,
-                }
-                for s in submissions
-            ]
-        )

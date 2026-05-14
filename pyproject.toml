@@ -99,7 +99,3 @@ markers = [
 filterwarnings = [
     "ignore::DeprecationWarning:httpx._models:",
 ]
-
-[tool.pytest]
-django_db_use_transactions = true
-django_db_keepdb = true

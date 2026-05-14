@@ -1,13 +1,24 @@
 from rest_framework import serializers
 
-from .models import Course, LessonTheory, Module, Technology
+from .models import (
+    CheckBoxAnswerOption,
+    CodingChallenge,
+    Course,
+    LessonCheckBoxQuestion,
+    LessonRadioQuestion,
+    LessonTheory,
+    Module,
+    RadioAnswerOption,
+    Technology,
+    TestCase,
+)
 
 
 class TechnologySerializer(serializers.ModelSerializer):
     class Meta:
         model = Technology
         fields = (
-            "id",
+            "public_id",
             "name",
         )
         read_only_fields = fields
@@ -17,7 +28,7 @@ class LessonTheoryShortSerializer(serializers.ModelSerializer):
     class Meta:
         model = LessonTheory
         fields = (
-            "id",
+            "public_id",
             "title",
             "order_index",
         )
@@ -25,13 +36,15 @@ class LessonTheoryShortSerializer(serializers.ModelSerializer):
 
 
 class LessonTheorySerializer(serializers.ModelSerializer):
-    module_id = serializers.IntegerField(read_only=True)
+    module_public_id = serializers.UUIDField(
+        source="module.public_id", read_only=True
+    )
 
     class Meta:
         model = LessonTheory
         fields = (
-            "id",
-            "module_id",
+            "public_id",
+            "module_public_id",
             "title",
             "content",
             "order_index",
@@ -40,8 +53,24 @@ class LessonTheorySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class LessonRadioShortSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LessonRadioQuestion
+        fields = ("public_id", "title", "order_index")
+        read_only_fields = fields
+
+
+class LessonCheckBoxShortSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LessonCheckBoxQuestion
+        fields = ("public_id", "title", "order_index")
+        read_only_fields = fields
+
+
 class ModuleShortSerializer(serializers.ModelSerializer):
     lessons_theories = serializers.SerializerMethodField()
+    lessons_radio = serializers.SerializerMethodField()
+    lessons_checkbox = serializers.SerializerMethodField()
 
     def get_lessons_theories(self, obj):
         queryset = obj.lessons_theories.filter(is_active=True).order_by(
@@ -49,26 +78,42 @@ class ModuleShortSerializer(serializers.ModelSerializer):
         )
         return LessonTheoryShortSerializer(queryset, many=True).data
 
+    def get_lessons_radio(self, obj):
+        queryset = obj.lessons_radio_questions.filter(is_active=True).order_by(
+            "order_index"
+        )
+        return LessonRadioShortSerializer(queryset, many=True).data
+
+    def get_lessons_checkbox(self, obj):
+        queryset = obj.lessons_checkbox_questions.filter(
+            is_active=True
+        ).order_by("order_index")
+        return LessonCheckBoxShortSerializer(queryset, many=True).data
+
     class Meta:
         model = Module
         fields = (
-            "id",
+            "public_id",
             "title",
             "description",
             "order_index",
             "lessons_theories",
+            "lessons_radio",
+            "lessons_checkbox",
         )
         read_only_fields = fields
 
 
 class ModuleListSerializer(serializers.ModelSerializer):
-    course_id = serializers.IntegerField(read_only=True)
+    course_public_id = serializers.UUIDField(
+        source="course.public_id", read_only=True
+    )
 
     class Meta:
         model = Module
         fields = (
-            "id",
-            "course_id",
+            "public_id",
+            "course_public_id",
             "title",
             "description",
             "order_index",
@@ -78,19 +123,37 @@ class ModuleListSerializer(serializers.ModelSerializer):
 
 
 class ModuleDetailSerializer(serializers.ModelSerializer):
-    course_id = serializers.IntegerField(read_only=True)
+    course_public_id = serializers.UUIDField(
+        source="course.public_id", read_only=True
+    )
     lessons_theories = LessonTheoryShortSerializer(many=True, read_only=True)
+    lessons_radio = serializers.SerializerMethodField()
+    lessons_checkbox = serializers.SerializerMethodField()
+
+    def get_lessons_radio(self, obj):
+        queryset = obj.lessons_radio_questions.filter(is_active=True).order_by(
+            "order_index"
+        )
+        return LessonRadioShortSerializer(queryset, many=True).data
+
+    def get_lessons_checkbox(self, obj):
+        queryset = obj.lessons_checkbox_questions.filter(
+            is_active=True
+        ).order_by("order_index")
+        return LessonCheckBoxShortSerializer(queryset, many=True).data
 
     class Meta:
         model = Module
         fields = (
-            "id",
-            "course_id",
+            "public_id",
+            "course_public_id",
             "title",
             "description",
             "order_index",
             "is_active",
             "lessons_theories",
+            "lessons_radio",
+            "lessons_checkbox",
         )
         read_only_fields = fields
 
@@ -101,7 +164,7 @@ class CourseListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = (
-            "id",
+            "public_id",
             "title",
             "slug",
             "image",
@@ -123,7 +186,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = (
-            "id",
+            "public_id",
             "title",
             "slug",
             "description",
@@ -136,9 +199,110 @@ class CourseDetailSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-# content/serializers.py (добавить в существующий файл)
+class RadioAnswerOptionPublicSerializer(serializers.ModelSerializer):
+    """Варианты ответа для клиента (без признака правильности)."""
 
-from .models import CodingChallenge, TestCase
+    class Meta:
+        model = RadioAnswerOption
+        fields = ("public_id", "text", "order_index")
+        read_only_fields = fields
+
+
+class CheckBoxAnswerOptionPublicSerializer(serializers.ModelSerializer):
+    """Варианты ответа для клиента (без признака правильности)."""
+
+    class Meta:
+        model = CheckBoxAnswerOption
+        fields = ("public_id", "text", "order_index")
+        read_only_fields = fields
+
+
+class LessonRadioListSerializer(serializers.ModelSerializer):
+    module_public_id = serializers.UUIDField(
+        source="module.public_id", read_only=True
+    )
+
+    class Meta:
+        model = LessonRadioQuestion
+        fields = (
+            "public_id",
+            "module_public_id",
+            "title",
+            "order_index",
+            "points",
+            "is_active",
+        )
+        read_only_fields = fields
+
+
+class LessonRadioDetailSerializer(serializers.ModelSerializer):
+    module_public_id = serializers.UUIDField(
+        source="module.public_id", read_only=True
+    )
+    answer_options = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LessonRadioQuestion
+        fields = (
+            "public_id",
+            "module_public_id",
+            "title",
+            "question_text",
+            "explanation",
+            "order_index",
+            "points",
+            "is_active",
+            "answer_options",
+        )
+        read_only_fields = fields
+
+    def get_answer_options(self, obj):
+        opts = obj.answers.all().order_by("order_index")
+        return RadioAnswerOptionPublicSerializer(opts, many=True).data
+
+
+class LessonCheckBoxListSerializer(serializers.ModelSerializer):
+    module_public_id = serializers.UUIDField(
+        source="module.public_id", read_only=True
+    )
+
+    class Meta:
+        model = LessonCheckBoxQuestion
+        fields = (
+            "public_id",
+            "module_public_id",
+            "title",
+            "order_index",
+            "points",
+            "is_active",
+        )
+        read_only_fields = fields
+
+
+class LessonCheckBoxDetailSerializer(serializers.ModelSerializer):
+    module_public_id = serializers.UUIDField(
+        source="module.public_id", read_only=True
+    )
+    answer_options = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LessonCheckBoxQuestion
+        fields = (
+            "public_id",
+            "module_public_id",
+            "title",
+            "question_text",
+            "explanation",
+            "order_index",
+            "points",
+            "is_active",
+            "answer_options",
+        )
+        read_only_fields = fields
+
+    def get_answer_options(self, obj):
+        opts = obj.answers.all().order_by("order_index")
+        return CheckBoxAnswerOptionPublicSerializer(opts, many=True).data
 
 
 class TestCaseSerializer(serializers.ModelSerializer):
@@ -147,13 +311,13 @@ class TestCaseSerializer(serializers.ModelSerializer):
     class Meta:
         model = TestCase
         fields = (
-            "id",
+            "public_id",
             "input_data",
             "expected_output",
             "is_hidden",
             "order_index",
         )
-        read_only_fields = ("id",)
+        read_only_fields = ("public_id",)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -170,11 +334,23 @@ class CodingChallengeListSerializer(serializers.ModelSerializer):
     difficulty_display = serializers.CharField(
         source="get_difficulty_display", read_only=True
     )
+    course_public_id = serializers.UUIDField(
+        source="course.public_id",
+        read_only=True,
+        allow_null=True,
+    )
+    module_public_id = serializers.UUIDField(
+        source="module.public_id",
+        read_only=True,
+        allow_null=True,
+    )
 
     class Meta:
         model = CodingChallenge
         fields = (
-            "id",
+            "public_id",
+            "course_public_id",
+            "module_public_id",
             "title",
             "difficulty",
             "difficulty_display",
@@ -192,11 +368,23 @@ class CodingChallengeDetailSerializer(serializers.ModelSerializer):
     )
     test_cases = serializers.SerializerMethodField()
     user_solved = serializers.SerializerMethodField()
+    course_public_id = serializers.UUIDField(
+        source="course.public_id",
+        read_only=True,
+        allow_null=True,
+    )
+    module_public_id = serializers.UUIDField(
+        source="module.public_id",
+        read_only=True,
+        allow_null=True,
+    )
 
     class Meta:
         model = CodingChallenge
         fields = (
-            "id",
+            "public_id",
+            "course_public_id",
+            "module_public_id",
             "title",
             "description",
             "instructions",

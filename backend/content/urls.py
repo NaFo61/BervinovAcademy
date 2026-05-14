@@ -4,6 +4,8 @@ from rest_framework.routers import DefaultRouter
 from .viewsets import (
     CodingChallengeViewSet,
     CourseViewSet,
+    LessonCheckBoxQuestionViewSet,
+    LessonRadioQuestionViewSet,
     LessonTheoryViewSet,
     ModuleViewSet,
 )
@@ -17,8 +19,16 @@ router.register(
     basename="lessons-theory",
 )
 router.register(
-    r"challenges", CodingChallengeViewSet, basename="challenges"
-)  # добавить
+    r"lessons-radio",
+    LessonRadioQuestionViewSet,
+    basename="lessons-radio",
+)
+router.register(
+    r"lessons-checkbox",
+    LessonCheckBoxQuestionViewSet,
+    basename="lessons-checkbox",
+)
+router.register(r"challenges", CodingChallengeViewSet, basename="challenges")
 
 app_name = "content"
 

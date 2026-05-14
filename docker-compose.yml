@@ -29,6 +29,48 @@ services:
       interval: 5s
       retries: 5
 
+  # Kafka stack: backend/celery in Compose should use KAFKA_BOOTSTRAP_SERVERS=kafka:29092.
+  # Host tools (kafka-console-consumer) use localhost:9092.
+  zookeeper:
+    # Pin: cp-*:latest switched to KRaft-only and breaks ZK env (KAFKA_PROCESS_ROLES).
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: bervinov-academy-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: bervinov-academy-kafka
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "kafka-broker-api-versions",
+          "--bootstrap-server",
+          "localhost:9092",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 40s
+
   backend:
     build:
       context: .
@@ -38,7 +80,6 @@ services:
       sh -c "cd /app/backend &&
              python manage.py compilemessages -l en &&
              python manage.py migrate &&
-             python manage.py seed_data --clear &&
              python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
@@ -49,6 +90,8 @@ services:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     working_dir: /app/backend
     healthcheck:  # Добавлен healthcheck для backend
@@ -65,15 +108,13 @@ services:
     container_name: bervinov-academy-frontend
     volumes:
       - ./frontend:/app
-      - /app/node_modules
+      - frontend_node_modules:/app/node_modules
     working_dir: /app
     command: >
-      sh -c "npm run build"
+      sh -c "npm install --ignore-scripts --omit=optional && npm run build"
     environment:
       - CHOKIDAR_USEPOLLING=true
-    depends_on:
-      backend:
-        condition: service_healthy
+    restart: "no"
 
   nginx:
     build:
@@ -85,8 +126,10 @@ services:
     volumes:
       - ./frontend/dist:/usr/share/nginx/html:ro
     depends_on:
-      - frontend
-      - backend
+      frontend:
+        condition: service_completed_successfully
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
   celery:
@@ -106,7 +149,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     working_dir: /app/backend
+    healthcheck:
+      disable: true
 
   celery-beat:
     build:
@@ -126,7 +173,79 @@ services:
       redis:
         condition: service_healthy
     working_dir: /app/backend
+    healthcheck:
+      disable: true
+
+  # Образ песочницы (только build; entrypoint заменён, чтобы сервис сразу
+  # завершился — runner использует image при docker run).
+  code-check-sandbox:
+    image: bervinov-academy-code-sandbox:local
+    build:
+      context: ./services/code_check_sandbox
+    entrypoint: ["/bin/true"]
+    restart: "no"
+
+  code-check-runner:
+    build:
+      context: ./services/code_check_emulator
+    image: bervinov-academy-code-check-runner:local
+    container_name: bervinov-academy-code-check-runner
+    restart: unless-stopped
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_TOPIC_IN: code-submissions
+      KAFKA_TOPIC_CODE_RESULTS: code-submission-results
+      KAFKA_GROUP_ID: code-check-runner
+      KAFKA_AUTO_OFFSET_RESET: earliest
+      SANDBOX_IMAGE: bervinov-academy-code-sandbox:local
+      MAX_CONCURRENT_RUNS: "2"
+      DOCKER_RUN_TIMEOUT_BUFFER_SEC: "5"
+      LOG_LEVEL: INFO
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      kafka:
+        condition: service_healthy
+      code-check-sandbox:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Миграции только в backend: параллельный migrate здесь даёт гонку на пустой БД
+  # (duplicate key typname «users» в pg_type).
+  kafka-results-consumer:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: bervinov-academy-kafka-results-consumer
+    command: >
+      sh -c "cd /app/backend &&
+             python manage.py compilemessages -l en &&
+             python manage.py consume_code_submission_results"
+    volumes:
+      - .:/app
+    env_file: .env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_TOPIC_CODE_RESULTS: code-submission-results
+      KAFKA_GROUP_CODE_RESULTS: django-code-submission-results
+      KAFKA_RESULTS_AUTO_OFFSET_RESET: earliest
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    working_dir: /app/backend
+    healthcheck:
+      disable: true
 
 volumes:
   postgres_data:
   redis_data:
+  frontend_node_modules:

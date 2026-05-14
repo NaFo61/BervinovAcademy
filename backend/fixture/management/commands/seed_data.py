@@ -745,7 +745,6 @@ class Command(BaseCommand):
         coding_challenges_data = [
             {
                 "title": "Сумма двух чисел",
-                "slug": "sum-of-two-numbers",
                 "description": "Напишите функцию, которая принимает два числа и возвращает их сумму.",
                 "instructions": "Реализуйте функцию `add(a, b)`, которая принимает два числа и возвращает их сумму.",
                 "initial_code": "def add(a, b):\n    # Напишите ваш код здесь\n    pass",
@@ -779,7 +778,6 @@ class Command(BaseCommand):
             },
             {
                 "title": "Проверка на четность",
-                "slug": "is-even",
                 "description": "Напишите функцию, которая проверяет, является ли число четным.",
                 "instructions": "Реализуйте функцию `is_even(n)`, которая возвращает True, если число четное, и False в противном случае.",
                 "initial_code": "def is_even(n):\n    # Напишите ваш код здесь\n    pass",
@@ -813,7 +811,6 @@ class Command(BaseCommand):
             },
             {
                 "title": "Поиск максимума",
-                "slug": "find-maximum",
                 "description": "Напишите функцию, которая находит максимальное число в списке.",
                 "instructions": "Реализуйте функцию `find_max(arr)`, которая принимает список чисел и возвращает максимальное значение.",
                 "initial_code": "def find_max(arr):\n    # Напишите ваш код здесь\n    pass",
@@ -847,7 +844,6 @@ class Command(BaseCommand):
             },
             {
                 "title": "Факториал числа",
-                "slug": "factorial",
                 "description": "Напишите рекурсивную функцию для вычисления факториала числа.",
                 "instructions": "Реализуйте функцию `factorial(n)`, которая возвращает факториал числа n (n!).",
                 "initial_code": "def factorial(n):\n    # Напишите ваш код здесь\n    pass",
@@ -881,7 +877,6 @@ class Command(BaseCommand):
             },
             {
                 "title": "Палиндром",
-                "slug": "palindrome",
                 "description": "Напишите функцию, которая проверяет, является ли строка палиндромом.",
                 "instructions": "Реализуйте функцию `is_palindrome(s)`, которая возвращает True, если строка читается одинаково слева направо и справа налево.",
                 "initial_code": "def is_palindrome(s):\n    # Напишите ваш код здесь\n    pass",
@@ -1056,21 +1051,22 @@ class Command(BaseCommand):
                         ],
                     }
 
-                challenge = CodingChallenge.objects.create(
-                    course=course,
-                    module=module,
-                    title=challenge_data["title"],
-                    description=challenge_data["description"],
-                    instructions=challenge_data["instructions"],
-                    initial_code=challenge_data["initial_code"],
-                    solution_template=challenge_data["solution_template"],
-                    difficulty=challenge_data["difficulty"],
-                    points=challenge_data["points"],
-                    time_limit_ms=challenge_data["time_limit_ms"],
-                    memory_limit_mb=challenge_data["memory_limit_mb"],
-                    order_index=challenge_index + 1,
-                    is_active=random.choice([True, False, True]),
-                )
+                cc_kwargs = {
+                    "course": course,
+                    "module": module,
+                    "title": challenge_data["title"],
+                    "description": challenge_data["description"],
+                    "instructions": challenge_data["instructions"],
+                    "initial_code": challenge_data["initial_code"],
+                    "solution_template": challenge_data["solution_template"],
+                    "difficulty": challenge_data["difficulty"],
+                    "points": challenge_data["points"],
+                    "time_limit_ms": challenge_data["time_limit_ms"],
+                    "memory_limit_mb": challenge_data["memory_limit_mb"],
+                    "order_index": challenge_index + 1,
+                    "is_active": random.choice([True, False, True]),
+                }
+                challenge = CodingChallenge.objects.create(**cc_kwargs)
 
                 # Создаем тестовые случаи для задачи
                 for test_index, test_data in enumerate(

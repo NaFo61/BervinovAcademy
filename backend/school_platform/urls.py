@@ -15,7 +15,15 @@ def health_check(request):
     return JsonResponse({"status": "ok"})
 
 
+def home_view(request):
+    """Главная страница проекта."""
+    from django.shortcuts import render
+
+    return render(request, "home.html")
+
+
 urlpatterns = [
+    path("", home_view, name="home"),
     path("i18n/", include("django.conf.urls.i18n")),
     path("admin/", admin.site.urls),
     path("health/", health_check, name="health"),

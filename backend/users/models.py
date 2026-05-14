@@ -1,6 +1,7 @@
 import os
 import uuid
 
+from common.models import UUIDPublicIdMixin
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.core.exceptions import ValidationError
@@ -63,7 +64,7 @@ class CustomUserManager(BaseUserManager):
         return self.get(email=login)
 
 
-class User(AbstractBaseUser, PermissionsMixin):
+class User(UUIDPublicIdMixin, AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = [
         ("student", _("Студент")),
         ("mentor", _("Ментор")),
@@ -240,7 +241,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name_plural = _("Пользователи")
 
 
-class Student(models.Model):
+class Student(UUIDPublicIdMixin, models.Model):
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
@@ -257,7 +258,7 @@ class Student(models.Model):
         return self.user.get_full_name() or str(self.user)
 
 
-class Specialization(AutoTranslateMixin, models.Model):
+class Specialization(UUIDPublicIdMixin, AutoTranslateMixin, models.Model):
     TYPE_CHOICES = [
         ("web", _("WEB-разработка")),
         ("mobile", _("Мобильная разработка")),
@@ -307,7 +308,7 @@ class Specialization(AutoTranslateMixin, models.Model):
         return self.title
 
 
-class Mentor(models.Model):
+class Mentor(UUIDPublicIdMixin, models.Model):
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,

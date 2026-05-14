@@ -248,7 +248,7 @@ class UserAnswerRadioAdmin(ModelAdmin):
     @display(description=_("Детали ответа"))
     def answer_details(self, obj):
         """Детальная информация об ответе"""
-        # Все ответы на этот вопрос от этого пользователя (история)
+        # Все попытки по этому вопросу (несколько POST в API на один вопрос).
         all_answers = UserAnswerRadio.objects.filter(
             user=obj.user, question=obj.question
         ).order_by("-created_at")
@@ -280,7 +280,7 @@ class UserAnswerRadioAdmin(ModelAdmin):
                 history_html = f"""
                 <div style="margin-top: 1rem;">
                     <strong style="color: var(--primary-text);">
-                    {_('История ответов')}:
+                    {_('История попыток по вопросу')}:
                     </strong>
                     <div style="margin-top: 0.5rem; padding-left: 0.5rem;
                     border-left: 2px solid #dee2e6;">
@@ -803,7 +803,7 @@ class CodeSubmissionAdmin(ModelAdmin):
     """Админка для отправок решений"""
 
     list_display = (
-        "submission_id",
+        "public_id",
         "user_info",
         "challenge_link",
         "status_badge",
@@ -821,7 +821,7 @@ class CodeSubmissionAdmin(ModelAdmin):
     list_per_page = 20
     ordering = ("-submitted_at",)
     readonly_fields = (
-        "submission_id",
+        "public_id",
         "code",
         "test_results",
         "submitted_at",
@@ -832,7 +832,7 @@ class CodeSubmissionAdmin(ModelAdmin):
     fieldsets = (
         (
             _("Информация"),
-            {"fields": ("submission_id", "user", "challenge", "status")},
+            {"fields": ("public_id", "user", "challenge", "status")},
         ),
         (_("Код"), {"fields": ("code",), "classes": ("wide",)}),
         (

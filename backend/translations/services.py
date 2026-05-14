@@ -6,13 +6,14 @@ logger = logging.getLogger(__name__)
 class TranslationService:
     @staticmethod
     def get_translation(text, source_lang, target_lang, context=None):
-        """Синхронное получение перевода"""
+        """Синхронное получение перевода (выполняется в этом процессе)."""
+        # Ленивый импорт: иначе users.models → mixins → services → tasks
+        # → translations.models → get_user_model() до установки User.
         from translations.models import TranslationMemory
-        from translations.tasks import translate_text
+        from translations.tasks import perform_translation
 
         text = text.strip()
 
-        # Проверяем кэш
         existing = TranslationMemory.objects.filter(
             source_text=text,
             source_lang=source_lang,
@@ -23,13 +24,8 @@ class TranslationService:
         if existing:
             return existing.target_text
 
-        # Отправляем задачу в Celery и ждем результат
-        result = translate_text.delay(text, source_lang, target_lang, context)
-
         try:
-            # Ждем результат до 10 секунд
-            translated = result.get(timeout=10)
-            return translated
+            return perform_translation(text, source_lang, target_lang, context)
         except Exception as e:
-            logger.error(f"Ошибка получения перевода: {e}")
-            return "в процессе"  # или вернуть оригинал
+            logger.exception("Ошибка получения перевода: %s", e)
+            return "в процессе"

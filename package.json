@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "@tanstack/react-router": "^1.169.2"
+  },
+  "devDependencies": {
+    "@tanstack/router-plugin": "^1.167.35",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.14",
+    "tailwindcss": "^4.3.0"
+  }
+}

@@ -1,4 +1,5 @@
 from datetime import timedelta
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -313,6 +314,88 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Europe/Moscow"
 
+# Kafka (опционально: пустой KAFKA_BOOTSTRAP_SERVERS — не публикуем)
+KAFKA_BOOTSTRAP_SERVERS = config("KAFKA_BOOTSTRAP_SERVERS", default="").strip()
+KAFKA_TOPIC_CODE_SUBMISSIONS = config(
+    "KAFKA_TOPIC", default="code-submissions"
+).strip()
+KAFKA_TOPIC_CODE_RESULTS = config(
+    "KAFKA_TOPIC_CODE_RESULTS", default="code-submission-results"
+).strip()
+KAFKA_GROUP_CODE_RESULTS = config(
+    "KAFKA_GROUP_CODE_RESULTS", default="django-code-submission-results"
+).strip()
+KAFKA_RESULTS_AUTO_OFFSET_RESET = config(
+    "KAFKA_RESULTS_AUTO_OFFSET_RESET", default="earliest"
+).strip()
+
+# Логирование (уровень: DEBUG, INFO, WARNING, ERROR)
+_LOG_LEVEL_RAW = config("DJANGO_LOG_LEVEL", default="INFO").upper()
+DJANGO_LOG_LEVEL = getattr(logging, _LOG_LEVEL_RAW, logging.INFO)
+
+LOGGING: dict[str, Any] = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "%(asctime)s %(levelname)s [%(name)s] %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": DJANGO_LOG_LEVEL,
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": DJANGO_LOG_LEVEL,
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "django.server": {
+            "handlers": ["console"],
+            "level": DJANGO_LOG_LEVEL,
+            "propagate": False,
+        },
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "progress": {
+            "handlers": ["console"],
+            "level": DJANGO_LOG_LEVEL,
+            "propagate": False,
+        },
+        "translations": {
+            "handlers": ["console"],
+            "level": DJANGO_LOG_LEVEL,
+            "propagate": False,
+        },
+        "users": {
+            "handlers": ["console"],
+            "level": DJANGO_LOG_LEVEL,
+            "propagate": False,
+        },
+        "content": {
+            "handlers": ["console"],
+            "level": DJANGO_LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+}
+
 # REST Framework settings
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -363,7 +446,7 @@ SIMPLE_JWT = {
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
     "AUTH_HEADER_TYPES": ("Bearer",),
-    "USER_ID_FIELD": "id",
+    "USER_ID_FIELD": "public_id",
     "USER_ID_CLAIM": "user_id",
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
     "TOKEN_TYPE_CLAIM": "token_type",

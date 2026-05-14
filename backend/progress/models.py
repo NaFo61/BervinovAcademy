@@ -1,5 +1,4 @@
-import uuid
-
+from common.models import UUIDPublicIdMixin
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
@@ -16,7 +15,7 @@ from content.models import (
 User = get_user_model()
 
 
-class UserAnswerRadio(models.Model):
+class UserAnswerRadio(UUIDPublicIdMixin, models.Model):
     """Модель для отслеживания ответов пользователя на radio-вопросы"""
 
     user = models.ForeignKey(
@@ -57,7 +56,8 @@ class UserAnswerRadio(models.Model):
         verbose_name = _("Ответ на radio-вопрос")
         verbose_name_plural = _("Ответы на radio-вопросы")
         ordering = ["-created_at"]
-        unique_together = ("user", "question")  # Один ответ на вопрос
+        # Несколько попыток на пару (user, question); зачёт «решено» — если
+        # хотя бы одна попытка с is_correct=True (см. API solved_ever).
         indexes = [
             models.Index(fields=["user", "question"]),
             models.Index(fields=["is_correct"]),
@@ -78,7 +78,7 @@ class UserAnswerRadio(models.Model):
         super().save(*args, **kwargs)
 
 
-class UserAnswerCheckBox(models.Model):
+class UserAnswerCheckBox(UUIDPublicIdMixin, models.Model):
     """Модель для отслеживания ответов пользователя на checkbox-вопросы"""
 
     user = models.ForeignKey(
@@ -160,8 +160,10 @@ class UserAnswerCheckBox(models.Model):
             super().save(*args, **kwargs)
 
 
-class CodeSubmission(models.Model):
+class CodeSubmission(UUIDPublicIdMixin, models.Model):
     """Отправка решения пользователя"""
+
+    STATUS_COMPLETED = "completed"
 
     STATUS_CHOICES = [
         ("pending", _("В очереди")),
@@ -171,14 +173,6 @@ class CodeSubmission(models.Model):
         ("timeout", _("Превышено время")),
         ("memory_limit", _("Превышена память")),
     ]
-
-    # Уникальный идентификатор для отслеживания
-    submission_id = models.UUIDField(
-        default=uuid.uuid4,
-        editable=False,
-        unique=True,
-        verbose_name=_("ID отправки"),
-    )
 
     # Связи
     user = models.ForeignKey(
@@ -247,13 +241,13 @@ class CodeSubmission(models.Model):
         return f"{self.user} - {self.challenge} - {self.submitted_at}"
 
     def save(self, *args, **kwargs):
-        if self.status == "completed" and not self.completed_at:
+        if self.status == self.STATUS_COMPLETED and not self.completed_at:
             self.completed_at = timezone.now()
         super().save(*args, **kwargs)
 
     def is_successful(self):
         """Успешно ли решена задача"""
-        return self.status == "completed"
+        return self.status == self.STATUS_COMPLETED
 
     def get_score_earned(self):
         """Полученные баллы за решение"""
