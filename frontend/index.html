@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bervinov Academy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+          mono: ['JetBrains Mono', 'monospace'],
+        },
+        colors: {
+          ink: '#111827',
+          paper: '#FAFAFA',
+          violet: { 500: '#7C3AED', 600: '#6D28D9' },
+          flame: { 500: '#F97316', 600: '#EA580C' },
+        },
+        boxShadow: {
+          soft: '0 8px 24px -8px rgba(124, 58, 237, 0.18), 0 2px 6px -2px rgba(124, 58, 237, 0.08)',
+          glow: '0 16px 48px -12px rgba(124, 58, 237, 0.35), 0 8px 24px -8px rgba(249, 115, 22, 0.18)',
+          ring: '0 0 0 1px rgba(124, 58, 237, 0.10)',
+        },
+        keyframes: {
+          shimmer: {
+            '0%': { backgroundPosition: '-200% 0' },
+            '100%': { backgroundPosition: '200% 0' },
+          },
+          float: {
+            '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+            '50%': { transform: 'translateY(-12px) rotate(2deg)' },
+          },
+          pulseDot: {
+            '0%, 100%': { opacity: 1 },
+            '50%': { opacity: 0.4 },
+          },
+        },
+        animation: {
+          shimmer: 'shimmer 2.4s linear infinite',
+          float: 'float 6s ease-in-out infinite',
+          pulseDot: 'pulseDot 1.6s ease-in-out infinite',
+        },
+      },
+    },
+  };
+</script>
+<style>
+  html, body { background: #FAFAFA; color: #111827; font-family: 'Inter', system-ui, sans-serif; }
+  ::selection { background: rgba(124,58,237,0.18); color: #111827; }
+  .grad-text {
+    background: linear-gradient(90deg, #7C3AED 0%, #F97316 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .grad-bg { background: linear-gradient(135deg, #7C3AED 0%, #F97316 100%); }
+  .grad-bg-soft { background: linear-gradient(135deg, rgba(124,58,237,0.10) 0%, rgba(249,115,22,0.10) 100%); }
+  .grad-border {
+    background: linear-gradient(white, white) padding-box,
+                linear-gradient(135deg, #7C3AED, #F97316) border-box;
+    border: 1px solid transparent;
+  }
+  .mesh-bg {
+    background-color: #FAFAFA;
+    background-image:
+      radial-gradient(at 12% 8%, rgba(124,58,237,0.22) 0px, transparent 45%),
+      radial-gradient(at 88% 12%, rgba(249,115,22,0.18) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(124,58,237,0.10) 0px, transparent 55%);
+  }
+  .mesh-bg-dim {
+    background-color: #FAFAFA;
+    background-image:
+      radial-gradient(at 8% 0%, rgba(124,58,237,0.10) 0px, transparent 40%),
+      radial-gradient(at 100% 0%, rgba(249,115,22,0.08) 0px, transparent 40%);
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.18); border-radius: 999px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .btn-grad {
+    background: linear-gradient(90deg, #7C3AED, #F97316);
+    background-size: 200% 100%;
+    transition: background-position 600ms ease;
+  }
+  .btn-grad:hover { background-position: 100% 0; }
+  .btn-shimmer { position: relative; overflow: hidden; }
+  .btn-shimmer::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%);
+    transform: translateX(-100%);
+    transition: transform 700ms ease;
+  }
+  .btn-shimmer:hover::after { transform: translateX(100%); }
+  .glass {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+  }
+  .glass-dark {
+    background: rgba(17, 24, 39, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .code-bg {
+    background: #0F172A;
+    color: #E2E8F0;
+  }
+  .check-dot {
+    width: 16px; height: 16px; border-radius: 999px;
+    background: linear-gradient(135deg, #22C55E, #16A34A);
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
+  }
+  .cross-dot {
+    width: 16px; height: 16px; border-radius: 999px;
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12);
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+  .avatar-ring {
+    background: linear-gradient(135deg, #7C3AED, #F97316);
+    padding: 3px; border-radius: 999px;
+  }
+  input:focus, textarea:focus, button:focus { outline: none; }
+  .ring-grad:focus-within {
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.18);
+    border-color: #7C3AED;
+  }
+</style>
+</head>
+<body class="antialiased">
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+<script src="https://unpkg.com/framer-motion@11.18.2/dist/framer-motion.js"></script>
+<script src="https://unpkg.com/recharts@2.15.0/umd/Recharts.js"></script>
+
+<script type="text/babel" src="src/shared.jsx"></script>
+<script type="text/babel" src="src/landing.jsx"></script>
+<script type="text/babel" src="src/catalog.jsx"></script>
+<script type="text/babel" src="src/problem.jsx"></script>
+<script type="text/babel" src="src/profile.jsx"></script>
+<script type="text/babel" src="src/auth.jsx"></script>
+<script type="text/babel" src="src/app.jsx"></script>
+</body>
+</html>
