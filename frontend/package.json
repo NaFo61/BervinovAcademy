@@ -1,0 +1,11 @@
+{
+  "name": "bervinov-academy-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes serve@14.2.4 -l 3000 .",
+    "build": "node build-dist.mjs",
+    "preview": "npx --yes serve@14.2.4 -l 4173 dist"
+  }
+}

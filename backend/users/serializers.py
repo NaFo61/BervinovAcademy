@@ -120,6 +120,7 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
         access["email"] = user.email
         access["phone"] = user.phone
         access["role"] = user.role
+        access["public_id"] = str(user.public_id)
 
         return {"refresh": str(refresh), "access": str(access)}
 
@@ -130,7 +131,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            "id",
+            "public_id",
             "email",
             "phone",
             "first_name",
@@ -139,14 +140,14 @@ class UserSerializer(serializers.ModelSerializer):
             "avatar",
             "bio",
         )
-        read_only_fields = ("id", "role")
+        read_only_fields = ("public_id", "role")
 
 
 class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            "id",
+            "public_id",
             "first_name",
             "last_name",
             "role",
@@ -164,7 +165,7 @@ class MentorProfileSerializer(serializers.Serializer):
         if not obj.specialization:
             return None
         return {
-            "id": obj.specialization_id,
+            "public_id": obj.specialization.public_id,
             "type": obj.specialization.type,
             "title": obj.specialization.title,
         }
@@ -172,7 +173,7 @@ class MentorProfileSerializer(serializers.Serializer):
     def get_technologies(self, obj):
         return [
             {
-                "id": tech.id,
+                "public_id": tech.public_id,
                 "title": getattr(tech, "title", str(tech)),
             }
             for tech in obj.technology.all()
@@ -191,7 +192,7 @@ class UserPublicProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields: tuple[str, ...] = (
-            "id",
+            "public_id",
             "first_name",
             "last_name",
             "role",
@@ -202,7 +203,7 @@ class UserPublicProfileSerializer(serializers.ModelSerializer):
             "mentor_profile",
         )
         read_only_fields: tuple[str, ...] = (
-            "id",
+            "public_id",
             "role",
             "date_joined",
             "last_login",
@@ -220,7 +221,7 @@ class UserPrivateProfileSerializer(UserPublicProfileSerializer):
             "phone",
         )
         read_only_fields: tuple[str, ...] = (
-            "id",
+            "public_id",
             "role",
             "mentor_profile",
             "email",

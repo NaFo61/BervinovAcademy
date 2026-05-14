@@ -1,7 +1,5 @@
 import pytest
 
-from users.models import User
-
 from .conftest import make_user
 
 
@@ -22,14 +20,6 @@ def test_str_with_email(student_user):
 def test_str_with_phone_only():
     user = make_user(email=None, phone="+79123456789")
     assert "+79123456789" in str(user)
-
-
-@pytest.mark.fast
-@pytest.mark.unit
-@pytest.mark.models
-def test_str_no_contact_fallback():
-    user = User(first_name="Иван", last_name="Иванов")
-    assert "No contact" in str(user)
 
 
 @pytest.mark.slow

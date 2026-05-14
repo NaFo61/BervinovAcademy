@@ -1,5 +1,11 @@
 // LANDING page — hero + why + top courses + footer
 
+const Routes = window.Routes;
+const FM = window.FM;
+const I = window.I;
+const CourseCard = window.CourseCard;
+const COURSES = window.COURSES;
+
 function LandingPage({ navigate }) {
   return (
     <div data-screen-label="01 Landing" className="min-h-screen">
@@ -26,13 +32,13 @@ function Hero({ navigate }) {
           </M.div>
           <M.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.05 }}
             className="text-[40px] sm:text-[56px] lg:text-[64px] font-extrabold leading-[1.02] tracking-tight">
-            Учись у <span className="grad-text">Мирона</span>.<br/>
+            Учись <span className="grad-text">кодить</span>.<br/>
             Эффективно. Удобно.<br/>
             <span className="relative inline-block">
               По‑настоящему.
               <svg className="absolute -bottom-2 left-0 w-full" height="14" viewBox="0 0 320 14" fill="none" preserveAspectRatio="none">
                 <path d="M2 10 Q 80 2 160 7 T 318 6" stroke="url(#hg)" strokeWidth="3" strokeLinecap="round" fill="none"/>
-                <defs><linearGradient id="hg" x1="0" y1="0" x2="320" y2="0"><stop stopColor="#7C3AED"/><stop offset="1" stopColor="#F97316"/></linearGradient></defs>
+                <defs><linearGradient id="hg" x1="0" y1="0" x2="320" y2="0"><stop stopColor="#2563EB"/><stop offset="1" stopColor="#06B6D4"/></linearGradient></defs>
               </svg>
             </span>
           </M.h1>
@@ -44,7 +50,7 @@ function Hero({ navigate }) {
             className="mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <button onClick={() => navigate(Routes.AUTH)}
               className="btn-grad btn-shimmer h-14 px-7 rounded-2xl text-white font-semibold shadow-glow inline-flex items-center gap-2">
-              Начать учиться <I.ChevronRight className="w-5 h-5"/>
+              Создать аккаунт <I.ChevronRight className="w-5 h-5"/>
             </button>
             <button onClick={() => navigate(Routes.CATALOG)}
               className="h-14 px-6 rounded-2xl bg-white/70 backdrop-blur border border-black/[0.06] hover:border-violet-300 font-semibold inline-flex items-center gap-2 transition-colors">
@@ -55,7 +61,7 @@ function Hero({ navigate }) {
           <M.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5, duration: 0.6 }}
             className="mt-10 flex items-center gap-6">
             <div className="flex -space-x-2">
-              {['#7C3AED', '#F97316', '#EC4899', '#06B6D4', '#22C55E'].map((c, i) => (
+              {['#2563EB', '#06B6D4', '#0EA5E9', '#06B6D4', '#22C55E'].map((c, i) => (
                 <div key={i} className="w-9 h-9 rounded-full border-2 border-white flex items-center justify-center text-white text-[11px] font-bold"
                      style={{ background: `linear-gradient(135deg, ${c}, ${c}99)` }}>
                   {['АК','МС','ДП','ЕН','+'][i]}
@@ -88,7 +94,7 @@ function HeroLessonCard() {
     let raf;
     const start = performance.now();
     const tick = (t) => {
-      const dt = (t - start) / 8000;
+      const dt = (t - start) / 8000; // 8s loop
       const p = (dt % 1) * 100;
       setProgress(p);
       raf = requestAnimationFrame(tick);
@@ -97,12 +103,13 @@ function HeroLessonCard() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  // Spawn achievements periodically
   React.useEffect(() => {
     const pool = [
       { icon: '✅', text: 'Задача решена!', tint: '#22C55E' },
-      { icon: '🔥', text: 'Серия 7 дней', tint: '#F97316' },
-      { icon: '⚡', text: '+15 XP', tint: '#7C3AED' },
-      { icon: '🏆', text: 'Урок 3/12', tint: '#EAB308' },
+      { icon: '🔥', text: 'Серия 7 дней', tint: '#06B6D4' },
+      { icon: '⚡', text: '+15 XP', tint: '#2563EB' },
+      { icon: '🏆', text: 'Урок 3/12', tint: '#38BDF8' },
     ];
     let i = 0;
     let uid = 0;
@@ -122,7 +129,9 @@ function HeroLessonCard() {
       className="relative" style={{ perspective: 1200 }}>
       <div className="absolute -inset-6 -z-10 rounded-[40px] grad-bg-soft blur-2xl"/>
 
+      {/* main card */}
       <div className="relative bg-white rounded-3xl shadow-glow ring-1 ring-black/5 overflow-hidden">
+        {/* card top — lesson header */}
         <div className="grad-bg p-5 text-white relative overflow-hidden">
           <div className="absolute -top-12 -right-8 w-44 h-44 rounded-full bg-white/15 blur-2xl"/>
           <div className="flex items-center justify-between">
@@ -136,6 +145,7 @@ function HeroLessonCard() {
           <div className="mt-3 text-xl font-bold leading-tight">Декораторы: как работают на самом деле</div>
         </div>
 
+        {/* progress */}
         <div className="px-5 pt-4 pb-2">
           <div className="flex items-center justify-between text-[11px] uppercase tracking-widest text-ink/50 mb-2">
             <span>Прогресс урока</span><span className="font-mono text-ink/70">{Math.round(progress)}%</span>
@@ -145,6 +155,7 @@ function HeroLessonCard() {
           </div>
         </div>
 
+        {/* code preview */}
         <div className="mx-5 my-4 rounded-xl code-bg p-4 font-mono text-xs leading-relaxed">
           <div className="flex items-center gap-1.5 mb-3">
             <span className="w-2.5 h-2.5 rounded-full bg-rose-400/70"/>
@@ -160,6 +171,7 @@ function HeroLessonCard() {
           <div className="pl-4"><span className="text-violet-300">return</span> wrapper</div>
         </div>
 
+        {/* tasks row */}
         <div className="px-5 pb-5 space-y-2">
           {[
             { label: 'Прочитать материал', done: true },
@@ -176,10 +188,11 @@ function HeroLessonCard() {
           ))}
         </div>
 
+        {/* mentor strip */}
         <div className="border-t border-black/5 px-5 py-3 flex items-center gap-3 bg-paper">
-          <div className="avatar-ring"><div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-xs font-bold grad-text">МБ</div></div>
+          <div className="avatar-ring"><div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-xs font-bold grad-text">КР</div></div>
           <div className="flex-1">
-            <div className="text-xs font-semibold">Мирон Бервинов</div>
+            <div className="text-xs font-semibold">Ведущий ментор</div>
             <div className="text-[11px] text-ink/55 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulseDot"/> Ментор онлайн
             </div>
@@ -190,6 +203,7 @@ function HeroLessonCard() {
         </div>
       </div>
 
+      {/* floating achievements */}
       <div className="absolute inset-0 pointer-events-none">
         <FM.AnimatePresence>
           {achievements.map((a, idx) => (
@@ -226,17 +240,17 @@ function WhySection() {
     {
       title: 'Живая проверка кода',
       desc: 'Ментор открывает твоё решение, прогоняет его, оставляет комментарии прямо в строках. Не «принято», а «смотри, здесь можно проще».',
-      Icon: I.Code, tint: '#7C3AED',
+      Icon: I.Code, tint: '#2563EB',
     },
     {
       title: 'Объясняю просто',
       desc: 'Без академического жаргона. Метафоры, схемы и примеры из реальных проектов — пока не щёлкнет.',
-      Icon: I.Brain, tint: '#F97316',
+      Icon: I.Brain, tint: '#06B6D4',
     },
     {
       title: 'Задачи из реальных проектов',
       desc: 'Не «отсортируй массив N-м способом». Парсер, очередь задач, мини-CRM — то, что встретишь на работе.',
-      Icon: I.Layers, tint: '#EC4899',
+      Icon: I.Layers, tint: '#0EA5E9',
     },
     {
       title: 'Личный чат с ментором',
@@ -273,6 +287,7 @@ function WhySection() {
               </div>
               <h3 className="font-bold text-lg leading-tight">{it.title}</h3>
               <p className="text-sm text-ink/60 mt-2 leading-relaxed">{it.desc}</p>
+              <div className="mt-5 inline-flex items-center gap-1 text-xs font-semibold text-violet-600 opacity-0 group-hover:opacity-100">Подробнее <I.ChevronRight className="w-3.5 h-3.5"/></div>
             </M.div>
           ))}
         </div>
@@ -310,6 +325,7 @@ function TopCourses({ navigate }) {
 }
 
 function CTABand({ navigate }) {
+  const M = FM.motion;
   return (
     <section className="relative bg-white">
       <div className="max-w-7xl mx-auto px-5 sm:px-8 pb-24">
@@ -322,7 +338,7 @@ function CTABand({ navigate }) {
               <h3 className="text-3xl sm:text-4xl font-extrabold leading-tight max-w-2xl">
                 Первый урок и встреча с ментором — бесплатно.
               </h3>
-              <p className="opacity-85 mt-3 max-w-xl">Зарегистрируйся, выбери курс и через 24 часа получишь персональный план обучения от Мирона.</p>
+              <p className="opacity-85 mt-3 max-w-xl">Зарегистрируйся, выбери курс и через 24 часа получишь персональный план обучения от куратора.</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <button onClick={() => navigate(Routes.AUTH)} className="h-14 px-7 rounded-2xl bg-white text-violet-600 font-bold inline-flex items-center gap-2 hover:scale-[1.02] transition-transform">

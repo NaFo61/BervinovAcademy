@@ -17,15 +17,17 @@
           mono: ['JetBrains Mono', 'monospace'],
         },
         colors: {
-          ink: '#111827',
-          paper: '#FAFAFA',
-          violet: { 500: '#7C3AED', 600: '#6D28D9' },
-          flame: { 500: '#F97316', 600: '#EA580C' },
+          ink: '#0B1226',          /* a touch cooler than 111827 */
+          paper: '#F6F8FC',        /* cool paper white */
+          /* Reuse "violet" token name for the primary so existing classes flip cleanly */
+          violet: { 500: '#3B82F6', 600: '#2563EB' },   /* blue 500/600 */
+          /* Reuse "flame" token for the secondary accent — now cyan */
+          flame:  { 500: '#06B6D4', 600: '#0891B2' },   /* cyan 500/600 */
         },
         boxShadow: {
-          soft: '0 8px 24px -8px rgba(124, 58, 237, 0.18), 0 2px 6px -2px rgba(124, 58, 237, 0.08)',
-          glow: '0 16px 48px -12px rgba(124, 58, 237, 0.35), 0 8px 24px -8px rgba(249, 115, 22, 0.18)',
-          ring: '0 0 0 1px rgba(124, 58, 237, 0.10)',
+          soft: '0 8px 24px -8px rgba(37, 99, 235, 0.20), 0 2px 6px -2px rgba(37, 99, 235, 0.08)',
+          glow: '0 16px 48px -12px rgba(37, 99, 235, 0.40), 0 8px 24px -8px rgba(6, 182, 212, 0.22)',
+          ring: '0 0 0 1px rgba(37, 99, 235, 0.10)',
         },
         keyframes: {
           shimmer: {
@@ -40,60 +42,143 @@
             '0%, 100%': { opacity: 1 },
             '50%': { opacity: 0.4 },
           },
+          drift: {
+            '0%, 100%': { transform: 'translate3d(0,0,0) scale(1)' },
+            '33%':      { transform: 'translate3d(40px,-30px,0) scale(1.06)' },
+            '66%':      { transform: 'translate3d(-30px,20px,0) scale(0.94)' },
+          },
+          spinSlow: {
+            '0%': { transform: 'rotate(0deg)' },
+            '100%': { transform: 'rotate(360deg)' },
+          },
         },
         animation: {
           shimmer: 'shimmer 2.4s linear infinite',
           float: 'float 6s ease-in-out infinite',
           pulseDot: 'pulseDot 1.6s ease-in-out infinite',
+          drift: 'drift 22s ease-in-out infinite',
+          spinSlow: 'spinSlow 60s linear infinite',
         },
       },
     },
   };
 </script>
 <style>
-  html, body { background: #FAFAFA; color: #111827; font-family: 'Inter', system-ui, sans-serif; }
-  ::selection { background: rgba(124,58,237,0.18); color: #111827; }
+  :root {
+    --c-1: #1D4ED8;   /* blue 700 — deep */
+    --c-2: #2563EB;   /* blue 600 — primary */
+    --c-3: #0EA5E9;   /* sky 500 */
+    --c-4: #06B6D4;   /* cyan 500 */
+    --c-5: #22D3EE;   /* cyan 400 — bright */
+    --paper: #F6F8FC;
+    --ink: #0B1226;
+  }
+  html, body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  ::selection { background: rgba(37, 99, 235, 0.18); color: var(--ink); }
+
+  /* ---- Primary surfaces & gradients ---- */
   .grad-text {
-    background: linear-gradient(90deg, #7C3AED 0%, #F97316 100%);
+    background: linear-gradient(95deg, var(--c-1) 0%, var(--c-2) 40%, var(--c-3) 70%, var(--c-5) 100%);
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }
-  .grad-bg { background: linear-gradient(135deg, #7C3AED 0%, #F97316 100%); }
-  .grad-bg-soft { background: linear-gradient(135deg, rgba(124,58,237,0.10) 0%, rgba(249,115,22,0.10) 100%); }
+  .grad-bg {
+    background: linear-gradient(135deg, var(--c-1) 0%, var(--c-2) 35%, var(--c-3) 75%, var(--c-5) 100%);
+  }
+  .grad-bg-soft {
+    background: linear-gradient(135deg, rgba(37,99,235,0.10) 0%, rgba(14,165,233,0.08) 50%, rgba(34,211,238,0.10) 100%);
+  }
   .grad-border {
     background: linear-gradient(white, white) padding-box,
-                linear-gradient(135deg, #7C3AED, #F97316) border-box;
+                linear-gradient(135deg, var(--c-2), var(--c-4)) border-box;
     border: 1px solid transparent;
   }
+
+  /* ---- Rich page backgrounds ---- */
+  /* HERO mesh: layered radial blobs + dot grid + faint diagonal lines */
   .mesh-bg {
-    background-color: #FAFAFA;
+    position: relative;
+    background-color: var(--paper);
     background-image:
-      radial-gradient(at 12% 8%, rgba(124,58,237,0.22) 0px, transparent 45%),
-      radial-gradient(at 88% 12%, rgba(249,115,22,0.18) 0px, transparent 50%),
-      radial-gradient(at 50% 100%, rgba(124,58,237,0.10) 0px, transparent 55%);
+      radial-gradient(at 14% 10%, rgba(37,99,235,0.30) 0px, transparent 45%),
+      radial-gradient(at 88% 16%, rgba(34,211,238,0.28) 0px, transparent 48%),
+      radial-gradient(at 70% 90%, rgba(14,165,233,0.22) 0px, transparent 55%),
+      radial-gradient(at 8% 88%, rgba(99,102,241,0.18) 0px, transparent 50%);
   }
+  .mesh-bg::before {
+    /* fine dot grid */
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(11,18,38,0.10) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: linear-gradient(180deg, rgba(0,0,0,0.7), rgba(0,0,0,0.25) 60%, transparent);
+    -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,0.7), rgba(0,0,0,0.25) 60%, transparent);
+    opacity: 0.6;
+  }
+  .mesh-bg::after {
+    /* faint diagonal lines */
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background-image: repeating-linear-gradient(135deg, rgba(37,99,235,0.05) 0 2px, transparent 2px 80px);
+    mask-image: radial-gradient(ellipse at 50% 30%, black 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at 50% 30%, black 30%, transparent 75%);
+  }
+
   .mesh-bg-dim {
-    background-color: #FAFAFA;
+    position: relative;
+    background-color: var(--paper);
     background-image:
-      radial-gradient(at 8% 0%, rgba(124,58,237,0.10) 0px, transparent 40%),
-      radial-gradient(at 100% 0%, rgba(249,115,22,0.08) 0px, transparent 40%);
+      radial-gradient(at 8% 0%, rgba(37,99,235,0.14) 0px, transparent 45%),
+      radial-gradient(at 100% 0%, rgba(34,211,238,0.12) 0px, transparent 45%);
   }
+  .mesh-bg-dim::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(11,18,38,0.07) 1px, transparent 1px);
+    background-size: 24px 24px;
+    mask-image: linear-gradient(180deg, rgba(0,0,0,0.55), transparent 70%);
+    -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,0.55), transparent 70%);
+  }
+
+  /* large slow-drifting aurora blobs (placed into FloatingShapes) */
+  .aurora {
+    position: absolute; border-radius: 50%; filter: blur(48px);
+    mix-blend-mode: multiply;
+    will-change: transform;
+    animation: drift 24s ease-in-out infinite;
+  }
+  .aurora-conic {
+    position: absolute; inset: -20%;
+    background: conic-gradient(from 90deg at 50% 50%,
+      rgba(37,99,235,0.10), rgba(14,165,233,0.04),
+      rgba(34,211,238,0.10), rgba(37,99,235,0.04),
+      rgba(37,99,235,0.10));
+    filter: blur(60px);
+    animation: spinSlow 90s linear infinite;
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  /* ---- UI atoms ---- */
   .scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
-  .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.18); border-radius: 999px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(37,99,235,0.20); border-radius: 999px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+
   .btn-grad {
-    background: linear-gradient(90deg, #7C3AED, #F97316);
+    background: linear-gradient(90deg, var(--c-1) 0%, var(--c-2) 35%, var(--c-3) 70%, var(--c-4) 100%);
     background-size: 200% 100%;
-    transition: background-position 600ms ease;
+    transition: background-position 700ms ease;
   }
   .btn-grad:hover { background-position: 100% 0; }
   .btn-shimmer { position: relative; overflow: hidden; }
   .btn-shimmer::after {
     content: ''; position: absolute; inset: 0;
-    background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%);
+    background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.40) 50%, transparent 70%);
     transform: translateX(-100%);
     transition: transform 700ms ease;
   }
   .btn-shimmer:hover::after { transform: translateX(100%); }
+
   .glass {
     background: rgba(255, 255, 255, 0.72);
     backdrop-filter: blur(20px) saturate(180%);
@@ -101,14 +186,20 @@
     border: 1px solid rgba(255, 255, 255, 0.6);
   }
   .glass-dark {
-    background: rgba(17, 24, 39, 0.55);
+    background: rgba(11, 18, 38, 0.55);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
+
   .code-bg {
-    background: #0F172A;
+    background: #0B1226;
     color: #E2E8F0;
   }
+  .code-bg ::selection {
+    background: rgba(56, 189, 248, 0.35);
+    color: #f1f5f9;
+  }
+
   .check-dot {
     width: 16px; height: 16px; border-radius: 999px;
     background: linear-gradient(135deg, #22C55E, #16A34A);
@@ -119,21 +210,30 @@
     background: linear-gradient(135deg, #EF4444, #DC2626);
     box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12);
   }
+
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { scrollbar-width: none; }
+
   .avatar-ring {
-    background: linear-gradient(135deg, #7C3AED, #F97316);
+    background: linear-gradient(135deg, var(--c-1), var(--c-3), var(--c-5));
     padding: 3px; border-radius: 999px;
   }
+
   input:focus, textarea:focus, button:focus { outline: none; }
   .ring-grad:focus-within {
-    box-shadow: 0 0 0 3px rgba(124,58,237,0.18);
-    border-color: #7C3AED;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+    border-color: var(--c-2);
   }
 </style>
 </head>
 <body class="antialiased">
 <div id="root"></div>
+
+<!--
+  Локальная разработка (npm run dev → serve на :3000): запросы /api/* иначе уходят на статик-сервер.
+  Раскомментируй строку ниже, если Django слушает http://127.0.0.1:8000 (в settings.py уже разрешён CORS для localhost:3000).
+-->
+<!-- <script>window.__API_BASE__ = 'http://127.0.0.1:8000';</script> -->
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>

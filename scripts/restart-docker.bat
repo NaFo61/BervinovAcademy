@@ -23,7 +23,7 @@ if %errorlevel% neq 0 (
 :: Создание директории для логов
 if not exist logs mkdir logs
 
-echo [1/7] Останавливаем контейнеры...
+echo [1/8] Останавливаем контейнеры...
 docker compose down
 if %errorlevel% neq 0 (
     echo %RED%[ERROR] Ошибка при остановке контейнеров%NC%
@@ -36,7 +36,7 @@ echo.
 echo Ожидание 3 секунды...
 timeout /t 3 /nobreak >nul
 
-echo [2/7] Удаляем volumes...
+echo [2/8] Удаляем volumes...
 docker compose down -v
 if %errorlevel% neq 0 (
     echo %RED%[ERROR] Ошибка при удалении volumes%NC%
@@ -49,7 +49,7 @@ echo.
 echo Ожидание 5 секунд...
 timeout /t 5 /nobreak >nul
 
-echo [3/7] Удаляем старые образы (опционально)...
+echo [3/8] Удаляем старые образы (опционально)...
 docker image prune -f
 echo %GREEN%[OK] Старые образы удалены%NC%
 
@@ -57,7 +57,7 @@ echo.
 echo Ожидание 2 секунды...
 timeout /t 2 /nobreak >nul
 
-echo [4/7] Собираем и запускаем контейнеры...
+echo [4/8] Собираем и запускаем контейнеры...
 docker compose up --build -d
 if %errorlevel% neq 0 (
     echo %RED%[ERROR] Ошибка при запуске контейнеров%NC%
@@ -67,7 +67,7 @@ if %errorlevel% neq 0 (
 echo %GREEN%[OK] Контейнеры собраны и запущены%NC%
 
 echo.
-echo [5/7] Ожидание запуска сервисов 15 секунд...
+echo [5/8] Ожидание запуска сервисов 15 секунд...
 timeout /t 15 /nobreak >nul
 
 echo.
@@ -75,7 +75,18 @@ echo Текущее состояние контейнеров:
 docker compose ps
 
 echo.
-echo [6/7] Запуск всех тестов...
+echo [6/8] Наполнение БД (seed_data)...
+echo ----------------------------------------
+docker compose exec -T backend python manage.py seed_data --clear
+if %errorlevel% neq 0 (
+    echo %RED%[ERROR] seed_data завершился с ошибкой%NC%
+    pause
+    exit /b 1
+)
+echo %GREEN%[OK] seed_data выполнен%NC%
+
+echo.
+echo [7/8] Запуск всех тестов...
 echo ----------------------------------------
 
 echo.
@@ -117,13 +128,13 @@ if %errorlevel% equ 0 (
 
 echo.
 echo ----------------------------------------
-echo [7/7] Сохраняем логи в файлы...
+echo [8/8] Сохраняем логи в файлы...
 echo ----------------------------------------
 
 :: Сохраняем логи всех сервисов
 setlocal enabledelayedexpansion
 
-for %%s in (db redis backend celery celery-beat) do (
+for %%s in (db redis backend celery celery-beat frontend) do (
     docker compose ps %%s 2>nul | findstr /C:"Up" >nul
     if !errorlevel! equ 0 (
         docker compose logs %%s > logs\%%s.log 2>&1
@@ -140,6 +151,7 @@ echo   📊 Краткий отчет о тестировании
 echo ========================================
 echo.
 echo %BLUE%[INFO] Результаты тестов:%NC%
+echo   ✓ seed_data: наполнение БД после чистого volume
 echo   ✓ Все тесты: проверка всего функционала
 echo   ✓ Миграции: проверка целостности БД
 echo   ✓ Staticfiles: проверка статических файлов

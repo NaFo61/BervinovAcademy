@@ -20,10 +20,10 @@ class CustomUserChangeForm(UserChangeForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["password"].help_text = _(
-            "Raw passwords are not stored, so there is no "
-            "way to see this user's password, "
-            "but you can change the password using "
-            '<a href="../password/"><strong>this form</strong></a>.'
+            "Пароли не хранятся в открытом виде, поэтому невозможно "
+            "увидеть пароль этого пользователя, "
+            "но вы можете изменить пароль, используя "
+            '<a href="../password/"><strong>эту форму</strong></a>.'
         )
 
 
@@ -47,13 +47,13 @@ class CustomUserAdmin(ModelAdmin):
     icon = "person"
 
     fieldsets = (
-        (_("Main information"), {"fields": ("email", "phone", "password")}),
+        (_("Основная информация"), {"fields": ("email", "phone", "password")}),
         (
-            _("Personal information"),
+            _("Личная информация"),
             {"fields": ("first_name", "last_name", "avatar", "bio")},
         ),
         (
-            _("Permissions"),
+            _("Права доступа"),
             {
                 "fields": (
                     "role",
@@ -61,7 +61,7 @@ class CustomUserAdmin(ModelAdmin):
                 )
             },
         ),
-        (_("System information"), {"fields": ("last_login", "date_joined")}),
+        (_("Системная информация"), {"fields": ("last_login", "date_joined")}),
     )
 
     add_fieldsets = (
@@ -89,7 +89,7 @@ class CustomUserAdmin(ModelAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
         """
-        Use special form during user creation
+        Использовать специальную форму при создании пользователя
         """
         defaults = {}
         if obj is None:
@@ -111,7 +111,7 @@ class CustomUserAdmin(ModelAdmin):
     def user_change_password(self, request, id, form_url=""):
         user = self.get_object(request, id)
         if not user:
-            messages.error(request, _("User not found."))
+            messages.error(request, _("Пользователь не найден."))
             return redirect("..")
 
         if request.method == "POST":
@@ -119,18 +119,16 @@ class CustomUserAdmin(ModelAdmin):
             if form.is_valid():
                 form.save()
                 update_session_auth_hash(request, user)
-                messages.success(
-                    request, _("Password successfully changed ✅")
-                )
+                messages.success(request, _("Пароль успешно изменен ✅"))
                 return redirect(reverse("admin:users_user_changelist"))
             else:
-                messages.error(request, _("Error while changing password."))
+                messages.error(request, _("Ошибка при изменении пароля."))
         else:
             form = AdminPasswordChangeForm(user)
 
         context = {
             **self.admin_site.each_context(request),
-            "title": _("Change password"),
+            "title": _("Смена пароля"),
             "form": form,
             "user": user,
         }
@@ -148,7 +146,7 @@ class SpecializationAdmin(ModelAdmin):
     )
     list_filter = ("is_active",)
 
-    @admin.display(description=_("Title"), ordering="title")
+    @admin.display(description=_("Название"), ordering="title")
     def display_title(self, obj):
         lang = getattr(self, "_current_language", "en")
         if lang == "ru":
@@ -166,7 +164,7 @@ class SpecializationAdmin(ModelAdmin):
         if obj is None:
             return (
                 (
-                    _("Create specialization"),
+                    _("Создание специализации"),
                     {"fields": ["title", "description", "is_active"]},
                 ),
             )
@@ -179,12 +177,12 @@ class SpecializationAdmin(ModelAdmin):
         else:
             main_fields = ["is_active", "title_en", "description_en"]
 
-        main_title = _("Main information")
+        main_title = _("Основная информация")
 
         fieldsets = (
             (main_title, {"fields": main_fields}),
             (
-                _("All language versions (editing)"),
+                _("Все языковые версии (редактирование)"),
                 {
                     "fields": [
                         "title",
@@ -196,7 +194,7 @@ class SpecializationAdmin(ModelAdmin):
                     ],
                     "classes": ("collapse",),
                     "description": _(
-                        "You can edit all language versions here."
+                        "Здесь вы можете отредактировать все языковые версии."
                     ),
                 },
             ),
@@ -228,7 +226,7 @@ class StudentAdmin(ModelAdmin):
     ordering = ("-user__date_joined",)
     icon = "graduation-cap"
 
-    @admin.display(description=_("Full name"))
+    @admin.display(description=_("Полное имя"))
     def user_full_name(self, obj):
         return f"{obj.user.first_name} {obj.user.last_name}"
 
@@ -236,11 +234,11 @@ class StudentAdmin(ModelAdmin):
     def user_email(self, obj):
         return obj.user.email
 
-    @admin.display(description=_("Phone"))
+    @admin.display(description=_("Телефон"))
     def user_phone(self, obj):
         return obj.user.phone
 
-    @admin.display(description=_("Data joined"))
+    @admin.display(description=_("Дата регистрации"))
     def date_joined(self, obj):
         return obj.user.date_joined
 
@@ -277,7 +275,7 @@ class MentorAdmin(ModelAdmin):
 
     fieldsets = (
         (
-            _("Main information"),
+            _("Основная информация"),
             {
                 "fields": (
                     "user",
@@ -289,7 +287,7 @@ class MentorAdmin(ModelAdmin):
         ),
     )
 
-    @admin.display(description=_("Full name"))
+    @admin.display(description=_("Полное имя"))
     def user_full_name(self, obj):
         return f"{obj.user.first_name} {obj.user.last_name}"
 
@@ -297,17 +295,17 @@ class MentorAdmin(ModelAdmin):
     def user_email(self, obj):
         return obj.user.email
 
-    @admin.display(description=_("Phone"))
+    @admin.display(description=_("Телефон"))
     def user_phone(self, obj):
         return obj.user.phone
 
-    @admin.display(description=_("Specialization"))
+    @admin.display(description=_("Специализация"))
     def specialization_display(self, obj):
         if obj.specialization:
             return f"{obj.specialization.type}: {obj.specialization.title}"
         return "—"
 
-    @admin.display(description=_("Technologies"))
+    @admin.display(description=_("Технологии"))
     def technologies_list(self, obj):
         technologies = obj.technology.all()
         if not technologies:

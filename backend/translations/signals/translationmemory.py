@@ -1,6 +1,7 @@
 import logging
 
 from django.apps import apps
+from django.db import DatabaseError
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -60,8 +61,18 @@ def apply_translation_to_model(
             f"Нашёл объект по {found_field}: {obj} -> обновляю "
             f"{translated_field} = {instance.target_text!r}"
         )
-        setattr(obj, translated_field, instance.target_text)
-        obj.save(update_fields=[translated_field])
+        try:
+            setattr(obj, translated_field, instance.target_text)
+            obj.save(update_fields=[translated_field])
+        except DatabaseError as e:
+            # При сидинге объекты могут быть удалены до применения перевода.
+            logger.warning(
+                "Не удалось применить перевод к объекту %s(id=%s): %s",
+                model_class.__name__,
+                getattr(obj, "id", None),
+                e,
+            )
+            continue
     logger.info(
         f"Перевод применён к {objs.count()} объектам {model_class.__name__}"
     )

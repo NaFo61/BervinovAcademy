@@ -1,7 +1,14 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .viewsets import CourseViewSet, LessonTheoryViewSet, ModuleViewSet
+from .viewsets import (
+    CodingChallengeViewSet,
+    CourseViewSet,
+    LessonCheckBoxQuestionViewSet,
+    LessonRadioQuestionViewSet,
+    LessonTheoryViewSet,
+    ModuleViewSet,
+)
 
 router = DefaultRouter()
 router.register(r"courses", CourseViewSet, basename="courses")
@@ -11,6 +18,17 @@ router.register(
     LessonTheoryViewSet,
     basename="lessons-theory",
 )
+router.register(
+    r"lessons-radio",
+    LessonRadioQuestionViewSet,
+    basename="lessons-radio",
+)
+router.register(
+    r"lessons-checkbox",
+    LessonCheckBoxQuestionViewSet,
+    basename="lessons-checkbox",
+)
+router.register(r"challenges", CodingChallengeViewSet, basename="challenges")
 
 app_name = "content"
 

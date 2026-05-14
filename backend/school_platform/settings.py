@@ -1,4 +1,5 @@
 from datetime import timedelta
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
+    "corsheaders",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -44,6 +46,8 @@ INSTALLED_APPS = [
     "communication",
     "translations",
     "fixture",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
 ]
 UNFOLD = {
     "SHOW_LANGUAGES": True,
@@ -63,7 +67,7 @@ UNFOLD = {
             },
         ]
     },
-    "SITE_HEADER": _("Bervinov Academy"),
+    "SITE_HEADER": _("Академия Бервинова"),
     "SITE_ICON": {
         "light": lambda request: static("img/logo.ico"),
         "dark": lambda request: static("img/logo.ico"),
@@ -83,78 +87,120 @@ UNFOLD = {
         "show_navigation": True,
         "navigation": [
             {
-                "title": _("Dashboard"),
+                "title": _("Главная"),
                 "separator": True,
                 "collapsible": False,
                 "items": [
                     {
-                        "title": _("Dashboard"),
+                        "title": _("Главная панель"),
                         "icon": "dashboard",
                         "link": reverse_lazy("admin:index"),
                     },
                 ],
             },
             {
-                "title": _("Users"),
+                "title": _("Пользователи"),
                 "separator": True,
                 "collapsible": True,
                 "items": [
                     {
-                        "title": _("Users"),
+                        "title": _("Пользователи"),
                         "icon": "person",
                         "link": "/admin/users/user/",
                     },
                     {
-                        "title": _("Mentors"),
+                        "title": _("Наставники"),
                         "icon": "person",
                         "link": "/admin/users/mentor/",
                     },
                     {
-                        "title": _("Students"),
+                        "title": _("Студенты"),
                         "icon": "elderly_woman",
                         "link": "/admin/users/student/",
                     },
                     {
-                        "title": _("Specialization"),
+                        "title": _("Специализации"),
                         "icon": "people",
                         "link": "/admin/users/specialization/",
                     },
                 ],
             },
             {
-                "title": _("Education"),
+                "title": _("Обучение"),
                 "separator": True,
                 "collapsible": True,
                 "items": [
                     {
-                        "title": _("Courses"),
+                        "title": _("Курсы"),
                         "icon": "school",
                         "link": "/admin/content/course/",
                     },
                     {
-                        "title": _("Modules"),
+                        "title": _("Модули"),
                         "icon": "list_alt",
                         "link": "/admin/content/module/",
                     },
                     {
-                        "title": _("Lessons"),
+                        "title": _("Теоретические уроки"),
                         "icon": "article",
                         "link": "/admin/content/lessontheory/",
                     },
                     {
-                        "title": _("Technologies"),
+                        "title": _("Вопросы с выбором одного ответа"),
+                        "icon": "radio_button_checked",
+                        "link": "/admin/content/lessonradioquestion/",
+                    },
+                    {
+                        "title": _("Вопросы с выбором нескольких ответов"),
+                        "icon": "check_box",
+                        "link": "/admin/content/lessoncheckboxquestion/",
+                    },
+                    {
+                        "title": _("Задачи"),
+                        "icon": "code",
+                        "link": "/admin/content/codingchallenge/",
+                    },
+                    {
+                        "title": _("Тестовые случаи"),
+                        "icon": "fact_check",
+                        "link": "/admin/content/testcase/",
+                    },
+                    {
+                        "title": _("Технологии"),
                         "icon": "science",
                         "link": "/admin/content/technology/",
                     },
                 ],
             },
             {
-                "title": _("Localization"),
+                "title": _("Прогресс"),
                 "separator": True,
                 "collapsible": True,
                 "items": [
                     {
-                        "title": _("Translation Memory"),
+                        "title": _("Ответы на radio-вопросы"),
+                        "icon": "radio_button_checked",
+                        "link": "/admin/progress/useranswerradio/",
+                    },
+                    {
+                        "title": _("Ответы на checkbox-вопросы"),
+                        "icon": "check_box",
+                        "link": "/admin/progress/useranswercheckbox/",
+                    },
+                    {
+                        "title": _("Отправки решений"),
+                        "icon": "terminal",
+                        "link": "/admin/progress/codesubmission/",
+                    },
+                ],
+            },
+            {
+                "title": _("Локализация"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Память переводов"),
                         "icon": "language",
                         "link": "/admin/translations/translationmemory/",
                     },
@@ -169,6 +215,7 @@ UNFOLD = {
 AUTH_USER_MODEL = "users.User"
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -177,6 +224,21 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
 ]
 
 ROOT_URLCONF = "school_platform.urls"
@@ -214,34 +276,18 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS: list[dict[str, Any]] = [
     # {
-    #     "NAME": "django.contrib.auth."
-    #     "password_validation.UserAttributeSimilarityValidator",
-    # },
-    # {
-    #     "NAME": "django.contrib.auth."
-    #     "password_validation.MinimumLengthValidator",
-    # },
-    # {
-    #     "NAME": "django.contrib.auth."
-    #     "password_validation.CommonPasswordValidator",
-    # },
-    # {
-    #     "NAME": "django.contrib.auth."
-    #     "password_validation.NumericPasswordValidator",
-    # },
-    # {
     #     "NAME": "users.validators.CustomPasswordValidator",
     # },
 ]
 
-LANGUAGE_CODE = "ru-ru"
+LANGUAGE_CODE = "ru"
 TIME_ZONE = "Europe/Moscow"
 USE_I18N = True
 USE_TZ = True
 
 LANGUAGES = (
-    ("en", _("English")),
-    ("ru", _("Russian")),
+    ("en", _("Английский")),
+    ("ru", _("Русский")),
 )
 
 LOCALE_PATHS = [
@@ -268,10 +314,87 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Europe/Moscow"
 
-try:
-    from school_platform.local_settings import *  # noqa: F403, F401
-except ImportError:
-    pass
+# Kafka (опционально: пустой KAFKA_BOOTSTRAP_SERVERS — не публикуем)
+KAFKA_BOOTSTRAP_SERVERS = config("KAFKA_BOOTSTRAP_SERVERS", default="").strip()
+KAFKA_TOPIC_CODE_SUBMISSIONS = config(
+    "KAFKA_TOPIC", default="code-submissions"
+).strip()
+KAFKA_TOPIC_CODE_RESULTS = config(
+    "KAFKA_TOPIC_CODE_RESULTS", default="code-submission-results"
+).strip()
+KAFKA_GROUP_CODE_RESULTS = config(
+    "KAFKA_GROUP_CODE_RESULTS", default="django-code-submission-results"
+).strip()
+KAFKA_RESULTS_AUTO_OFFSET_RESET = config(
+    "KAFKA_RESULTS_AUTO_OFFSET_RESET", default="earliest"
+).strip()
+
+# Логирование (уровень: DEBUG, INFO, WARNING, ERROR)
+_LOG_LEVEL_RAW = config("DJANGO_LOG_LEVEL", default="INFO").upper()
+DJANGO_LOG_LEVEL = getattr(logging, _LOG_LEVEL_RAW, logging.INFO)
+
+LOGGING: dict[str, Any] = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "%(asctime)s %(levelname)s [%(name)s] %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": DJANGO_LOG_LEVEL,
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": DJANGO_LOG_LEVEL,
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "django.server": {
+            "handlers": ["console"],
+            "level": DJANGO_LOG_LEVEL,
+            "propagate": False,
+        },
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "progress": {
+            "handlers": ["console"],
+            "level": DJANGO_LOG_LEVEL,
+            "propagate": False,
+        },
+        "translations": {
+            "handlers": ["console"],
+            "level": DJANGO_LOG_LEVEL,
+            "propagate": False,
+        },
+        "users": {
+            "handlers": ["console"],
+            "level": DJANGO_LOG_LEVEL,
+            "propagate": False,
+        },
+        "content": {
+            "handlers": ["console"],
+            "level": DJANGO_LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+}
 
 # REST Framework settings
 REST_FRAMEWORK = {
@@ -289,6 +412,29 @@ REST_FRAMEWORK = {
         "register": "25/min",
         "token_refresh": "20/min",
     },
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+SPECTACULAR_SETTINGS = {
+    "TITLE": _("Академия Бервинова API"),
+    "DESCRIPTION": _("API для онлайн-школы Академия Бервинова"),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
+    "COMPONENT_SPLIT_REQUEST": True,
+    "AUTHENTICATION_WHITELIST": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+    "SECURITY": [
+        {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+            }
+        }
+    ],
 }
 
 # JWT settings
@@ -300,12 +446,11 @@ SIMPLE_JWT = {
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
     "AUTH_HEADER_TYPES": ("Bearer",),
-    "USER_ID_FIELD": "id",
+    "USER_ID_FIELD": "public_id",
     "USER_ID_CLAIM": "user_id",
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
     "TOKEN_TYPE_CLAIM": "token_type",
     "JTI_CLAIM": "jti",
-    # Custom payload
     "CUSTOM_PAYLOAD": {
         "email": "email",
         "phone": "phone",
@@ -314,3 +459,12 @@ SIMPLE_JWT = {
         "last_name": "last_name",
     },
 }
+
+MODELTRANSLATION_AUTO_POPULATE = False
+MODELTRANSLATION_GOOGLE_TRANSLATE_API_KEY = None
+MODELTRANSLATION_TRANSLATION_FILES = ()
+
+try:
+    from school_platform.local_settings import *  # noqa: F403, F401
+except ImportError:
+    pass

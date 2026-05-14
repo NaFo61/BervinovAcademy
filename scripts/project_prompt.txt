@@ -1,0 +1,828 @@
+================================================================================
+КОНТЕКСТ РЕПОЗИТОРИЯ (автогенерация для LLM)
+Bervinov Academy
+================================================================================
+
+## ДЛЯ МОДЕЛИ (как использовать этот файл)
+
+  • Назначение: одноразовый снимок структуры и ключевых точек входа; не замена чтению кода.
+  • Источник истины: файлы в репозитории; при конфликте доверять коду, не этому тексту.
+  • Языки: интерфейс и комментарии часто на русском; имена в коде и API — латиница.
+  • Репозиторий: монолит — `backend/` (Django), `frontend/` (React + Vite), `nginx/` (прокси в Docker).
+  • Обновление: перегенерировать командой `python scripts/generate-prompt.py`.
+
+## ОБЗОР ПРОЕКТА
+
+  Название: Bervinov Academy
+  Версия (pyproject): 0.1.0
+  Описание: образовательная платформа (курсы, уроки, менторство, прогресс, подписки); бэкенд REST на Django.
+  Тип: fullstack — Django REST + SPA на React.
+  Сгенерировано (UTC): 2026-05-10T21:45:11Z
+
+## КАК СВЯЗАНЫ ЧАСТИ (поток запросов)
+
+  Разработка (локально):
+    1) Backend: `python manage.py runserver` из каталога `backend/` (порт 8000 по умолчанию).
+    2) Frontend: `npm run dev` в `frontend/` — Vite на порту 3000; в `vite.config` прокси `/api` → backend.
+
+  Production (Docker / nginx):
+    Браузер → nginx (порт 80) → статика SPA из `/`; пути `/api/`, `/admin/`, `/static/`, `/media/` проксируются на контейнер backend.
+
+  Схема (упрощённо):
+    [клиент] --HTTP--> [nginx или Vite dev] --/api--> [Django DRF]
+
+## ТОЧКИ ВХОДА BACKEND
+
+  • Корневые URL: `backend/school_platform/urls.py` — монтирует `api/` → приложения users, content, progress;
+    также admin, health, drf-spectacular (swagger/redoc).
+  • Настройки: `backend/school_platform/settings.py`.
+  • ASGI/WSGI: `asgi.py`, `wsgi.py`; Celery: `celery.py`.
+
+## FRONTEND (маршруты SPA)
+
+  Файловый роутинг TanStack Router; сгенерированное дерево: `frontend/src/routeTree.gen.ts`.
+  Пути страниц:
+  • /
+  • /about
+  • /community
+  • /courses
+  • /login
+  • /mentors
+
+  Скрипты package.json:
+  npm run build
+  npm run dev
+  npm run lint
+  npm run preview
+
+## СТЕК (кратко)
+
+  Backend: Python 3.11+, Django, DRF, JWT (simplejwt), Celery, Redis, PostgreSQL.
+  Frontend: React 18, TypeScript, Vite, TanStack Router, Tailwind v4 (@tailwindcss/vite), axios.
+  dependencies (основное):
+    - @tanstack/react-router
+    - axios
+    - react
+    - react-dom
+    - tw-animate-css
+  devDependencies:
+    - @tailwindcss/vite
+    - @tanstack/router-plugin
+    - @types/react
+    - @types/react-dom
+    - @vitejs/plugin-react
+    - autoprefixer
+    - typescript
+    - vite
+
+  Фрагмент requirements.txt:
+  | django==4.2
+  | python-decouple==3.8
+  | psycopg2-binary==2.9.10
+  | pillow==12.0.0
+  | django-unfold==0.68.0
+  | celery==5.5.3
+  | redis==7.0.1
+  | deep-translator>=1.11.0
+  | django-modeltranslation
+  | Faker==38.2.0
+  | Unidecode==1.4.0
+  | djangorestframework==3.16.1
+  | djangorestframework-simplejwt==5.5.1
+  | pre-commit>=3.0.0
+  | black>=23.0.0
+  | isort>=5.12.0
+  | mypy>=1.0.0
+  | pytest==8.3.5
+  | pytest-django==4.9.0
+  | pytest-cov==6.0.0
+  | pytest-xdist==3.6.1
+  | model-bakery==1.20.0
+  | drf-spectacular[sidecar]>=0.27.0
+  | rpds-py>=0.8.0
+  | django-cors-headers==4.3.1
+
+## DJANGO-ПРИЛОЖЕНИЯ (папки в backend/ с apps.py)
+
+  • communication: models, views
+  • content: models, viewsets, serializers, urls
+  • education: models, views
+  • fixture: конфиг/утилиты
+  • mentoring: models, views
+  • progress: models, viewsets, serializers, urls
+  • subscriptions: models, views
+  • translations: models
+  • users: models, viewsets, serializers, urls
+
+## ДЕРЕВО РЕПОЗИТОРИЯ (укороченное)
+
+  backend/
+    communication/
+      migrations/
+        [py] __init__.py
+      [py] __init__.py
+      [py] admin.py
+      [py] apps.py
+      [py] models.py
+      [py] tests.py
+      [py] views.py
+    content/
+      migrations/
+        [py] 0001_initial.py
+        [py] 0002_alter_course_options_alter_lessontheory_options_and_more.py
+        [py] 0003_lessonradioquestion_lessoncheckboxquestion_and_more.py
+        [py] 0004_alter_answeroption_options_and_more.py
+        [py] 0005_rename_answeroption_radioansweroption.py
+        [py] 0006_codingchallenge_testcase_and_more.py
+        [py] 0007_alter_codingchallenge_unique_together_and_more.py
+        [py] __init__.py
+      tests/
+        [py] __init__.py
+        [py] conftest.py
+        [py] test_models.py
+      [py] __init__.py
+      [py] admin.py
+      [py] apps.py
+      [py] models.py
+      [py] serializers.py
+      [py] urls.py
+      [py] viewsets.py
+    education/
+      migrations/
+        [py] __init__.py
+      [py] __init__.py
+      [py] admin.py
+      [py] apps.py
+      [py] models.py
+      [py] tests.py
+      [py] views.py
+    fixture/
+      management/
+        commands/
+        [py] __init__.py
+      [py] __init__.py
+      [py] apps.py
+    locale/
+      en/
+        LC_MESSAGES/
+    mentoring/
+      migrations/
+        [py] __init__.py
+      [py] __init__.py
+      [py] admin.py
+      [py] apps.py
+      [py] models.py
+      [py] tests.py
+      [py] views.py
+    progress/
+      migrations/
+        [py] 0001_initial.py
+        [py] 0002_codesubmission_and_more.py
+        [py] __init__.py
+      [py] __init__.py
+      [py] admin.py
+      [py] apps.py
+      [py] models.py
+      [py] serializers.py
+      [py] urls.py
+      [py] viewsets.py
+    school_platform/
+      admin/
+        [py] __init__.py
+        [py] views.py
+      [py] __init__.py
+      [py] asgi.py
+      [py] celery.py
+      [py] settings.py
+      [py] urls.py
+      [py] wsgi.py
+    subscriptions/
+      migrations/
+        [py] __init__.py
+      [py] __init__.py
+      [py] admin.py
+      [py] apps.py
+      [py] models.py
+      [py] tests.py
+      [py] views.py
+    templates/
+      admin/
+        auth/
+        [html] index.html
+    translations/
+      migrations/
+        [py] 0001_initial.py
+        [py] 0002_alter_translationmemory_options_and_more.py
+        [py] __init__.py
+      signals/
+        [py] __init__.py
+        [py] specialization.py
+        [py] translationmemory.py
+      tests/
+      translation_registry/
+        [py] __init__.py
+        [py] users.py
+      [file] 03_dashboard 1 (1).png
+      [py] __init__.py
+      [py] admin.py
+      [py] apps.py
+      [py] mixins.py
+      [py] models.py
+      [py] services.py
+      [py] tasks.py
+    users/
+      migrations/
+        [py] 0001_initial.py
+        [py] 0002_alter_user_bio.py
+        [py] 0003_alter_user_options_alter_user_avatar_alter_user_bio_and_more.py
+        [py] 0004_specialization_alter_mentor_experience_years_and_more.py
+        [py] 0005_specialization_title_en_specialization_title_ru_and_more.py
+        [py] 0006_alter_specialization_type.py
+        [py] 0007_remove_specialization_translation_status_and_more.py
+        [py] 0008_remove_specialization_title_en_and_more.py
+        [py] 0009_specialization_description_en_and_more.py
+        [py] 0010_mentor_technology.py
+        [py] 0011_user_bio_en_user_bio_ru.py
+        [py] 0012_remove_user_bio_en_remove_user_bio_ru.py
+        [py] 0013_alter_mentor_options_alter_specialization_options_and_more.py
+        [py] __init__.py
+      tests/
+        [py] __init__.py
+        [py] conftest.py
+        [py] test_manager.py
+        [py] test_profiles.py
+        [py] test_user_avatar.py
+        [py] test_user_fields.py
+        [py] test_user_lifecycle.py
+      [py] __init__.py
+      [py] admin.py
+      [py] apps.py
+      [py] models.py
+      [py] serializers.py
+      [py] urls.py
+      [py] validators.py
+      [py] viewsets.py
+    [py] __init__.py
+    [file] celerybeat-schedule
+    [py] conftest.py
+    [file] Dockerfile
+    [py] manage.py
+  frontend/
+    public/
+      [file] auth-illustration.png
+    src/
+      api/
+        [ts] auth.ts
+        [ts] users.ts
+      auth/
+        [tsx] AuthContext.tsx
+        [ts] types.ts
+      components/
+        [tsx] AppHeader.tsx
+      context/
+        [tsx] HomeSidebarMobileContext.tsx
+      data/
+        [ts] mockCourses.ts
+        [ts] mockHomePopularCourses.ts
+      demo/
+        [ts] simulatedUser.ts
+      lib/
+        [ts] apiClient.ts
+        [ts] authRedirect.ts
+        [ts] authTokens.ts
+        [ts] userAvatar.ts
+      routes/
+        [tsx] __root.tsx
+        [tsx] about.tsx
+        [tsx] community.tsx
+        [tsx] courses.tsx
+        [tsx] index.tsx
+        [tsx] login.tsx
+        [tsx] mentors.tsx
+      [css] index.css
+      [tsx] main.tsx
+      [ts] routeTree.gen.ts
+      [ts] vite-env.d.ts
+    [file] Dockerfile
+    [html] index.html
+    [json] package-lock.json
+    [json] package.json
+    [js] postcss.config.js
+    [json] tsconfig.json
+    [js] vite.config.js
+  logs/
+    [file] backend.log
+    [file] celery-beat.log
+    [file] celery.log
+    [file] db.log
+    [file] frontend.log
+    [file] redis.log
+  nginx/
+    [file] Dockerfile
+    [file] nginx.conf
+  scripts/
+    [bat] fast-commit.bat
+    [sh] fast-commit.sh
+    [bat] generate-prompt.bat
+    [py] generate-prompt.py
+    [sh] generate-prompt.sh
+    [txt] project_prompt.txt
+    [md] README.md
+    [bat] restart-docker.bat
+    [sh] restart-docker.sh
+  [yml] docker-compose.yml
+  [file] LICENSE
+  [json] package-lock.json
+  [json] package.json
+  [toml] pyproject.toml
+  [md] README.md
+  ... (1 строк дерева скрыто; увеличьте max_lines в скрипте)
+
+## ФРАГМЕНТЫ КЛЮЧЕВЫХ ФАЙЛОВ
+
+  [docker-compose] docker-compose.yml
+  (оркестрация сервисов)
+  --- начало файла ---
+  | services:
+  |   db:
+  |     image: postgres:15-alpine
+  |     container_name: bervinov-academy-db
+  |     ports:
+  |       - "5433:5432"
+  |     env_file: .env
+  |     environment:
+  |       POSTGRES_DB: ${DB_NAME}
+  |       POSTGRES_USER: ${DB_USER}
+  |       POSTGRES_PASSWORD: ${DB_PASSWORD}
+  |     volumes:
+  |       - postgres_data:/var/lib/postgresql/data
+  |     healthcheck:
+  |       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+  |       interval: 5s
+  |       retries: 5
+  |       timeout: 5s
+  | 
+  |   redis:
+  |     image: redis:7-alpine
+  |     container_name: bervinov-academy-redis
+  |     ports:
+  |       - "6379:6379"
+  |     volumes:
+  |       - redis_data:/data
+  |     healthcheck:
+  |       test: ["CMD", "redis-cli", "ping"]
+  |       interval: 5s
+  |       retries: 5
+  | 
+  |   backend:
+  |     build:
+  |       context: .
+  |       dockerfile: backend/Dockerfile
+  |     container_name: bervinov-academy-backend
+  |     command: >
+  |       sh -c "cd /app/backend &&
+  |              python manage.py compilemessages -l en &&
+  |              python manage.py migrate &&
+  |              python manage.py seed_data --clear &&
+  |              python manage.py runserver 0.0.0.0:8000"
+  |     volumes:
+  |       - .:/app
+  |     ports:
+  |       - "8000:8000"
+  |     env_file: .env
+  |     depends_on:
+  |       db:
+  |         condition: service_healthy
+  |       redis:
+  |         condition: service_healthy
+  |     working_dir: /app/backend
+  |     healthcheck:  # Добавлен healthcheck для backend
+  |       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+  | ... (77 строк не показано)
+  --- конец файла ---
+
+  [nginx] nginx\nginx.conf
+  (прокси SPA и API)
+  --- начало файла ---
+  | events {
+  |     worker_connections 1024;
+  | }
+  | 
+  | http {
+  |     include       /etc/nginx/mime.types;
+  |     default_type  application/octet-stream;
+  | 
+  |     sendfile        on;
+  |     keepalive_timeout  65;
+  | 
+  |     # Frontend - статические файлы React приложения
+  |     server {
+  |         listen 80;
+  |         server_name localhost;
+  | 
+  |         # Прокси для API запросов
+  |         location /api/ {
+  |             proxy_pass http://backend:8000/api/;
+  |             proxy_set_header Host $host;
+  |             proxy_set_header X-Real-IP $remote_addr;
+  |             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  |             proxy_set_header X-Forwarded-Proto $scheme;
+  |         }
+  | 
+  |         # Прокси для админ-панели Django (включая статику)
+  |         location /admin/ {
+  |             proxy_pass http://backend:8000/admin/;
+  |             proxy_set_header Host $host;
+  |             proxy_set_header X-Real-IP $remote_addr;
+  |             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  |             proxy_set_header X-Forwarded-Proto $scheme;
+  |         }
+  | 
+  |         # Статика Django (CSS, JS, изображения для админки)
+  |         location /static/ {
+  |             proxy_pass http://backend:8000/static/;
+  |             proxy_set_header Host $host;
+  |             proxy_set_header X-Real-IP $remote_addr;
+  |             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  |             proxy_set_header X-Forwarded-Proto $scheme;
+  |         }
+  | 
+  |         # Медиа файлы (загруженные пользователями)
+  |         location /media/ {
+  |             proxy_pass http://backend:8000/media/;
+  |             proxy_set_header Host $host;
+  |             proxy_set_header X-Real-IP $remote_addr;
+  |             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  |             proxy_set_header X-Forwarded-Proto $scheme;
+  |         }
+  | 
+  |         # Прокси для Swagger/ReDoc документации API
+  |         location /api/schema/ {
+  |             proxy_pass http://backend:8000/api/schema/;
+  |             proxy_set_header Host $host;
+  |             proxy_set_header X-Real-IP $remote_addr;
+  |             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  |             proxy_set_header X-Forwarded-Proto $scheme;
+  |         }
+  | 
+  |         location /api/swagger/ {
+  |             proxy_pass http://backend:8000/api/swagger/;
+  |             proxy_set_header Host $host;
+  |             proxy_set_header X-Real-IP $remote_addr;
+  |             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  |             proxy_set_header X-Forwarded-Proto $scheme;
+  |         }
+  | 
+  |         location /api/redoc/ {
+  |             proxy_pass http://backend:8000/api/redoc/;
+  |             proxy_set_header Host $host;
+  |             proxy_set_header X-Real-IP $remote_addr;
+  |             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  |             proxy_set_header X-Forwarded-Proto $scheme;
+  |         }
+  | 
+  |         # Статические файлы frontend (для production сборки)
+  |         location / {
+  |             root /usr/share/nginx/html;
+  |             try_files $uri $uri/ /index.html;
+  |         }
+  |     }
+  | }
+  --- конец файла ---
+
+  [django urls] backend\school_platform\urls.py
+  (корневые маршруты Django)
+  --- начало файла ---
+  | from django.conf import settings
+  | from django.conf.urls.static import static
+  | from django.contrib import admin
+  | from django.http import JsonResponse
+  | from django.urls import include, path
+  | from drf_spectacular.views import (
+  |     SpectacularAPIView,
+  |     SpectacularRedocView,
+  |     SpectacularSwaggerView,
+  | )
+  | 
+  | 
+  | def health_check(request):
+  |     """Health check endpoint for Docker."""
+  |     return JsonResponse({"status": "ok"})
+  | 
+  | 
+  | def home_view(request):
+  |     """Главная страница проекта."""
+  |     from django.shortcuts import render
+  |     return render(request, 'home.html')
+  | 
+  | 
+  | urlpatterns = [
+  |     path("", home_view, name="home"),
+  |     path("i18n/", include("django.conf.urls.i18n")),
+  |     path("admin/", admin.site.urls),
+  |     path("health/", health_check, name="health"),
+  |     path("api/", include("users.urls")),
+  |     path("api/", include("content.urls")),
+  |     path("api/", include("progress.urls")),
+  |     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+  |     path(
+  |         "api/swagger/",
+  |         SpectacularSwaggerView.as_view(url_name="schema"),
+  |         name="swagger-ui",
+  |     ),
+  |     path(
+  |         "api/redoc/",
+  |         SpectacularRedocView.as_view(url_name="schema"),
+  |         name="redoc",
+  |     ),
+  | ]
+  | 
+  | if settings.DEBUG:
+  |     urlpatterns += static(
+  |         settings.STATIC_URL, document_root=settings.STATIC_ROOT
+  |     )
+  |     urlpatterns += static(
+  |         settings.MEDIA_URL, document_root=settings.MEDIA_ROOT
+  |     )
+  --- конец файла ---
+
+  [vite] frontend\vite.config.js
+  (dev-сервер и proxy /api)
+  --- начало файла ---
+  | import { defineConfig, loadEnv } from 'vite'
+  | import react from '@vitejs/plugin-react'
+  | import tailwindcss from '@tailwindcss/vite'
+  | import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
+  | 
+  | export default defineConfig(({ mode }) => {
+  |   const env = loadEnv(mode, '.', '')
+  | 
+  |   return {
+  |     plugins: [tailwindcss(), TanStackRouterVite(), react()],
+  |     server: {
+  |       port: 3000,
+  |       proxy: {
+  |         '/api': {
+  |           target: env.VITE_API_TARGET || 'http://localhost:8000',
+  |           changeOrigin: true,
+  |         },
+  |       },
+  |     },
+  |     build: {
+  |       outDir: 'dist',
+  |       sourcemap: true,
+  |     },
+  |   }
+  | })
+  --- конец файла ---
+
+  [README] README.md
+  (человеческое описание проекта)
+  --- начало файла ---
+  | # Bervinov Academy - Educational Platform
+  | 
+  | ![Bervinov Academy](https://via.placeholder.com/800x200/2D3748/FFFFFF?text=Bervinov+Academy+-+Modern+Learning+Platform)
+  | 
+  | Bervinov Academy - это современная образовательная платформа с менторской поддержкой, построенная по принципам Stepik. Платформа предоставляет интерактивные курсы по программированию с автоматической проверкой заданий и персональными менторами.
+  | 
+  | ### 🎯 Основные возможности
+  | 
+  | - **📚 Структурированные курсы** с модулями и уроками
+  | - **👨‍🏫 Менторская поддержка** для каждого студента
+  | - **💻 Автоматическая проверка** кодовых заданий
+  | - **📊 Отслеживание прогресса** с детальной статистикой
+  | - **💬 Система коммуникации** между студентами и менторами
+  | - **💰 Гибкая система подписок**
+  | 
+  | ## 🏗️ Архитектура проекта
+  | 
+  | ### ER-диаграмма базы данных
+  | 
+  | ![ER Diagram](docs/images/er-diagram.png)
+  | 
+  | *Примечание: Добавьте скриншот вашей ER-диграммы в папку `docs/images/`*
+  | 
+  | ### Структура приложений Django
+  | 
+  | ```
+  | backend/
+  | ├── users/                 # Пользователи и аутентификация
+  | ├── subscriptions/         # Планы и подписки
+  | ├── education/            # Курсы, модули, уроки, задания
+  | ├── progress/             # Прогресс студентов, выполнения заданий
+  | ├── mentoring/            # Менторы и связи ментор-студент
+  | ├── content/              # Технологии и теги
+  | └── communication/        # Комментарии, сообщения, закладки
+  | ```
+  | 
+  | ## 🚀 Быстрый старт
+  | 
+  | ### Предварительные требования
+  | 
+  | ... (191 строк не показано)
+  --- конец файла ---
+
+  [pyproject] pyproject.toml
+  (метаданные Python-проекта)
+  --- начало файла ---
+  | [project]
+  | name = "bervinov-academy"
+  | version = "0.1.0"
+  | description = "Online education platform"
+  | requires-python = ">=3.11"
+  | 
+  | [tool.black]
+  | line-length = 79
+  | target-version = ['py311']
+  | include = '\.pyi?$'
+  | extend-exclude = '''
+  | /(
+  |   | migrations
+  |   | .venv
+  |   | .git
+  |   | __pycache__
+  |   | build
+  |   | dist
+  | )/
+  | '''
+  | 
+  | [tool.isort]
+  | profile = "black"
+  | multi_line_output = 3
+  | line_length = 79
+  | known_first_party = [
+  |   "backend", "users", "education", "subscriptions",
+  |   "progress", "mentoring", "content", "communication",
+  |   "translations"
+  | ]
+  | force_single_line = false
+  | force_sort_within_sections = true
+  | 
+  | [tool.flake8]
+  | max-line-length = 79
+  | ... (70 строк не показано)
+  --- конец файла ---
+
+  [env example] .env.example
+  (переменные окружения (шаблон))
+  --- начало файла ---
+  | # Debug
+  | DEBUG=True
+  | 
+  | # Secret Key - СГЕНЕРИРУЙ НОВЫЙ ДЛЯ ПРОДАКШЕНА!
+  | SECRET_KEY=your-super-secret-key-here-change-in-production
+  | 
+  | # Database PostgreSQL
+  | DB_ENGINE=django.db.backends.postgresql
+  | DB_NAME=your_database_name_here
+  | DB_USER=your_database_user_here
+  | DB_PASSWORD=your-strong-database-password-here
+  | DB_HOST=localhost
+  | DB_PORT=5432
+  | 
+  | # Django Security
+  | ALLOWED_HOSTS=localhost,127.0.0.1,.localhost
+  | CSRF_TRUSTED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
+  | 
+  | # Frontend
+  | FRONTEND_URL=http://localhost:3000
+  --- конец файла ---
+
+## DOCKER COMPOSE (полный текст, если уместен)
+
+  services:
+    db:
+      image: postgres:15-alpine
+      container_name: bervinov-academy-db
+      ports:
+        - "5433:5432"
+      env_file: .env
+      environment:
+        POSTGRES_DB: ${DB_NAME}
+        POSTGRES_USER: ${DB_USER}
+        POSTGRES_PASSWORD: ${DB_PASSWORD}
+      volumes:
+        - postgres_data:/var/lib/postgresql/data
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+        interval: 5s
+        retries: 5
+        timeout: 5s
+  
+    redis:
+      image: redis:7-alpine
+      container_name: bervinov-academy-redis
+      ports:
+        - "6379:6379"
+      volumes:
+        - redis_data:/data
+      healthcheck:
+        test: ["CMD", "redis-cli", "ping"]
+        interval: 5s
+        retries: 5
+  
+    backend:
+      build:
+        context: .
+        dockerfile: backend/Dockerfile
+      container_name: bervinov-academy-backend
+      command: >
+        sh -c "cd /app/backend &&
+               python manage.py compilemessages -l en &&
+               python manage.py migrate &&
+               python manage.py seed_data --clear &&
+               python manage.py runserver 0.0.0.0:8000"
+      volumes:
+        - .:/app
+      ports:
+        - "8000:8000"
+      env_file: .env
+      depends_on:
+        db:
+          condition: service_healthy
+        redis:
+          condition: service_healthy
+      working_dir: /app/backend
+      healthcheck:  # Добавлен healthcheck для backend
+        test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+        start_period: 30s
+  
+    frontend:
+      build:
+        context: ./frontend
+        dockerfile: Dockerfile
+      container_name: bervinov-academy-frontend
+      volumes:
+        - ./frontend:/app
+        - /app/node_modules
+      working_dir: /app
+      command: >
+        sh -c "npm run build"
+      environment:
+        - CHOKIDAR_USEPOLLING=true
+      depends_on:
+        backend:
+          condition: service_healthy
+  
+    nginx:
+      build:
+        context: ./nginx
+        dockerfile: Dockerfile
+      container_name: bervinov-academy-nginx
+      ports:
+        - "80:80"
+      volumes:
+        - ./frontend/dist:/usr/share/nginx/html:ro
+      depends_on:
+        - frontend
+        - backend
+      restart: unless-stopped
+  
+    celery:
+      build:
+        context: .
+        dockerfile: backend/Dockerfile
+      container_name: bervinov-academy-celery
+      command: >
+        sh -c "cd /app/backend &&
+               python manage.py compilemessages -l en &&
+               celery -A school_platform worker --loglevel=info"
+      volumes:
+        - .:/app
+      env_file: .env
+      depends_on:
+        db:
+          condition: service_healthy
+        redis:
+          condition: service_healthy
+      working_dir: /app/backend
+  
+    celery-beat:
+      build:
+        context: .
+        dockerfile: backend/Dockerfile
+      container_name: bervinov-academy-celery-beat
+      command: >
+        sh -c "cd /app/backend &&
+               python manage.py compilemessages -l en &&
+               celery -A school_platform beat --loglevel=info"
+      volumes:
+        - .:/app
+      env_file: .env
+      depends_on:
+        db:
+          condition: service_healthy
+        redis:
+          condition: service_healthy
+      working_dir: /app/backend
+  
+  volumes:
+    postgres_data:
+    redis_data:
+
+================================================================================
+КОНЕЦ ФАЙЛА КОНТЕКСТА
+================================================================================

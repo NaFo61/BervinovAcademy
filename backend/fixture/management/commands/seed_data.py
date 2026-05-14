@@ -4,7 +4,18 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from content.models import Course, LessonTheory, Module, Technology
+from content.models import (
+    CheckBoxAnswerOption,
+    CodingChallenge,
+    Course,
+    LessonCheckBoxQuestion,
+    LessonRadioQuestion,
+    LessonTheory,
+    Module,
+    RadioAnswerOption,
+    Technology,
+    TestCase,
+)
 from translations.models import TranslationMemory
 from users.models import Mentor, Specialization, Student
 
@@ -38,6 +49,18 @@ class Command(BaseCommand):
             default=5,
             help="Количество уроков на модуль",
         )
+        parser.add_argument(
+            "--radio-questions-per-module",
+            type=int,
+            default=2,
+            help="Количество radio-вопросов на модуль",
+        )
+        parser.add_argument(
+            "--checkbox-questions-per-module",
+            type=int,
+            default=2,
+            help="Количество checkbox-вопросов на модуль",
+        )
 
     def handle(self, *args, **options):
         with transaction.atomic():
@@ -51,9 +74,7 @@ class Command(BaseCommand):
             # Создаем технологии ДО создания менторов
             technologies = self.create_technologies()
 
-            self.create_mentors(
-                specializations, technologies
-            )  # ✅ Передаем технологии
+            self.create_mentors(specializations, technologies)
             self.create_students()
 
             # Создаем курсы и связанные данные
@@ -62,6 +83,12 @@ class Command(BaseCommand):
                 technologies=technologies,
                 modules_per_course=options["modules_per_course"],
                 lessons_per_module=options["lessons_per_module"],
+                radio_questions_per_module=options[
+                    "radio_questions_per_module"
+                ],
+                checkbox_questions_per_module=options[
+                    "checkbox_questions_per_module"
+                ],
             )
 
             self.stdout.write(self.style.SUCCESS("Данные успешно созданы"))
@@ -74,6 +101,12 @@ class Command(BaseCommand):
         Technology.objects.all().delete()
         Module.objects.all().delete()
         LessonTheory.objects.all().delete()
+        LessonRadioQuestion.objects.all().delete()
+        RadioAnswerOption.objects.all().delete()
+        LessonCheckBoxQuestion.objects.all().delete()
+        CheckBoxAnswerOption.objects.all().delete()
+        CodingChallenge.objects.all().delete()
+        TestCase.objects.all().delete()
 
     def create_superuser(self):
         User.objects.create_superuser(
@@ -223,107 +256,6 @@ class Command(BaseCommand):
                 user=user,
                 specialization=specialization,
                 experience_years=random.randint(3, 15),
-            )
-            self.stdout.write(self.style.SUCCESS("Создано 5 менторов"))
-
-            # Добавляем технологии ментору
-            if specialization:
-                # Получаем технологии, связанные со специализацией ментора
-                specialization_type = specialization.type
-                relevant_tech_names = specialization_tech_map.get(
-                    specialization_type, []
-                )
-
-                # Ищем соответствующие объекты Technology
-                relevant_technologies = []
-                for tech_name in relevant_tech_names:
-                    # Пытаемся найти технологию по имени
-                    tech = Technology.objects.filter(name=tech_name).first()
-                    if tech:
-                        relevant_technologies.append(tech)
-                    else:
-                        # Если технологии нет, создаем ее
-                        tech = Technology.objects.create(name=tech_name)
-                        relevant_technologies.append(tech)
-
-                # Добавляем случайные технологии из общих технологий
-                additional_technologies = random.sample(
-                    list(technologies),
-                    k=min(random.randint(1, 3), len(technologies)),
-                )
-
-                # Объединяем и добавляем все технологии ментору
-                all_technologies = list(
-                    set(relevant_technologies + additional_technologies)
-                )
-                mentor.technology.set(all_technologies[: random.randint(2, 5)])
-            else:
-                # Если нет специализации, добавляем случайные технологии
-                mentor_technologies = random.sample(
-                    list(technologies),
-                    k=min(random.randint(2, 5), len(technologies)),
-                )
-                mentor.technology.set(mentor_technologies)
-
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"Создан ментор {first_name} {last_name} "
-                    f"с {mentor.technology.count()} технологиями"
-                )
-            )
-
-            self.stdout.write(
-                self.style.SUCCESS("Создано 5 менторов с технологиями")
-            )
-
-            # Добавляем технологии ментору
-            if specialization:
-                # Получаем технологии, связанные со специализацией ментора
-                specialization_type = specialization.type
-                relevant_tech_names = specialization_tech_map.get(
-                    specialization_type, []
-                )
-
-                # Ищем соответствующие объекты Technology
-                relevant_technologies = []
-                for tech_name in relevant_tech_names:
-                    # Пытаемся найти технологию по имени
-                    tech = Technology.objects.filter(name=tech_name).first()
-                    if tech:
-                        relevant_technologies.append(tech)
-                    else:
-                        # Если технологии нет, создаем ее
-                        tech = Technology.objects.create(name=tech_name)
-                        relevant_technologies.append(tech)
-
-                # Добавляем случайные технологии из общих технологий
-                additional_technologies = random.sample(
-                    list(technologies),
-                    k=min(random.randint(1, 3), len(technologies)),
-                )
-
-                # Объединяем и добавляем все технологии ментору
-                all_technologies = list(
-                    set(relevant_technologies + additional_technologies)
-                )
-                mentor.technology.set(all_technologies[: random.randint(2, 5)])
-            else:
-                # Если нет специализации, добавляем случайные технологии
-                mentor_technologies = random.sample(
-                    list(technologies),
-                    k=min(random.randint(2, 5), len(technologies)),
-                )
-                mentor.technology.set(mentor_technologies)
-
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"Создан ментор {first_name} {last_name} "
-                    f"с {mentor.technology.count()} технологиями"
-                )
-            )
-
-            self.stdout.write(
-                self.style.SUCCESS("Создано 5 менторов с технологиями")
             )
 
             # Добавляем технологии ментору
@@ -493,6 +425,8 @@ class Command(BaseCommand):
         technologies=None,
         modules_per_course=3,
         lessons_per_module=5,
+        radio_questions_per_module=2,
+        checkbox_questions_per_module=2,
     ):
         if technologies is None:
             technologies = list(Technology.objects.all())
@@ -562,13 +496,23 @@ class Command(BaseCommand):
                 course=course,
                 count=modules_per_course,
                 lessons_per_module=lessons_per_module,
+                radio_questions_per_module=radio_questions_per_module,
+                checkbox_questions_per_module=checkbox_questions_per_module,
             )
 
             self.stdout.write(
                 self.style.SUCCESS(f"Создан курс: {course_titles[i]}")
             )
 
-    def create_modules_for_course(self, course, count=3, lessons_per_module=5):
+    def create_modules_for_course(
+        self,
+        course,
+        count=3,
+        lessons_per_module=5,
+        radio_questions_per_module=2,
+        checkbox_questions_per_module=2,
+        challenges_per_module=2,
+    ):
         module_titles = [
             "Введение и основы",
             "Основные концепции и техники",
@@ -652,6 +596,320 @@ class Command(BaseCommand):
             "собеседований.",
         ]
 
+        radio_questions_data = [
+            {
+                "title": "Основы языка программирования",
+                "question": "Какой тип данных используется для хранения "
+                "целых чисел?",
+                "explanation": "int используется для хранения целых чисел в "
+                "большинстве языков программирования.",
+                "answers": [
+                    ("int", True),
+                    ("float", False),
+                    ("str", False),
+                    ("bool", False),
+                ],
+            },
+            {
+                "title": "Управляющие конструкции",
+                "question": "Какая конструкция используется для выполнения "
+                "кода при условии?",
+                "explanation": "if - это условный оператор, выполняющий "
+                "код при истинности условия.",
+                "answers": [
+                    ("for", False),
+                    ("while", False),
+                    ("if", True),
+                    ("switch", False),
+                ],
+            },
+            {
+                "title": "Функции",
+                "question": "Как называется функция, которая "
+                "вызывает саму себя?",
+                "explanation": "Рекурсивная функция - это функция, которая "
+                "вызывает саму себя в своем теле.",
+                "answers": [
+                    ("Итеративная", False),
+                    ("Рекурсивная", True),
+                    ("Анонимная", False),
+                    ("Вложенная", False),
+                ],
+            },
+            {
+                "title": "ООП",
+                "question": "Какой принцип ООП позволяет скрывать "
+                "внутреннюю реализацию?",
+                "explanation": "Инкапсуляция скрывает детали реализации и "
+                "предоставляет только интерфейс для "
+                "взаимодействия.",
+                "answers": [
+                    ("Наследование", False),
+                    ("Полиморфизм", False),
+                    ("Инкапсуляция", True),
+                    ("Абстракция", False),
+                ],
+            },
+            {
+                "title": "Базы данных",
+                "question": "Какой язык используется для работы с "
+                "реляционными базами данных?",
+                "explanation": "SQL (Structured Query Language) - "
+                "стандартный язык для работы с "
+                "реляционными БД.",
+                "answers": [
+                    ("Python", False),
+                    ("Java", False),
+                    ("SQL", True),
+                    ("HTML", False),
+                ],
+            },
+        ]
+
+        checkbox_questions_data = [
+            {
+                "title": "Типы данных в Python",
+                "question": "Какие из перечисленных типов данных "
+                "являются встроенными в Python?",
+                "explanation": "В Python встроенными типами "
+                "являются int, float, str, list, "
+                "dict, tuple, set и bool.",
+                "points": 2,
+                "answers": [
+                    ("int", True),
+                    ("float", True),
+                    ("array", False),
+                    ("list", True),
+                ],
+            },
+            {
+                "title": "Фреймворки веб-разработки",
+                "question": "Какие из перечисленных являются "
+                "Python-фреймворками для веб-разработки?",
+                "explanation": "Django, Flask и FastAPI - популярные "
+                "Python-фреймворки. React - это "
+                "JavaScript библиотека.",
+                "points": 3,
+                "answers": [
+                    ("Django", True),
+                    ("React", False),
+                    ("Flask", True),
+                    ("FastAPI", True),
+                ],
+            },
+            {
+                "title": "HTTP методы",
+                "question": "Какие HTTP методы существуют?",
+                "explanation": "GET, POST, PUT, DELETE - основные "
+                "HTTP методы. SELECT - это SQL запрос.",
+                "points": 2,
+                "answers": [
+                    ("GET", True),
+                    ("POST", True),
+                    ("SELECT", False),
+                    ("DELETE", True),
+                ],
+            },
+            {
+                "title": "Системы контроля версий",
+                "question": "Какие из перечисленных являются "
+                "системами контроля версий?",
+                "explanation": "Git и Mercurial - распределенные системы "
+                "контроля версий. Docker - "
+                "для контейнеризации.",
+                "points": 2,
+                "answers": [
+                    ("Git", True),
+                    ("Docker", False),
+                    ("Mercurial", True),
+                    ("Kubernetes", False),
+                ],
+            },
+            {
+                "title": "Базы данных",
+                "question": "Какие из перечисленных "
+                "являются NoSQL базами данных?",
+                "explanation": "MongoDB и Redis - NoSQL базы данных. "
+                "PostgreSQL и MySQL - реляционные.",
+                "points": 2,
+                "answers": [
+                    ("PostgreSQL", False),
+                    ("MongoDB", True),
+                    ("MySQL", False),
+                    ("Redis", True),
+                ],
+            },
+        ]
+
+        # Данные для задач программирования
+        coding_challenges_data = [
+            {
+                "title": "Сумма двух чисел",
+                "description": "Напишите функцию, которая принимает два числа и возвращает их сумму.",
+                "instructions": "Реализуйте функцию `add(a, b)`, которая принимает два числа и возвращает их сумму.",
+                "initial_code": "def add(a, b):\n    # Напишите ваш код здесь\n    pass",
+                "solution_template": "def add(a, b):\n    return a + b",
+                "difficulty": "beginner",
+                "points": 5,
+                "time_limit_ms": 1000,
+                "memory_limit_mb": 128,
+                "test_cases": [
+                    {
+                        "input_data": "1\n2",
+                        "expected_output": "3",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "-1\n1",
+                        "expected_output": "0",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "0\n0",
+                        "expected_output": "0",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "100\n200",
+                        "expected_output": "300",
+                        "is_hidden": True,
+                    },
+                ],
+            },
+            {
+                "title": "Проверка на четность",
+                "description": "Напишите функцию, которая проверяет, является ли число четным.",
+                "instructions": "Реализуйте функцию `is_even(n)`, которая возвращает True, если число четное, и False в противном случае.",
+                "initial_code": "def is_even(n):\n    # Напишите ваш код здесь\n    pass",
+                "solution_template": "def is_even(n):\n    return n % 2 == 0",
+                "difficulty": "beginner",
+                "points": 5,
+                "time_limit_ms": 1000,
+                "memory_limit_mb": 128,
+                "test_cases": [
+                    {
+                        "input_data": "2",
+                        "expected_output": "True",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "3",
+                        "expected_output": "False",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "0",
+                        "expected_output": "True",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "101",
+                        "expected_output": "False",
+                        "is_hidden": True,
+                    },
+                ],
+            },
+            {
+                "title": "Поиск максимума",
+                "description": "Напишите функцию, которая находит максимальное число в списке.",
+                "instructions": "Реализуйте функцию `find_max(arr)`, которая принимает список чисел и возвращает максимальное значение.",
+                "initial_code": "def find_max(arr):\n    # Напишите ваш код здесь\n    pass",
+                "solution_template": "def find_max(arr):\n    if not arr:\n        return None\n    return max(arr)",
+                "difficulty": "easy",
+                "points": 10,
+                "time_limit_ms": 1000,
+                "memory_limit_mb": 128,
+                "test_cases": [
+                    {
+                        "input_data": "[1, 2, 3, 4, 5]",
+                        "expected_output": "5",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "[-1, -5, -2, -3]",
+                        "expected_output": "-1",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "[42]",
+                        "expected_output": "42",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "[10, 20, 30, 5, 25]",
+                        "expected_output": "30",
+                        "is_hidden": True,
+                    },
+                ],
+            },
+            {
+                "title": "Факториал числа",
+                "description": "Напишите рекурсивную функцию для вычисления факториала числа.",
+                "instructions": "Реализуйте функцию `factorial(n)`, которая возвращает факториал числа n (n!).",
+                "initial_code": "def factorial(n):\n    # Напишите ваш код здесь\n    pass",
+                "solution_template": "def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)",
+                "difficulty": "easy",
+                "points": 10,
+                "time_limit_ms": 1000,
+                "memory_limit_mb": 128,
+                "test_cases": [
+                    {
+                        "input_data": "5",
+                        "expected_output": "120",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "0",
+                        "expected_output": "1",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "1",
+                        "expected_output": "1",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "7",
+                        "expected_output": "5040",
+                        "is_hidden": True,
+                    },
+                ],
+            },
+            {
+                "title": "Палиндром",
+                "description": "Напишите функцию, которая проверяет, является ли строка палиндромом.",
+                "instructions": "Реализуйте функцию `is_palindrome(s)`, которая возвращает True, если строка читается одинаково слева направо и справа налево.",
+                "initial_code": "def is_palindrome(s):\n    # Напишите ваш код здесь\n    pass",
+                "solution_template": "def is_palindrome(s):\n    s = s.lower().replace(' ', '')\n    return s == s[::-1]",
+                "difficulty": "medium",
+                "points": 15,
+                "time_limit_ms": 1000,
+                "memory_limit_mb": 128,
+                "test_cases": [
+                    {
+                        "input_data": "racecar",
+                        "expected_output": "True",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "hello",
+                        "expected_output": "False",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "A man a plan a canal panama",
+                        "expected_output": "True",
+                        "is_hidden": False,
+                    },
+                    {
+                        "input_data": "Was it a car or a cat I saw",
+                        "expected_output": "True",
+                        "is_hidden": True,
+                    },
+                ],
+            },
+        ]
+
         for module_index in range(count):
             if module_index < len(module_titles):
                 title = module_titles[module_index]
@@ -665,10 +923,10 @@ class Command(BaseCommand):
                 title=title,
                 description=description,
                 order_index=module_index + 1,
-                is_active=random.choice([True, False, True]),  # Чаще активные
+                is_active=random.choice([True, False, True]),
             )
 
-            # Создаем уроки для модуля
+            # Создаем теоретические уроки для модуля
             for lesson_index in range(lessons_per_module):
                 LessonTheory.objects.create(
                     module=module,
@@ -676,5 +934,164 @@ class Command(BaseCommand):
                     content=lesson_content[lesson_index % len(lesson_content)],
                     order_index=lesson_index + 1,
                     is_active=random.choice([True, False, True]),
-                    # Чаще активные
                 )
+
+            # Создаем radio-вопросы для модуля
+            for radio_index in range(radio_questions_per_module):
+                if radio_index < len(radio_questions_data):
+                    question_data = radio_questions_data[radio_index]
+                else:
+                    question_data = {
+                        "title": f"Radio вопрос {radio_index + 1}",
+                        "question": f"Текст вопроса {radio_index + 1}?",
+                        "explanation": f"Пояснение к вопросу "
+                        f"{radio_index + 1}",
+                        "answers": [
+                            ("Вариант 1", random.choice([True, False])),
+                            ("Вариант 2", random.choice([True, False])),
+                            ("Вариант 3", random.choice([True, False])),
+                            ("Вариант 4", random.choice([True, False])),
+                        ],
+                    }
+                    correct_count = sum(
+                        1 for a in question_data["answers"] if a[1]
+                    )
+                    if correct_count != 1:
+                        question_data["answers"] = [
+                            (text, i == 0)
+                            for i, (text, _) in enumerate(
+                                question_data["answers"]
+                            )
+                        ]
+
+                radio_question = LessonRadioQuestion.objects.create(
+                    module=module,
+                    title=question_data["title"],
+                    question_text=question_data["question"],
+                    explanation=question_data["explanation"],
+                    order_index=radio_index + 1,
+                    is_active=random.choice([True, False, True]),
+                    points=random.randint(1, 3),
+                )
+
+                for answer_index, (answer_text, is_correct) in enumerate(
+                    question_data["answers"]
+                ):
+                    RadioAnswerOption.objects.create(
+                        question=radio_question,
+                        text=answer_text,
+                        is_correct=is_correct,
+                        order_index=answer_index + 1,
+                    )
+
+            # Создаем checkbox-вопросы для модуля
+            for checkbox_index in range(checkbox_questions_per_module):
+                if checkbox_index < len(checkbox_questions_data):
+                    question_data = checkbox_questions_data[checkbox_index]
+                else:
+                    num_answers = random.randint(3, 5)
+                    correct_count = random.randint(1, 3)
+                    answers = []
+                    for i in range(num_answers):
+                        answers.append((f"Вариант {i+1}", i < correct_count))
+
+                    question_data = {
+                        "title": f"Checkbox вопрос {checkbox_index + 1}",
+                        "question": f"Текст вопроса {checkbox_index + 1}?",
+                        "explanation": f"Пояснение к вопросу "
+                        f"{checkbox_index + 1}",
+                        "points": random.randint(2, 5),
+                        "answers": answers,
+                    }
+
+                checkbox_question = LessonCheckBoxQuestion.objects.create(
+                    module=module,
+                    title=question_data["title"],
+                    question_text=question_data["question"],
+                    explanation=question_data["explanation"],
+                    order_index=checkbox_index + 1,
+                    is_active=random.choice([True, False, True]),
+                    points=question_data.get("points", random.randint(2, 5)),
+                )
+
+                for answer_index, (answer_text, is_correct) in enumerate(
+                    question_data["answers"]
+                ):
+                    CheckBoxAnswerOption.objects.create(
+                        question=checkbox_question,
+                        text=answer_text,
+                        is_correct=is_correct,
+                        order_index=answer_index + 1,
+                    )
+
+            # Создаем задачи программирования для модуля
+            for challenge_index in range(challenges_per_module):
+                if challenge_index < len(coding_challenges_data):
+                    challenge_data = coding_challenges_data[challenge_index]
+                else:
+                    # Случайная задача
+                    difficulties = ["beginner", "easy", "medium", "hard"]
+                    challenge_data = {
+                        "title": f"Задача {challenge_index + 1}",
+                        "description": f"Описание задачи {challenge_index + 1}",
+                        "instructions": f"Инструкция для задачи {challenge_index + 1}",
+                        "initial_code": "def solve():\n    pass",
+                        "solution_template": "def solve():\n    return True",
+                        "difficulty": random.choice(difficulties),
+                        "points": random.randint(5, 30),
+                        "time_limit_ms": random.choice([1000, 2000, 3000]),
+                        "memory_limit_mb": random.choice([128, 256, 512]),
+                        "test_cases": [
+                            {
+                                "input_data": f"input_{i}",
+                                "expected_output": f"output_{i}",
+                                "is_hidden": i > 0,
+                            }
+                            for i in range(1, 4)
+                        ],
+                    }
+
+                cc_kwargs = {
+                    "course": course,
+                    "module": module,
+                    "title": challenge_data["title"],
+                    "description": challenge_data["description"],
+                    "instructions": challenge_data["instructions"],
+                    "initial_code": challenge_data["initial_code"],
+                    "solution_template": challenge_data["solution_template"],
+                    "difficulty": challenge_data["difficulty"],
+                    "points": challenge_data["points"],
+                    "time_limit_ms": challenge_data["time_limit_ms"],
+                    "memory_limit_mb": challenge_data["memory_limit_mb"],
+                    "order_index": challenge_index + 1,
+                    "is_active": random.choice([True, False, True]),
+                }
+                challenge = CodingChallenge.objects.create(**cc_kwargs)
+
+                # Создаем тестовые случаи для задачи
+                for test_index, test_data in enumerate(
+                    challenge_data["test_cases"]
+                ):
+                    TestCase.objects.create(
+                        challenge=challenge,
+                        input_data=test_data["input_data"],
+                        expected_output=test_data["expected_output"],
+                        is_hidden=test_data["is_hidden"],
+                        order_index=test_index + 1,
+                    )
+
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"Создана задача: {challenge.title} с {challenge.test_cases.count()} тестами"
+                    )
+                )
+
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Создан модуль {module.title} с "
+                    f"{lessons_per_module} уроками, "
+                    f"{radio_questions_per_module} radio-вопросами, "
+                    f"{checkbox_questions_per_module} checkbox-вопросами и "
+                    f"{challenges_per_module} задачами"
+                )
+            )
