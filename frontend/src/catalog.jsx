@@ -39,7 +39,7 @@ function mapApiCourseToCard(row) {
   };
 }
 
-function CatalogPage({ navigate }) {
+function CatalogPage({ navigate, hashParams }) {
   const FM = window.FM;
   const M = FM.motion;
   const I = window.I;
@@ -48,8 +48,13 @@ function CatalogPage({ navigate }) {
   const [loadState, setLoadState] = React.useState('loading');
   const [loadError, setLoadError] = React.useState('');
   const [cat, setCat] = React.useState('Все');
-  const [query, setQuery] = React.useState('');
+  const [query, setQuery] = React.useState(() => (hashParams && hashParams.get('q')) || '');
   const [sort, setSort] = React.useState('Новизна');
+
+  React.useEffect(() => {
+    const q = (hashParams && hashParams.get('q')) || '';
+    setQuery(q);
+  }, [hashParams]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -186,7 +191,7 @@ function CatalogPage({ navigate }) {
                     transition={{ duration: 0.35, delay: i * 0.04, ease: [0.16, 1, 0.3, 1] }}>
                     <CourseCard
                       course={c}
-                      onOpen={() => navigate(window.Routes.PROBLEM)}
+                      onOpen={() => navigate(window.Routes.COURSE, { id: c.id })}
                       delay={0}
                     />
                   </M.div>

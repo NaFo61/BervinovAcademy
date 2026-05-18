@@ -19,6 +19,129 @@ from content.models import (
 )
 
 
+def _open_link(url):
+    return format_html(
+        '<a href="{}" style="color: #0d6efd;" title="{}">→</a>',
+        url,
+        _("Открыть"),
+    )
+
+
+def _lesson_counts_for_module(module):
+    return (
+        module.lessons_theories.count(),
+        module.lessons_radio_questions.count(),
+        module.lessons_checkbox_questions.count(),
+    )
+
+
+def _format_lesson_counts(theory, radio, checkbox):
+    total = theory + radio + checkbox
+    if total == 0:
+        return format_html('<span style="color: #dc3545;">0</span>')
+    parts = []
+    if theory:
+        parts.append(f"{theory} {_('теор.')}")
+    if radio:
+        parts.append(f"{radio} radio")
+    if checkbox:
+        parts.append(f"{checkbox} {_('чекб.')}")
+    return format_html("{}", " · ".join(parts))
+
+
+def _clone_course(original):
+    base_slug = f"{original.slug}-copy"
+    slug = base_slug
+    counter = 1
+    while Course.objects.filter(slug=slug).exists():
+        counter += 1
+        slug = f"{base_slug}-{counter}"
+
+    new_course = Course.objects.create(
+        title=f"{original.title} ({_('Копия')})",
+        slug=slug,
+        description=original.description,
+        image=original.image,
+        is_active=False,
+    )
+    new_course.technology.set(original.technology.all())
+
+    for module in original.modules.order_by("order_index"):
+        new_module = Module.objects.create(
+            course=new_course,
+            title=module.title,
+            description=module.description,
+            is_active=module.is_active,
+        )
+
+        for lesson in module.lessons_theories.order_by("order_index"):
+            LessonTheory.objects.create(
+                module=new_module,
+                title=lesson.title,
+                content=lesson.content,
+                is_active=lesson.is_active,
+            )
+
+        for question in module.lessons_radio_questions.order_by("order_index"):
+            new_question = LessonRadioQuestion.objects.create(
+                module=new_module,
+                title=question.title,
+                question_text=question.question_text,
+                explanation=question.explanation,
+                points=question.points,
+                is_active=question.is_active,
+            )
+            for answer in question.answers.order_by("order_index"):
+                RadioAnswerOption.objects.create(
+                    question=new_question,
+                    text=answer.text,
+                    is_correct=answer.is_correct,
+                )
+
+        for question in module.lessons_checkbox_questions.order_by(
+            "order_index"
+        ):
+            new_question = LessonCheckBoxQuestion.objects.create(
+                module=new_module,
+                title=question.title,
+                question_text=question.question_text,
+                explanation=question.explanation,
+                points=question.points,
+                is_active=question.is_active,
+            )
+            for answer in question.answers.order_by("order_index"):
+                CheckBoxAnswerOption.objects.create(
+                    question=new_question,
+                    text=answer.text,
+                    is_correct=answer.is_correct,
+                )
+
+        for challenge in module.challenges.order_by("order_index"):
+            new_challenge = CodingChallenge.objects.create(
+                course=new_course,
+                module=new_module,
+                title=challenge.title,
+                description=challenge.description,
+                instructions=challenge.instructions,
+                difficulty=challenge.difficulty,
+                points=challenge.points,
+                initial_code=challenge.initial_code,
+                solution_template=challenge.solution_template,
+                time_limit_ms=challenge.time_limit_ms,
+                memory_limit_mb=challenge.memory_limit_mb,
+                is_active=challenge.is_active,
+            )
+            for test_case in challenge.test_cases.order_by("order_index"):
+                TestCase.objects.create(
+                    challenge=new_challenge,
+                    input_data=test_case.input_data,
+                    expected_output=test_case.expected_output,
+                    is_hidden=test_case.is_hidden,
+                )
+
+    return new_course
+
+
 @admin.register(Technology)
 class TechnologyAdmin(ModelAdmin):
     list_display = ("name", "courses_count", "is_used")
@@ -135,7 +258,12 @@ class CourseAdmin(ModelAdmin):
     @admin.display(description=_("Статистика"))
     def courses_stats(self, obj):
         modules = obj.modules.count()
-        lessons = LessonTheory.objects.filter(module__course=obj).count()
+        theory = LessonTheory.objects.filter(module__course=obj).count()
+        radio = LessonRadioQuestion.objects.filter(module__course=obj).count()
+        checkbox = LessonCheckBoxQuestion.objects.filter(
+            module__course=obj
+        ).count()
+        total_lessons = theory + radio + checkbox
 
         stats_html = f"""
         <div style="
@@ -155,9 +283,15 @@ class CourseAdmin(ModelAdmin):
             </div>
             <div>
                 <strong style="color: var(--primary-text);">
-                {_('Уроки')}:
+                {_('Уроки (всего)')}:
                 </strong>
-                <span style="color: var(--secondary-text);">{lessons}</span>
+                <span style="color: var(--secondary-text);">
+                {total_lessons}
+                </span>
+            </div>
+            <div style="font-size: 0.8125rem; color: var(--secondary-text);">
+                {_('Теория')}: {theory} · radio:
+                 {radio} · {_('чекб.')}: {checkbox}
             </div>
         </div>
         """
@@ -165,21 +299,8 @@ class CourseAdmin(ModelAdmin):
 
     @display(description=_("Действия"), label=True)
     def actions_column(self, obj):
-        return format_html(
-            """
-            <div style="display: flex; gap: 5px;">
-                <a href="{view}" style="color: #0d6efd;" title="{view_title}">
-                    👁️
-                </a>
-                <a href="{edit}" style="color: #198754;" title="{edit_title}">
-                    ✏️
-                </a>
-            </div>
-            """,
-            view=reverse("admin:content_course_change", args=[obj.id]),
-            edit=reverse("admin:content_course_change", args=[obj.id]),
-            view_title=_("Просмотр"),
-            edit_title=_("Редактировать"),
+        return _open_link(
+            reverse("admin:content_course_change", args=[obj.id])
         )
 
     @action(description=_("Активировать курсы ✅"), permissions=["change"])
@@ -210,18 +331,19 @@ class CourseAdmin(ModelAdmin):
             )
             return
 
-        course = queryset.first()
-        course.pk = None
-        course.title = f"{course.title} ({_('Копия')})"
-        course.slug = f"{course.slug}-copy"
-        course.is_active = False
-        course.save()
-
-        course.technology.set(course.technology.all())
+        original = queryset.prefetch_related(
+            "technology",
+            "modules__lessons_theories",
+            "modules__lessons_radio_questions__answers",
+            "modules__lessons_checkbox_questions__answers",
+            "modules__challenges__test_cases",
+        ).first()
+        new_course = _clone_course(original)
 
         self.message_user(
             request,
-            _("Курс успешно клонирован"),
+            _("Курс «%(title)s» успешно клонирован с модулями и уроками")
+            % {"title": new_course.title},
             messages.SUCCESS,
         )
 
@@ -232,15 +354,40 @@ class CourseAdmin(ModelAdmin):
         return queryset.prefetch_related("technology", "modules")
 
 
+class ModuleInline(TabularInline):
+    """Модули курса на странице редактирования курса"""
+
+    model = Module
+    extra = 0
+    ordering = ("order_index",)
+    ordering_field = "order_index"
+    hide_ordering_field = True
+    show_change_link = True
+    fields = ("title", "is_active", "lessons_inline_count")
+    readonly_fields = ("lessons_inline_count",)
+
+    @admin.display(description=_("Уроки"))
+    def lessons_inline_count(self, obj):
+        if not obj.pk:
+            return "—"
+        theory, radio, checkbox = _lesson_counts_for_module(obj)
+        return _format_lesson_counts(theory, radio, checkbox)
+
+
+CourseAdmin.inlines = [ModuleInline]
+
+
 class LessonTheoryInline(TabularInline):
     """Инлайн для теоретических уроков"""
 
     model = LessonTheory
     extra = 1
     ordering = ("order_index",)
+    ordering_field = "order_index"
+    hide_ordering_field = True
     show_change_link = True
 
-    fields = ("title", "content_preview", "order_index", "is_active")
+    fields = ("title", "content_preview", "is_active")
     readonly_fields = ("content_preview",)
 
     @admin.display(description=_("Содержание"))
@@ -261,16 +408,16 @@ class LessonRadioQuestionInline(TabularInline):
     model = LessonRadioQuestion
     extra = 1
     ordering = ("order_index",)
+    ordering_field = "order_index"
+    hide_ordering_field = True
     show_change_link = True
     fields = (
         "title",
         "question_preview",
         "points",
-        "order_index",
         "is_active",
     )
     readonly_fields = ("question_preview",)
-    classes = ["collapse"]
 
     @admin.display(description=_("Вопрос"))
     def question_preview(self, obj):
@@ -292,16 +439,16 @@ class LessonCheckBoxQuestionInline(TabularInline):
     model = LessonCheckBoxQuestion
     extra = 1
     ordering = ("order_index",)
+    ordering_field = "order_index"
+    hide_ordering_field = True
     show_change_link = True
     fields = (
         "title",
         "question_preview",
         "points",
-        "order_index",
         "is_active",
     )
     readonly_fields = ("question_preview",)
-    classes = ["collapse"]
 
     @admin.display(description=_("Вопрос"))
     def question_preview(self, obj):
@@ -317,6 +464,28 @@ class LessonCheckBoxQuestionInline(TabularInline):
         )
 
 
+class CodingChallengeInline(TabularInline):
+    """Задачи по программированию в модуле"""
+
+    model = CodingChallenge
+    fk_name = "module"
+    extra = 0
+    ordering = ("order_index",)
+    ordering_field = "order_index"
+    hide_ordering_field = True
+    show_change_link = True
+    fields = ("title", "difficulty", "points", "is_active")
+
+    def save_new(self, form, commit=True):
+        obj = super().save_new(form, commit=False)
+        if obj.module_id and not obj.course_id:
+            obj.course_id = obj.module.course_id
+        if commit:
+            obj.save()
+            form.save_m2m()
+        return obj
+
+
 @admin.register(Module)
 class ModuleAdmin(ModelAdmin):
     """Админка для модулей"""
@@ -325,7 +494,6 @@ class ModuleAdmin(ModelAdmin):
         "title",
         "course_link",
         "lessons_count",
-        "order_index",
         "is_active",
         "actions_column",
     )
@@ -343,6 +511,7 @@ class ModuleAdmin(ModelAdmin):
         LessonTheoryInline,
         LessonRadioQuestionInline,
         LessonCheckBoxQuestionInline,
+        CodingChallengeInline,
     ]
 
     fieldsets = (
@@ -353,7 +522,6 @@ class ModuleAdmin(ModelAdmin):
                     "course",
                     "title",
                     "description",
-                    "order_index",
                     "is_active",
                 ),
             },
@@ -374,17 +542,8 @@ class ModuleAdmin(ModelAdmin):
 
     @admin.display(description=_("Уроки"))
     def lessons_count(self, obj):
-        count = obj.lessons_theories.count()
-        if count == 0:
-            return format_html(
-                '<span style="color: #dc3545;">{}</span>', count
-            )
-
-        url = (
-            reverse("admin:content_lessontheory_changelist")
-            + f"?module__id__exact={obj.id}"
-        )
-        return format_html('<a href="{}">{}</a>', url, count)
+        theory, radio, checkbox = _lesson_counts_for_module(obj)
+        return _format_lesson_counts(theory, radio, checkbox)
 
     @admin.display(description=_("Статистика"))
     def lessons_count_display(self, obj):
@@ -445,21 +604,8 @@ class ModuleAdmin(ModelAdmin):
 
     @display(description=_("Действия"), label=True)
     def actions_column(self, obj):
-        return format_html(
-            """
-            <div style="display: flex; gap: 5px;">
-                <a href="{view}" style="color: #0d6efd;" title="{view_title}">
-                    👁️
-                </a>
-                <a href="{edit}" style="color: #198754;" title="{edit_title}">
-                    ✏️
-                </a>
-            </div>
-            """,
-            view=reverse("admin:content_module_change", args=[obj.id]),
-            edit=reverse("admin:content_module_change", args=[obj.id]),
-            view_title=_("Просмотр"),
-            edit_title=_("Редактировать"),
+        return _open_link(
+            reverse("admin:content_module_change", args=[obj.id])
         )
 
     @action(description=_("Активировать модули ✅"), permissions=["change"])
@@ -485,7 +631,9 @@ class ModuleAdmin(ModelAdmin):
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         return queryset.select_related("course").prefetch_related(
-            "lessons_theories"
+            "lessons_theories",
+            "lessons_radio_questions",
+            "lessons_checkbox_questions",
         )
 
 
@@ -498,7 +646,6 @@ class LessonTheoryAdmin(ModelAdmin):
         "module_link",
         "course_link",
         "content_preview",
-        "order_index",
         "is_active",
         "actions_column",
     )
@@ -526,7 +673,6 @@ class LessonTheoryAdmin(ModelAdmin):
                     "module",
                     "title",
                     "content",
-                    "order_index",
                     "is_active",
                 ),
             },
@@ -597,21 +743,8 @@ class LessonTheoryAdmin(ModelAdmin):
 
     @display(description=_("Действия"), label=True)
     def actions_column(self, obj):
-        return format_html(
-            """
-            <div style="display: flex; gap: 5px;">
-                <a href="{view}" style="color: #0d6efd;" title="{view_title}">
-                    👁️
-                </a>
-                <a href="{edit}" style="color: #198754;" title="{edit_title}">
-                    ✏️
-                </a>
-            </div>
-            """,
-            view=reverse("admin:content_lessontheory_change", args=[obj.id]),
-            edit=reverse("admin:content_lessontheory_change", args=[obj.id]),
-            view_title=_("Просмотр"),
-            edit_title=_("Редактировать"),
+        return _open_link(
+            reverse("admin:content_lessontheory_change", args=[obj.id])
         )
 
     @action(description=_("Активировать уроки ✅"), permissions=["change"])
@@ -644,8 +777,9 @@ class RadioAnswerOptionInline(TabularInline):
     extra = 2
     max_num = 10
     ordering = ("order_index",)
-    fields = ("text", "is_correct", "order_index")
-    classes = ["collapse"]
+    ordering_field = "order_index"
+    hide_ordering_field = True
+    fields = ("text", "is_correct")
 
     def get_extra(self, request, obj=None, **kwargs):
         if not obj:
@@ -658,8 +792,9 @@ class CheckBoxAnswerOptionInline(TabularInline):
     extra = 2
     max_num = 10
     ordering = ("order_index",)
-    fields = ("text", "is_correct", "order_index")
-    classes = ["collapse"]
+    ordering_field = "order_index"
+    hide_ordering_field = True
+    fields = ("text", "is_correct")
 
     def get_extra(self, request, obj=None, **kwargs):
         if not obj:
@@ -676,7 +811,6 @@ class LessonRadioQuestionAdmin(ModelAdmin):
         "answers_count",
         "correct_answer_preview",
         "points",
-        "order_index",
         "is_active",
         "actions_column",
     )
@@ -707,14 +841,6 @@ class LessonRadioQuestionAdmin(ModelAdmin):
                     "question_text",
                     "explanation",
                     "points",
-                ),
-            },
-        ),
-        (
-            _("Порядок и статус"),
-            {
-                "fields": (
-                    "order_index",
                     "is_active",
                 ),
             },
@@ -881,25 +1007,8 @@ class LessonRadioQuestionAdmin(ModelAdmin):
 
     @display(description=_("Действия"), label=True)
     def actions_column(self, obj):
-        return format_html(
-            """
-            <div style="display: flex; gap: 5px;">
-                <a href="{view}" style="color: #0d6efd;" title="{view_title}">
-                    👁️
-                </a>
-                <a href="{edit}" style="color: #198754;" title="{edit_title}">
-                    ✏️
-                </a>
-            </div>
-            """,
-            view=reverse(
-                "admin:content_lessonradioquestion_change", args=[obj.id]
-            ),
-            edit=reverse(
-                "admin:content_lessonradioquestion_change", args=[obj.id]
-            ),
-            view_title=_("Просмотр"),
-            edit_title=_("Редактировать"),
+        return _open_link(
+            reverse("admin:content_lessonradioquestion_change", args=[obj.id])
         )
 
     @action(description=_("Активировать вопросы ✅"), permissions=["change"])
@@ -963,7 +1072,6 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
         "answers_count",
         "correct_answers_count",
         "points",
-        "order_index",
         "is_active",
         "actions_column",
     )
@@ -994,14 +1102,6 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
                     "question_text",
                     "explanation",
                     "points",
-                ),
-            },
-        ),
-        (
-            _("Порядок и статус"),
-            {
-                "fields": (
-                    "order_index",
                     "is_active",
                 ),
             },
@@ -1165,25 +1265,10 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
 
     @display(description=_("Действия"), label=True)
     def actions_column(self, obj):
-        return format_html(
-            """
-            <div style="display: flex; gap: 5px;">
-                <a href="{view}" style="color: #0d6efd;" title="{view_title}">
-                    👁️
-                </a>
-                <a href="{edit}" style="color: #198754;" title="{edit_title}">
-                    ✏️
-                </a>
-            </div>
-            """,
-            view=reverse(
+        return _open_link(
+            reverse(
                 "admin:content_lessoncheckboxquestion_change", args=[obj.id]
-            ),
-            edit=reverse(
-                "admin:content_lessoncheckboxquestion_change", args=[obj.id]
-            ),
-            view_title=_("Просмотр"),
-            edit_title=_("Редактировать"),
+            )
         )
 
     @action(description=_("Активировать вопросы ✅"), permissions=["change"])
@@ -1226,7 +1311,6 @@ class CodingChallengeAdmin(ModelAdmin):
         "module_link",
         "solved_count",
         "is_active",
-        "order_index",
     )
     list_filter = (
         "difficulty",
@@ -1276,7 +1360,6 @@ class CodingChallengeAdmin(ModelAdmin):
                 "fields": (
                     "course",
                     "module",
-                    "order_index",
                     "is_active",
                 ),
             },
@@ -1366,8 +1449,10 @@ class CodingChallengeAdmin(ModelAdmin):
                 <strong>{_('Успешных отправок')}:</strong> {completed}
             </div>
             <div>
-                <strong>{_('Процент успеха')}:</strong> 
-                <span style="color: {'#198754' if success_rate >= 50 else '#ffc107' if success_rate > 0 else '#dc3545'}">
+                <strong>{_('Процент успеха')}:</strong>
+                <span style="color: {'#198754'
+                if success_rate >= 50 else '#ffc107'
+                if success_rate > 0 else '#dc3545'}">
                     {success_rate}%
                 </span>
             </div>
@@ -1401,8 +1486,9 @@ class TestCaseInline(TabularInline):
     model = TestCase
     extra = 1
     ordering = ("order_index",)
-    fields = ("input_data", "expected_output", "is_hidden", "order_index")
-    classes = ["collapse"]
+    ordering_field = "order_index"
+    hide_ordering_field = True
+    fields = ("input_data", "expected_output", "is_hidden")
 
 
 # Добавляем inlines в CodingChallengeAdmin
@@ -1418,7 +1504,6 @@ class TestCaseAdmin(ModelAdmin):
         "input_preview",
         "output_preview",
         "is_hidden",
-        "order_index",
     )
     list_filter = ("is_hidden", "challenge")
     search_fields = ("challenge__title", "input_data", "expected_output")

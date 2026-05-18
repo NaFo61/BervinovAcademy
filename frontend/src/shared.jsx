@@ -7,6 +7,7 @@ const FM = window.Motion || {};
 const Routes = {
   LANDING: 'landing',
   CATALOG: 'catalog',
+  COURSE: 'course',
   PROBLEM: 'problem',
   PROFILE: 'profile',
   AUTH: 'auth'
@@ -27,8 +28,17 @@ function useHashRoute() {
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
-  const navigate = (r) => {
-    location.hash = '#/' + r;
+  const navigate = (r, query) => {
+    let hash = '#/' + r;
+    if (query) {
+      const qs = query instanceof URLSearchParams
+        ? query.toString()
+        : typeof query === 'string'
+          ? query.replace(/^\?/, '')
+          : new URLSearchParams(query).toString();
+      if (qs) hash += '?' + qs;
+    }
+    location.hash = hash;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   return [state.path, navigate, state.params];
@@ -327,6 +337,8 @@ const COURSES = [
 // ------- Layout chrome -------
 function TopNav({ route, navigate }) {
   const [session, setSession] = React.useState(() => !!localStorage.getItem('access_token'));
+  const [searchDraft, setSearchDraft] = React.useState('');
+  const searchRef = React.useRef(null);
 
   React.useEffect(() => {
     const sync = () => setSession(!!localStorage.getItem('access_token'));
@@ -338,9 +350,28 @@ function TopNav({ route, navigate }) {
     };
   }, []);
 
+  React.useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   const access = session ? localStorage.getItem('access_token') : null;
   const payload = access ? parseJwtPayload(access) : {};
   const displayName = [payload.first_name, payload.last_name].filter(Boolean).join(' ').trim();
+
+  const submitSearch = (e) => {
+    e?.preventDefault();
+    const q = searchDraft.trim();
+    const params = q ? new URLSearchParams({ q }) : null;
+    navigate(Routes.CATALOG, params);
+    setSearchDraft('');
+  };
 
   const handleLogout = async (e) => {
     e.preventDefault();
@@ -384,19 +415,26 @@ function TopNav({ route, navigate }) {
             ))}
           </nav>
           <div className="flex-1" />
-          <button className="hidden sm:flex items-center gap-2 px-3 h-10 rounded-xl border border-black/[0.06] bg-white text-ink/60 text-sm w-56 hover:border-violet-300 transition-colors">
-            <I.Search className="w-4 h-4" />
-            <span>Поиск курсов…</span>
-            <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded border border-black/10 text-ink/40 font-mono">⌘K</span>
-          </button>
+          <form onSubmit={submitSearch} className="hidden sm:flex items-center gap-2 px-3 h-10 rounded-xl border border-black/[0.06] bg-white text-sm w-56 hover:border-violet-300 focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-500/15 transition-colors">
+            <I.Search className="w-4 h-4 text-ink/50 shrink-0" />
+            <input
+              ref={searchRef}
+              type="search"
+              value={searchDraft}
+              onChange={(e) => setSearchDraft(e.target.value)}
+              placeholder="Поиск курсов…"
+              className="flex-1 min-w-0 bg-transparent text-ink/80 placeholder:text-ink/40 outline-none"
+              aria-label="Поиск курсов"
+            />
+            <kbd className="shrink-0 text-[10px] px-1.5 py-0.5 rounded border border-black/10 text-ink/40 font-mono">⌘K</kbd>
+          </form>
           {session ? (
             <div className="flex items-center gap-2">
-              <span className="hidden sm:inline max-w-[140px] truncate text-sm text-ink/70" title={displayName || payload.email || ''}>
-                {displayName || payload.email || 'Аккаунт'}
-              </span>
-              <button type="button" onClick={() => navigate(Routes.PROFILE)} className="h-10 px-3 rounded-xl text-sm font-medium text-ink/70 hover:bg-black/[0.04]">
-                Профиль
-              </button>
+              {displayName ? (
+                <span className="hidden sm:inline max-w-[140px] truncate text-sm text-ink/70" title={displayName}>
+                  {displayName}
+                </span>
+              ) : null}
               <button type="button" onClick={handleLogout} className="h-10 px-4 rounded-xl text-sm font-semibold text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50 transition-colors">
                 Выйти
               </button>
