@@ -228,3 +228,4 @@ lerna-debug.log*
 # Temporary files
 *.tmp
 *.temp
+.claude/
