@@ -8,6 +8,7 @@ const Routes = {
   LANDING: 'landing',
   CATALOG: 'catalog',
   COURSE: 'course',
+  LEARN: 'learn',
   PROBLEM: 'problem',
   PROFILE: 'profile',
   AUTH: 'auth'
@@ -44,9 +45,170 @@ function useHashRoute() {
   return [state.path, navigate, state.params];
 }
 
+function initApiBase() {
+  if (typeof window === 'undefined') return;
+  if (typeof window.__API_BASE__ === 'string') return;
+  const { hostname, port } = window.location;
+  if ((hostname === 'localhost' || hostname === '127.0.0.1') && port === '3000') {
+    window.__API_BASE__ = 'http://127.0.0.1:8000';
+  } else {
+    window.__API_BASE__ = '';
+  }
+}
+initApiBase();
+
 function getApiBase() {
   const b = typeof window !== 'undefined' && window.__API_BASE__;
   return typeof b === 'string' ? b.replace(/\/$/, '') : '';
+}
+
+const COURSE_PALETTE = [
+  ['#2563EB', '#06B6D4'],
+  ['#7C3AED', '#F97316'],
+  ['#1D4ED8', '#0EA5E9'],
+  ['#0EA5E9', '#22C55E'],
+];
+
+function coursePaletteFromId(publicId) {
+  const h = String(publicId || '').split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+  return COURSE_PALETTE[Math.abs(h) % COURSE_PALETTE.length];
+}
+
+function mapApiCourseToCard(row) {
+  const tags = (row.technology || []).map((t) => t.name || '').filter(Boolean);
+  const cat = tags[0] || 'Курс';
+  const [gradFrom, gradTo] = coursePaletteFromId(row.public_id);
+  const img = row.image ? mediaUrl(row.image) : '';
+  const title = (row.title || 'Курс').trim();
+  const emoji = tags[0] ? tags[0].slice(0, 2) : title.slice(0, 2);
+  const h = String(row.public_id || '').split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+  return {
+    id: row.public_id,
+    publicId: row.public_id,
+    slug: row.slug,
+    title: row.title,
+    desc: (row.description || '').trim()
+      || (tags.length ? `Технологии: ${tags.join(', ')}.` : 'Курс Академии Бервинова.'),
+    tags: tags.length ? tags : ['Курс'],
+    cat,
+    level: 'Курс',
+    rating: '—',
+    students: 0,
+    lessons: 0,
+    hours: 0,
+    price: 0,
+    lang: 'RU',
+    popularity: Math.min(95, 40 + (Math.abs(h) % 56)),
+    gradFrom,
+    gradTo,
+    accentEmoji: emoji,
+    imageUrl: img,
+    fromApi: true,
+    createdAt: row.created_at || '',
+  };
+}
+
+function mapApiCourseToCourse(row) {
+  const tags = (row.technology || []).map((t) => t.name || '').filter(Boolean);
+  const [gradFrom, gradTo] = coursePaletteFromId(row.public_id);
+  const moduleCount = (row.modules || []).length;
+  const description = (row.description || '').trim();
+  return {
+    id: row.public_id,
+    slug: row.slug,
+    title: row.title || 'Курс',
+    desc: description || (tags.length ? `Технологии: ${tags.join(', ')}.` : 'Курс Академии Бервинова.'),
+    tags: tags.length ? tags : ['Курс'],
+    cat: tags[0] || 'Курс',
+    level: 'Курс',
+    rating: '—',
+    students: 0,
+    lessons: moduleCount,
+    hours: moduleCount,
+    price: 0,
+    gradFrom,
+    gradTo,
+    accentEmoji: tags[0] ? tags[0].slice(0, 2) : (row.title || '').slice(0, 2),
+    imageUrl: row.image ? mediaUrl(row.image) : '',
+    popularity: 75,
+    fromApi: true,
+  };
+}
+
+const MODULE_ICONS = ['📚', '🔧', '⚡', '✅', '🚀', '🌐', '🧩', '📊'];
+
+function mapApiModules(modules) {
+  return (modules || []).map((mod, i) => {
+    const theories = mod.lessons_theories || [];
+    const radio = mod.lessons_radio || [];
+    const checkbox = mod.lessons_checkbox || [];
+    const coding = mod.lessons_coding || [];
+    return {
+      id: mod.public_id,
+      title: mod.title,
+      icon: MODULE_ICONS[i % MODULE_ICONS.length],
+      lessons: theories.length,
+      quizzes: radio.length + checkbox.length,
+      hours: 0,
+      tasks: coding.length,
+      items: [],
+      description: mod.description || '',
+    };
+  });
+}
+
+function apiPathFromNextUrl(nextUrl) {
+  if (!nextUrl) return null;
+  if (!/^https?:\/\//i.test(nextUrl)) {
+    return nextUrl.startsWith('/') ? nextUrl : '/' + nextUrl;
+  }
+  const base = getApiBase();
+  if (base && nextUrl.startsWith(base)) {
+    const rest = nextUrl.slice(base.length);
+    return rest.startsWith('/') ? rest : '/' + rest;
+  }
+  try {
+    const u = new URL(nextUrl);
+    return u.pathname + u.search;
+  } catch (_) {
+    return null;
+  }
+}
+
+/** Загружает все страницы списка курсов (DRF pagination или один массив). */
+async function fetchCoursesList() {
+  const all = [];
+  let path = '/api/content/courses/';
+  for (;;) {
+    const data = await fetchApiJson(path);
+    if (Array.isArray(data)) return data;
+    all.push(...(data.results || []));
+    const nextPath = apiPathFromNextUrl(data.next);
+    if (!nextPath) break;
+    path = nextPath;
+  }
+  return all;
+}
+
+async function refreshAccessToken() {
+  const refresh = localStorage.getItem('refresh_token');
+  if (!refresh) return false;
+  try {
+    const data = await fetchApiJson('/api/auth/refresh/', {
+      method: 'POST',
+      body: { refresh },
+      _retry: false,
+    });
+    if (data && data.access) {
+      localStorage.setItem('access_token', data.access);
+      if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
+      notifyAuthChanged();
+      return true;
+    }
+  } catch (_) {
+    /* expired refresh */
+  }
+  return false;
 }
 
 function mediaUrl(path) {
@@ -78,7 +240,13 @@ function formatDrfError(data, depth = 0) {
 }
 
 async function fetchApiJson(path, opts = {}) {
-  const { method = 'GET', body, auth = false, headers: extraHeaders = {} } = opts;
+  const {
+    method = 'GET',
+    body,
+    auth = false,
+    headers: extraHeaders = {},
+    _retry = true,
+  } = opts;
   const url = `${getApiBase()}${path.startsWith('/') ? path : '/' + path}`;
   const headers = { ...extraHeaders };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -90,7 +258,7 @@ async function fetchApiJson(path, opts = {}) {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
-    credentials: 'omit'
+    credentials: 'omit',
   });
   const text = await res.text();
   let data = null;
@@ -98,6 +266,15 @@ async function fetchApiJson(path, opts = {}) {
     data = text ? JSON.parse(text) : null;
   } catch (_) {
     data = { _raw: text };
+  }
+  if (res.status === 401 && auth && _retry && !path.includes('/auth/refresh/')) {
+    const renewed = await refreshAccessToken();
+    if (renewed) {
+      return fetchApiJson(path, { ...opts, _retry: false });
+    }
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    notifyAuthChanged();
   }
   if (!res.ok) {
     const msg = formatDrfError(data) || res.statusText || 'Ошибка запроса';
@@ -391,7 +568,6 @@ function TopNav({ route, navigate }) {
   const links = [
     { id: Routes.LANDING, label: 'Главная' },
     { id: Routes.CATALOG, label: 'Каталог' },
-    { id: Routes.PROBLEM, label: 'Задача' },
     { id: Routes.PROFILE, label: 'Профиль' }
   ];
 
@@ -473,7 +649,6 @@ function Footer({ navigate }) {
         </div>
         <FooterCol title="Учёба" items={[
         { label: 'Каталог курсов', onClick: () => navigate(Routes.CATALOG) },
-        { label: 'Тренажёр задач', onClick: () => navigate(Routes.PROBLEM) },
         { label: 'Мой профиль', onClick: () => navigate(Routes.PROFILE) },
         { label: 'Сертификаты', onClick: () => {} }]
         } />
@@ -634,10 +809,16 @@ Object.assign(window, {
   getApiBase,
   apiJson: fetchApiJson,
   fetchApiJson,
+  fetchCoursesList,
+  refreshAccessToken,
   formatDrfError,
   mediaUrl,
   parseJwtPayload,
   notifyAuthChanged,
+  mapApiCourseToCard,
+  mapApiCourseToCourse,
+  mapApiModules,
+  MODULE_ICONS,
   I,
   TopNav,
   Footer,
@@ -646,5 +827,5 @@ Object.assign(window, {
   COURSES,
   CATEGORIES,
   FloatingShapes,
-  FM
+  FM,
 });

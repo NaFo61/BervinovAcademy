@@ -4,7 +4,7 @@ const Routes = window.Routes;
 const FM = window.FM;
 const I = window.I;
 const CourseCard = window.CourseCard;
-const COURSES = window.COURSES;
+const mapApiCourseToCard = window.mapApiCourseToCard;
 
 function LandingPage({ navigate }) {
   return (
@@ -298,7 +298,28 @@ function WhySection() {
 
 function TopCourses({ navigate }) {
   const M = FM.motion;
-  const top3 = COURSES.slice(0, 3);
+  const [courses, setCourses] = React.useState([]);
+  const [state, setState] = React.useState('loading');
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await window.fetchCoursesList();
+        if (!cancelled) {
+          setCourses(list.slice(0, 3).map(mapApiCourseToCard));
+          setState('ok');
+        }
+      } catch (_) {
+        if (!cancelled) {
+          setCourses([]);
+          setState('err');
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <section className="relative bg-paper">
       <div className="max-w-7xl mx-auto px-5 sm:px-8 py-24">
@@ -315,9 +336,28 @@ function TopCourses({ navigate }) {
           </button>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {top3.map((c, i) => (
-            <CourseCard key={c.id} course={c} delay={i * 0.1} onOpen={() => navigate(Routes.CATALOG)} />
-          ))}
+          {state === 'loading' ? (
+            <div className="col-span-full flex justify-center py-16 text-ink/55 text-sm gap-2">
+              <span className="w-6 h-6 rounded-full border-2 border-violet-500 border-t-transparent animate-spin"/>
+              Загружаем курсы…
+            </div>
+          ) : state === 'err' ? (
+            <p className="col-span-full text-sm text-ink/55 text-center py-12">
+              Курсы временно недоступны.{' '}
+              <button type="button" onClick={() => navigate(Routes.CATALOG)} className="text-violet-600 font-semibold hover:underline">
+                Открыть каталог
+              </button>
+            </p>
+          ) : (
+            courses.map((c, i) => (
+              <CourseCard
+                key={c.id}
+                course={c}
+                delay={i * 0.1}
+                onOpen={() => navigate(window.Routes.COURSE, { id: c.id })}
+              />
+            ))
+          )}
         </div>
       </div>
     </section>

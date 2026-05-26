@@ -214,6 +214,42 @@
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { scrollbar-width: none; }
 
+  /* ── Theory lesson prose ── */
+  .theory-content { font-size: 15px; line-height: 1.8; color: rgba(11,18,38,0.82); }
+  .theory-content h1 { font-size: 1.65rem; font-weight: 800; margin: 0 0 0.75rem; color: #0B1226; }
+  .theory-content h2 { font-size: 1.3rem;  font-weight: 700; margin: 1.75rem 0 0.6rem; color: #0B1226; }
+  .theory-content h3 { font-size: 1.1rem;  font-weight: 600; margin: 1.25rem 0 0.5rem; color: #0B1226; }
+  .theory-content h4 { font-size: 1rem;    font-weight: 600; margin: 1rem 0 0.4rem; }
+  .theory-content p  { margin-bottom: 1rem; }
+  .theory-content ul, .theory-content ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+  .theory-content li { margin-bottom: 0.3rem; }
+  .theory-content ul { list-style-type: disc; }
+  .theory-content ol { list-style-type: decimal; }
+  .theory-content strong { font-weight: 700; color: #0B1226; }
+  .theory-content em { font-style: italic; }
+  .theory-content a  { color: #2563EB; text-decoration: underline; text-underline-offset: 3px; }
+  .theory-content code {
+    background: rgba(11,18,38,0.07); padding: 0.15em 0.45em;
+    border-radius: 5px; font-family: 'JetBrains Mono', monospace;
+    font-size: 0.875em; color: #1D4ED8;
+  }
+  .theory-content pre {
+    background: #0B1226; color: #E2E8F0;
+    padding: 1.25rem 1.5rem; border-radius: 14px;
+    overflow-x: auto; margin: 1.25rem 0; font-size: 0.875rem;
+    line-height: 1.65; font-family: 'JetBrains Mono', monospace;
+  }
+  .theory-content pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+  .theory-content blockquote {
+    border-left: 3px solid #2563EB; padding: 0.5rem 1rem;
+    margin: 1rem 0; color: rgba(11,18,38,0.65); font-style: italic;
+    background: rgba(37,99,235,0.04); border-radius: 0 8px 8px 0;
+  }
+  .theory-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 0.9rem; }
+  .theory-content th, .theory-content td { border: 1px solid rgba(11,18,38,0.1); padding: 0.55rem 0.85rem; text-align: left; }
+  .theory-content th { background: rgba(11,18,38,0.04); font-weight: 600; }
+  .theory-content hr { border: none; border-top: 1px solid rgba(11,18,38,0.08); margin: 1.5rem 0; }
+
   .avatar-ring {
     background: linear-gradient(135deg, var(--c-1), var(--c-3), var(--c-5));
     padding: 3px; border-radius: 999px;
@@ -230,10 +266,9 @@
 <div id="root"></div>
 
 <!--
-  Локальная разработка (npm run dev → serve на :3000): запросы /api/* иначе уходят на статик-сервер.
-  Раскомментируй строку ниже, если Django слушает http://127.0.0.1:8000 (в settings.py уже разрешён CORS для localhost:3000).
+  Локальная разработка (npm run dev → serve на :3000): API_BASE подставляется автоматически в shared.jsx.
+  При необходимости переопредели: window.__API_BASE__ = 'http://127.0.0.1:8000';
 -->
-<!-- <script>window.__API_BASE__ = 'http://127.0.0.1:8000';</script> -->
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
@@ -249,6 +284,7 @@
 <script type="text/babel" src="src/profile.jsx"></script>
 <script type="text/babel" src="src/auth.jsx"></script>
 <script type="text/babel" src="src/course.jsx"></script>
+<script type="text/babel" src="src/learn.jsx"></script>
 <script type="text/babel" src="src/app.jsx"></script>
 </body>
 </html>

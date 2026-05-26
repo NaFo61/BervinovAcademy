@@ -67,10 +67,18 @@ class LessonCheckBoxShortSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class CodingChallengeShortSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CodingChallenge
+        fields = ("public_id", "title", "order_index", "difficulty", "points")
+        read_only_fields = fields
+
+
 class ModuleShortSerializer(serializers.ModelSerializer):
     lessons_theories = serializers.SerializerMethodField()
     lessons_radio = serializers.SerializerMethodField()
     lessons_checkbox = serializers.SerializerMethodField()
+    lessons_coding = serializers.SerializerMethodField()
 
     def get_lessons_theories(self, obj):
         queryset = obj.lessons_theories.filter(is_active=True).order_by(
@@ -90,6 +98,12 @@ class ModuleShortSerializer(serializers.ModelSerializer):
         ).order_by("order_index")
         return LessonCheckBoxShortSerializer(queryset, many=True).data
 
+    def get_lessons_coding(self, obj):
+        queryset = obj.challenges.filter(is_active=True).order_by(
+            "order_index"
+        )
+        return CodingChallengeShortSerializer(queryset, many=True).data
+
     class Meta:
         model = Module
         fields = (
@@ -100,6 +114,7 @@ class ModuleShortSerializer(serializers.ModelSerializer):
             "lessons_theories",
             "lessons_radio",
             "lessons_checkbox",
+            "lessons_coding",
         )
         read_only_fields = fields
 
@@ -126,9 +141,16 @@ class ModuleDetailSerializer(serializers.ModelSerializer):
     course_public_id = serializers.UUIDField(
         source="course.public_id", read_only=True
     )
-    lessons_theories = LessonTheoryShortSerializer(many=True, read_only=True)
+    lessons_theories = serializers.SerializerMethodField()
     lessons_radio = serializers.SerializerMethodField()
     lessons_checkbox = serializers.SerializerMethodField()
+    lessons_coding = serializers.SerializerMethodField()
+
+    def get_lessons_theories(self, obj):
+        queryset = obj.lessons_theories.filter(is_active=True).order_by(
+            "order_index"
+        )
+        return LessonTheoryShortSerializer(queryset, many=True).data
 
     def get_lessons_radio(self, obj):
         queryset = obj.lessons_radio_questions.filter(is_active=True).order_by(
@@ -142,6 +164,12 @@ class ModuleDetailSerializer(serializers.ModelSerializer):
         ).order_by("order_index")
         return LessonCheckBoxShortSerializer(queryset, many=True).data
 
+    def get_lessons_coding(self, obj):
+        queryset = obj.challenges.filter(is_active=True).order_by(
+            "order_index"
+        )
+        return CodingChallengeShortSerializer(queryset, many=True).data
+
     class Meta:
         model = Module
         fields = (
@@ -154,6 +182,7 @@ class ModuleDetailSerializer(serializers.ModelSerializer):
             "lessons_theories",
             "lessons_radio",
             "lessons_checkbox",
+            "lessons_coding",
         )
         read_only_fields = fields
 

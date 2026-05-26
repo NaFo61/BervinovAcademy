@@ -229,7 +229,7 @@ class UserAnswerRadioAdmin(ModelAdmin):
                 title="{view_title}">👁️</a>
                 <a href="{edit}" style="color: #198754;"
                 title="{edit_title}">✏️</a>
-                <a href="{user}" style="color: #6f42c1;" 
+                <a href="{user}" style="color: #6f42c1;"
                 title="{user_title}">👤</a>
             </div>
             """,
@@ -308,7 +308,7 @@ class UserAnswerRadioAdmin(ModelAdmin):
                     </strong>
                 </div>
                 <div style="padding: 0.75rem; background: rgba(0,0,0,0.02);
-                border-radius: 0.375rem; border: 1px 
+                border-radius: 0.375rem; border: 1px
                 solid var(--border-color);">
                     {obj.question.question_text}
                 </div>
@@ -611,7 +611,7 @@ class UserAnswerCheckBoxAdmin(ModelAdmin):
         return format_html(
             """
             <div style="display: flex; gap: 5px;">
-                <a href="{view}" style="color: #0d6efd;" 
+                <a href="{view}" style="color: #0d6efd;"
                 title="{view_title}">👁️</a>
                 <a href="{edit}" style="color: #198754;"
                 title="{edit_title}">✏️</a>
@@ -902,10 +902,11 @@ class CodeSubmissionAdmin(ModelAdmin):
             if percent == 100
             else "#ffc107" if percent > 0 else "#dc3545"
         )
+        percent_label = f"{percent:.0f}"
         return format_html(
-            '<span style="color: {};">{}/{} ({:.0f}%)</span>',
+            '<span style="color: {};">{}/{} ({}%)</span>',
             color,
             obj.tests_passed,
             obj.total_tests,
-            percent,
+            percent_label,
         )

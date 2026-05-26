@@ -9,11 +9,61 @@ from unidecode import unidecode
 
 
 def _next_order_index(model_cls, **filters):
-    """Следующий порядковый номер в рамках queryset (для авто-нумерации при создании)."""
+    """
+    Следующий порядковый номер в рамках queryset
+    """
     max_val = model_cls.objects.filter(**filters).aggregate(
         m=models.Max("order_index")
     )["m"]
     return (max_val or 0) + 1
+
+
+MODULE_ORDER_HELP = _(
+    "Порядок среди всех уроков модуля (теория, тесты, задачи с кодом)"
+)
+
+
+def _validate_module_order_index(instance):
+    from content.module_lessons import order_index_conflict
+
+    if not instance.module_id:
+        return
+    if order_index_conflict(
+        instance.module_id,
+        instance.order_index,
+        exclude_model=instance.__class__,
+        exclude_pk=instance.pk,
+    ):
+        raise ValidationError(
+            {
+                "order_index": _(
+                    "Позиция %(pos)d уже занята другим уроком в этом модуле"
+                )
+                % {"pos": instance.order_index}
+            }
+        )
+
+
+def _save_module_lesson_order(instance):
+    from content.module_lessons import (
+        next_order_in_module,
+        order_index_conflict,
+    )
+
+    if not instance.module_id or not instance._state.adding:
+        return
+    if order_index_conflict(instance.module_id, instance.order_index):
+        instance.order_index = next_order_in_module(instance.module_id)
+
+
+def _delete_module_lesson(instance):
+    from content.module_lessons import shift_orders_after_delete
+
+    module_id = instance.module_id
+    deleted_index = instance.order_index
+    super(type(instance), instance).delete()
+    if module_id:
+        shift_orders_after_delete(module_id, deleted_index)
 
 
 class Technology(UUIDPublicIdMixin, models.Model):
@@ -129,6 +179,7 @@ class LessonTheory(UUIDPublicIdMixin, models.Model):
         default=1,
         validators=[MinValueValidator(1)],
         verbose_name=_("Порядковый номер"),
+        help_text=MODULE_ORDER_HELP,
     )
     is_active = models.BooleanField(default=True, verbose_name=_("Активен"))
     indexes = [
@@ -139,43 +190,20 @@ class LessonTheory(UUIDPublicIdMixin, models.Model):
         verbose_name = _("Теоретический урок")
         verbose_name_plural = _("Теоретические уроки")
         ordering = ("order_index",)
-        unique_together = ("module", "order_index")
 
     def __str__(self):
         return f"{self.module.title} - {self.title}"
 
     def save(self, *args, **kwargs):
-        if self._state.adding:
-            self.order_index = _next_order_index(
-                LessonTheory, module_id=self.module_id
-            )
+        _save_module_lesson_order(self)
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        module = self.module
-        deleted_index = self.order_index
-        super().delete(*args, **kwargs)
-        LessonTheory.objects.filter(
-            module=module, order_index__gt=deleted_index
-        ).update(order_index=models.F("order_index") - 1)
+        _delete_module_lesson(self)
 
     def clean(self):
-        if not self.pk:
-            max_order = LessonTheory.objects.filter(
-                module=self.module
-            ).aggregate(models.Max("order_index"))["order_index__max"]
-
-            if max_order and self.order_index > max_order + 1:
-                raise ValidationError(
-                    {
-                        "order_index": _(
-                            "Порядковый номер не "
-                            "может быть больше %(max)d "
-                            "(следующая доступная позиция)"
-                        )
-                        % {"max": max_order + 1}
-                    }
-                )
+        super().clean()
+        _validate_module_order_index(self)
 
 
 class LessonRadioQuestion(UUIDPublicIdMixin, models.Model):
@@ -198,6 +226,7 @@ class LessonRadioQuestion(UUIDPublicIdMixin, models.Model):
         default=1,
         validators=[MinValueValidator(1)],
         verbose_name=_("Порядковый номер"),
+        help_text=MODULE_ORDER_HELP,
     )
     is_active = models.BooleanField(default=True, verbose_name=_("Активен"))
     points = models.PositiveIntegerField(
@@ -210,17 +239,20 @@ class LessonRadioQuestion(UUIDPublicIdMixin, models.Model):
         verbose_name = _("Урок с радио-кнопками")
         verbose_name_plural = _("Уроки с радио-кнопками")
         ordering = ("order_index",)
-        unique_together = ("module", "order_index")
 
     def __str__(self):
         return f"{self.module.title} - {self.title}"
 
     def save(self, *args, **kwargs):
-        if self._state.adding:
-            self.order_index = _next_order_index(
-                LessonRadioQuestion, module_id=self.module_id
-            )
+        _save_module_lesson_order(self)
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        _delete_module_lesson(self)
+
+    def clean(self):
+        super().clean()
+        _validate_module_order_index(self)
 
     def get_correct_answer(self):
         return self.answers.filter(is_correct=True).first()
@@ -280,6 +312,7 @@ class LessonCheckBoxQuestion(UUIDPublicIdMixin, models.Model):
         default=1,
         validators=[MinValueValidator(1)],
         verbose_name=_("Порядковый номер"),
+        help_text=MODULE_ORDER_HELP,
     )
     is_active = models.BooleanField(default=True, verbose_name=_("Активен"))
     points = models.PositiveIntegerField(
@@ -296,28 +329,23 @@ class LessonCheckBoxQuestion(UUIDPublicIdMixin, models.Model):
         verbose_name = _("Урок с чекбоксами")
         verbose_name_plural = _("Уроки с чекбоксами")
         ordering = ("order_index",)
-        unique_together = ("module", "order_index")
 
     def __str__(self):
         return f"{self.module.title} - {self.title}"
 
     def save(self, *args, **kwargs):
-        if self._state.adding:
-            self.order_index = _next_order_index(
-                LessonCheckBoxQuestion, module_id=self.module_id
-            )
+        _save_module_lesson_order(self)
         super().save(*args, **kwargs)
 
     def get_correct_answers(self):
         return self.answers.filter(is_correct=True)
 
     def delete(self, *args, **kwargs):
-        module = self.module
-        deleted_index = self.order_index
-        super().delete(*args, **kwargs)
-        LessonCheckBoxQuestion.objects.filter(
-            module=module, order_index__gt=deleted_index
-        ).update(order_index=models.F("order_index") - 1)
+        _delete_module_lesson(self)
+
+    def clean(self):
+        super().clean()
+        _validate_module_order_index(self)
 
 
 class CheckBoxAnswerOption(UUIDPublicIdMixin, models.Model):
@@ -413,9 +441,7 @@ class CodingChallenge(UUIDPublicIdMixin, models.Model):
     )
     module = models.ForeignKey(
         Module,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.CASCADE,
         related_name="challenges",
         verbose_name=_("Модуль"),
     )
@@ -425,6 +451,7 @@ class CodingChallenge(UUIDPublicIdMixin, models.Model):
         default=1,
         validators=[MinValueValidator(1)],
         verbose_name=_("Порядковый номер"),
+        help_text=MODULE_ORDER_HELP,
     )
     created_at = models.DateTimeField(
         auto_now_add=True, verbose_name=_("Дата создания")
@@ -437,7 +464,6 @@ class CodingChallenge(UUIDPublicIdMixin, models.Model):
         verbose_name = _("Задача")
         verbose_name_plural = _("Задачи")
         ordering = ("order_index", "difficulty", "title")
-        unique_together = ("module", "order_index")
         indexes = [
             models.Index(fields=["course", "order_index"]),
             models.Index(fields=["module", "order_index"]),
@@ -448,13 +474,14 @@ class CodingChallenge(UUIDPublicIdMixin, models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
-        if self._state.adding:
-            if self.module_id:
-                filters = {"module_id": self.module_id}
-            else:
-                filters = {"module__isnull": True}
-            self.order_index = _next_order_index(CodingChallenge, **filters)
+        if self.module_id:
+            self.course_id = self.module.course_id
+        _save_module_lesson_order(self)
         super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        _validate_module_order_index(self)
 
     def get_max_score(self):
         """Максимальный возможный балл за задачу"""
@@ -474,14 +501,7 @@ class CodingChallenge(UUIDPublicIdMixin, models.Model):
         return round((successful / total) * 100, 1)
 
     def delete(self, *args, **kwargs):
-        """Переопределяем delete для пересчета order_index (как в других моделях)"""
-        module = self.module
-        deleted_index = self.order_index
-        super().delete(*args, **kwargs)
-        if module:
-            CodingChallenge.objects.filter(
-                module=module, order_index__gt=deleted_index
-            ).update(order_index=models.F("order_index") - 1)
+        _delete_module_lesson(self)
 
 
 class TestCase(UUIDPublicIdMixin, models.Model):

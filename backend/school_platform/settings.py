@@ -156,16 +156,6 @@ UNFOLD = {
                         "link": "/admin/content/lessoncheckboxquestion/",
                     },
                     {
-                        "title": _("Задачи"),
-                        "icon": "code",
-                        "link": "/admin/content/codingchallenge/",
-                    },
-                    {
-                        "title": _("Тестовые случаи"),
-                        "icon": "fact_check",
-                        "link": "/admin/content/testcase/",
-                    },
-                    {
                         "title": _("Технологии"),
                         "icon": "science",
                         "link": "/admin/content/technology/",

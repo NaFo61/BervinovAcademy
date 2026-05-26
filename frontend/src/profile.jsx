@@ -121,9 +121,17 @@ function ProfileHeader({ user, navigate }) {
       <div className="relative max-w-7xl mx-auto px-5 sm:px-8">
         <div className="flex flex-col md:flex-row items-start gap-7">
           <div className="avatar-ring">
-            <div className="w-28 h-28 rounded-full bg-white flex items-center justify-center text-4xl font-extrabold grad-text">
-              {initials}
-            </div>
+            {user.avatar ? (
+              <img
+                src={window.mediaUrl(user.avatar)}
+                alt=""
+                className="w-28 h-28 rounded-full object-cover bg-white"
+              />
+            ) : (
+              <div className="w-28 h-28 rounded-full bg-white flex items-center justify-center text-4xl font-extrabold grad-text">
+                {initials}
+              </div>
+            )}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-3 flex-wrap">
@@ -413,7 +421,7 @@ function ActiveCourses({ navigate }) {
                     transition={{ duration: 1, delay: 0.2 }} className="h-full grad-bg rounded-full"/>
                 </div>
               </div>
-              <button onClick={() => navigate(window.Routes.PROBLEM)}
+              <button onClick={() => navigate(window.Routes.CATALOG)}
                 className="self-start h-9 px-4 rounded-xl btn-grad btn-shimmer text-white text-sm font-semibold inline-flex items-center gap-1.5">
                 Продолжить <I.ChevronRight className="w-3.5 h-3.5"/>
               </button>

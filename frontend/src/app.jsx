@@ -10,15 +10,18 @@ const ProblemPage = window.ProblemPage;
 const ProfilePage = window.ProfilePage;
 const AuthPage = window.AuthPage;
 const CoursePage = window.CoursePage;
+const LearnPage = window.LearnPage;
+
+const NO_FOOTER_ROUTES = new Set([Routes.PROBLEM, Routes.AUTH, Routes.LEARN]);
 
 function App() {
   const [route, navigate, hashParams] = useHashRoute();
-  const showChrome = route !== Routes.AUTH; // Auth page is full-bleed but keep nav for consistency
 
   const Page = {
     [Routes.LANDING]: LandingPage,
     [Routes.CATALOG]: CatalogPage,
     [Routes.COURSE]: CoursePage,
+    [Routes.LEARN]: LearnPage,
     [Routes.PROBLEM]: ProblemPage,
     [Routes.PROFILE]: ProfilePage,
     [Routes.AUTH]: AuthPage,
@@ -32,7 +35,7 @@ function App() {
       <main className="flex-1">
         <Page {...pageProps}/>
       </main>
-      {route !== Routes.PROBLEM && route !== Routes.AUTH && <Footer navigate={navigate}/>}
+      {!NO_FOOTER_ROUTES.has(route) && <Footer navigate={navigate}/>}
     </div>
   );
 }

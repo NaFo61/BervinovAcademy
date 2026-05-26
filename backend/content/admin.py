@@ -32,11 +32,12 @@ def _lesson_counts_for_module(module):
         module.lessons_theories.count(),
         module.lessons_radio_questions.count(),
         module.lessons_checkbox_questions.count(),
+        module.challenges.count(),
     )
 
 
-def _format_lesson_counts(theory, radio, checkbox):
-    total = theory + radio + checkbox
+def _format_lesson_counts(theory, radio, checkbox, coding=0):
+    total = theory + radio + checkbox + coding
     if total == 0:
         return format_html('<span style="color: #dc3545;">0</span>')
     parts = []
@@ -46,6 +47,8 @@ def _format_lesson_counts(theory, radio, checkbox):
         parts.append(f"{radio} radio")
     if checkbox:
         parts.append(f"{checkbox} {_('чекб.')}")
+    if coding:
+        parts.append(f"{coding} {_('код')}")
     return format_html("{}", " · ".join(parts))
 
 
@@ -263,7 +266,8 @@ class CourseAdmin(ModelAdmin):
         checkbox = LessonCheckBoxQuestion.objects.filter(
             module__course=obj
         ).count()
-        total_lessons = theory + radio + checkbox
+        coding = CodingChallenge.objects.filter(module__course=obj).count()
+        total_lessons = theory + radio + checkbox + coding
 
         stats_html = f"""
         <div style="
@@ -291,7 +295,7 @@ class CourseAdmin(ModelAdmin):
             </div>
             <div style="font-size: 0.8125rem; color: var(--secondary-text);">
                 {_('Теория')}: {theory} · radio:
-                 {radio} · {_('чекб.')}: {checkbox}
+                 {radio} · {_('чекб.')}: {checkbox} · {_('код')}: {coding}
             </div>
         </div>
         """
@@ -370,8 +374,8 @@ class ModuleInline(TabularInline):
     def lessons_inline_count(self, obj):
         if not obj.pk:
             return "—"
-        theory, radio, checkbox = _lesson_counts_for_module(obj)
-        return _format_lesson_counts(theory, radio, checkbox)
+        theory, radio, checkbox, coding = _lesson_counts_for_module(obj)
+        return _format_lesson_counts(theory, radio, checkbox, coding)
 
 
 CourseAdmin.inlines = [ModuleInline]
@@ -384,10 +388,10 @@ class LessonTheoryInline(TabularInline):
     extra = 1
     ordering = ("order_index",)
     ordering_field = "order_index"
-    hide_ordering_field = True
+    hide_ordering_field = False
     show_change_link = True
 
-    fields = ("title", "content_preview", "is_active")
+    fields = ("order_index", "title", "content_preview", "is_active")
     readonly_fields = ("content_preview",)
 
     @admin.display(description=_("Содержание"))
@@ -409,9 +413,10 @@ class LessonRadioQuestionInline(TabularInline):
     extra = 1
     ordering = ("order_index",)
     ordering_field = "order_index"
-    hide_ordering_field = True
+    hide_ordering_field = False
     show_change_link = True
     fields = (
+        "order_index",
         "title",
         "question_preview",
         "points",
@@ -440,9 +445,10 @@ class LessonCheckBoxQuestionInline(TabularInline):
     extra = 1
     ordering = ("order_index",)
     ordering_field = "order_index"
-    hide_ordering_field = True
+    hide_ordering_field = False
     show_change_link = True
     fields = (
+        "order_index",
         "title",
         "question_preview",
         "points",
@@ -469,16 +475,16 @@ class CodingChallengeInline(TabularInline):
 
     model = CodingChallenge
     fk_name = "module"
-    extra = 0
+    extra = 1
     ordering = ("order_index",)
     ordering_field = "order_index"
-    hide_ordering_field = True
+    hide_ordering_field = False
     show_change_link = True
-    fields = ("title", "difficulty", "points", "is_active")
+    fields = ("order_index", "title", "difficulty", "points", "is_active")
 
     def save_new(self, form, commit=True):
         obj = super().save_new(form, commit=False)
-        if obj.module_id and not obj.course_id:
+        if obj.module_id:
             obj.course_id = obj.module.course_id
         if commit:
             obj.save()
@@ -504,7 +510,7 @@ class ModuleAdmin(ModelAdmin):
     search_fields = ("title", "description", "course__title")
     list_per_page = 20
     ordering = ("course", "order_index")
-    readonly_fields = ("lessons_count_display",)
+    readonly_fields = ("lessons_count_display", "module_lessons_outline")
     icon = "list_alt"
 
     inlines = [
@@ -527,6 +533,16 @@ class ModuleAdmin(ModelAdmin):
             },
         ),
         (
+            _("Порядок уроков в модуле"),
+            {
+                "fields": ("module_lessons_outline",),
+                "description": _(
+                    "Порядковый номер (#) задаётся в таблицах ниже и общий "
+                    "для теории, тестов и задач с кодом."
+                ),
+            },
+        ),
+        (
             _("Статистика"),
             {
                 "fields": ("lessons_count_display",),
@@ -542,15 +558,43 @@ class ModuleAdmin(ModelAdmin):
 
     @admin.display(description=_("Уроки"))
     def lessons_count(self, obj):
-        theory, radio, checkbox = _lesson_counts_for_module(obj)
-        return _format_lesson_counts(theory, radio, checkbox)
+        theory, radio, checkbox, coding = _lesson_counts_for_module(obj)
+        return _format_lesson_counts(theory, radio, checkbox, coding)
+
+    @admin.display(description=_("Порядок уроков"))
+    def module_lessons_outline(self, obj):
+        if not obj.pk:
+            return "—"
+        from content.module_lessons import iter_module_lessons
+
+        labels = {
+            "theory": _("Теория"),
+            "radio": "Radio",
+            "checkbox": _("Чекбокс"),
+            "coding": _("Код"),
+        }
+        rows = []
+        for kind, lesson in iter_module_lessons(obj):
+            rows.append(
+                f"<li><strong>#{lesson.order_index}</strong> "
+                f"[{labels.get(kind, kind)}] {lesson.title}</li>"
+            )
+        if not rows:
+            return format_html(
+                '<span style="color: #dc3545;">{}</span>',
+                _("Нет уроков"),
+            )
+        return format_html(
+            "<ol style='margin:0;padding-left:1.25rem'>{}</ol>", "".join(rows)
+        )
 
     @admin.display(description=_("Статистика"))
     def lessons_count_display(self, obj):
         theory_count = obj.lessons_theories.count()
         radio_count = obj.lessons_radio_questions.count()
         checkbox_count = obj.lessons_checkbox_questions.count()
-        total = theory_count + radio_count + checkbox_count
+        coding_count = obj.challenges.count()
+        total = theory_count + radio_count + checkbox_count + coding_count
 
         stats_html = f"""
             <div style="
@@ -592,6 +636,17 @@ class ModuleAdmin(ModelAdmin):
                         margin-right: 0.5rem;
                     "></span>
                     <strong>{_('Чекбоксы')}:</strong> {checkbox_count}
+                </div>
+                <div style="margin-bottom: 0.25rem;">
+                    <span style="
+                        display: inline-block;
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 50%;
+                        background: #6f42c1;
+                        margin-right: 0.5rem;
+                    "></span>
+                    <strong>{_('Код')}:</strong> {coding_count}
                 </div>
                 <hr style="margin: 0.5rem 0;
                 border-color: var(--border-color);">
@@ -1300,7 +1355,10 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
 
 @admin.register(CodingChallenge)
 class CodingChallengeAdmin(ModelAdmin):
-    """Админка для задач по программированию"""
+    """Редактирование задачи (код, тесты) — открывается из модуля курса."""
+
+    def has_module_permission(self, request):
+        return False
 
     list_display = (
         "title",
@@ -1323,6 +1381,7 @@ class CodingChallengeAdmin(ModelAdmin):
     ordering = ("order_index", "difficulty", "title")
     readonly_fields = (
         "public_id",
+        "course",
         "created_at",
         "updated_at",
         "stats_display",
@@ -1340,6 +1399,7 @@ class CodingChallengeAdmin(ModelAdmin):
                     "instructions",
                     "difficulty",
                     "points",
+                    "order_index",
                 ),
             },
         ),
@@ -1355,11 +1415,11 @@ class CodingChallengeAdmin(ModelAdmin):
             },
         ),
         (
-            _("Привязка к курсу"),
+            _("Модуль курса"),
             {
                 "fields": (
-                    "course",
                     "module",
+                    "course",
                     "is_active",
                 ),
             },
@@ -1497,7 +1557,10 @@ CodingChallengeAdmin.inlines = [TestCaseInline]
 
 @admin.register(TestCase)
 class TestCaseAdmin(ModelAdmin):
-    """Админка для тестовых случаев"""
+    """Тестовые случаи — редактируются внутри задачи в модуле."""
+
+    def has_module_permission(self, request):
+        return False
 
     list_display = (
         "challenge_link",

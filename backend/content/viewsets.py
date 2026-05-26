@@ -77,6 +77,7 @@ class CourseViewSet(
                 "modules__lessons_radio_questions__answers",
                 "modules__lessons_checkbox_questions",
                 "modules__lessons_checkbox_questions__answers",
+                "modules__challenges",
             )
             .order_by("-created_at")
         )
@@ -143,6 +144,7 @@ class ModuleViewSet(
             "lessons_radio_questions__answers",
             "lessons_checkbox_questions",
             "lessons_checkbox_questions__answers",
+            "challenges",
         ).order_by("course_id", "order_index")
 
     def get_serializer_class(self):
@@ -291,7 +293,7 @@ class CodingChallengeViewSet(
     - В детальном просмотре показываются только не скрытые тесты
 
     Поля задачи:
-    - public_id — публичный UUID (retrieve; тот же id передаётся в progress как challenge)
+    - public_id — публичный UUID
     - title — название задачи
     - description — описание задачи
     - instructions — инструкция по выполнению
