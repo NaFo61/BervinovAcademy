@@ -47,24 +47,46 @@ function buildModuleLessonItems(mod) {
   return items;
 }
 
+function buildExamLessonItems(exam) {
+  const items = [];
+  const push = (type, row) => {
+    items.push({
+      type,
+      lesson: row,
+      order: row.order_index || 0,
+    });
+  };
+  for (const t of (exam.lessons_theories || [])) push('theory', t);
+  for (const r of (exam.lessons_radio || [])) push('radio', r);
+  for (const c of (exam.lessons_checkbox || [])) push('checkbox', c);
+  for (const ch of (exam.lessons_coding || [])) push('coding', ch);
+  items.sort((a, b) => (a.order - b.order) || String(a.type).localeCompare(b.type));
+  return items;
+}
+
+function buildContentOutline(modules, exams) {
+  const items = [];
+  for (const m of (modules || [])) {
+    items.push({ kind: 'module', order: m.order_index || 0, data: m });
+  }
+  for (const e of (exams || [])) {
+    items.push({ kind: 'exam', order: e.order_index || 0, data: e });
+  }
+  items.sort((a, b) => (a.order - b.order) || (a.kind === 'module' ? -1 : 1));
+  return items;
+}
+
 function lessonKey(type, id) { return type + '-' + id; }
-
-function loadCompleted(courseId) {
-  try {
-    const raw = localStorage.getItem('lrn_done_' + courseId);
-    return new Set(raw ? JSON.parse(raw) : []);
-  } catch { return new Set(); }
-}
-
-function saveCompleted(courseId, set) {
-  try { localStorage.setItem('lrn_done_' + courseId, JSON.stringify([...set])); } catch {}
-}
 
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 function LearnPage({ navigate, hashParams }) {
   const courseId   = hashParams?.get('course') || null;
+  const moduleParam = hashParams?.get('module') || null;
   const lessonParam = hashParams?.get('lesson') || null;
+  const examParam   = hashParams?.get('exam') || null;
+  const stepParam   = hashParams?.get('step') || null;
+  const ExamContent = window.ExamContent;
 
   const dashIdx    = lessonParam ? lessonParam.indexOf('-') : -1;
   const lessonType = dashIdx > 0 ? lessonParam.slice(0, dashIdx) : null;
@@ -86,17 +108,36 @@ function LearnPage({ navigate, hashParams }) {
   const [submitResult, setSubmitResult]           = React.useState(null); // API response or null
   const [submitLoading, setSubmitLoading]         = React.useState(false);
 
-  // ── progress (localStorage) ──
-  const [completed, setCompleted] = React.useState(() => courseId ? loadCompleted(courseId) : new Set());
+  // ── progress (backend only) ──
+  const [completed, setCompleted] = React.useState(new Set());
 
   const markDone = React.useCallback((type, id) => {
     setCompleted(prev => {
       const next = new Set(prev);
       next.add(lessonKey(type, id));
-      saveCompleted(courseId, next);
       return next;
     });
+  }, []);
+
+  const refreshCourseProgress = React.useCallback(() => {
+    if (!courseId) return Promise.resolve();
+    const token = localStorage.getItem('access_token');
+    if (!token) return Promise.resolve();
+    return window.fetchCourseProgress(courseId)
+      .then((data) => {
+        setCompleted(new Set(data?.completed || []));
+      })
+      .catch(() => {});
   }, [courseId]);
+
+  // ── enroll + load progress from backend ──
+  React.useEffect(() => {
+    if (courseState !== 'ok' || !courseId) return;
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    window.enrollInCourse(courseId).catch(() => {});
+    refreshCourseProgress();
+  }, [courseState, courseId, refreshCourseProgress]);
 
   // ── sidebar toggle (mobile) ──
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -117,12 +158,69 @@ function LearnPage({ navigate, hashParams }) {
     [courseData]
   );
 
-  // ── redirect to first lesson when course loads and no lesson is set ──
+  const contentOutline = React.useMemo(
+    () => courseData ? buildContentOutline(courseData.modules, courseData.exams) : [],
+    [courseData],
+  );
+
+  const currentExam = React.useMemo(() => {
+    if (!courseData || !examParam) return null;
+    return (courseData.exams || []).find((e) => e.public_id === examParam) || null;
+  }, [courseData, examParam]);
+
+  const inExamMode = !!examParam;
+
+  const moduleLessons = React.useMemo(() => {
+    if (!courseData || !moduleParam) return [];
+    const mod = (courseData.modules || []).find(m => m.public_id === moduleParam) || null;
+    if (!mod) return [];
+    return buildModuleLessonItems(mod).map(({ type, lesson }) => ({
+      type,
+      id: lesson.public_id,
+      title: lesson.title,
+      order: lesson.order_index || 0,
+      modId: mod.public_id,
+      modTitle: mod.title,
+    }));
+  }, [courseData, moduleParam]);
+
+  // ── redirect to first tile ──
   React.useEffect(() => {
-    if (courseState !== 'ok' || lessonId || allLessons.length === 0) return;
-    const first = allLessons[0];
-    navigate(Routes.LEARN, { course: courseId, lesson: lessonKey(first.type, first.id) });
-  }, [courseState, allLessons, lessonId]);
+    if (courseState !== 'ok') return;
+    if (examParam) return;
+
+    // If module is set but lesson isn't: open first tile in module (or stay on module stub)
+    if (moduleParam && !lessonId) {
+      const mod = (courseData?.modules || []).find(m => m.public_id === moduleParam) || null;
+      if (!mod) return;
+      const items = buildModuleLessonItems(mod);
+      const first = items[0] || null;
+      if (!first) return;
+      navigate(Routes.LEARN, { course: courseId, module: moduleParam, lesson: lessonKey(first.type, first.lesson.public_id) });
+      return;
+    }
+
+    // First visit: open 1st item in course outline
+    if (!moduleParam && !lessonId) {
+      const firstItem = contentOutline[0] || null;
+      if (!firstItem) return;
+      if (firstItem.kind === 'module') {
+        const items = buildModuleLessonItems(firstItem.data);
+        const first = items[0] || null;
+        if (!first) {
+          navigate(Routes.LEARN, { course: courseId, module: firstItem.data.public_id });
+          return;
+        }
+        navigate(Routes.LEARN, {
+          course: courseId,
+          module: firstItem.data.public_id,
+          lesson: lessonKey(first.type, first.lesson.public_id),
+        });
+      } else {
+        navigate(Routes.LEARN, { course: courseId, exam: firstItem.data.public_id });
+      }
+    }
+  }, [courseState, allLessons, lessonId, moduleParam, examParam, courseId, courseData, contentOutline, navigate]);
 
   // ── current index in flat list ──
   const currentIdx = React.useMemo(() => {
@@ -131,9 +229,29 @@ function LearnPage({ navigate, hashParams }) {
     return i >= 0 ? i : 0;
   }, [allLessons, lessonType, lessonId]);
 
+  const currentLesson = allLessons[currentIdx] || null;
+  const currentModule = React.useMemo(() => {
+    if (!courseData) return null;
+    const id = moduleParam || currentLesson?.modId || null;
+    if (!id) return null;
+    return (courseData.modules || []).find(m => m.public_id === id) || null;
+  }, [courseData, moduleParam, currentLesson]);
+  const hasModuleStub = !!currentModule && moduleLessons.length === 0;
+
+  // ── keep module param consistent with current lesson ──
+  React.useEffect(() => {
+    if (courseState !== 'ok' || examParam) return;
+    if (!lessonType || !lessonId) return;
+    const cur = allLessons[currentIdx] || null;
+    if (!cur) return;
+    if (moduleParam !== cur.modId) {
+      navigate(Routes.LEARN, { course: courseId, module: cur.modId, lesson: lessonKey(cur.type, cur.id) });
+    }
+  }, [courseState, lessonType, lessonId, allLessons, currentIdx, moduleParam, courseId]);
+
   // ── load lesson detail ──
   React.useEffect(() => {
-    if (!lessonType || !lessonId) return;
+    if (examParam || !lessonType || !lessonId) return;
     setLessonData(null);
     setLessonLoading(true);
     setSubmitted(false);
@@ -155,22 +273,47 @@ function LearnPage({ navigate, hashParams }) {
       .catch(() => setLessonLoading(false));
   }, [lessonType, lessonId]);
 
+  // ── auto-mark theory as read on view ──
+  React.useEffect(() => {
+    if (lessonType !== 'theory') return;
+    if (!lessonData || lessonLoading) return;
+    const id = lessonData.public_id || lessonId;
+    if (!id) return;
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      window.fetchApiJson('/api/progress/theory/', {
+        method: 'POST',
+        body: { lesson: id },
+        auth: true,
+      })
+        .then(() => {
+          markDone('theory', id);
+          refreshCourseProgress();
+        })
+        .catch(() => {});
+    }
+  }, [lessonType, lessonData, lessonLoading, lessonId, markDone, refreshCourseProgress]);
+
   // ── navigation helpers ──
   const goTo = (lesson) => {
-    navigate(Routes.LEARN, { course: courseId, lesson: lessonKey(lesson.type, lesson.id) });
+    navigate(Routes.LEARN, { course: courseId, module: lesson.modId, lesson: lessonKey(lesson.type, lesson.id) });
     setSidebarOpen(false);
   };
-  const goNext = () => { if (currentIdx < allLessons.length - 1) goTo(allLessons[currentIdx + 1]); };
+  const goNext = () => {
+    if (currentIdx < allLessons.length - 1) goTo(allLessons[currentIdx + 1]);
+    else navigate(Routes.COURSE, { id: courseId });
+  };
   const goPrev = () => { if (currentIdx > 0) goTo(allLessons[currentIdx - 1]); };
 
   // ── submit radio ──
   const handleRadioSubmit = async () => {
     if (!selectedRadio || submitted) return;
     setSubmitLoading(true);
+    let res = null;
     const token = localStorage.getItem('access_token');
     if (token) {
       try {
-        const res = await window.fetchApiJson('/api/progress/radio/', {
+        res = await window.fetchApiJson('/api/progress/radio/', {
           method: 'POST',
           body: { question: lessonId, selected_answer: selectedRadio },
           auth: true,
@@ -180,17 +323,33 @@ function LearnPage({ navigate, hashParams }) {
     }
     setSubmitted(true);
     setSubmitLoading(false);
-    markDone('radio', lessonId);
+    if (res?.is_correct || res?.solved_ever) {
+      markDone('radio', lessonId);
+      refreshCourseProgress();
+    }
+  };
+
+  const handleRadioRetry = () => {
+    setSubmitted(false);
+    setSubmitResult(null);
+    setSelectedRadio(null);
+  };
+
+  const handleBoxRetry = () => {
+    setSubmitted(false);
+    setSubmitResult(null);
+    setSelectedBoxes(new Set());
   };
 
   // ── submit checkbox ──
   const handleBoxSubmit = async () => {
     if (submitted) return;
     setSubmitLoading(true);
+    let res = null;
     const token = localStorage.getItem('access_token');
     if (token) {
       try {
-        const res = await window.fetchApiJson('/api/progress/checkbox/', {
+        res = await window.fetchApiJson('/api/progress/checkbox/', {
           method: 'POST',
           body: { question: lessonId, selected_answers: [...selectedBoxes] },
           auth: true,
@@ -200,7 +359,10 @@ function LearnPage({ navigate, hashParams }) {
     }
     setSubmitted(true);
     setSubmitLoading(false);
-    markDone('checkbox', lessonId);
+    if (res?.is_correct) {
+      markDone('checkbox', lessonId);
+      refreshCourseProgress();
+    }
   };
 
   // ── loading / error states ──
@@ -227,7 +389,6 @@ function LearnPage({ navigate, hashParams }) {
     );
   }
 
-  const currentLesson = allLessons[currentIdx] || null;
   const totalLessons  = allLessons.length;
   const doneCount     = allLessons.filter(l => completed.has(lessonKey(l.type, l.id))).length;
   const progressPct   = totalLessons ? Math.round((doneCount / totalLessons) * 100) : 0;
@@ -275,21 +436,98 @@ function LearnPage({ navigate, hashParams }) {
           </div>
         </div>
 
-        {/* modules + lessons */}
+        {/* modules + exams */}
         <div className="flex-1 overflow-y-auto scrollbar-thin py-2">
-          {(courseData.modules || []).map((mod, mi) => (
-            <ModuleSidebarSection
-              key={mod.public_id}
-              mod={mod}
-              modIndex={mi}
-              currentLesson={currentLesson}
-              completed={completed}
-              onSelect={goTo}
-            />
-          ))}
-          {totalLessons === 0 && (
+          {contentOutline.map((item, oi) => {
+            if (item.kind === 'module') {
+              const mod = item.data;
+              const items = buildModuleLessonItems(mod);
+              const total = items.length;
+              const doneInModule = items.filter(
+                ({ type, lesson }) => completed.has(lessonKey(type, lesson.public_id)),
+              ).length;
+              const active = !inExamMode && (moduleParam ? mod.public_id === moduleParam : currentLesson?.modId === mod.public_id);
+
+              return (
+                <button
+                  key={`mod-${mod.public_id}`}
+                  type="button"
+                  onClick={() => {
+                    const first = items[0] || null;
+                    if (first) {
+                      goTo({
+                        type: first.type,
+                        id: first.lesson.public_id,
+                        title: first.lesson.title,
+                        modId: mod.public_id,
+                        modTitle: mod.title,
+                      });
+                    } else {
+                      navigate(Routes.LEARN, { course: courseId, module: mod.public_id });
+                      setSidebarOpen(false);
+                    }
+                  }}
+                  className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors
+                    ${active ? 'bg-violet-500/[0.07]' : 'hover:bg-black/[0.025]'}`}
+                >
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0
+                    ${active ? 'grad-bg text-white' : 'bg-black/[0.04] text-ink/55'}`}>
+                    {oi + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-[13px] leading-snug truncate ${active ? 'font-semibold text-violet-700' : 'font-semibold text-ink'}`}>
+                      {mod.title}
+                    </div>
+                    {total > 0 ? (
+                      <div className="text-[10px] text-ink/40 mt-0.5">{doneInModule}/{total} завершено</div>
+                    ) : (
+                      <div className="text-[10px] text-ink/30 mt-0.5 italic">Пока нет материалов</div>
+                    )}
+                  </div>
+                  {active && <div className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0"/>}
+                </button>
+              );
+            }
+
+            const ex = item.data;
+            const examItems = buildExamLessonItems(ex);
+            const active = inExamMode && examParam === ex.public_id;
+            return (
+              <button
+                key={`exam-${ex.public_id}`}
+                type="button"
+                onClick={() => {
+                  navigate(Routes.LEARN, { course: courseId, exam: ex.public_id });
+                  setSidebarOpen(false);
+                }}
+                className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors
+                  ${active ? 'bg-amber-500/[0.08]' : 'hover:bg-black/[0.025]'}`}
+              >
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0
+                  ${active ? 'bg-amber-500 text-white' : 'bg-amber-500/10 text-amber-700'}`}>
+                  <I.Clock className="w-3.5 h-3.5"/>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0
+                      ${active ? 'bg-amber-500/20 text-amber-800' : 'bg-amber-500/10 text-amber-700'}`}>
+                      КР
+                    </span>
+                    <span className={`text-[13px] leading-snug truncate ${active ? 'font-semibold text-amber-900' : 'font-semibold text-ink'}`}>
+                      {ex.title}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-ink/40 mt-0.5">
+                    {ex.duration_minutes} мин · {examItems.length} заданий
+                  </div>
+                </div>
+                {active && <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"/>}
+              </button>
+            );
+          })}
+          {contentOutline.length === 0 && (
             <div className="px-5 py-10 text-sm text-ink/35 text-center">
-              В этом курсе пока нет уроков
+              В этом курсе пока нет материалов
             </div>
           )}
         </div>
@@ -311,7 +549,13 @@ function LearnPage({ navigate, hashParams }) {
 
           {/* breadcrumb */}
           <div className="flex-1 min-w-0">
-            {currentLesson && (
+            {inExamMode && currentExam ? (
+              <div className="flex items-center gap-1.5 text-[13px] min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 shrink-0">КР</span>
+                <I.ChevronRight className="w-3 h-3 text-ink/30 shrink-0"/>
+                <span className="font-medium text-ink/80 truncate">{currentExam.title}</span>
+              </div>
+            ) : currentLesson && (
               <div className="flex items-center gap-1.5 text-[13px] min-w-0">
                 <span className="text-ink/40 shrink-0 truncate max-w-[120px]">{currentLesson.modTitle}</span>
                 <I.ChevronRight className="w-3 h-3 text-ink/30 shrink-0"/>
@@ -321,16 +565,87 @@ function LearnPage({ navigate, hashParams }) {
           </div>
 
           {/* counter */}
-          {totalLessons > 0 && (
+          {!inExamMode && totalLessons > 0 && (
             <div className="text-[11px] text-ink/40 shrink-0 font-mono">
               {currentIdx + 1} / {totalLessons}
             </div>
           )}
         </div>
 
-        {/* lesson area */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin">
+        {/* lesson / exam area */}
+        <div className={`flex-1 min-h-0 ${inExamMode ? 'overflow-hidden flex flex-col' : 'overflow-y-auto scrollbar-thin'}`}>
+          {inExamMode && ExamContent ? (
+            <ExamContent
+              courseId={courseId}
+              examId={examParam}
+              stepParam={stepParam}
+              navigate={navigate}
+              embedded
+            />
+          ) : (
           <div className="max-w-3xl mx-auto px-5 sm:px-10 py-10">
+
+            {/* module tiles */}
+            {currentModule && (
+              <div className="mb-8">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-semibold uppercase tracking-widest text-ink/40">Модуль</div>
+                    <div className="text-[18px] font-extrabold text-ink truncate">{currentModule.title}</div>
+                  </div>
+                  {moduleLessons.length > 0 && (
+                    <div className="text-[11px] text-ink/45 shrink-0">
+                      {moduleLessons.filter(l => completed.has(lessonKey(l.type, l.id))).length}/{moduleLessons.length} в модуле
+                    </div>
+                  )}
+                </div>
+
+                {hasModuleStub ? (
+                  <div className="rounded-2xl bg-black/[0.02] ring-1 ring-black/[0.06] p-6 text-center text-ink/45">
+                    <div className="text-3xl mb-2">📦</div>
+                    <div className="text-sm font-semibold text-ink/60">В этом модуле пока нет материалов</div>
+                    <div className="text-xs mt-1">Выберите другой модуль слева</div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-8 sm:grid-cols-12 md:grid-cols-16 gap-1.5">
+                    {moduleLessons.map((l, idx) => {
+                      const active = currentLesson?.type === l.type && currentLesson?.id === l.id;
+                      const done = completed.has(lessonKey(l.type, l.id));
+                      const icon = (
+                        l.type === 'theory' ? '📖'
+                        : l.type === 'radio' ? '?'
+                        : l.type === 'checkbox' ? '☑'
+                        : l.type === 'coding' ? '>_'
+                        : '•'
+                      );
+                      return (
+                        <button
+                          key={lessonKey(l.type, l.id)}
+                          type="button"
+                          onClick={() => goTo(l)}
+                          title={`${idx + 1}. ${l.title}`}
+                          className={`relative w-9 h-9 sm:w-10 sm:h-10 rounded-lg ring-1 transition-all select-none
+                            ${active ? 'ring-violet-500 bg-violet-50' : 'ring-black/[0.06] bg-white hover:ring-violet-200 hover:bg-violet-50/30'}
+                          `}
+                        >
+                          <div className={`absolute inset-0 rounded-lg ${done ? 'bg-emerald-500/[0.10]' : ''}`}/>
+                          <div className="absolute top-0.5 left-1 text-[9px] font-mono text-ink/35">
+                            {idx + 1}
+                          </div>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            {done ? (
+                              <span className="check-dot" style={{ width: 18, height: 18 }}/>
+                            ) : (
+                              <span className="font-mono text-[13px] text-ink/70">{icon}</span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {lessonLoading ? (
               <div className="flex items-center justify-center gap-3 py-24 text-ink/50">
@@ -348,7 +663,10 @@ function LearnPage({ navigate, hashParams }) {
               <TheoryLesson
                 lesson={lessonData}
                 isDone={completed.has(lessonKey('theory', lessonData.public_id))}
-                onComplete={() => markDone('theory', lessonData.public_id)}
+                onComplete={() => {
+                  markDone('theory', lessonData.public_id);
+                  refreshCourseProgress();
+                }}
               />
 
             ) : lessonType === 'radio' && lessonData ? (
@@ -360,6 +678,7 @@ function LearnPage({ navigate, hashParams }) {
                 result={submitResult}
                 loading={submitLoading}
                 onSubmit={handleRadioSubmit}
+                onRetry={handleRadioRetry}
                 onLogin={() => navigate(Routes.AUTH)}
               />
 
@@ -372,6 +691,7 @@ function LearnPage({ navigate, hashParams }) {
                 result={submitResult}
                 loading={submitLoading}
                 onSubmit={handleBoxSubmit}
+                onRetry={handleBoxRetry}
                 onLogin={() => navigate(Routes.AUTH)}
               />
 
@@ -379,7 +699,10 @@ function LearnPage({ navigate, hashParams }) {
               <CodingLesson
                 lesson={lessonData}
                 isDone={completed.has(lessonKey('coding', lessonData.public_id))}
-                onComplete={() => markDone('coding', lessonData.public_id)}
+                onComplete={() => {
+                  markDone('coding', lessonData.public_id);
+                  refreshCourseProgress();
+                }}
                 onLogin={() => navigate(Routes.AUTH)}
               />
 
@@ -392,7 +715,7 @@ function LearnPage({ navigate, hashParams }) {
             )}
 
             {/* ── Prev / Next navigation ── */}
-            {totalLessons > 0 && (currentIdx > 0 || currentIdx < totalLessons - 1) && (
+            {totalLessons > 0 && (currentIdx > 0 || currentIdx <= totalLessons - 1) && (
               <div className="mt-12 pt-6 border-t border-black/[0.05] flex items-center justify-between gap-4">
                 <button onClick={goPrev} disabled={currentIdx === 0}
                   className="flex items-center gap-2 px-4 h-11 rounded-xl border border-black/[0.08] text-sm font-semibold text-ink/60
@@ -401,80 +724,23 @@ function LearnPage({ navigate, hashParams }) {
                   <I.ChevronRight className="w-4 h-4 rotate-180"/>
                   Предыдущий
                 </button>
-                <button onClick={goNext} disabled={currentIdx >= totalLessons - 1}
+                <button onClick={goNext} disabled={false}
                   className="flex items-center gap-2 px-5 h-11 rounded-xl btn-grad text-white text-sm font-semibold shadow-soft
                     disabled:opacity-30 disabled:cursor-not-allowed">
-                  Следующий
+                  {currentIdx >= totalLessons - 1 ? 'К курсу' : 'Следующий'}
                   <I.ChevronRight className="w-4 h-4"/>
                 </button>
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Sidebar: module section ─────────────────────────────────────────────────
-
-function ModuleSidebarSection({ mod, modIndex, currentLesson, completed, onSelect }) {
-  const moduleItems = buildModuleLessonItems(mod);
-  const total = moduleItems.length;
-  const isActive  = currentLesson?.modId === mod.public_id;
-
-  const doneCount = moduleItems.filter(
-    ({ type, lesson }) => completed.has(lessonKey(type, lesson.public_id)),
-  ).length;
-
-  const [open, setOpen] = React.useState(isActive || modIndex === 0);
-
-  React.useEffect(() => { if (isActive) setOpen(true); }, [isActive]);
-
-  return (
-    <div>
-      <button type="button" onClick={() => setOpen(o => !o)}
-        className="w-full px-4 py-3 flex items-center gap-3 hover:bg-black/[0.025] transition-colors text-left">
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0 grad-bg text-white">
-          {modIndex + 1}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-[13px] font-semibold text-ink leading-snug truncate">{mod.title}</div>
-          {total > 0 && (
-            <div className="text-[10px] text-ink/40 mt-0.5">{doneCount}/{total} завершено</div>
-          )}
-        </div>
-        <I.ChevronDown className={`w-4 h-4 text-ink/35 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}/>
-      </button>
-
-      {open && (
-        <div className="pb-1">
-          {moduleItems.map(({ type, lesson }) => (
-            <LessonItem
-              key={type + '-' + lesson.public_id}
-              type={type}
-              lesson={lesson}
-              isActive={currentLesson?.type === type && currentLesson?.id === lesson.public_id}
-              isDone={completed.has(lessonKey(type, lesson.public_id))}
-              onClick={() => onSelect({
-                type,
-                id: lesson.public_id,
-                title: lesson.title,
-                modId: mod.public_id,
-                modTitle: mod.title,
-              })}
-            />
-          ))}
-          {total === 0 && (
-            <div className="px-8 py-2 text-[11px] text-ink/30 italic">Нет уроков</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Sidebar: lesson item ────────────────────────────────────────────────────
+// ─── Meta for tiles ─────────────────────────────────────────────────────────
 
 const TYPE_META = {
   theory:   { emoji: '📖', label: 'Теория' },
@@ -509,41 +775,14 @@ const DEFAULT_PYTHON_CODE = `def solve():
 
 print(solve())`;
 
-function LessonItem({ type, lesson, isActive, isDone, onClick }) {
-  const meta = TYPE_META[type] || { emoji: '📄', label: '' };
-  return (
-    <button type="button" onClick={onClick}
-      className={`w-full pl-7 pr-4 py-2.5 flex items-center gap-3 transition-colors text-left
-        ${isActive
-          ? 'bg-violet-500/[0.08] text-violet-700'
-          : 'text-ink/65 hover:bg-black/[0.025] hover:text-ink'
-        }`}>
-
-      <div className="w-6 h-6 flex items-center justify-center shrink-0 text-base">
-        {isDone
-          ? <span className="check-dot" style={{ width: 14, height: 14 }}/>
-          : <span>{meta.emoji}</span>
-        }
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className={`text-[12.5px] leading-snug line-clamp-2 ${isActive ? 'font-semibold' : ''}`}>
-          {lesson.title}
-        </div>
-        <div className="text-[10px] text-ink/38 mt-0.5">{meta.label}</div>
-      </div>
-
-      {isActive && <div className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0"/>}
-    </button>
-  );
-}
-
 // ─── Theory lesson ───────────────────────────────────────────────────────────
 
 function TheoryLesson({ lesson, isDone, onComplete }) {
   return (
     <div>
       <LessonHeader type="theory" title={lesson.title} label="Теоретический урок"/>
+
+      <window.VideoExplanation video={lesson.video} title="Видео-объяснение"/>
 
       {/* content */}
       <div
@@ -556,13 +795,13 @@ function TheoryLesson({ lesson, isDone, onComplete }) {
         {isDone ? (
           <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
             <span className="check-dot"/>
-            <span className="text-sm font-semibold text-emerald-700">Урок отмечен как прочитанный</span>
+            <span className="text-sm font-semibold text-emerald-700">Прочитано</span>
           </div>
         ) : (
-          <button onClick={onComplete}
-            className="btn-grad btn-shimmer h-12 px-6 rounded-xl text-white font-semibold inline-flex items-center gap-2 shadow-soft">
-            <I.Check className="w-4 h-4"/> Отметить как прочитанный
-          </button>
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200">
+            <span className="w-2 h-2 rounded-full bg-blue-400"/>
+            <span className="text-sm font-semibold text-blue-700">Отметится автоматически после открытия</span>
+          </div>
         )}
       </div>
     </div>
@@ -571,7 +810,7 @@ function TheoryLesson({ lesson, isDone, onComplete }) {
 
 // ─── Radio question ──────────────────────────────────────────────────────────
 
-function RadioLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onLogin }) {
+function RadioLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin }) {
   const loggedIn  = !!localStorage.getItem('access_token');
   const isCorrect = result?.is_correct;
 
@@ -583,6 +822,8 @@ function RadioLesson({ lesson, selected, setSelected, submitted, result, loading
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
         <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
       </div>
+
+      <window.VideoExplanation video={lesson.video} title="Разбор задания"/>
 
       {/* options */}
       <div className="mt-5 space-y-3">
@@ -647,6 +888,7 @@ function RadioLesson({ lesson, selected, setSelected, submitted, result, loading
           pointsEarned={result?.points_earned}
           loggedIn={loggedIn}
           onLogin={onLogin}
+          onRetry={!isCorrect ? onRetry : undefined}
         />
       )}
     </div>
@@ -655,7 +897,7 @@ function RadioLesson({ lesson, selected, setSelected, submitted, result, loading
 
 // ─── Checkbox question ───────────────────────────────────────────────────────
 
-function CheckboxLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onLogin }) {
+function CheckboxLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin }) {
   const loggedIn  = !!localStorage.getItem('access_token');
   const isCorrect = result?.is_correct;
 
@@ -675,6 +917,8 @@ function CheckboxLesson({ lesson, selected, setSelected, submitted, result, load
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
         <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
       </div>
+
+      <window.VideoExplanation video={lesson.video} title="Разбор задания"/>
 
       <div className="mt-4 text-[11px] text-ink/40 flex items-center gap-1.5 mb-4">
         <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -734,6 +978,7 @@ function CheckboxLesson({ lesson, selected, setSelected, submitted, result, load
           pointsEarned={result?.points_earned}
           loggedIn={loggedIn}
           onLogin={onLogin}
+          onRetry={!isCorrect ? onRetry : undefined}
         />
       )}
     </div>
@@ -797,7 +1042,7 @@ function QuizActions({ disabled, loading, loggedIn, onSubmit, onLogin }) {
   );
 }
 
-function QuizResult({ isCorrect, hasResult, explanation, pointsEarned, loggedIn, onLogin }) {
+function QuizResult({ isCorrect, hasResult, explanation, pointsEarned, loggedIn, onLogin, onRetry }) {
   const showScore = hasResult && isCorrect !== undefined;
   return (
     <div className={`mt-7 p-5 rounded-2xl border ${
@@ -832,6 +1077,14 @@ function QuizResult({ isCorrect, hasResult, explanation, pointsEarned, loggedIn,
       {explanation && (
         <p className="text-[13.5px] text-ink/70 leading-relaxed mt-1">{explanation}</p>
       )}
+      {onRetry && (
+        <button type="button" onClick={onRetry}
+          className="mt-4 h-11 px-5 rounded-xl bg-white border border-rose-200 text-sm font-semibold text-rose-700
+            hover:border-rose-300 hover:bg-rose-50 transition-colors inline-flex items-center gap-2">
+          <I.Refresh className="w-4 h-4"/>
+          Решить ещё раз
+        </button>
+      )}
       {!loggedIn && (
         <button onClick={onLogin}
           className="mt-3 text-[12px] text-violet-600 underline underline-offset-2 hover:text-violet-800 transition-colors">
@@ -844,7 +1097,7 @@ function QuizResult({ isCorrect, hasResult, explanation, pointsEarned, loggedIn,
 
 // ─── Coding challenge ────────────────────────────────────────────────────────
 
-function CodeSubmissionResult({ result, points, loggedIn, onLogin }) {
+function CodeSubmissionResult({ result, points, loggedIn, onLogin, onRetry }) {
   if (!result) return null;
 
   const passed = result.status === 'completed';
@@ -917,6 +1170,15 @@ function CodeSubmissionResult({ result, points, loggedIn, onLogin }) {
         </div>
       )}
 
+      {!pending && !passed && onRetry && (
+        <button type="button" onClick={onRetry}
+          className="mt-4 h-11 px-5 rounded-xl bg-white border border-rose-200 text-sm font-semibold text-rose-700
+            hover:border-rose-300 hover:bg-rose-50 transition-colors inline-flex items-center gap-2">
+          <I.Refresh className="w-4 h-4"/>
+          Решить ещё раз
+        </button>
+      )}
+
       {!loggedIn && (
         <button onClick={onLogin}
           className="mt-3 text-[12px] text-violet-600 underline underline-offset-2 hover:text-violet-800 transition-colors">
@@ -985,6 +1247,12 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin }) {
   };
 
   const solved = isDone || submitResult?.status === 'completed';
+  const failed = submitResult && isCodeSubmissionFinal(submitResult.status) && submitResult.status !== 'completed';
+
+  const handleRetry = () => {
+    setSubmitResult(null);
+    setSubmitError(null);
+  };
 
   return (
     <div>
@@ -1001,6 +1269,8 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin }) {
           {lesson.description}
         </div>
       )}
+
+      <window.VideoExplanation video={lesson.video} title="Видео-разбор задачи"/>
 
       {lesson.instructions && (
         <div className="mt-5">
@@ -1051,19 +1321,22 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin }) {
         <p className="mt-4 text-sm text-red-600">{submitError}</p>
       )}
 
-      <QuizActions
-        disabled={!code.trim()}
-        loading={submitLoading}
-        loggedIn={loggedIn}
-        onSubmit={handleSubmit}
-        onLogin={onLogin}
-      />
+      {(!submitResult || failed) && (
+        <QuizActions
+          disabled={!code.trim()}
+          loading={submitLoading}
+          loggedIn={loggedIn}
+          onSubmit={handleSubmit}
+          onLogin={onLogin}
+        />
+      )}
 
       <CodeSubmissionResult
         result={submitResult}
         points={lesson.points}
         loggedIn={loggedIn}
         onLogin={onLogin}
+        onRetry={failed ? handleRetry : undefined}
       />
 
       {solved && !submitLoading && (

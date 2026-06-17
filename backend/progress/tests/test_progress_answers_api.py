@@ -27,6 +27,10 @@ class TestProgressAnswersRouting:
         match = resolve("/api/progress/code/")
         assert match.url_name == "answers-code-list"
 
+    def test_resolves_theory_collection(self):
+        match = resolve("/api/progress/theory/")
+        assert match.url_name == "reads-theory-list"
+
 
 @pytest.mark.django_db
 class TestProgressAnswersUnauthenticated:
@@ -40,6 +44,7 @@ class TestProgressAnswersUnauthenticated:
             "/api/progress/radio/",
             "/api/progress/checkbox/",
             "/api/progress/code/",
+            "/api/progress/theory/",
         ],
     )
     def test_list_requires_auth(self, client, path):
@@ -54,6 +59,17 @@ class TestProgressAnswersAuthenticated:
         c = APIClient()
         c.force_authenticate(user=student_user)
         return c
+
+    def test_post_theory_creates_read(self, client, theory_lesson):
+        resp = client.post(
+            "/api/progress/theory/",
+            {"lesson": str(theory_lesson.public_id)},
+            format="json",
+        )
+        assert resp.status_code in (
+            status.HTTP_200_OK,
+            status.HTTP_201_CREATED,
+        )
 
     def test_post_radio_creates_answer(
         self, client, student_user, radio_question, radio_answers
@@ -137,6 +153,7 @@ class TestProgressAnswersAuthenticated:
             "is_correct",
             "points_earned",
             "created_at",
+            "saved",
         }
         assert (
             UserAnswerCheckBox.objects.filter(user=student_user).count() == 1
@@ -154,13 +171,14 @@ class TestProgressAnswersAuthenticated:
             payload,
             format="json",
         )
-        assert response.status_code == status.HTTP_201_CREATED
+        assert response.status_code == status.HTTP_200_OK
         assert response.data["selected_answers"] == []
         assert response.data["selected_answers_text"] == []
         assert response.data["is_correct"] is False
         assert response.data["points_earned"] == 0
+        assert response.data["saved"] is False
         assert (
-            UserAnswerCheckBox.objects.filter(user=student_user).count() == 1
+            UserAnswerCheckBox.objects.filter(user=student_user).count() == 0
         )
 
     def test_post_code_creates_submission(

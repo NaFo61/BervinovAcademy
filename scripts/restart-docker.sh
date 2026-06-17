@@ -58,9 +58,10 @@ echo
 echo "Ожидание 5 секунд..."
 sleep 5
 
-echo "[3/8] Удаляем старые образы (опционально)..."
+echo "[3/8] Удаляем старые образы и кэш сборки..."
 docker image prune -f
-print_success "Старые образы удалены"
+docker builder prune -af
+print_success "Старые образы и кэш сборки удалены"
 
 echo
 echo "Ожидание 2 секунды..."

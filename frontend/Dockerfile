@@ -1,13 +1,12 @@
-FROM node:20-alpine
+# Сборка dist — только копирование статики (см. build-dist.mjs).
+# Node не нужен: меньше образов с Docker Hub и быстрее старт.
+FROM alpine:3.20
 
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install --ignore-scripts --omit=optional
-
 COPY . .
 
-RUN npm run build
-
-EXPOSE 3000
-CMD ["npx", "--yes", "serve@14.2.4", "-l", "3000", "dist"]
+RUN rm -rf dist && mkdir -p dist \
+    && cp index.html dist/ \
+    && cp -r src dist/ \
+    && (test -d public && cp -r public dist/ || true)

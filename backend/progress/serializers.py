@@ -8,10 +8,16 @@ from content.models import (
     CodingChallenge,
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
+    LessonTheory,
     RadioAnswerOption,
 )
 
-from .models import CodeSubmission, UserAnswerCheckBox, UserAnswerRadio
+from .models import (
+    CodeSubmission,
+    UserAnswerCheckBox,
+    UserAnswerRadio,
+    UserLessonTheoryRead,
+)
 
 
 class UserAnswerRadioSerializer(serializers.ModelSerializer):
@@ -139,8 +145,65 @@ class UserAnswerCheckBoxSerializer(serializers.ModelSerializer):
         instance = super().create(validated_data)
         if selected_answers:
             instance.selected_answers.set(selected_answers)
-        instance.save()
+        instance.is_correct = instance.calculate_correctness()
+        instance.points_earned = instance.calculate_points()
+        instance.save(
+            update_fields=["is_correct", "points_earned", "updated_at"]
+        )
         return instance
+
+    def submit(self, validated_data):
+        """
+        Сохраняет ответ только при полной правильности.
+        При ошибке возвращает dict с результатом проверки без записи в БД.
+        """
+        user = self.context["request"].user
+        question = validated_data["question"]
+        selected_answers = list(validated_data.get("selected_answers", []))
+
+        correct_set = set(question.answers.filter(is_correct=True))
+        selected_set = set(selected_answers)
+        is_correct = bool(correct_set) and selected_set == correct_set
+
+        base = {
+            "question": str(question.public_id),
+            "question_title": question.title,
+            "selected_answers": [str(a.public_id) for a in selected_answers],
+            "selected_answers_text": [a.text for a in selected_answers],
+            "is_correct": is_correct,
+            "points_earned": question.points if is_correct else 0,
+            "saved": is_correct,
+        }
+
+        if not is_correct:
+            return None, base
+
+        instance, _created = UserAnswerCheckBox.objects.get_or_create(
+            user=user,
+            question=question,
+        )
+        instance.selected_answers.set(selected_answers)
+        instance.is_correct = True
+        instance.points_earned = question.points
+        instance.save(
+            update_fields=["is_correct", "points_earned", "updated_at"]
+        )
+        out = UserAnswerCheckBoxSerializer(instance, context=self.context).data
+        out["saved"] = True
+        return instance, out
+
+
+class UserLessonTheoryReadSerializer(serializers.ModelSerializer):
+    lesson = serializers.SlugRelatedField(
+        slug_field="public_id",
+        queryset=LessonTheory.objects.filter(is_active=True),
+    )
+    lesson_title = serializers.CharField(source="lesson.title", read_only=True)
+
+    class Meta:
+        model = UserLessonTheoryRead
+        fields = ("public_id", "lesson", "lesson_title", "read_at")
+        read_only_fields = ("public_id", "lesson_title", "read_at")
 
 
 class CodeSubmissionSerializer(serializers.ModelSerializer):
@@ -228,10 +291,37 @@ class CodeSubmissionCreateSerializer(serializers.ModelSerializer):
         slug_field="public_id",
         queryset=CodingChallenge.objects.filter(is_active=True),
     )
+    exam_attempt = serializers.SlugRelatedField(
+        slug_field="public_id",
+        queryset=CodeSubmission.objects.none(),
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = CodeSubmission
-        fields = ("challenge", "code")
+        fields = ("challenge", "code", "exam_attempt")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from exams.models import ExamAttempt
+
+        self.fields["exam_attempt"].queryset = ExamAttempt.objects.filter(
+            status=ExamAttempt.Status.IN_PROGRESS,
+        )
+
+    def validate(self, attrs):
+        attempt = attrs.get("exam_attempt")
+        if attempt and attempt.user_id != self.context["request"].user.id:
+            raise serializers.ValidationError(
+                {"exam_attempt": _("Недопустимая попытка КР.")}
+            )
+        challenge = attrs.get("challenge")
+        if attempt and challenge and challenge.exam_id != attempt.exam_id:
+            raise serializers.ValidationError(
+                {"challenge": _("Задача не относится к этой контрольной.")}
+            )
+        return attrs
 
     def validate_code(self, value: str) -> str:
         text = (value or "").strip()

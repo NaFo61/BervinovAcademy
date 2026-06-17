@@ -2,6 +2,13 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from education.services import build_enrollments_payload
+from progress.profile_serializers import (
+    UserProgressStatsSerializer,
+    build_achievements_payload,
+)
+from progress.stats import build_activity_payload
+
 from .models import User
 
 
@@ -78,6 +85,53 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         )
 
         return user
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    login = serializers.CharField()
+
+    def validate_login(self, value):
+        login = (value or "").strip()
+        if not login:
+            raise serializers.ValidationError(
+                "Укажите email или номер телефона."
+            )
+        return login
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    login = serializers.CharField()
+    code = serializers.CharField(min_length=6, max_length=6)
+    password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        validators=[validate_password],
+        error_messages={
+            "min_length": "Пароль должен содержать минимум 8 символов.",
+        },
+    )
+    password_confirm = serializers.CharField(write_only=True)
+
+    def validate_login(self, value):
+        login = (value or "").strip()
+        if not login:
+            raise serializers.ValidationError(
+                "Укажите email или номер телефона."
+            )
+        return login
+
+    def validate_code(self, value):
+        code = (value or "").strip()
+        if not code.isdigit():
+            raise serializers.ValidationError("Код должен состоять из цифр.")
+        return code
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs["password_confirm"]:
+            raise serializers.ValidationError(
+                {"password_confirm": "Пароли не совпадают."}
+            )
+        return attrs
 
 
 class CustomTokenObtainPairSerializer(serializers.Serializer):
@@ -182,12 +236,28 @@ class MentorProfileSerializer(serializers.Serializer):
 
 class UserPublicProfileSerializer(serializers.ModelSerializer):
     mentor_profile = serializers.SerializerMethodField()
+    progress = serializers.SerializerMethodField()
+    achievements = serializers.SerializerMethodField()
+    enrollments = serializers.SerializerMethodField()
+    activity = serializers.SerializerMethodField()
 
     def get_mentor_profile(self, obj):
         mentor = getattr(obj, "mentor_profile", None)
         if not mentor:
             return None
         return MentorProfileSerializer(mentor, context=self.context).data
+
+    def get_progress(self, obj):
+        return UserProgressStatsSerializer.from_user(obj).data
+
+    def get_achievements(self, obj):
+        return build_achievements_payload(obj)
+
+    def get_enrollments(self, obj):
+        return build_enrollments_payload(obj)
+
+    def get_activity(self, obj):
+        return build_activity_payload(obj)
 
     class Meta:
         model = User
@@ -201,6 +271,10 @@ class UserPublicProfileSerializer(serializers.ModelSerializer):
             "date_joined",
             "last_login",
             "mentor_profile",
+            "progress",
+            "achievements",
+            "enrollments",
+            "activity",
         )
         read_only_fields: tuple[str, ...] = (
             "public_id",
@@ -208,6 +282,10 @@ class UserPublicProfileSerializer(serializers.ModelSerializer):
             "date_joined",
             "last_login",
             "mentor_profile",
+            "progress",
+            "achievements",
+            "enrollments",
+            "activity",
         )
 
 
@@ -223,7 +301,11 @@ class UserPrivateProfileSerializer(UserPublicProfileSerializer):
         read_only_fields: tuple[str, ...] = (
             "public_id",
             "role",
+            "date_joined",
+            "last_login",
             "mentor_profile",
+            "progress",
+            "achievements",
             "email",
             "phone",
         )

@@ -17,7 +17,7 @@ Bervinov Academy
   Версия (pyproject): 0.1.0
   Описание: образовательная платформа (курсы, уроки, менторство, прогресс, подписки); бэкенд REST на Django.
   Тип: fullstack — Django REST + SPA на React.
-  Сгенерировано (UTC): 2026-05-10T21:45:11Z
+  Сгенерировано (UTC): 2026-06-17T16:38:17Z
 
 ## КАК СВЯЗАНЫ ЧАСТИ (поток запросов)
 
@@ -42,38 +42,17 @@ Bervinov Academy
 
   Файловый роутинг TanStack Router; сгенерированное дерево: `frontend/src/routeTree.gen.ts`.
   Пути страниц:
-  • /
-  • /about
-  • /community
-  • /courses
-  • /login
-  • /mentors
+  (frontend/src/routeTree.gen.ts не найден — соберите роутер TanStack)
 
   Скрипты package.json:
   npm run build
   npm run dev
-  npm run lint
   npm run preview
 
 ## СТЕК (кратко)
 
   Backend: Python 3.11+, Django, DRF, JWT (simplejwt), Celery, Redis, PostgreSQL.
   Frontend: React 18, TypeScript, Vite, TanStack Router, Tailwind v4 (@tailwindcss/vite), axios.
-  dependencies (основное):
-    - @tanstack/react-router
-    - axios
-    - react
-    - react-dom
-    - tw-animate-css
-  devDependencies:
-    - @tailwindcss/vite
-    - @tanstack/router-plugin
-    - @types/react
-    - @types/react-dom
-    - @vitejs/plugin-react
-    - autoprefixer
-    - typescript
-    - vite
 
   Фрагмент requirements.txt:
   | django==4.2
@@ -101,15 +80,18 @@ Bervinov Academy
   | drf-spectacular[sidecar]>=0.27.0
   | rpds-py>=0.8.0
   | django-cors-headers==4.3.1
+  | kafka-python==2.0.2
+  | livekit-api>=1.0.0
 
 ## DJANGO-ПРИЛОЖЕНИЯ (папки в backend/ с apps.py)
 
-  • communication: models, views
+  • communication: models, views, viewsets, serializers, urls
   • content: models, viewsets, serializers, urls
-  • education: models, views
+  • education: models, views, viewsets, serializers, urls
+  • exams: models, views, serializers, urls
   • fixture: конфиг/утилиты
-  • mentoring: models, views
-  • progress: models, viewsets, serializers, urls
+  • mentoring: models, views, urls
+  • progress: models, views, viewsets, serializers, urls
   • subscriptions: models, views
   • translations: models
   • users: models, viewsets, serializers, urls
@@ -117,15 +99,29 @@ Bervinov Academy
 ## ДЕРЕВО РЕПОЗИТОРИЯ (укороченное)
 
   backend/
+    common/
+      [py] __init__.py
+      [py] drf.py
+      [py] models.py
     communication/
       migrations/
+        [py] 0001_initial.py
         [py] __init__.py
+      tests/
+        [py] __init__.py
+        [py] test_conference_api.py
       [py] __init__.py
       [py] admin.py
       [py] apps.py
+      [py] livekit_tokens.py
       [py] models.py
+      [py] serializers.py
+      [py] services.py
+      [py] tasks.py
       [py] tests.py
+      [py] urls.py
       [py] views.py
+      [py] viewsets.py
     content/
       migrations/
         [py] 0001_initial.py
@@ -135,26 +131,62 @@ Bervinov Academy
         [py] 0005_rename_answeroption_radioansweroption.py
         [py] 0006_codingchallenge_testcase_and_more.py
         [py] 0007_alter_codingchallenge_unique_together_and_more.py
+        [py] 0008_codingchallenge_slug.py
+        [py] 0009_uuid_public_ids.py
+        [py] 0010_remove_codingchallenge_slug.py
+        [py] 0011_module_lesson_shared_order.py
+        [py] 0012_lesson_video_fields.py
+        [py] 0013_exam_system.py
         [py] __init__.py
       tests/
         [py] __init__.py
         [py] conftest.py
+        [py] test_exam_lesson_api.py
         [py] test_models.py
+        [py] test_video_utils.py
+      [py] __init__.py
+      [py] admin.py
+      [py] apps.py
+      [py] container_lessons.py
+      [py] lesson_parent.py
+      [py] lesson_querysets.py
+      [py] models.py
+      [py] module_lessons.py
+      [py] serializers.py
+      [py] urls.py
+      [py] video_utils.py
+      [py] viewsets.py
+    education/
+      migrations/
+        [py] 0001_initial.py
+        [py] __init__.py
+      tests/
+        [py] __init__.py
+        [py] test_enrollment.py
       [py] __init__.py
       [py] admin.py
       [py] apps.py
       [py] models.py
       [py] serializers.py
+      [py] services.py
+      [py] tests.py
       [py] urls.py
+      [py] views.py
       [py] viewsets.py
-    education/
+    exams/
       migrations/
+        [py] 0001_exam_system.py
         [py] __init__.py
+      tests/
+        [py] __init__.py
+        [py] test_exam_api.py
       [py] __init__.py
       [py] admin.py
       [py] apps.py
       [py] models.py
-      [py] tests.py
+      [py] serializers.py
+      [py] services.py
+      [py] urls.py
       [py] views.py
     fixture/
       management/
@@ -165,26 +197,58 @@ Bervinov Academy
     locale/
       en/
         LC_MESSAGES/
+      ru/
+        LC_MESSAGES/
     mentoring/
       migrations/
         [py] __init__.py
+      tests/
+        [py] __init__.py
+        [py] test_mentor_api.py
       [py] __init__.py
       [py] admin.py
       [py] apps.py
       [py] models.py
+      [py] permissions.py
+      [py] services.py
       [py] tests.py
+      [py] urls.py
       [py] views.py
     progress/
+      management/
+        commands/
+        [py] __init__.py
       migrations/
         [py] 0001_initial.py
         [py] 0002_codesubmission_and_more.py
+        [py] 0003_rename_submission_public_id_answer_public_ids.py
+        [py] 0004_alter_codesubmission_public_id.py
+        [py] 0005_alter_useranswerradio_unique_together.py
+        [py] 0006_userlessontheoryread.py
+        [py] 0007_achievement_models.py
+        [py] 0008_seed_achievements.py
+        [py] 0009_exam_system.py
         [py] __init__.py
+      tests/
+        [py] __init__.py
+        [py] conftest.py
+        [py] test_kafka_results.py
+        [py] test_profile_stats.py
+        [py] test_progress_answers_api.py
       [py] __init__.py
+      [py] achievements.py
       [py] admin.py
       [py] apps.py
+      [py] kafka_payloads.py
+      [py] kafka_publisher.py
+      [py] kafka_results_consumer.py
       [py] models.py
+      [py] profile_serializers.py
       [py] serializers.py
+      [py] signals.py
+      [py] stats.py
       [py] urls.py
+      [py] views.py
       [py] viewsets.py
     school_platform/
       admin/
@@ -218,11 +282,9 @@ Bervinov Academy
         [py] __init__.py
         [py] specialization.py
         [py] translationmemory.py
-      tests/
       translation_registry/
         [py] __init__.py
         [py] users.py
-      [file] 03_dashboard 1 (1).png
       [py] __init__.py
       [py] admin.py
       [py] apps.py
@@ -245,98 +307,18 @@ Bervinov Academy
         [py] 0011_user_bio_en_user_bio_ru.py
         [py] 0012_remove_user_bio_en_remove_user_bio_ru.py
         [py] 0013_alter_mentor_options_alter_specialization_options_and_more.py
+        [py] 0014_user_uuid_public_ids.py
         [py] __init__.py
       tests/
         [py] __init__.py
         [py] conftest.py
         [py] test_manager.py
+        [py] test_password_reset.py
         [py] test_profiles.py
         [py] test_user_avatar.py
         [py] test_user_fields.py
         [py] test_user_lifecycle.py
-      [py] __init__.py
-      [py] admin.py
-      [py] apps.py
-      [py] models.py
-      [py] serializers.py
-      [py] urls.py
-      [py] validators.py
-      [py] viewsets.py
-    [py] __init__.py
-    [file] celerybeat-schedule
-    [py] conftest.py
-    [file] Dockerfile
-    [py] manage.py
-  frontend/
-    public/
-      [file] auth-illustration.png
-    src/
-      api/
-        [ts] auth.ts
-        [ts] users.ts
-      auth/
-        [tsx] AuthContext.tsx
-        [ts] types.ts
-      components/
-        [tsx] AppHeader.tsx
-      context/
-        [tsx] HomeSidebarMobileContext.tsx
-      data/
-        [ts] mockCourses.ts
-        [ts] mockHomePopularCourses.ts
-      demo/
-        [ts] simulatedUser.ts
-      lib/
-        [ts] apiClient.ts
-        [ts] authRedirect.ts
-        [ts] authTokens.ts
-        [ts] userAvatar.ts
-      routes/
-        [tsx] __root.tsx
-        [tsx] about.tsx
-        [tsx] community.tsx
-        [tsx] courses.tsx
-        [tsx] index.tsx
-        [tsx] login.tsx
-        [tsx] mentors.tsx
-      [css] index.css
-      [tsx] main.tsx
-      [ts] routeTree.gen.ts
-      [ts] vite-env.d.ts
-    [file] Dockerfile
-    [html] index.html
-    [json] package-lock.json
-    [json] package.json
-    [js] postcss.config.js
-    [json] tsconfig.json
-    [js] vite.config.js
-  logs/
-    [file] backend.log
-    [file] celery-beat.log
-    [file] celery.log
-    [file] db.log
-    [file] frontend.log
-    [file] redis.log
-  nginx/
-    [file] Dockerfile
-    [file] nginx.conf
-  scripts/
-    [bat] fast-commit.bat
-    [sh] fast-commit.sh
-    [bat] generate-prompt.bat
-    [py] generate-prompt.py
-    [sh] generate-prompt.sh
-    [txt] project_prompt.txt
-    [md] README.md
-    [bat] restart-docker.bat
-    [sh] restart-docker.sh
-  [yml] docker-compose.yml
-  [file] LICENSE
-  [json] package-lock.json
-  [json] package.json
-  [toml] pyproject.toml
-  [md] README.md
-  ... (1 строк дерева скрыто; увеличьте max_lines в скрипте)
+  ... (83 строк дерева скрыто; увеличьте max_lines в скрипте)
 
 ## ФРАГМЕНТЫ КЛЮЧЕВЫХ ФАЙЛОВ
 
@@ -374,31 +356,31 @@ Bervinov Academy
   |       interval: 5s
   |       retries: 5
   | 
-  |   backend:
-  |     build:
-  |       context: .
-  |       dockerfile: backend/Dockerfile
-  |     container_name: bervinov-academy-backend
-  |     command: >
-  |       sh -c "cd /app/backend &&
-  |              python manage.py compilemessages -l en &&
-  |              python manage.py migrate &&
-  |              python manage.py seed_data --clear &&
-  |              python manage.py runserver 0.0.0.0:8000"
-  |     volumes:
-  |       - .:/app
+  |   # Kafka stack: backend/celery in Compose should use KAFKA_BOOTSTRAP_SERVERS=kafka:29092.
+  |   # Host tools (kafka-console-consumer) use localhost:9092.
+  |   zookeeper:
+  |     # Pin: cp-*:latest switched to KRaft-only and breaks ZK env (KAFKA_PROCESS_ROLES).
+  |     image: confluentinc/cp-zookeeper:7.6.1
+  |     container_name: bervinov-academy-zookeeper
   |     ports:
-  |       - "8000:8000"
-  |     env_file: .env
+  |       - "2181:2181"
+  |     environment:
+  |       ZOOKEEPER_CLIENT_PORT: 2181
+  |       ZOOKEEPER_TICK_TIME: 2000
+  | 
+  |   kafka:
+  |     image: confluentinc/cp-kafka:7.6.1
+  |     container_name: bervinov-academy-kafka
+  |     ports:
+  |       - "9092:9092"
   |     depends_on:
-  |       db:
-  |         condition: service_healthy
-  |       redis:
-  |         condition: service_healthy
-  |     working_dir: /app/backend
-  |     healthcheck:  # Добавлен healthcheck для backend
-  |       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
-  | ... (77 строк не показано)
+  |       - zookeeper
+  |     environment:
+  |       KAFKA_BROKER_ID: 1
+  |       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+  |       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+  |       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+  | ... (193 строк не показано)
   --- конец файла ---
 
   [nginx] nginx\nginx.conf
@@ -513,7 +495,8 @@ Bervinov Academy
   | def home_view(request):
   |     """Главная страница проекта."""
   |     from django.shortcuts import render
-  |     return render(request, 'home.html')
+  | 
+  |     return render(request, "home.html")
   | 
   | 
   | urlpatterns = [
@@ -524,6 +507,10 @@ Bervinov Academy
   |     path("api/", include("users.urls")),
   |     path("api/", include("content.urls")),
   |     path("api/", include("progress.urls")),
+  |     path("api/", include("education.urls")),
+  |     path("api/", include("mentoring.urls")),
+  |     path("api/", include("exams.urls")),
+  |     path("api/", include("communication.urls")),
   |     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
   |     path(
   |         "api/swagger/",
@@ -543,83 +530,55 @@ Bervinov Academy
   |     )
   |     urlpatterns += static(
   |         settings.MEDIA_URL, document_root=settings.MEDIA_ROOT
-  |     )
+  | ... (1 строк не показано)
   --- конец файла ---
 
-  [vite] frontend\vite.config.js
-  (dev-сервер и proxy /api)
-  --- начало файла ---
-  | import { defineConfig, loadEnv } from 'vite'
-  | import react from '@vitejs/plugin-react'
-  | import tailwindcss from '@tailwindcss/vite'
-  | import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
-  | 
-  | export default defineConfig(({ mode }) => {
-  |   const env = loadEnv(mode, '.', '')
-  | 
-  |   return {
-  |     plugins: [tailwindcss(), TanStackRouterVite(), react()],
-  |     server: {
-  |       port: 3000,
-  |       proxy: {
-  |         '/api': {
-  |           target: env.VITE_API_TARGET || 'http://localhost:8000',
-  |           changeOrigin: true,
-  |         },
-  |       },
-  |     },
-  |     build: {
-  |       outDir: 'dist',
-  |       sourcemap: true,
-  |     },
-  |   }
-  | })
-  --- конец файла ---
+  [vite] пропущено — нет файла: C:\Users\Dir\PycharmProjects\BervinovAcademy\frontend\vite.config.js
 
   [README] README.md
   (человеческое описание проекта)
   --- начало файла ---
-  | # Bervinov Academy - Educational Platform
+  | <div align="center">
   | 
-  | ![Bervinov Academy](https://via.placeholder.com/800x200/2D3748/FFFFFF?text=Bervinov+Academy+-+Modern+Learning+Platform)
+  | # Bervinov Academy
   | 
-  | Bervinov Academy - это современная образовательная платформа с менторской поддержкой, построенная по принципам Stepik. Платформа предоставляет интерактивные курсы по программированию с автоматической проверкой заданий и персональными менторами.
+  | **Образовательная платформа** с курсами, интерактивными заданиями, автопроверкой кода (Kafka + Docker-песочница) и современным SPA-фронтендом.
   | 
-  | ### 🎯 Основные возможности
+  | Python **3.11+** · Django · PostgreSQL · Redis · Celery · Kafka · React
   | 
-  | - **📚 Структурированные курсы** с модулями и уроками
-  | - **👨‍🏫 Менторская поддержка** для каждого студента
-  | - **💻 Автоматическая проверка** кодовых заданий
-  | - **📊 Отслеживание прогресса** с детальной статистикой
-  | - **💬 Система коммуникации** между студентами и менторами
-  | - **💰 Гибкая система подписок**
+  | </div>
   | 
-  | ## 🏗️ Архитектура проекта
+  | ---
   | 
-  | ### ER-диаграмма базы данных
+  | <!-- ═══════════════════════════════════════════════════════════════════
+  |      HERO / АНИМАЦИЯ — вставьте сюда демо
+  |      Варианты:
+  |      1) GIF: <img src="docs/images/demo.gif" alt="Demo" width="720" />
+  |      2) Видео: <video src="docs/images/demo.webm" autoplay muted loop />
+  |      3) Lottie: в README.md напрямую Lottie не рендерится — используйте
+  |         ссылку на страницу или статичный превью-кадр + GIF ниже.
+  |      ═══════════════════════════════════════════════════════════════════ -->
   | 
-  | ![ER Diagram](docs/images/er-diagram.png)
+  | <p align="center">
+  |   <a href="#-быстрый-старт-docker">Запуск</a>
+  |   &nbsp;·&nbsp;
+  |   <a href="#-обновление-проекта">Обновление</a>
+  |   &nbsp;·&nbsp;
+  |   <a href="#-схема-базы-данных">Схема БД</a>
+  |   &nbsp;·&nbsp;
+  |   <a href="#-архитектура-сервисов">Архитектура</a>
+  |   &nbsp;·&nbsp;
+  |   <a href="#-гайд-по-проекту">Гайд</a>
+  | </p>
   | 
-  | *Примечание: Добавьте скриншот вашей ER-диграммы в папку `docs/images/`*
+  | <p align="center">
+  |   <!-- TODO: положите файл и раскомментируйте строку ниже -->
+  |   <!-- <img src="docs/images/hero-demo.gif" alt="Bervinov Academy demo" width="780" /> -->
+  |   <img src="https://via.placeholder.com/780x320/1a1a2e/eeeef7?text=Hero+%2F+Animation+%E2%86%92+docs%2Fimages%2Fhero-demo.gif" alt="Место под анимацию: добавьте docs/images/hero-demo.gif" width="780" />
+  | </p>
   | 
-  | ### Структура приложений Django
-  | 
-  | ```
-  | backend/
-  | ├── users/                 # Пользователи и аутентификация
-  | ├── subscriptions/         # Планы и подписки
-  | ├── education/            # Курсы, модули, уроки, задания
-  | ├── progress/             # Прогресс студентов, выполнения заданий
-  | ├── mentoring/            # Менторы и связи ментор-студент
-  | ├── content/              # Технологии и теги
-  | └── communication/        # Комментарии, сообщения, закладки
-  | ```
-  | 
-  | ## 🚀 Быстрый старт
-  | 
-  | ### Предварительные требования
-  | 
-  | ... (191 строк не показано)
+  | ---
+  | ... (375 строк не показано)
   --- конец файла ---
 
   [pyproject] pyproject.toml
@@ -660,7 +619,7 @@ Bervinov Academy
   | 
   | [tool.flake8]
   | max-line-length = 79
-  | ... (70 строк не показано)
+  | ... (66 строк не показано)
   --- конец файла ---
 
   [env example] .env.example
@@ -668,6 +627,9 @@ Bervinov Academy
   --- начало файла ---
   | # Debug
   | DEBUG=True
+  | 
+  | # Уровень логов Django: DEBUG, INFO, WARNING, ERROR
+  | DJANGO_LOG_LEVEL=INFO
   | 
   | # Secret Key - СГЕНЕРИРУЙ НОВЫЙ ДЛЯ ПРОДАКШЕНА!
   | SECRET_KEY=your-super-secret-key-here-change-in-production
@@ -686,6 +648,19 @@ Bervinov Academy
   | 
   | # Frontend
   | FRONTEND_URL=http://localhost:3000
+  | 
+  | # Kafka (kafka-python; new CodeSubmission is published to this topic)
+  | # Django on host: localhost:9092. Backend in docker-compose: kafka:29092
+  | KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+  | KAFKA_TOPIC=code-submissions
+  | # Результаты проверки: воркер code-check-runner пишет сюда;
+  | # ``python manage.py consume_code_submission_results``
+  | # (сервис kafka-results-consumer в docker-compose) читает и обновляет CodeSubmission.
+  | KAFKA_TOPIC_CODE_RESULTS=code-submission-results
+  | # Отдельная consumer group для Django (не совпадать с group воркера проверки).
+  | KAFKA_GROUP_CODE_RESULTS=django-code-submission-results
+  | KAFKA_RESULTS_AUTO_OFFSET_RESET=earliest
+  | ... (11 строк не показано)
   --- конец файла ---
 
 ## DOCKER COMPOSE (полный текст, если уместен)
@@ -721,6 +696,48 @@ Bervinov Academy
         interval: 5s
         retries: 5
   
+    # Kafka stack: backend/celery in Compose should use KAFKA_BOOTSTRAP_SERVERS=kafka:29092.
+    # Host tools (kafka-console-consumer) use localhost:9092.
+    zookeeper:
+      # Pin: cp-*:latest switched to KRaft-only and breaks ZK env (KAFKA_PROCESS_ROLES).
+      image: confluentinc/cp-zookeeper:7.6.1
+      container_name: bervinov-academy-zookeeper
+      ports:
+        - "2181:2181"
+      environment:
+        ZOOKEEPER_CLIENT_PORT: 2181
+        ZOOKEEPER_TICK_TIME: 2000
+  
+    kafka:
+      image: confluentinc/cp-kafka:7.6.1
+      container_name: bervinov-academy-kafka
+      ports:
+        - "9092:9092"
+      depends_on:
+        - zookeeper
+      environment:
+        KAFKA_BROKER_ID: 1
+        KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+        KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+        KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+        KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+        KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      healthcheck:
+        test:
+          [
+            "CMD",
+            "kafka-broker-api-versions",
+            "--bootstrap-server",
+            "localhost:9092",
+          ]
+        interval: 10s
+        timeout: 10s
+        retries: 12
+        start_period: 40s
+  
     backend:
       build:
         context: .
@@ -730,7 +747,6 @@ Bervinov Academy
         sh -c "cd /app/backend &&
                python manage.py compilemessages -l en &&
                python manage.py migrate &&
-               python manage.py seed_data --clear &&
                python manage.py runserver 0.0.0.0:8000"
       volumes:
         - .:/app
@@ -742,6 +758,8 @@ Bervinov Academy
           condition: service_healthy
         redis:
           condition: service_healthy
+        kafka:
+          condition: service_healthy
       working_dir: /app/backend
       healthcheck:  # Добавлен healthcheck для backend
         test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
@@ -751,21 +769,17 @@ Bervinov Academy
         start_period: 30s
   
     frontend:
-      build:
-        context: ./frontend
-        dockerfile: Dockerfile
+      image: alpine:3.20
       container_name: bervinov-academy-frontend
       volumes:
         - ./frontend:/app
-        - /app/node_modules
       working_dir: /app
       command: >
-        sh -c "npm run build"
-      environment:
-        - CHOKIDAR_USEPOLLING=true
-      depends_on:
-        backend:
-          condition: service_healthy
+        sh -c "rm -rf dist && mkdir -p dist &&
+               cp index.html dist/ &&
+               cp -r src dist/ &&
+               (test -d public && cp -r public dist/ || true)"
+      restart: "no"
   
     nginx:
       build:
@@ -777,8 +791,10 @@ Bervinov Academy
       volumes:
         - ./frontend/dist:/usr/share/nginx/html:ro
       depends_on:
-        - frontend
-        - backend
+        frontend:
+          condition: service_completed_successfully
+        backend:
+          condition: service_healthy
       restart: unless-stopped
   
     celery:
@@ -798,7 +814,11 @@ Bervinov Academy
           condition: service_healthy
         redis:
           condition: service_healthy
+        kafka:
+          condition: service_healthy
       working_dir: /app/backend
+      healthcheck:
+        disable: true
   
     celery-beat:
       build:
@@ -818,10 +838,34 @@ Bervinov Academy
         redis:
           condition: service_healthy
       working_dir: /app/backend
+      healthcheck:
+        disable: true
   
-  volumes:
-    postgres_data:
-    redis_data:
+    # Образ песочницы (только build; entrypoint заменён, чтобы сервис сразу
+    # завершился — runner использует image при docker run).
+    code-check-sandbox:
+      image: bervinov-academy-code-sandbox:local
+      build:
+        context: ./services/code_check_sandbox
+      entrypoint: ["/bin/true"]
+      restart: "no"
+  
+    code-check-runner:
+      build:
+        context: ./services/code_check_emulator
+      image: bervinov-academy-code-check-runner:local
+      container_name: bervinov-academy-code-check-runner
+      restart: unless-stopped
+      environment:
+        KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+        KAFKA_TOPIC_IN: code-submissions
+        KAFKA_TOPIC_CODE_RESULTS: code-submission-results
+        KAFKA_GROUP_ID: code-check-runner
+        KAFKA_AUTO_OFFSET_RESET: earliest
+        SANDBOX_IMAGE: bervinov-academy-code-sandbox:local
+        MAX_CONCURRENT_RUNS: "2"
+        DOCKER_RUN_TIMEOUT_BUFFER_SEC: "5"
+  ... (48 строк не показано)
 
 ================================================================================
 КОНЕЦ ФАЙЛА КОНТЕКСТА

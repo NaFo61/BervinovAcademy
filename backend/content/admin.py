@@ -9,6 +9,7 @@ from content.models import (
     CheckBoxAnswerOption,
     CodingChallenge,
     Course,
+    Exam,
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
     LessonTheory,
@@ -33,6 +34,15 @@ def _lesson_counts_for_module(module):
         module.lessons_radio_questions.count(),
         module.lessons_checkbox_questions.count(),
         module.challenges.count(),
+    )
+
+
+def _lesson_counts_for_exam(exam):
+    return (
+        exam.lessons_theories.count(),
+        exam.lessons_radio_questions.count(),
+        exam.lessons_checkbox_questions.count(),
+        exam.challenges.count(),
     )
 
 
@@ -82,6 +92,7 @@ def _clone_course(original):
                 module=new_module,
                 title=lesson.title,
                 content=lesson.content,
+                video_url=lesson.video_url,
                 is_active=lesson.is_active,
             )
 
@@ -91,6 +102,7 @@ def _clone_course(original):
                 title=question.title,
                 question_text=question.question_text,
                 explanation=question.explanation,
+                video_url=question.video_url,
                 points=question.points,
                 is_active=question.is_active,
             )
@@ -109,6 +121,7 @@ def _clone_course(original):
                 title=question.title,
                 question_text=question.question_text,
                 explanation=question.explanation,
+                video_url=question.video_url,
                 points=question.points,
                 is_active=question.is_active,
             )
@@ -126,6 +139,7 @@ def _clone_course(original):
                 title=challenge.title,
                 description=challenge.description,
                 instructions=challenge.instructions,
+                video_url=challenge.video_url,
                 difficulty=challenge.difficulty,
                 points=challenge.points,
                 initial_code=challenge.initial_code,
@@ -177,6 +191,7 @@ class CourseAdmin(ModelAdmin):
         "title",
         "technologies_list",
         "modules_count",
+        "exams_count",
         "is_active",
         "created_at",
         "actions_column",
@@ -254,6 +269,19 @@ class CourseAdmin(ModelAdmin):
 
         url = (
             reverse("admin:content_module_changelist")
+            + f"?course__id__exact={obj.id}"
+        )
+        return format_html('<a href="{}">{}</a>', url, count)
+
+    @admin.display(description=_("Контрольные"))
+    def exams_count(self, obj):
+        count = obj.exams.count()
+        if count == 0:
+            return format_html(
+                '<span style="color: #dc3545;">{}</span>', count
+            )
+        url = (
+            reverse("admin:content_exam_changelist")
             + f"?course__id__exact={obj.id}"
         )
         return format_html('<a href="{}">{}</a>', url, count)
@@ -378,7 +406,33 @@ class ModuleInline(TabularInline):
         return _format_lesson_counts(theory, radio, checkbox, coding)
 
 
-CourseAdmin.inlines = [ModuleInline]
+class ExamInline(TabularInline):
+    """Контрольные работы курса на странице редактирования курса."""
+
+    model = Exam
+    extra = 0
+    ordering = ("order_index",)
+    ordering_field = "order_index"
+    hide_ordering_field = True
+    show_change_link = True
+    fields = (
+        "title",
+        "duration_minutes",
+        "pass_score_percent",
+        "is_active",
+        "lessons_inline_count",
+    )
+    readonly_fields = ("lessons_inline_count",)
+
+    @admin.display(description=_("Задания"))
+    def lessons_inline_count(self, obj):
+        if not obj.pk:
+            return "—"
+        theory, radio, checkbox, coding = _lesson_counts_for_exam(obj)
+        return _format_lesson_counts(theory, radio, checkbox, coding)
+
+
+CourseAdmin.inlines = [ModuleInline, ExamInline]
 
 
 class LessonTheoryInline(TabularInline):
@@ -728,6 +782,8 @@ class LessonTheoryAdmin(ModelAdmin):
                     "module",
                     "title",
                     "content",
+                    "video_url",
+                    "video_file",
                     "is_active",
                 ),
             },
@@ -895,6 +951,8 @@ class LessonRadioQuestionAdmin(ModelAdmin):
                     "title",
                     "question_text",
                     "explanation",
+                    "video_url",
+                    "video_file",
                     "points",
                     "is_active",
                 ),
@@ -1156,6 +1214,8 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
                     "title",
                     "question_text",
                     "explanation",
+                    "video_url",
+                    "video_file",
                     "points",
                     "is_active",
                 ),
@@ -1397,6 +1457,8 @@ class CodingChallengeAdmin(ModelAdmin):
                     "title",
                     "description",
                     "instructions",
+                    "video_url",
+                    "video_file",
                     "difficulty",
                     "points",
                     "order_index",

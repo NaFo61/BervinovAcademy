@@ -9,6 +9,7 @@ from content.models import (
     CodingChallenge,
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
+    LessonTheory,
     RadioAnswerOption,
 )
 
@@ -226,6 +227,14 @@ class CodeSubmission(UUIDPublicIdMixin, models.Model):
     completed_at = models.DateTimeField(
         null=True, blank=True, verbose_name=_("Время завершения")
     )
+    exam_attempt = models.ForeignKey(
+        "exams.ExamAttempt",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="code_submissions",
+        verbose_name=_("Попытка КР"),
+    )
 
     class Meta:
         verbose_name = _("Отправка решения")
@@ -254,3 +263,128 @@ class CodeSubmission(UUIDPublicIdMixin, models.Model):
         if self.is_successful():
             return self.challenge.points
         return 0
+
+
+class UserLessonTheoryRead(UUIDPublicIdMixin, models.Model):
+    """Фиксация факта, что пользователь открыл (прочитал) теорию."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="theory_reads",
+        verbose_name=_("Пользователь"),
+    )
+    lesson = models.ForeignKey(
+        LessonTheory,
+        on_delete=models.CASCADE,
+        related_name="user_reads",
+        verbose_name=_("Теоретический урок"),
+    )
+    read_at = models.DateTimeField(
+        default=timezone.now,
+        verbose_name=_("Прочитано в"),
+        db_index=True,
+    )
+
+    class Meta:
+        verbose_name = _("Прочтение теории")
+        verbose_name_plural = _("Прочтения теории")
+        ordering = ("-read_at",)
+        unique_together = ("user", "lesson")
+        indexes = [
+            models.Index(fields=["user", "lesson"]),
+            models.Index(fields=["lesson", "-read_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user} - {self.lesson.title}"
+
+
+class Achievement(UUIDPublicIdMixin, models.Model):
+    """Шаблон достижения (порог по типу активности)."""
+
+    class Kind(models.TextChoices):
+        TASKS_SOLVED = "tasks_solved", _("Решено задач")
+        THEORIES_READ = "theories_read", _("Прочитано теорий")
+        COURSES_COMPLETED = "courses_completed", _("Завершено курсов")
+        QUIZZES_SOLVED = "quizzes_solved", _("Решено тестов")
+        STREAK_DAYS = "streak_days", _("Дней подряд")
+
+    code = models.SlugField(
+        max_length=64,
+        unique=True,
+        verbose_name=_("Код"),
+    )
+    kind = models.CharField(
+        max_length=32,
+        choices=Kind.choices,
+        verbose_name=_("Тип"),
+        db_index=True,
+    )
+    threshold = models.PositiveIntegerField(
+        verbose_name=_("Порог"),
+        help_text=_("Минимальное значение метрики для разблокировки"),
+    )
+    title = models.CharField(max_length=120, verbose_name=_("Название"))
+    description = models.TextField(
+        blank=True,
+        verbose_name=_("Описание"),
+    )
+    emoji = models.CharField(
+        max_length=16,
+        default="🏆",
+        verbose_name=_("Эмодзи"),
+    )
+    order_index = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Порядок"),
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_("Активно"),
+    )
+
+    class Meta:
+        verbose_name = _("Достижение")
+        verbose_name_plural = _("Достижения")
+        ordering = ("order_index", "threshold", "code")
+        indexes = [
+            models.Index(fields=["kind", "threshold"]),
+        ]
+
+    def __str__(self):
+        return self.title
+
+
+class UserAchievement(UUIDPublicIdMixin, models.Model):
+    """Факт разблокировки достижения пользователем."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="achievements",
+        verbose_name=_("Пользователь"),
+    )
+    achievement = models.ForeignKey(
+        Achievement,
+        on_delete=models.CASCADE,
+        related_name="user_unlocks",
+        verbose_name=_("Достижение"),
+    )
+    unlocked_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Разблокировано"),
+        db_index=True,
+    )
+
+    class Meta:
+        verbose_name = _("Достижение пользователя")
+        verbose_name_plural = _("Достижения пользователей")
+        ordering = ("-unlocked_at",)
+        unique_together = ("user", "achievement")
+        indexes = [
+            models.Index(fields=["user", "-unlocked_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user} — {self.achievement.title}"

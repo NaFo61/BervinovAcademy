@@ -260,6 +260,20 @@
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
     border-color: var(--c-2);
   }
+
+  .auth-input-wrap {
+    border: 1px solid rgba(11, 18, 38, 0.10);
+    background: #fff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .auth-input-wrap:focus-within {
+    border-color: rgba(139, 92, 246, 0.55);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+  }
+  .auth-input-wrap.is-error {
+    border-color: rgba(244, 63, 94, 0.55);
+    box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.08);
+  }
 </style>
 </head>
 <body class="antialiased">
@@ -276,15 +290,21 @@
 <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
 <script src="https://unpkg.com/framer-motion@11.18.2/dist/framer-motion.js"></script>
 <script src="https://unpkg.com/recharts@2.15.0/umd/Recharts.js"></script>
+<script src="https://unpkg.com/livekit-client@2.9.9/dist/livekit-client.umd.js"></script>
 
 <script type="text/babel" src="src/shared.jsx"></script>
 <script type="text/babel" src="src/landing.jsx"></script>
 <script type="text/babel" src="src/catalog.jsx"></script>
 <script type="text/babel" src="src/problem.jsx"></script>
 <script type="text/babel" src="src/profile.jsx"></script>
+<script type="text/babel" src="src/profile-edit.jsx"></script>
 <script type="text/babel" src="src/auth.jsx"></script>
 <script type="text/babel" src="src/course.jsx"></script>
+<script type="text/babel" src="src/exam.jsx"></script>
 <script type="text/babel" src="src/learn.jsx"></script>
+<script type="text/babel" src="src/mentor.jsx"></script>
+<script type="text/babel" src="src/call.jsx"></script>
+<script type="text/babel" src="src/conferences.jsx"></script>
 <script type="text/babel" src="src/app.jsx"></script>
 </body>
 </html>

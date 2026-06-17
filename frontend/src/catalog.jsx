@@ -148,7 +148,27 @@ function CatalogPage({ navigate, hashParams }) {
 
   const [page, setPage] = React.useState(1);
 
+  const [enrollMap, setEnrollMap] = React.useState({});
+
   const filterKeyRef = React.useRef(null);
+
+
+
+  React.useEffect(() => {
+
+    let cancelled = false;
+
+    (async () => {
+
+      const list = await window.fetchMyEnrollments();
+
+      if (!cancelled) setEnrollMap(window.enrollmentsByCourseId(list));
+
+    })();
+
+    return () => { cancelled = true; };
+
+  }, []);
 
 
 
@@ -382,47 +402,133 @@ function CatalogPage({ navigate, hashParams }) {
 
 
 
-        <div className="mt-8 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft p-4 flex flex-col gap-4">
+      </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
 
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pr-2">
 
-              {categories.map((c) => (
+      <div className="max-w-7xl mx-auto px-5 sm:px-8">
 
-                <button key={c} type="button" onClick={() => setCat(c)}
+        <div className="grid lg:grid-cols-[280px_1fr] gap-6 items-start">
 
-                  className={`px-3.5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+          <aside className="lg:sticky lg:top-24 space-y-4">
 
-                    cat === c ? 'grad-bg text-white shadow-soft' : 'bg-black/[0.04] text-ink/70 hover:bg-black/[0.07]'
+            <div className="bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft p-5">
 
-                  }`}>
+              <div className="flex items-center gap-2 mb-4">
 
-                  {c}
+                <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-600">
 
-                </button>
+                  <I.Filter className="w-4 h-4"/>
 
-              ))}
+                </div>
 
-            </div>
+                <div className="text-sm font-bold">Фильтры</div>
 
-            <div className="flex-1 min-w-[200px]"/>
+              </div>
 
-            <div className="ring-grad flex items-center gap-2 px-3 h-11 rounded-xl border border-black/[0.06] bg-white w-full sm:w-72 transition-all">
 
-              <I.Search className="w-4 h-4 text-ink/50"/>
 
-              <input value={query} onChange={(e) => setQuery(e.target.value)}
+              <div className="text-[11px] font-semibold uppercase tracking-widest text-ink/45 mb-2">Поиск</div>
 
-                placeholder="Название, технология…"
+              <div className="flex items-center gap-2 px-3 h-11 rounded-xl border border-black/[0.06] bg-black/[0.02] focus-within:border-violet-300 focus-within:ring-2 focus-within:ring-violet-500/10 transition-all">
 
-                className="bg-transparent text-sm flex-1 placeholder:text-ink/40"/>
+                <I.Search className="w-4 h-4 text-ink/45 shrink-0"/>
 
-              {query && (
+                <input value={query} onChange={(e) => setQuery(e.target.value)}
 
-                <button type="button" onClick={() => setQuery('')} className="text-ink/40 hover:text-ink">
+                  placeholder="Название, технология…"
 
-                  <I.X className="w-3.5 h-3.5"/>
+                  className="bg-transparent text-sm flex-1 placeholder:text-ink/40 focus:outline-none"/>
+
+                {query && (
+
+                  <button type="button" onClick={() => setQuery('')} className="text-ink/40 hover:text-ink shrink-0">
+
+                    <I.X className="w-3.5 h-3.5"/>
+
+                  </button>
+
+                )}
+
+              </div>
+
+
+
+              <div className="mt-5 text-[11px] font-semibold uppercase tracking-widest text-ink/45 mb-3">Технологии</div>
+
+              <div className="grid grid-cols-2 gap-2">
+
+                {categories.map((c) => (
+
+                  <button key={c} type="button" onClick={() => setCat(c)}
+
+                    className={`px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all ${
+
+                      cat === c
+
+                        ? 'grad-bg text-white shadow-soft'
+
+                        : 'bg-black/[0.03] text-ink/70 hover:bg-violet-500/[0.08] hover:text-violet-700 ring-1 ring-black/[0.04]'
+
+                    }`}>
+
+                    {c}
+
+                  </button>
+
+                ))}
+
+              </div>
+
+
+
+              <div className="mt-5 text-[11px] font-semibold uppercase tracking-widest text-ink/45 mb-3">Сортировка</div>
+
+              <div className="space-y-1.5">
+
+                {['Новизна', 'Название', 'Популярность'].map((s) => (
+
+                  <button key={s} type="button" onClick={() => setSort(s)}
+
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all ${
+
+                      sort === s
+
+                        ? 'bg-violet-500/10 text-violet-700 ring-1 ring-violet-500/25'
+
+                        : 'text-ink/65 hover:bg-black/[0.03]'
+
+                    }`}>
+
+                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+
+                      sort === s ? 'border-violet-600' : 'border-ink/20'
+
+                    }`}>
+
+                      {sort === s && <span className="w-2 h-2 rounded-full bg-violet-600"/>}
+
+                    </span>
+
+                    {s}
+
+                  </button>
+
+                ))}
+
+              </div>
+
+
+
+              {(cat !== 'Все' || query) && (
+
+                <button type="button"
+
+                  onClick={() => { setCat('Все'); setQuery(''); }}
+
+                  className="mt-5 w-full h-10 rounded-xl border border-black/[0.08] text-sm font-medium text-ink/60 hover:border-violet-300 hover:text-violet-600 transition-colors">
+
+                  Сбросить фильтры
 
                 </button>
 
@@ -430,41 +536,11 @@ function CatalogPage({ navigate, hashParams }) {
 
             </div>
 
-          </div>
-
-          <div className="flex items-center gap-6 flex-wrap pt-1">
-
-            <div className="flex items-center gap-2 flex-wrap">
-
-              <div className="text-xs font-semibold uppercase tracking-widest text-ink/50">Сортировка</div>
-
-              {['Новизна', 'Название', 'Популярность'].map((s) => (
-
-                <button key={s} type="button" onClick={() => setSort(s)}
-
-                  className={`px-3 h-9 rounded-lg text-xs font-medium transition-all ${
-
-                    sort === s ? 'bg-violet-500/10 text-violet-600 ring-1 ring-violet-500/20' : 'text-ink/60 hover:bg-black/[0.04]'
-
-                  }`}>
-
-                  {s}
-
-                </button>
-
-              ))}
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
+          </aside>
 
 
 
-      <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <div>
 
         {loadState === 'loading' && (
 
@@ -503,6 +579,8 @@ function CatalogPage({ navigate, hashParams }) {
                     <CourseCard
 
                       course={c}
+
+                      enrollment={enrollMap[c.id] || null}
 
                       onOpen={() => navigate(window.Routes.COURSE, { id: c.id })}
 
@@ -557,6 +635,10 @@ function CatalogPage({ navigate, hashParams }) {
           </div>
 
         )}
+
+          </div>
+
+        </div>
 
       </div>
 

@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "education",
     "progress",
     "mentoring",
+    "exams",
     "content",
     "communication",
     "translations",
@@ -160,6 +161,21 @@ UNFOLD = {
                         "icon": "science",
                         "link": "/admin/content/technology/",
                     },
+                    {
+                        "title": _("Контрольные работы"),
+                        "icon": "assignment",
+                        "link": "/admin/content/exam/",
+                    },
+                    {
+                        "title": _("Попытки КР"),
+                        "icon": "history",
+                        "link": "/admin/exams/examattempt/",
+                    },
+                    {
+                        "title": _("Доступ к КР"),
+                        "icon": "key",
+                        "link": "/admin/exams/examaccessgrant/",
+                    },
                 ],
             },
             {
@@ -264,6 +280,24 @@ DATABASES = {
     }
 }
 
+EMAIL_BACKEND = config(
+    "EMAIL_BACKEND",
+    default="django.core.mail.backends.console.EmailBackend",
+)
+DEFAULT_FROM_EMAIL = config(
+    "DEFAULT_FROM_EMAIL", default="noreply@bervinov.dev"
+)
+
+CACHES = {
+    "default": {
+        "BACKEND": config(
+            "CACHE_BACKEND",
+            default="django.core.cache.backends.locmem.LocMemCache",
+        ),
+        "LOCATION": "school-platform-cache",
+    }
+}
+
 AUTH_PASSWORD_VALIDATORS: list[dict[str, Any]] = [
     # {
     #     "NAME": "users.validators.CustomPasswordValidator",
@@ -303,6 +337,33 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Europe/Moscow"
+
+from celery.schedules import crontab  # noqa: E402
+
+CELERY_BEAT_SCHEDULE = {
+    "expire-stale-conferences": {
+        "task": "communication.expire_stale_conferences",
+        "schedule": crontab(minute=0),
+    },
+    "close-conferences-without-mentor": {
+        "task": "communication.close_conferences_without_mentor",
+        "schedule": crontab(),
+    },
+}
+
+# LiveKit (видеоконференции ментор ↔ участник)
+LIVEKIT_URL = config("LIVEKIT_URL", default="").strip()
+LIVEKIT_API_KEY = config("LIVEKIT_API_KEY", default="").strip()
+LIVEKIT_API_SECRET = config("LIVEKIT_API_SECRET", default="").strip()
+LIVEKIT_TOKEN_TTL_HOURS = config(
+    "LIVEKIT_TOKEN_TTL_HOURS", default=4, cast=int
+)
+CONFERENCE_WAITING_TTL_HOURS = config(
+    "CONFERENCE_WAITING_TTL_HOURS", default=24, cast=int
+)
+CONFERENCE_MENTOR_ABSENCE_MINUTES = config(
+    "CONFERENCE_MENTOR_ABSENCE_MINUTES", default=5, cast=int
+)
 
 # Kafka (опционально: пустой KAFKA_BOOTSTRAP_SERVERS — не публикуем)
 KAFKA_BOOTSTRAP_SERVERS = config("KAFKA_BOOTSTRAP_SERVERS", default="").strip()
@@ -401,6 +462,7 @@ REST_FRAMEWORK = {
         "login": "25/min",
         "register": "25/min",
         "token_refresh": "20/min",
+        "password_reset": "10/min",
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }

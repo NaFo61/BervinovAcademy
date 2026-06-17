@@ -8,11 +8,16 @@ const LandingPage = window.LandingPage;
 const CatalogPage = window.CatalogPage;
 const ProblemPage = window.ProblemPage;
 const ProfilePage = window.ProfilePage;
+const ProfileEditPage = window.ProfileEditPage;
 const AuthPage = window.AuthPage;
 const CoursePage = window.CoursePage;
 const LearnPage = window.LearnPage;
+const MentorPage = window.MentorPage;
+const ExamPage = window.ExamPage;
+const CallPage = window.CallPage;
+const ConferencesPage = window.ConferencesPage;
 
-const NO_FOOTER_ROUTES = new Set([Routes.PROBLEM, Routes.AUTH, Routes.LEARN]);
+const NO_FOOTER_ROUTES = new Set([Routes.PROBLEM, Routes.AUTH, Routes.LEARN, Routes.EXAM, Routes.CALL]);
 
 function App() {
   const [route, navigate, hashParams] = useHashRoute();
@@ -22,9 +27,14 @@ function App() {
     [Routes.CATALOG]: CatalogPage,
     [Routes.COURSE]: CoursePage,
     [Routes.LEARN]: LearnPage,
+    [Routes.EXAM]: ExamPage,
     [Routes.PROBLEM]: ProblemPage,
     [Routes.PROFILE]: ProfilePage,
+    [Routes.PROFILE_EDIT]: ProfileEditPage,
+    [Routes.MENTOR]: MentorPage,
     [Routes.AUTH]: AuthPage,
+    [Routes.CALL]: CallPage,
+    [Routes.CONFERENCES]: ConferencesPage,
   }[route] || LandingPage;
 
   const pageProps = { navigate, hashParams, route };

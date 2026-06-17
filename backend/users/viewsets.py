@@ -1,4 +1,4 @@
-from django.shortcuts import get_object_or_404
+from common.drf import UUID_LOOKUP_REGEX
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -8,8 +8,11 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import User
+from .password_reset import confirm_reset_code, issue_reset_code
 from .serializers import (
     CustomTokenObtainPairSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     UserListSerializer,
     UserPrivateProfileSerializer,
     UserPublicProfileSerializer,
@@ -120,6 +123,46 @@ class UserLoginViewSet(viewsets.GenericViewSet):
         )
 
 
+class PasswordResetViewSet(viewsets.GenericViewSet):
+    """Запрос кода и сброс пароля по email или телефону."""
+
+    permission_classes = [AllowAny]
+    throttle_scope = "password_reset"
+
+    @action(detail=False, methods=["post"], url_path="request")
+    def request_code(self, request, *args, **kwargs):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        login = serializer.validated_data["login"]
+        _, dev_code = issue_reset_code(login)
+        payload = {
+            "message": (
+                "Если аккаунт найден, мы отправили код восстановления."
+            ),
+        }
+        if dev_code:
+            payload["dev_code"] = dev_code
+        return Response(payload, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["post"], url_path="confirm")
+    def confirm(self, request, *args, **kwargs):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        ok, error = confirm_reset_code(
+            login=serializer.validated_data["login"],
+            code=serializer.validated_data["code"],
+            password=serializer.validated_data["password"],
+        )
+        if not ok:
+            return Response(
+                {"detail": error}, status=status.HTTP_400_BAD_REQUEST
+            )
+        return Response(
+            {"message": "Пароль успешно изменён. Теперь можно войти."},
+            status=status.HTTP_200_OK,
+        )
+
+
 class UserLogoutViewSet(viewsets.GenericViewSet):
     """
     ViewSet для выхода пользователя из системы.
@@ -203,10 +246,10 @@ class TokenRefreshViewSet(viewsets.GenericViewSet):
         serializer = TokenRefreshSerializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
-        except InvalidToken:
+        except (InvalidToken, User.DoesNotExist):
             return Response(
                 {"error": "Недействительный refresh токен"},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
@@ -218,7 +261,7 @@ class UserProfileViewSet(viewsets.GenericViewSet):
 
     Доступные действия:
     - list — получение списка всех пользователей (публичные данные)
-    - retrieve — получение профиля конкретного пользователя
+    - retrieve — получение профиля по public_id (UUID)
     - me — получение или редактирование своего профиля
 
     Особенности:
@@ -245,6 +288,8 @@ class UserProfileViewSet(viewsets.GenericViewSet):
     """
 
     queryset = User.objects.all()
+    lookup_field = "public_id"
+    lookup_value_regex = UUID_LOOKUP_REGEX
 
     def get_permissions(self):
         """
@@ -316,7 +361,7 @@ class UserProfileViewSet(viewsets.GenericViewSet):
         - Если запрашивает владелец — возвращает приватный профиль
         - Если другой пользователь — возвращает публичный профиль
         """
-        user_obj = get_object_or_404(self.get_queryset(), pk=kwargs.get("pk"))
+        user_obj = self.get_object()
 
         if self._is_owner(request, user_obj):
             serializer = UserPrivateProfileSerializer(

@@ -109,9 +109,7 @@ class TestModuleModel:
         assert modules[1] == module2
 
     def test_module_delete_reorders(self, db, course):
-        module1 = Module.objects.create(
-            course=course, title="Module 1", order_index=1
-        )
+        Module.objects.create(course=course, title="Module 1", order_index=1)
         module2 = Module.objects.create(
             course=course, title="Module 2", order_index=2
         )
@@ -167,7 +165,7 @@ class TestLessonTheoryModel:
         assert lessons[1] == lesson2
 
     def test_lesson_delete_reorders(self, db, module):
-        lesson1 = LessonTheory.objects.create(
+        LessonTheory.objects.create(
             module=module, title="Lesson 1", content="Content 1", order_index=1
         )
         lesson2 = LessonTheory.objects.create(

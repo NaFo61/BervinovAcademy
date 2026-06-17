@@ -95,6 +95,10 @@ def apply_code_submission_result_payload(
         sub.error_message = ""
         sub.test_results = {}
     sub.save()
+    if sub.exam_attempt_id:
+        from exams.services import record_coding_submission
+
+        record_coding_submission(sub.exam_attempt, sub)
     logger.info(
         "Отправка кода %s: из Kafka verdict=%r → статус Django=%s, "
         "тесты %s/%s, сообщение=%r",

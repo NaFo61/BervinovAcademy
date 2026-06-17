@@ -9,9 +9,14 @@ const Routes = {
   CATALOG: 'catalog',
   COURSE: 'course',
   LEARN: 'learn',
+  EXAM: 'exam',
   PROBLEM: 'problem',
   PROFILE: 'profile',
-  AUTH: 'auth'
+  PROFILE_EDIT: 'profile-edit',
+  MENTOR: 'mentor',
+  AUTH: 'auth',
+  CALL: 'call',
+  CONFERENCES: 'conferences',
 };
 
 function parseHashRoute() {
@@ -286,6 +291,83 @@ async function fetchApiJson(path, opts = {}) {
   return data;
 }
 
+async function enrollInCourse(coursePublicId) {
+  return fetchApiJson('/api/education/enrollments/', {
+    method: 'POST',
+    body: { course: coursePublicId },
+    auth: true,
+  });
+}
+
+async function fetchMyEnrollments() {
+  if (!localStorage.getItem('access_token')) return [];
+  try {
+    return await fetchApiJson('/api/education/enrollments/', { auth: true });
+  } catch (_) {
+    return [];
+  }
+}
+
+async function fetchCourseProgress(coursePublicId) {
+  return fetchApiJson(
+    `/api/progress/course/?course_public_id=${encodeURIComponent(coursePublicId)}`,
+    { auth: true },
+  );
+}
+
+function enrollmentsByCourseId(enrollments) {
+  const map = {};
+  for (const row of enrollments || []) {
+    if (row.course_public_id) map[row.course_public_id] = row;
+  }
+  return map;
+}
+
+async function fetchApiForm(path, formData, opts = {}) {
+  const {
+    method = 'PATCH',
+    auth = true,
+    headers: extraHeaders = {},
+    _retry = true,
+  } = opts;
+  const url = `${getApiBase()}${path.startsWith('/') ? path : '/' + path}`;
+  const headers = { ...extraHeaders };
+  if (auth) {
+    const t = localStorage.getItem('access_token');
+    if (t) headers['Authorization'] = 'Bearer ' + t;
+  }
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: formData,
+    credentials: 'omit',
+  });
+  const text = await res.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (_) {
+    data = { _raw: text };
+  }
+  if (res.status === 401 && auth && _retry && !path.includes('/auth/refresh/')) {
+    const renewed = await refreshAccessToken();
+    if (renewed) {
+      return fetchApiForm(path, formData, { ...opts, _retry: false });
+    }
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    notifyAuthChanged();
+  }
+  if (!res.ok) {
+    const msg = formatDrfError(data) || res.statusText || 'Ошибка запроса';
+    const err = new Error(msg);
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
+}
+
 function parseJwtPayload(token) {
   try {
     const part = token.split('.')[1];
@@ -296,8 +378,74 @@ function parseJwtPayload(token) {
   }
 }
 
+function buildLearnQuery(courseId, moduleId, lessonType, lessonId) {
+  if (!courseId || !moduleId || !lessonType || !lessonId) return null;
+  return {
+    course: courseId,
+    module: moduleId,
+    lesson: `${lessonType}-${lessonId}`,
+  };
+}
+
+function buildExamQuery(courseId, examId, stepType, stepId) {
+  if (!courseId || !examId) return null;
+  const q = { course: courseId, exam: examId };
+  if (stepType && stepId) q.step = `${stepType}-${stepId}`;
+  return q;
+}
+
+function openStudentProfile(navigate, userPublicId) {
+  if (!userPublicId) return;
+  navigate(Routes.PROFILE, { user: userPublicId });
+}
+
+async function createConference(guestPublicId) {
+  return fetchApiJson('/api/communication/conferences/', {
+    method: 'POST',
+    body: { guest: guestPublicId },
+    auth: true,
+  });
+}
+
+function openConferenceCall(navigate, conferencePublicId) {
+  if (!conferencePublicId) return;
+  navigate(Routes.CALL, { conf: conferencePublicId });
+}
+
+async function fetchNotifications(unreadOnly = true) {
+  const qs = unreadOnly ? '?unread=1' : '';
+  return fetchApiJson(`/api/communication/notifications/${qs}`, { auth: true });
+}
+
 function notifyAuthChanged() {
   window.dispatchEvent(new CustomEvent('auth-changed'));
+}
+
+function VideoExplanation({ video, title }) {
+  if (!video || !video.embed_url) return null;
+  const label = title || 'Видео-объяснение';
+  const isFile = video.kind === 'file';
+  return (
+    <div className="mt-6">
+      <div className="text-xs font-semibold uppercase tracking-widest text-ink/55 mb-2 flex items-center gap-2">
+        <I.Play className="w-3.5 h-3.5"/>
+        {label}
+      </div>
+      <div className="rounded-2xl overflow-hidden ring-1 ring-black/[0.06] bg-black aspect-video shadow-soft">
+        {isFile ? (
+          <video controls className="w-full h-full bg-black" src={video.embed_url} />
+        ) : (
+          <iframe
+            src={video.embed_url}
+            className="w-full h-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            title={label}
+          />
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ------- Icons (line, 1.6 stroke) -------
@@ -327,6 +475,26 @@ const I = {
       <path d="M10 20a2 2 0 0 0 4 0" strokeLinecap="round" />
     </svg>,
 
+  Mic: ({ className, off }) =>
+  <svg viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="1.6">
+      <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3z" />
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v3" strokeLinecap="round" />
+      {off ? <path d="M4 4l16 16" strokeLinecap="round" /> : null}
+    </svg>,
+
+  Video: ({ className, off }) =>
+  <svg viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="1.6">
+      <rect x="3" y="6" width="13" height="12" rx="2" />
+      <path d="M16 10l5-3v10l-5-3" strokeLinejoin="round" />
+      {off ? <path d="M4 4l16 16" strokeLinecap="round" /> : null}
+    </svg>,
+
+  Monitor: ({ className }) =>
+  <svg viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="1.6">
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M8 20h8M12 16v4" strokeLinecap="round" />
+    </svg>,
+
   Play: ({ className }) =>
   <svg viewBox="0 0 24 24" className={className}><path d="M8 5v14l11-7z" fill="currentColor" /></svg>,
 
@@ -349,6 +517,12 @@ const I = {
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className={className}>
       <circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c.6-3.4 3.3-5.5 6.5-5.5s5.9 2.1 6.5 5.5" />
       <circle cx="17" cy="7" r="2.8" /><path d="M16 14.5c2.8.3 4.8 2.3 5.3 5.5" />
+    </svg>,
+
+  Maximize: ({ className }) =>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className={className}>
+      <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 9 3.8 3.8M15 9l5.2-5.2M9 15l-5.2 5.2M15 15l5.2 5.2" strokeLinecap="round" />
     </svg>,
 
   Book: ({ className }) =>
@@ -414,6 +588,12 @@ const I = {
   Send: ({ className }) =>
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className={className}>
       <path d="m4 12 16-8-6 18-3-7-7-3z" strokeLinejoin="round" />
+    </svg>,
+
+  Refresh: ({ className }) =>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className={className}>
+      <path d="M4 4v5h5M20 20v-5h-5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20.5 9A8.5 8.5 0 0 0 5.5 7.5L4 10M3.5 15A8.5 8.5 0 0 0 18.5 16.5L20 14" strokeLinecap="round" strokeLinejoin="round" />
     </svg>,
 
   Mail: ({ className }) =>
@@ -512,6 +692,118 @@ const COURSES = [
 
 
 // ------- Layout chrome -------
+function NotificationBell({ navigate }) {
+  const [open, setOpen] = React.useState(false);
+  const [items, setItems] = React.useState([]);
+  const wrapRef = React.useRef(null);
+
+  const load = React.useCallback(async () => {
+    if (!localStorage.getItem('access_token')) {
+      setItems([]);
+      return;
+    }
+    try {
+      const data = await fetchNotifications(true);
+      setItems(Array.isArray(data) ? data : []);
+    } catch (_) {
+      setItems([]);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    load();
+    const id = setInterval(load, 30000);
+    const onAuth = () => load();
+    window.addEventListener('auth-changed', onAuth);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('auth-changed', onAuth);
+    };
+  }, [load]);
+
+  React.useEffect(() => {
+    const onDoc = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+
+  const join = async (note) => {
+    const confId = note.conference?.public_id;
+    if (!confId) return;
+    try {
+      await fetchApiJson(
+        `/api/communication/notifications/${encodeURIComponent(note.public_id)}/read/`,
+        { method: 'POST', auth: true },
+      );
+    } catch (_) { /* ignore */ }
+    setOpen(false);
+    openConferenceCall(navigate, confId);
+  };
+
+  const dismiss = async (note) => {
+    try {
+      await fetchApiJson(
+        `/api/communication/notifications/${encodeURIComponent(note.public_id)}/dismiss/`,
+        { method: 'POST', auth: true },
+      );
+      load();
+    } catch (_) { /* ignore */ }
+  };
+
+  if (!localStorage.getItem('access_token')) return null;
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-label="Уведомления"
+        className="relative w-10 h-10 rounded-xl hover:bg-black/[0.04] flex items-center justify-center text-ink/70">
+        <I.Bell className="w-5 h-5" />
+        {items.length > 0 && (
+          <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+            {items.length > 9 ? '9+' : items.length}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-glow ring-1 ring-black/[0.08] z-50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-black/[0.06] font-semibold text-sm">Уведомления</div>
+          {items.length === 0 ? (
+            <div className="px-4 py-8 text-center text-sm text-ink/45">Нет новых</div>
+          ) : (
+            <ul className="max-h-80 overflow-y-auto divide-y divide-black/[0.06]">
+              {items.map((note) => (
+                <li key={note.public_id} className="px-4 py-3">
+                  <div className="text-sm font-medium">{note.title}</div>
+                  {note.body ? <div className="text-xs text-ink/55 mt-0.5">{note.body}</div> : null}
+                  {note.kind === 'conference_invite' && note.conference && (
+                    <div className="mt-2 flex gap-2">
+                      <button type="button" onClick={() => join(note)}
+                        className="h-8 px-3 rounded-lg btn-grad text-white text-xs font-semibold">
+                        Присоединиться
+                      </button>
+                      <button type="button" onClick={() => dismiss(note)}
+                        className="h-8 px-3 rounded-lg text-xs font-semibold text-ink/55 hover:bg-black/[0.04]">
+                        Отклонить
+                      </button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="px-4 py-2 border-t border-black/[0.06]">
+            <button type="button" onClick={() => { setOpen(false); navigate(Routes.CONFERENCES); }}
+              className="text-xs font-semibold text-violet-600 hover:underline">
+              Все созвоны
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TopNav({ route, navigate }) {
   const [session, setSession] = React.useState(() => !!localStorage.getItem('access_token'));
   const [searchDraft, setSearchDraft] = React.useState('');
@@ -541,6 +833,7 @@ function TopNav({ route, navigate }) {
   const access = session ? localStorage.getItem('access_token') : null;
   const payload = access ? parseJwtPayload(access) : {};
   const displayName = [payload.first_name, payload.last_name].filter(Boolean).join(' ').trim();
+  const isMentor = payload.role === 'mentor' || payload.role === 'admin';
 
   const submitSearch = (e) => {
     e?.preventDefault();
@@ -568,7 +861,8 @@ function TopNav({ route, navigate }) {
   const links = [
     { id: Routes.LANDING, label: 'Главная' },
     { id: Routes.CATALOG, label: 'Каталог' },
-    { id: Routes.PROFILE, label: 'Профиль' }
+    { id: Routes.PROFILE, label: 'Профиль' },
+    ...(isMentor ? [{ id: Routes.MENTOR, label: 'Ментор' }] : []),
   ];
 
   return (
@@ -606,6 +900,7 @@ function TopNav({ route, navigate }) {
           </form>
           {session ? (
             <div className="flex items-center gap-2">
+              <NotificationBell navigate={navigate} />
               {displayName ? (
                 <span className="hidden sm:inline max-w-[140px] truncate text-sm text-ink/70" title={displayName}>
                   {displayName}
@@ -708,16 +1003,14 @@ function CourseCover({ course, className = '', big = false }) {
         <div className={`font-bold ${big ? 'text-5xl' : 'text-3xl'} font-mono leading-none opacity-90`}>{course.accentEmoji}</div>
         <div className="text-[10px] uppercase tracking-widest opacity-80 mt-1">{course.cat}</div>
       </div>
-      {/* level badge */}
-      <div className="absolute top-3 right-3 px-2 py-1 rounded-md bg-white/20 backdrop-blur text-white text-[10px] font-medium uppercase tracking-wider">
-        {course.level}
-      </div>
     </div>);
 
 }
 
-function CourseCard({ course, onOpen, delay = 0 }) {
+function CourseCard({ course, onOpen, delay = 0, enrollment = null }) {
   const M = FM.motion;
+  const progress = enrollment?.percent ?? 0;
+  const enrolled = Boolean(enrollment);
   return (
     <M.div
       initial={{ opacity: 0, y: 24 }}
@@ -727,10 +1020,15 @@ function CourseCard({ course, onOpen, delay = 0 }) {
       whileHover={{ y: -4 }}
       className="bg-white rounded-2xl shadow-soft overflow-hidden ring-1 ring-black/[0.04] hover:shadow-glow transition-shadow cursor-pointer flex flex-col"
       onClick={onOpen}>
-      
+
       <CourseCover course={course} />
       <div className="p-5 flex flex-col gap-3 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
+          {enrolled && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/12 text-emerald-700 uppercase tracking-wider">
+              {enrollment.status === 'completed' ? 'Завершён' : `В процессе · ${progress}%`}
+            </span>
+          )}
           {course.tags.slice(0, 3).map((t) =>
           <span key={t} className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-600 uppercase tracking-wider">{t}</span>
           )}
@@ -744,10 +1042,11 @@ function CourseCard({ course, onOpen, delay = 0 }) {
         </div>
         <div className="mt-1">
           <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-ink/40 mb-1.5">
-            <span>Популярность</span><span>{course.popularity}%</span>
+            <span>{enrolled ? 'Ваш прогресс' : 'Популярность'}</span>
+            <span>{enrolled ? `${progress}%` : `${course.popularity}%`}</span>
           </div>
           <div className="h-1.5 bg-black/[0.05] rounded-full overflow-hidden">
-            <M.div initial={{ width: 0 }} whileInView={{ width: `${course.popularity}%` }}
+            <M.div initial={{ width: 0 }} whileInView={{ width: `${enrolled ? progress : course.popularity}%` }}
             viewport={{ once: true }} transition={{ duration: 1, delay: delay + 0.2, ease: 'easeOut' }}
             className="h-full grad-bg rounded-full" />
           </div>
@@ -809,17 +1108,30 @@ Object.assign(window, {
   getApiBase,
   apiJson: fetchApiJson,
   fetchApiJson,
+  fetchApiForm,
   fetchCoursesList,
+  enrollInCourse,
+  fetchMyEnrollments,
+  fetchCourseProgress,
+  enrollmentsByCourseId,
   refreshAccessToken,
   formatDrfError,
   mediaUrl,
   parseJwtPayload,
   notifyAuthChanged,
+  buildLearnQuery,
+  buildExamQuery,
+  openStudentProfile,
+  createConference,
+  openConferenceCall,
+  fetchNotifications,
+  VideoExplanation,
   mapApiCourseToCard,
   mapApiCourseToCourse,
   mapApiModules,
   MODULE_ICONS,
   I,
+  NotificationBell,
   TopNav,
   Footer,
   CourseCover,

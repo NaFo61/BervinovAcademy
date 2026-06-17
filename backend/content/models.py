@@ -19,51 +19,38 @@ def _next_order_index(model_cls, **filters):
 
 
 MODULE_ORDER_HELP = _(
-    "Порядок среди всех уроков модуля (теория, тесты, задачи с кодом)"
+    "Порядок среди всех уроков контейнера (теория, тесты, задачи с кодом)"
 )
+
+VIDEO_URL_HELP = _("Ссылка на YouTube, Rutube или VK Видео (необязательно)")
+
+
+def _lesson_video_upload_to(instance, filename):
+    return f"lesson_videos/{instance.__class__.__name__.lower()}/{filename}"
 
 
 def _validate_module_order_index(instance):
-    from content.module_lessons import order_index_conflict
+    from content.lesson_parent import validate_lesson_order_index
 
-    if not instance.module_id:
-        return
-    if order_index_conflict(
-        instance.module_id,
-        instance.order_index,
-        exclude_model=instance.__class__,
-        exclude_pk=instance.pk,
-    ):
-        raise ValidationError(
-            {
-                "order_index": _(
-                    "Позиция %(pos)d уже занята другим уроком в этом модуле"
-                )
-                % {"pos": instance.order_index}
-            }
-        )
+    validate_lesson_order_index(instance)
 
 
 def _save_module_lesson_order(instance):
-    from content.module_lessons import (
-        next_order_in_module,
-        order_index_conflict,
-    )
+    from content.lesson_parent import save_lesson_order
 
-    if not instance.module_id or not instance._state.adding:
-        return
-    if order_index_conflict(instance.module_id, instance.order_index):
-        instance.order_index = next_order_in_module(instance.module_id)
+    save_lesson_order(instance)
 
 
 def _delete_module_lesson(instance):
-    from content.module_lessons import shift_orders_after_delete
+    from content.lesson_parent import delete_lesson_with_order_shift
 
-    module_id = instance.module_id
-    deleted_index = instance.order_index
-    super(type(instance), instance).delete()
-    if module_id:
-        shift_orders_after_delete(module_id, deleted_index)
+    delete_lesson_with_order_shift(instance)
+
+
+def _clean_lesson_parent(instance):
+    from content.lesson_parent import validate_lesson_parent
+
+    validate_lesson_parent(instance)
 
 
 class Technology(UUIDPublicIdMixin, models.Model):
@@ -166,15 +153,139 @@ class Module(UUIDPublicIdMixin, models.Model):
             module.save()
 
 
+class Exam(UUIDPublicIdMixin, models.Model):
+    """Контрольная работа (КР) — контейнер заданий с таймером и правилами."""
+
+    class NavigationMode(models.TextChoices):
+        FREE = "free", _("Свободная навигация")
+        LINEAR = "linear", _("Строго по порядку")
+
+    class TabPolicy(models.TextChoices):
+        LOG_ONLY = "log_only", _("Только логирование")
+        WARN = "warn", _("Предупреждения")
+
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name="exams",
+        verbose_name=_("Курс"),
+    )
+    title = models.CharField(max_length=200, verbose_name=_("Название"))
+    description = models.TextField(verbose_name=_("Описание"), blank=True)
+    order_index = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        verbose_name=_("Порядковый номер в курсе"),
+    )
+    is_active = models.BooleanField(default=True, verbose_name=_("Активна"))
+    duration_minutes = models.PositiveIntegerField(
+        default=45,
+        verbose_name=_("Длительность (мин)"),
+        help_text=_("Таймер с момента «Начать»"),
+    )
+    navigation_mode = models.CharField(
+        max_length=10,
+        choices=NavigationMode.choices,
+        default=NavigationMode.FREE,
+        verbose_name=_("Навигация между заданиями"),
+    )
+    tab_policy = models.CharField(
+        max_length=10,
+        choices=TabPolicy.choices,
+        default=TabPolicy.LOG_ONLY,
+        verbose_name=_("Политика переключения вкладок"),
+    )
+    tab_warn_limit = models.PositiveSmallIntegerField(
+        default=2,
+        verbose_name=_("Лимит предупреждений"),
+        help_text=_("После лимита — автосдача с текущими ответами"),
+    )
+    mentor_unlock_required = models.BooleanField(
+        default=False,
+        verbose_name=_("Нужно разрешение ментора"),
+        help_text=_("Доступ к старту только после одобрения ментора"),
+    )
+    pass_score_percent = models.PositiveSmallIntegerField(
+        default=60,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        verbose_name=_("Порог зачёта (%)"),
+    )
+    prerequisite_modules = models.ManyToManyField(
+        Module,
+        blank=True,
+        related_name="required_for_exams",
+        verbose_name=_("Обязательные модули"),
+        help_text=_("Нужно пройти эти модули перед стартом КР"),
+    )
+
+    class Meta:
+        verbose_name = _("Контрольная работа")
+        verbose_name_plural = _("Контрольные работы")
+        ordering = ("order_index",)
+        unique_together = ("course", "order_index")
+
+    def __str__(self):
+        return f"{self.course.title} — {self.title}"
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.order_index = _next_order_index(
+                Exam, course_id=self.course_id
+            )
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        course = self.course
+        deleted_index = self.order_index
+        super().delete(*args, **kwargs)
+        for exam in Exam.objects.filter(
+            course=course, order_index__gt=deleted_index
+        ):
+            exam.order_index -= 1
+            exam.save(update_fields=["order_index"])
+
+
 class LessonTheory(UUIDPublicIdMixin, models.Model):
     module = models.ForeignKey(
         Module,
         on_delete=models.CASCADE,
         related_name="lessons_theories",
         verbose_name=_("Модуль"),
+        null=True,
+        blank=True,
+    )
+    exam = models.ForeignKey(
+        Exam,
+        on_delete=models.CASCADE,
+        related_name="lessons_theories",
+        verbose_name=_("Контрольная"),
+        null=True,
+        blank=True,
+    )
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name="course_lessons_theories",
+        verbose_name=_("Курс"),
+        null=True,
+        blank=True,
+        help_text=_("Урок на уровне курса (без модуля и КР)"),
     )
     title = models.CharField(max_length=200, verbose_name=_("Название урока"))
     content = models.TextField(verbose_name=_("Содержание урока"))
+    video_url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name=_("Ссылка на видео"),
+        help_text=VIDEO_URL_HELP,
+    )
+    video_file = models.FileField(
+        upload_to=_lesson_video_upload_to,
+        blank=True,
+        null=True,
+        verbose_name=_("Видеофайл"),
+        help_text=_("Или загрузите MP4/WebM как объяснение"),
+    )
     order_index = models.PositiveIntegerField(
         default=1,
         validators=[MinValueValidator(1)],
@@ -192,7 +303,8 @@ class LessonTheory(UUIDPublicIdMixin, models.Model):
         ordering = ("order_index",)
 
     def __str__(self):
-        return f"{self.module.title} - {self.title}"
+        parent = self.module or self.exam or self.course
+        return f"{parent} - {self.title}"
 
     def save(self, *args, **kwargs):
         _save_module_lesson_order(self)
@@ -203,6 +315,7 @@ class LessonTheory(UUIDPublicIdMixin, models.Model):
 
     def clean(self):
         super().clean()
+        _clean_lesson_parent(self)
         _validate_module_order_index(self)
 
 
@@ -212,6 +325,24 @@ class LessonRadioQuestion(UUIDPublicIdMixin, models.Model):
         on_delete=models.CASCADE,
         related_name="lessons_radio_questions",
         verbose_name=_("Модуль"),
+        null=True,
+        blank=True,
+    )
+    exam = models.ForeignKey(
+        Exam,
+        on_delete=models.CASCADE,
+        related_name="lessons_radio_questions",
+        verbose_name=_("Контрольная"),
+        null=True,
+        blank=True,
+    )
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name="course_lessons_radio_questions",
+        verbose_name=_("Курс"),
+        null=True,
+        blank=True,
     )
     title = models.CharField(
         max_length=200, verbose_name=_("Название вопроса")
@@ -221,6 +352,18 @@ class LessonRadioQuestion(UUIDPublicIdMixin, models.Model):
         verbose_name=_("Пояснение"),
         blank=True,
         help_text=_("Пояснение правильного ответа, показываемое после ответа"),
+    )
+    video_url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name=_("Ссылка на видео"),
+        help_text=VIDEO_URL_HELP,
+    )
+    video_file = models.FileField(
+        upload_to=_lesson_video_upload_to,
+        blank=True,
+        null=True,
+        verbose_name=_("Видеофайл"),
     )
     order_index = models.PositiveIntegerField(
         default=1,
@@ -241,7 +384,8 @@ class LessonRadioQuestion(UUIDPublicIdMixin, models.Model):
         ordering = ("order_index",)
 
     def __str__(self):
-        return f"{self.module.title} - {self.title}"
+        parent = self.module or self.exam or self.course
+        return f"{parent} - {self.title}"
 
     def save(self, *args, **kwargs):
         _save_module_lesson_order(self)
@@ -252,6 +396,7 @@ class LessonRadioQuestion(UUIDPublicIdMixin, models.Model):
 
     def clean(self):
         super().clean()
+        _clean_lesson_parent(self)
         _validate_module_order_index(self)
 
     def get_correct_answer(self):
@@ -298,6 +443,24 @@ class LessonCheckBoxQuestion(UUIDPublicIdMixin, models.Model):
         on_delete=models.CASCADE,
         related_name="lessons_checkbox_questions",
         verbose_name=_("Модуль"),
+        null=True,
+        blank=True,
+    )
+    exam = models.ForeignKey(
+        Exam,
+        on_delete=models.CASCADE,
+        related_name="lessons_checkbox_questions",
+        verbose_name=_("Контрольная"),
+        null=True,
+        blank=True,
+    )
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name="course_lessons_checkbox_questions",
+        verbose_name=_("Курс"),
+        null=True,
+        blank=True,
     )
     title = models.CharField(
         max_length=200, verbose_name=_("Название вопроса")
@@ -307,6 +470,18 @@ class LessonCheckBoxQuestion(UUIDPublicIdMixin, models.Model):
         verbose_name=_("Пояснение"),
         blank=True,
         help_text=_("Пояснение правильных ответов, показываемое после ответа"),
+    )
+    video_url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name=_("Ссылка на видео"),
+        help_text=VIDEO_URL_HELP,
+    )
+    video_file = models.FileField(
+        upload_to=_lesson_video_upload_to,
+        blank=True,
+        null=True,
+        verbose_name=_("Видеофайл"),
     )
     order_index = models.PositiveIntegerField(
         default=1,
@@ -331,7 +506,8 @@ class LessonCheckBoxQuestion(UUIDPublicIdMixin, models.Model):
         ordering = ("order_index",)
 
     def __str__(self):
-        return f"{self.module.title} - {self.title}"
+        parent = self.module or self.exam or self.course
+        return f"{parent} - {self.title}"
 
     def save(self, *args, **kwargs):
         _save_module_lesson_order(self)
@@ -345,6 +521,7 @@ class LessonCheckBoxQuestion(UUIDPublicIdMixin, models.Model):
 
     def clean(self):
         super().clean()
+        _clean_lesson_parent(self)
         _validate_module_order_index(self)
 
 
@@ -399,6 +576,18 @@ class CodingChallenge(UUIDPublicIdMixin, models.Model):
         verbose_name=_("Инструкция по выполнению"),
         help_text=_("Подробная инструкция для пользователя"),
     )
+    video_url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name=_("Ссылка на видео"),
+        help_text=VIDEO_URL_HELP,
+    )
+    video_file = models.FileField(
+        upload_to=_lesson_video_upload_to,
+        blank=True,
+        null=True,
+        verbose_name=_("Видеофайл"),
+    )
     initial_code = models.TextField(
         verbose_name=_("Начальный код"),
         blank=True,
@@ -444,6 +633,16 @@ class CodingChallenge(UUIDPublicIdMixin, models.Model):
         on_delete=models.CASCADE,
         related_name="challenges",
         verbose_name=_("Модуль"),
+        null=True,
+        blank=True,
+    )
+    exam = models.ForeignKey(
+        Exam,
+        on_delete=models.CASCADE,
+        related_name="challenges",
+        verbose_name=_("Контрольная"),
+        null=True,
+        blank=True,
     )
 
     is_active = models.BooleanField(default=True, verbose_name=_("Активна"))
@@ -474,13 +673,15 @@ class CodingChallenge(UUIDPublicIdMixin, models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
-        if self.module_id:
-            self.course_id = self.module.course_id
+        from content.lesson_parent import sync_coding_challenge_course
+
+        sync_coding_challenge_course(self)
         _save_module_lesson_order(self)
         super().save(*args, **kwargs)
 
     def clean(self):
         super().clean()
+        _clean_lesson_parent(self)
         _validate_module_order_index(self)
 
     def get_max_score(self):

@@ -30,12 +30,18 @@ from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import CodeSubmission, UserAnswerCheckBox, UserAnswerRadio
+from .models import (
+    CodeSubmission,
+    UserAnswerCheckBox,
+    UserAnswerRadio,
+    UserLessonTheoryRead,
+)
 from .serializers import (
     CodeSubmissionCreateSerializer,
     CodeSubmissionSerializer,
     UserAnswerCheckBoxSerializer,
     UserAnswerRadioSerializer,
+    UserLessonTheoryReadSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -111,6 +117,14 @@ class UserAnswerCheckBoxViewSet(
             .order_by("-created_at")
         )
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance, payload = serializer.submit(serializer.validated_data)
+        if instance is None:
+            return Response(payload, status=status.HTTP_200_OK)
+        return Response(payload, status=status.HTTP_201_CREATED)
+
 
 class UserCodeSubmissionViewSet(
     mixins.CreateModelMixin,
@@ -182,3 +196,54 @@ class UserCodeSubmissionViewSet(
             instance, context=self.get_serializer_context()
         )
         return Response(out.data, status=status.HTTP_201_CREATED)
+
+
+class UserLessonTheoryReadViewSet(
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    Фиксация «прочитано» для теории.
+
+    - ``GET /api/progress/theory/`` — все прочитанные уроки теории текущего пользователя
+      (фильтр: ``?course_public_id=<uuid>``)
+    - ``POST /api/progress/theory/`` — отметить теорию прочитанной
+
+    POST body: ``{"lesson": "<public_id теории>"}``
+    """
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserLessonTheoryReadSerializer
+    lookup_field = "public_id"
+    lookup_value_regex = UUID_LOOKUP_REGEX
+
+    def get_queryset(self):
+        qs = (
+            UserLessonTheoryRead.objects.filter(user=self.request.user)
+            .select_related(
+                "lesson", "lesson__module", "lesson__module__course"
+            )
+            .order_by("-read_at")
+        )
+        course_pid = self.request.query_params.get("course_public_id")
+        if course_pid:
+            qs = qs.filter(lesson__module__course__public_id=course_pid)
+        return qs
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        lesson = serializer.validated_data["lesson"]
+        obj, created = UserLessonTheoryRead.objects.get_or_create(
+            user=request.user,
+            lesson=lesson,
+        )
+        out = UserLessonTheoryReadSerializer(
+            obj, context=self.get_serializer_context()
+        )
+        return Response(
+            out.data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )

@@ -19,6 +19,61 @@ def _disable_kafka_in_progress_tests(settings):
     reset_kafka_producer()
 
 
+@pytest.fixture(autouse=True)
+def _seed_achievements(db):
+    from progress.models import Achievement
+
+    if Achievement.objects.exists():
+        return
+    defaults = [
+        (
+            "tasks_1",
+            "tasks_solved",
+            1,
+            "Первый шаг",
+            "Решил первую задачу",
+            "👶",
+            10,
+        ),
+        (
+            "tasks_10",
+            "tasks_solved",
+            10,
+            "Десятка",
+            "10 решённых задач",
+            "🔟",
+            20,
+        ),
+        (
+            "theories_10",
+            "theories_read",
+            10,
+            "Книжный червь",
+            "10 теорий",
+            "📚",
+            40,
+        ),
+    ]
+    for (
+        code,
+        kind,
+        threshold,
+        title,
+        description,
+        emoji,
+        order_index,
+    ) in defaults:
+        Achievement.objects.create(
+            code=code,
+            kind=kind,
+            threshold=threshold,
+            title=title,
+            description=description,
+            emoji=emoji,
+            order_index=order_index,
+        )
+
+
 @pytest.fixture
 def coding_challenge(db, module):
     return CodingChallenge.objects.create(

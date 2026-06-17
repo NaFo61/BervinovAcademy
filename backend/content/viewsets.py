@@ -3,6 +3,7 @@ from rest_framework import mixins, viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from content.lesson_querysets import public_lesson_parent_q
 from content.models import (
     CodingChallenge,
     Course,
@@ -72,12 +73,17 @@ class CourseViewSet(
             .prefetch_related(
                 "technology",
                 "modules",
+                "exams",
                 "modules__lessons_theories",
                 "modules__lessons_radio_questions",
                 "modules__lessons_radio_questions__answers",
                 "modules__lessons_checkbox_questions",
                 "modules__lessons_checkbox_questions__answers",
                 "modules__challenges",
+                "exams__lessons_theories",
+                "exams__lessons_radio_questions",
+                "exams__lessons_checkbox_questions",
+                "exams__challenges",
             )
             .order_by("-created_at")
         )
@@ -195,15 +201,20 @@ class LessonTheoryViewSet(
         Возвращает queryset активных уроков из активных модулей и курсов.
         Оптимизирует загрузку связанных модулей и курсов.
         """
-        queryset = LessonTheory.objects.filter(
-            is_active=True,
-            module__is_active=True,
-            module__course__is_active=True,
-        ).select_related("module", "module__course")
+        queryset = (
+            LessonTheory.objects.filter(is_active=True)
+            .filter(public_lesson_parent_q())
+            .select_related(
+                "module", "module__course", "exam", "exam__course", "course"
+            )
+        )
         module_pub = self.request.query_params.get("module_public_id")
         if module_pub:
             queryset = queryset.filter(module__public_id=module_pub)
-        return queryset.order_by("module_id", "order_index")
+        exam_pub = self.request.query_params.get("exam_public_id")
+        if exam_pub:
+            queryset = queryset.filter(exam__public_id=exam_pub)
+        return queryset.order_by("order_index")
 
     def get_serializer_class(self):
         """Возвращает единый сериализатор для всех действий."""
@@ -222,17 +233,20 @@ class LessonRadioQuestionViewSet(
     lookup_value_regex = UUID_LOOKUP_REGEX
 
     def get_queryset(self):
-        queryset = LessonRadioQuestion.objects.filter(
-            is_active=True,
-            module__is_active=True,
-            module__course__is_active=True,
-        ).select_related("module", "module__course")
+        queryset = (
+            LessonRadioQuestion.objects.filter(is_active=True)
+            .filter(public_lesson_parent_q())
+            .select_related(
+                "module", "module__course", "exam", "exam__course", "course"
+            )
+        )
         module_pub = self.request.query_params.get("module_public_id")
         if module_pub:
             queryset = queryset.filter(module__public_id=module_pub)
-        return queryset.prefetch_related("answers").order_by(
-            "module_id", "order_index"
-        )
+        exam_pub = self.request.query_params.get("exam_public_id")
+        if exam_pub:
+            queryset = queryset.filter(exam__public_id=exam_pub)
+        return queryset.prefetch_related("answers").order_by("order_index")
 
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -252,17 +266,20 @@ class LessonCheckBoxQuestionViewSet(
     lookup_value_regex = UUID_LOOKUP_REGEX
 
     def get_queryset(self):
-        queryset = LessonCheckBoxQuestion.objects.filter(
-            is_active=True,
-            module__is_active=True,
-            module__course__is_active=True,
-        ).select_related("module", "module__course")
+        queryset = (
+            LessonCheckBoxQuestion.objects.filter(is_active=True)
+            .filter(public_lesson_parent_q())
+            .select_related(
+                "module", "module__course", "exam", "exam__course", "course"
+            )
+        )
         module_pub = self.request.query_params.get("module_public_id")
         if module_pub:
             queryset = queryset.filter(module__public_id=module_pub)
-        return queryset.prefetch_related("answers").order_by(
-            "module_id", "order_index"
-        )
+        exam_pub = self.request.query_params.get("exam_public_id")
+        if exam_pub:
+            queryset = queryset.filter(exam__public_id=exam_pub)
+        return queryset.prefetch_related("answers").order_by("order_index")
 
     def get_serializer_class(self):
         if self.action == "retrieve":

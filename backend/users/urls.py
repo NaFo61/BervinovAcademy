@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from users.viewsets import (
+    PasswordResetViewSet,
     TokenRefreshViewSet,
     UserLoginViewSet,
     UserLogoutViewSet,
@@ -14,6 +15,9 @@ auth_router.register(r"register", UserRegistrationViewSet, basename="register")
 auth_router.register(r"login", UserLoginViewSet, basename="login")
 auth_router.register(r"logout", UserLogoutViewSet, basename="logout")
 auth_router.register(r"refresh", TokenRefreshViewSet, basename="refresh")
+auth_router.register(
+    r"password-reset", PasswordResetViewSet, basename="password-reset"
+)
 
 router = DefaultRouter()
 router.register(r"users", UserProfileViewSet, basename="users")

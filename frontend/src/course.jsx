@@ -14,12 +14,15 @@ function CoursePage({ navigate, hashParams }) {
   const [apiRow, setApiRow] = React.useState(null);
   const [loadState, setLoadState] = React.useState(() => (courseId ? 'loading' : 'idle'));
   const [loadError, setLoadError] = React.useState('');
+  const [enrollment, setEnrollment] = React.useState(null);
+  const [enrollBusy, setEnrollBusy] = React.useState(false);
 
   React.useEffect(() => {
     if (!courseId) {
       setApiRow(null);
       setLoadState('idle');
       setLoadError('');
+      setEnrollment(null);
       return;
     }
     let cancelled = false;
@@ -42,6 +45,52 @@ function CoursePage({ navigate, hashParams }) {
     })();
     return () => { cancelled = true; };
   }, [courseId]);
+
+  React.useEffect(() => {
+    if (!courseId || loadState !== 'ok') return;
+    if (!localStorage.getItem('access_token')) {
+      setEnrollment(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await window.fetchMyEnrollments();
+        if (!cancelled) {
+          const row = (list || []).find((e) => e.course_public_id === courseId) || null;
+          setEnrollment(row);
+        }
+      } catch (_) {
+        if (!cancelled) setEnrollment(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [courseId, loadState]);
+
+  const handleEnroll = async () => {
+    if (!localStorage.getItem('access_token')) {
+      navigate(Routes.AUTH);
+      return;
+    }
+    if (!courseId || enrollBusy) return;
+    setEnrollBusy(true);
+    try {
+      const row = await window.enrollInCourse(courseId);
+      setEnrollment(row);
+    } catch (_) {}
+    setEnrollBusy(false);
+  };
+
+  const handleStartLearning = async () => {
+    if (!localStorage.getItem('access_token')) {
+      navigate(Routes.AUTH);
+      return;
+    }
+    if (!enrollment) {
+      await handleEnroll();
+    }
+    navigate(Routes.LEARN, { course: courseId });
+  };
 
   const course = apiRow ? mapApiCourseToCourse(apiRow) : null;
 
@@ -78,7 +127,8 @@ function CoursePage({ navigate, hashParams }) {
   return (
     <div data-screen-label="Course" className="min-h-screen bg-paper">
       <CourseHero course={course} navigate={navigate} modules={modules}
-        totalLessons={totalLessons} totalQuizzes={totalQuizzes} totalHours={totalHours}/>
+        totalLessons={totalLessons} totalQuizzes={totalQuizzes} totalHours={totalHours}
+        enrollment={enrollment} onStart={handleStartLearning} onEnroll={handleEnroll} enrollBusy={enrollBusy}/>
       <div className="max-w-7xl mx-auto px-5 sm:px-8 py-14 grid lg:grid-cols-[1fr_340px] gap-10">
         <div className="space-y-10">
           <CourseHighlights course={course}/>
@@ -86,7 +136,8 @@ function CoursePage({ navigate, hashParams }) {
         </div>
         <div>
           <CourseSidebar course={course} navigate={navigate}
-            totalLessons={totalLessons} totalQuizzes={totalQuizzes} totalHours={totalHours}/>
+            totalLessons={totalLessons} totalQuizzes={totalQuizzes} totalHours={totalHours}
+            enrollment={enrollment} onStart={handleStartLearning} onEnroll={handleEnroll} enrollBusy={enrollBusy}/>
         </div>
       </div>
     </div>
@@ -94,8 +145,9 @@ function CoursePage({ navigate, hashParams }) {
 }
 
 // ── Hero ─────────────────────────────────────────────────────────────────────
-function CourseHero({ course, navigate, modules, totalLessons, totalQuizzes, totalHours }) {
+function CourseHero({ course, navigate, modules, totalLessons, totalQuizzes, totalHours, enrollment, onStart, onEnroll, enrollBusy }) {
   const M = FM.motion;
+  const progress = enrollment?.percent ?? 0;
   return (
     <section className="relative overflow-hidden"
       style={{ background: `linear-gradient(135deg, ${course.gradFrom} 0%, ${course.gradTo} 100%)` }}>
@@ -126,9 +178,6 @@ function CourseHero({ course, navigate, modules, totalLessons, totalQuizzes, tot
                   {t}
                 </span>
               ))}
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/15 text-white/80 backdrop-blur border border-white/20">
-                {course.level}
-              </span>
             </M.div>
 
             {/* title */}
@@ -180,17 +229,28 @@ function CourseHero({ course, navigate, modules, totalLessons, totalQuizzes, tot
 
             {/* CTAs */}
             <M.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.32 }}
-              className="flex flex-wrap gap-3">
+              className="flex flex-wrap gap-3 items-center">
+              {enrollment && (
+                <div className="w-full sm:w-auto mb-1 sm:mb-0 px-4 py-2 rounded-xl bg-white/20 backdrop-blur border border-white/30 text-white text-sm">
+                  {enrollment.status === 'completed'
+                    ? 'Курс завершён'
+                    : `Пройдено ${progress}% · ${enrollment.completed_steps}/${enrollment.total_steps} шагов`}
+                </div>
+              )}
               <button
-                onClick={() => navigate(Routes.LEARN, { course: course.id })}
+                onClick={onStart}
                 className="h-14 px-7 rounded-2xl bg-white text-ink font-bold text-[15px] inline-flex items-center gap-2.5 hover:scale-[1.02] transition-transform shadow-glow">
-                <I.Play className="w-5 h-5 text-violet-600"/> Учиться
+                <I.Play className="w-5 h-5 text-violet-600"/>
+                {enrollment ? 'Продолжить' : 'Начать обучение'}
               </button>
-              <button
-                onClick={() => navigate(Routes.AUTH)}
-                className="h-14 px-6 rounded-2xl bg-white/15 backdrop-blur border border-white/30 text-white font-semibold inline-flex items-center gap-2 hover:bg-white/25 transition-colors">
-                Записаться на курс <I.ChevronRight className="w-4 h-4"/>
-              </button>
+              {!enrollment && (
+                <button
+                  onClick={onEnroll}
+                  disabled={enrollBusy}
+                  className="h-14 px-6 rounded-2xl bg-white/15 backdrop-blur border border-white/30 text-white font-semibold inline-flex items-center gap-2 hover:bg-white/25 transition-colors disabled:opacity-60">
+                  {enrollBusy ? 'Записываем…' : 'Записаться на курс'} <I.ChevronRight className="w-4 h-4"/>
+                </button>
+              )}
             </M.div>
           </div>
 
@@ -350,8 +410,9 @@ function CourseModulesSection({ modules, navigate, course }) {
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
-function CourseSidebar({ course, navigate, totalLessons, totalQuizzes, totalHours }) {
+function CourseSidebar({ course, navigate, totalLessons, totalQuizzes, totalHours, enrollment, onStart, onEnroll, enrollBusy }) {
   const M = FM.motion;
+  const progress = enrollment?.percent ?? 0;
   const [sticky, setSticky] = React.useState(false);
 
   React.useEffect(() => {
@@ -388,15 +449,29 @@ function CourseSidebar({ course, navigate, totalLessons, totalQuizzes, totalHour
               <I.Bolt className="w-3 h-3"/> Скидка 30% — до 30 мая
             </div>
           )}
-          <button onClick={() => navigate(Routes.LEARN, { course: course.id })}
+          {enrollment && (
+            <div className="mb-4">
+              <div className="flex items-center justify-between text-xs text-ink/55 mb-1.5">
+                <span>Ваш прогресс</span>
+                <span className="font-semibold">{progress}%</span>
+              </div>
+              <div className="h-2 bg-black/[0.06] rounded-full overflow-hidden">
+                <div className="h-full grad-bg rounded-full transition-all" style={{ width: `${progress}%` }}/>
+              </div>
+            </div>
+          )}
+          <button onClick={onStart}
             className="btn-grad btn-shimmer w-full h-13 py-3.5 rounded-2xl text-white font-bold text-[15px] inline-flex items-center justify-center gap-2 shadow-glow mb-3">
-            <I.Play className="w-4 h-4"/> Учиться
+            <I.Play className="w-4 h-4"/>
+            {enrollment ? 'Продолжить обучение' : 'Начать обучение'}
             <I.ChevronRight className="w-4 h-4"/>
           </button>
-          <button onClick={() => navigate(Routes.AUTH)}
-            className="w-full h-11 rounded-xl border border-black/[0.08] text-sm font-semibold text-ink/70 hover:border-violet-300 hover:text-violet-600 transition-colors inline-flex items-center justify-center gap-2">
-            Записаться на курс
-          </button>
+          {!enrollment && (
+            <button onClick={onEnroll} disabled={enrollBusy}
+              className="w-full h-11 rounded-xl border border-black/[0.08] text-sm font-semibold text-ink/70 hover:border-violet-300 hover:text-violet-600 transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-60">
+              {enrollBusy ? 'Записываем…' : 'Записаться на курс'}
+            </button>
+          )}
 
           <div className="mt-5 pt-5 border-t border-black/[0.05] space-y-2.5">
             <div className="text-xs font-semibold uppercase tracking-widest text-ink/50 mb-3">Курс включает</div>

@@ -12,6 +12,11 @@ from .models import (
     Technology,
     TestCase,
 )
+from .video_utils import build_video_payload
+
+
+def _serialize_video(serializer, obj):
+    return build_video_payload(obj, serializer.context.get("request"))
 
 
 class TechnologySerializer(serializers.ModelSerializer):
@@ -39,6 +44,10 @@ class LessonTheorySerializer(serializers.ModelSerializer):
     module_public_id = serializers.UUIDField(
         source="module.public_id", read_only=True
     )
+    video = serializers.SerializerMethodField()
+
+    def get_video(self, obj):
+        return _serialize_video(self, obj)
 
     class Meta:
         model = LessonTheory
@@ -47,6 +56,7 @@ class LessonTheorySerializer(serializers.ModelSerializer):
             "module_public_id",
             "title",
             "content",
+            "video",
             "order_index",
             "is_active",
         )
@@ -207,10 +217,33 @@ class CourseListSerializer(serializers.ModelSerializer):
 class CourseDetailSerializer(serializers.ModelSerializer):
     technology = TechnologySerializer(many=True, read_only=True)
     modules = serializers.SerializerMethodField()
+    exams = serializers.SerializerMethodField()
+    course_lessons = serializers.SerializerMethodField()
 
     def get_modules(self, obj):
         queryset = obj.modules.filter(is_active=True).order_by("order_index")
         return ModuleShortSerializer(queryset, many=True).data
+
+    def get_exams(self, obj):
+        from exams.serializers import ExamShortSerializer
+
+        queryset = obj.exams.filter(is_active=True).order_by("order_index")
+        return ExamShortSerializer(queryset, many=True).data
+
+    def get_course_lessons(self, obj):
+        from content.container_lessons import iter_container_lessons
+
+        items = []
+        for kind, lesson in iter_container_lessons(obj, active_only=True):
+            items.append(
+                {
+                    "kind": kind,
+                    "public_id": str(lesson.public_id),
+                    "title": lesson.title,
+                    "order_index": lesson.order_index,
+                }
+            )
+        return items
 
     class Meta:
         model = Course
@@ -224,6 +257,8 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             "created_at",
             "technology",
             "modules",
+            "exams",
+            "course_lessons",
         )
         read_only_fields = fields
 
@@ -269,6 +304,10 @@ class LessonRadioDetailSerializer(serializers.ModelSerializer):
         source="module.public_id", read_only=True
     )
     answer_options = serializers.SerializerMethodField()
+    video = serializers.SerializerMethodField()
+
+    def get_video(self, obj):
+        return _serialize_video(self, obj)
 
     class Meta:
         model = LessonRadioQuestion
@@ -278,6 +317,7 @@ class LessonRadioDetailSerializer(serializers.ModelSerializer):
             "title",
             "question_text",
             "explanation",
+            "video",
             "order_index",
             "points",
             "is_active",
@@ -313,6 +353,10 @@ class LessonCheckBoxDetailSerializer(serializers.ModelSerializer):
         source="module.public_id", read_only=True
     )
     answer_options = serializers.SerializerMethodField()
+    video = serializers.SerializerMethodField()
+
+    def get_video(self, obj):
+        return _serialize_video(self, obj)
 
     class Meta:
         model = LessonCheckBoxQuestion
@@ -322,6 +366,7 @@ class LessonCheckBoxDetailSerializer(serializers.ModelSerializer):
             "title",
             "question_text",
             "explanation",
+            "video",
             "order_index",
             "points",
             "is_active",
@@ -397,6 +442,7 @@ class CodingChallengeDetailSerializer(serializers.ModelSerializer):
     )
     test_cases = serializers.SerializerMethodField()
     user_solved = serializers.SerializerMethodField()
+    video = serializers.SerializerMethodField()
     course_public_id = serializers.UUIDField(
         source="course.public_id",
         read_only=True,
@@ -408,6 +454,9 @@ class CodingChallengeDetailSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
 
+    def get_video(self, obj):
+        return _serialize_video(self, obj)
+
     class Meta:
         model = CodingChallenge
         fields = (
@@ -417,6 +466,7 @@ class CodingChallengeDetailSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "instructions",
+            "video",
             "initial_code",
             "difficulty",
             "difficulty_display",
