@@ -12,6 +12,9 @@ const STATUS_LABELS = {
   expired: 'Истекла',
 };
 
+const WHITEBOARD_TILE_KEY = 'shared:whiteboard';
+const WHITEBOARD_DATA_TOPIC = 'whiteboard_visibility';
+
 function participantName(p) {
   if (!p) return 'Участник';
   if (typeof p.name === 'string' && p.name.trim()) return p.name.trim();
@@ -93,6 +96,18 @@ function buildTiles(room, LK) {
   return { tiles, audioPubs };
 }
 
+function publishWhiteboardVisibility(room, LK, enabled) {
+  if (!room?.localParticipant) return;
+  const payload = new TextEncoder().encode(JSON.stringify({ enabled: Boolean(enabled) }));
+  try {
+    room.localParticipant.publishData(payload, { reliable: true, topic: WHITEBOARD_DATA_TOPIC });
+    return;
+  } catch (_) { /* older LiveKit signature */ }
+  try {
+    room.localParticipant.publishData(payload, LK?.DataPacket_Kind?.RELIABLE, { topic: WHITEBOARD_DATA_TOPIC });
+  } catch (_) { /* best-effort UI sync */ }
+}
+
 function MediaTrack({ publication, muted = false, fit = 'cover' }) {
   const ref = React.useRef(null);
 
@@ -146,6 +161,7 @@ function CallPage({ navigate, hashParams }) {
   const [muted, setMuted] = React.useState(false);
   const [videoOff, setVideoOff] = React.useState(false);
   const [sharing, setSharing] = React.useState(false);
+  const [whiteboardEnabled, setWhiteboardEnabled] = React.useState(true);
   const [mediaWarning, setMediaWarning] = React.useState('');
   const [isMentor, setIsMentor] = React.useState(false);
   const [layoutTick, setLayoutTick] = React.useState(0);
@@ -154,11 +170,16 @@ function CallPage({ navigate, hashParams }) {
 
   const roomRef = React.useRef(null);
   const endSentRef = React.useRef(false);
+  const whiteboardEnabledRef = React.useRef(true);
   const LK = window.LivekitClient || window.LiveKit;
 
   const bumpLayout = React.useCallback(() => {
     setLayoutTick((v) => v + 1);
   }, []);
+
+  React.useEffect(() => {
+    whiteboardEnabledRef.current = whiteboardEnabled;
+  }, [whiteboardEnabled]);
 
   const cleanupRoom = React.useCallback(async () => {
     const room = roomRef.current;
@@ -232,6 +253,23 @@ function CallPage({ navigate, hashParams }) {
           LK.RoomEvent.ActiveSpeakersChanged,
         ].filter(Boolean);
         events.forEach((eventName) => room.on(eventName, bumpLayout));
+        if (LK.RoomEvent.DataReceived) {
+          room.on(LK.RoomEvent.DataReceived, (payload, participant, kind, topic) => {
+            if (topic !== WHITEBOARD_DATA_TOPIC) return;
+            try {
+              const text = new TextDecoder().decode(payload);
+              const data = JSON.parse(text);
+              setWhiteboardEnabled(Boolean(data.enabled));
+              if (!data.enabled) setSelectedTileKey((key) => (key === WHITEBOARD_TILE_KEY ? null : key));
+              bumpLayout();
+            } catch (_) { /* ignore malformed data packets */ }
+          });
+        }
+        if (LK.RoomEvent.ParticipantConnected) {
+          room.on(LK.RoomEvent.ParticipantConnected, () => {
+            if (mentor) publishWhiteboardVisibility(room, LK, whiteboardEnabledRef.current);
+          });
+        }
         room.on(LK.RoomEvent.Disconnected, () => {
           if (!cancelled) setPhase('ended');
         });
@@ -348,6 +386,16 @@ function CallPage({ navigate, hashParams }) {
     bumpLayout();
   };
 
+  const toggleWhiteboard = () => {
+    if (!isMentor) return;
+    const room = roomRef.current;
+    const next = !whiteboardEnabled;
+    setWhiteboardEnabled(next);
+    if (!next) setSelectedTileKey((key) => (key === WHITEBOARD_TILE_KEY ? null : key));
+    if (room) publishWhiteboardVisibility(room, LK, next);
+    bumpLayout();
+  };
+
   const toggleFullscreen = async () => {
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
@@ -408,12 +456,19 @@ function CallPage({ navigate, hashParams }) {
     );
   }
 
-  const { tiles, audioPubs } = buildTiles(roomRef.current, LK);
-  const cameraTiles = tiles.filter((tile) => !tile.placeholder);
-  const visibleTiles = displayMode === 'clean' ? cameraTiles : tiles;
-  const screenTile = tiles.find((tile) => tile.isScreen && !tile.placeholder);
-  const selectedTile = visibleTiles.find((tile) => tile.key === selectedTileKey && !tile.placeholder);
-  const mainTile = screenTile || selectedTile || visibleTiles.find((tile) => !tile.isLocal && !tile.placeholder) || visibleTiles[0];
+  const { tiles: mediaTiles, audioPubs } = buildTiles(roomRef.current, LK);
+  const whiteboardTile = whiteboardEnabled ? {
+    key: WHITEBOARD_TILE_KEY,
+    type: 'whiteboard',
+    label: 'Общая доска',
+    isLocal: false,
+    isScreen: false,
+    placeholder: false,
+  } : null;
+  const visibleTiles = whiteboardTile ? [...mediaTiles, whiteboardTile] : mediaTiles;
+  const screenTile = visibleTiles.find((tile) => tile.isScreen && !tile.placeholder);
+  const selectedTile = visibleTiles.find((tile) => tile.key === selectedTileKey);
+  const mainTile = selectedTile || screenTile || visibleTiles.find((tile) => !tile.isLocal && !tile.placeholder) || visibleTiles[0];
   const sideTiles = visibleTiles.filter((tile) => tile.key !== mainTile?.key);
   const isCleanMode = displayMode === 'clean';
   const isGridMode = displayMode === 'grid';
@@ -455,7 +510,7 @@ function CallPage({ navigate, hashParams }) {
 
       <div className={`flex-1 min-h-0 ${isCleanMode ? 'relative p-0' : 'p-3 sm:p-4'}`}>
         {isGridMode ? (
-          <div className={`h-full grid gap-3 ${visibleTiles.length <= 1 ? 'grid-cols-1' : visibleTiles.length === 2 ? 'md:grid-cols-2' : 'sm:grid-cols-2 xl:grid-cols-3'}`}>
+          <div className={`h-full grid gap-3 ${visibleTiles.length <= 1 ? 'grid-cols-1' : visibleTiles.length === 2 ? 'md:grid-cols-2' : visibleTiles.length <= 4 ? 'sm:grid-cols-2' : 'sm:grid-cols-2 xl:grid-cols-3'}`}>
             {visibleTiles.map((tile) => (
               <VideoTile
                 key={tile.key}
@@ -464,10 +519,8 @@ function CallPage({ navigate, hashParams }) {
                 fit="contain"
                 selected={tile.key === selectedTileKey}
                 onSelect={() => {
-                  if (!tile.placeholder) {
-                    setSelectedTileKey(tile.key);
-                    setDisplayMode('focus');
-                  }
+                  setSelectedTileKey(tile.key);
+                  setDisplayMode('focus');
                 }}
               />
             ))}
@@ -495,7 +548,7 @@ function CallPage({ navigate, hashParams }) {
                     fit="contain"
                     selected={tile.key === selectedTileKey}
                     onSelect={() => {
-                      if (!tile.placeholder) setSelectedTileKey(tile.key);
+                      setSelectedTileKey(tile.key);
                     }}
                   />
                 ))}
@@ -509,9 +562,8 @@ function CallPage({ navigate, hashParams }) {
 
       <div className={`${isCleanMode ? 'fixed bottom-4 left-1/2 -translate-x-1/2 z-20 rounded-2xl bg-black/45 backdrop-blur-xl px-4 py-3' : 'p-4 pb-6'} flex flex-wrap items-center justify-center gap-3`}>
         <div className="flex items-center gap-1 rounded-full bg-white/10 p-1">
-          <ModeButton active={displayMode === 'grid'} onClick={() => setDisplayMode('grid')}>Все</ModeButton>
-          <ModeButton active={displayMode === 'focus'} onClick={() => setDisplayMode('focus')}>Фокус</ModeButton>
-          <ModeButton active={displayMode === 'clean'} onClick={() => setDisplayMode('clean')}>Без рамок</ModeButton>
+          <ModeButton active={displayMode === 'grid'} onClick={() => setDisplayMode('grid')}>Мозаика</ModeButton>
+          <ModeButton active={displayMode === 'focus'} onClick={() => setDisplayMode('focus')}>Важное</ModeButton>
         </div>
         <CallControl label={muted ? 'Вкл. звук' : 'Без звука'} active={muted} onClick={toggleMute}>
           <I.Mic className="w-5 h-5" off={muted} />
@@ -522,6 +574,11 @@ function CallPage({ navigate, hashParams }) {
         <CallControl label={sharing ? 'Стоп экран' : 'Экран'} active={sharing} onClick={toggleScreen}>
           <I.Monitor className="w-5 h-5" />
         </CallControl>
+        {isMentor && (
+          <CallControl label={whiteboardEnabled ? 'Скрыть доску' : 'Доска'} active={whiteboardEnabled} onClick={toggleWhiteboard}>
+            <I.Layers className="w-5 h-5" />
+          </CallControl>
+        )}
         <CallControl label="Полный экран" active={false} onClick={toggleFullscreen}>
           <I.Maximize className="w-5 h-5" />
         </CallControl>
@@ -539,21 +596,33 @@ function VideoTile({ tile, main = false, compact = false, clean = false, fit = '
   const rounded = clean ? 'rounded-none' : (main ? 'rounded-2xl' : 'rounded-xl');
   const chrome = clean ? 'ring-0 border-0' : 'ring-1 ring-white/10';
   const selectedClass = clean ? '' : (selected ? 'ring-2 ring-cyan-300' : 'hover:ring-white/30');
+  const isWhiteboard = tile?.type === 'whiteboard';
   return (
-    <button type="button" onClick={onSelect}
-      className={`relative block text-left overflow-hidden bg-[#111827] ${chrome} ${selectedClass} ${rounded} ${base}`}>
-      {tile?.publication && !tile.placeholder ? (
+    <button type="button" onClick={onSelect} aria-label={`Показать: ${tile?.label || 'Участник'}`}
+      className={`relative block text-left overflow-hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-300 bg-[#111827] ${chrome} ${selectedClass} ${rounded} ${base}`}>
+      {isWhiteboard ? (
+        <WhiteboardTile main={main} compact={compact} />
+      ) : tile?.publication && !tile.placeholder ? (
         <MediaTrack publication={tile.publication} muted={tile.isLocal} fit={fit} />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
-          <div className={`${main ? 'w-20 h-20 text-2xl' : 'w-12 h-12 text-base'} rounded-full bg-white/10 flex items-center justify-center font-bold`}>
-            {(tile?.label || 'У').slice(0, 1).toUpperCase()}
+          <div className="flex flex-col items-center gap-3 px-4 text-center">
+            <div className={`${main ? 'w-24 h-24 text-3xl' : 'w-12 h-12 text-base'} rounded-full bg-white/10 flex items-center justify-center font-bold`}>
+              {(tile?.label || 'У').slice(0, 1).toUpperCase()}
+            </div>
+            {main && (
+              <div>
+                <div className="text-xl sm:text-2xl font-bold">{tile?.label || 'Участник'}</div>
+                <div className="text-sm text-white/45 mt-1">Камера выключена</div>
+              </div>
+            )}
           </div>
         </div>
       )}
       {!clean && <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent">
         <div className="flex items-center gap-2">
           {tile?.isScreen && <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-400/20 text-cyan-100">экран</span>}
+          {isWhiteboard && <span className="text-[10px] px-2 py-0.5 rounded bg-white text-slate-900">доска</span>}
           <span className={`${main ? 'text-sm' : 'text-xs'} font-semibold truncate`}>{tile?.label || 'Участник'}</span>
         </div>
       </div>}
@@ -561,10 +630,32 @@ function VideoTile({ tile, main = false, compact = false, clean = false, fit = '
   );
 }
 
+function WhiteboardTile({ main = false, compact = false }) {
+  return (
+    <div className="absolute inset-0 bg-white text-slate-900">
+      <div className="absolute inset-0 opacity-[0.08]"
+        style={{
+          backgroundImage: 'linear-gradient(#0f172a 1px, transparent 1px), linear-gradient(90deg, #0f172a 1px, transparent 1px)',
+          backgroundSize: main ? '40px 40px' : '24px 24px',
+        }}
+      />
+      <div className={`absolute inset-0 flex flex-col items-center justify-center text-center ${compact ? 'gap-1 px-3' : 'gap-3 px-6'}`}>
+        <div className={`${main ? 'w-16 h-16' : 'w-10 h-10'} rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg`}>
+          <I.Layers className={main ? 'w-8 h-8' : 'w-5 h-5'} />
+        </div>
+        <div>
+          <div className={`${main ? 'text-2xl' : 'text-sm'} font-extrabold`}>Общая доска</div>
+          {main && <div className="mt-1 text-sm text-slate-500">Заготовка для Miro-режима</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ModeButton({ active, onClick, children }) {
   return (
     <button type="button" onClick={onClick}
-      className={`h-9 px-3 rounded-full text-xs font-semibold transition-colors ${
+      className={`h-9 px-3 rounded-full text-xs font-semibold transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-300 ${
         active ? 'bg-cyan-400 text-slate-950' : 'text-white/70 hover:bg-white/10'
       }`}>
       {children}
@@ -575,7 +666,7 @@ function ModeButton({ active, onClick, children }) {
 function CallControl({ children, label, active, onClick }) {
   return (
     <button type="button" onClick={onClick} title={label}
-      className={`flex flex-col items-center gap-1 min-w-[72px] ${active ? 'text-cyan-200' : 'text-white/90'}`}>
+      className={`flex flex-col items-center gap-1 min-w-[72px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-300 rounded-xl ${active ? 'text-cyan-200' : 'text-white/90'}`}>
       <span className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
         active ? 'bg-cyan-500/70' : 'bg-white/12 hover:bg-white/20'
       }`}>
