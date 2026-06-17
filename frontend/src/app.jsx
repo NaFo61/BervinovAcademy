@@ -21,6 +21,7 @@ const NO_FOOTER_ROUTES = new Set([Routes.PROBLEM, Routes.AUTH, Routes.LEARN, Rou
 
 function App() {
   const [route, navigate, hashParams] = useHashRoute();
+  const isCallRoute = route === Routes.CALL;
 
   const Page = {
     [Routes.LANDING]: LandingPage,
@@ -40,9 +41,9 @@ function App() {
   const pageProps = { navigate, hashParams, route };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className={`${isCallRoute ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col`}>
       <TopNav route={route} navigate={navigate}/>
-      <main className="flex-1">
+      <main className={`flex-1 min-h-0 ${isCallRoute ? 'overflow-hidden' : ''}`}>
         <Page {...pageProps}/>
       </main>
       {!NO_FOOTER_ROUTES.has(route) && <Footer navigate={navigate}/>}

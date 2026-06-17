@@ -167,7 +167,9 @@ function CallPage({ navigate, hashParams }) {
   const [layoutTick, setLayoutTick] = React.useState(0);
   const [selectedTileKey, setSelectedTileKey] = React.useState(null);
   const [displayMode, setDisplayMode] = React.useState('grid');
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
 
+  const callRootRef = React.useRef(null);
   const roomRef = React.useRef(null);
   const endSentRef = React.useRef(false);
   const whiteboardEnabledRef = React.useRef(true);
@@ -180,6 +182,14 @@ function CallPage({ navigate, hashParams }) {
   React.useEffect(() => {
     whiteboardEnabledRef.current = whiteboardEnabled;
   }, [whiteboardEnabled]);
+
+  React.useEffect(() => {
+    const syncFullscreen = () => {
+      setIsFullscreen(document.fullscreenElement === callRootRef.current);
+    };
+    document.addEventListener('fullscreenchange', syncFullscreen);
+    return () => document.removeEventListener('fullscreenchange', syncFullscreen);
+  }, []);
 
   const cleanupRoom = React.useCallback(async () => {
     const room = roomRef.current;
@@ -399,7 +409,7 @@ function CallPage({ navigate, hashParams }) {
   const toggleFullscreen = async () => {
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
-      else await document.documentElement.requestFullscreen();
+      else await callRootRef.current?.requestFullscreen();
     } catch (_) { /* ignore */ }
   };
 
@@ -470,14 +480,15 @@ function CallPage({ navigate, hashParams }) {
   const selectedTile = visibleTiles.find((tile) => tile.key === selectedTileKey);
   const mainTile = selectedTile || screenTile || visibleTiles.find((tile) => !tile.isLocal && !tile.placeholder) || visibleTiles[0];
   const sideTiles = visibleTiles.filter((tile) => tile.key !== mainTile?.key);
-  const isCleanMode = displayMode === 'clean';
+  const isCleanMode = displayMode === 'clean' || isFullscreen;
   const isGridMode = displayMode === 'grid';
   const title = conference
     ? `${participantName(conference.mentor)} ↔ ${participantName(conference.guest)}`
     : 'Созвон';
 
   return (
-    <div data-screen-label="Call" className="min-h-[calc(100vh-4rem)] bg-[#070b18] text-white flex flex-col">
+    <div ref={callRootRef} data-screen-label="Call"
+      className={`${isFullscreen ? 'h-screen max-h-screen' : 'h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)]'} overflow-hidden bg-[#070b18] text-white flex flex-col`}>
       {!isCleanMode && (
         <div className="px-4 sm:px-6 py-3 flex items-center justify-between border-b border-white/10 bg-white/[0.03]">
           <div>
@@ -508,9 +519,9 @@ function CallPage({ navigate, hashParams }) {
         </div>
       )}
 
-      <div className={`flex-1 min-h-0 ${isCleanMode ? 'relative p-0' : 'p-3 sm:p-4'}`}>
+      <div className={`flex-1 min-h-0 overflow-hidden ${isCleanMode ? 'relative p-0' : 'p-3 sm:p-4'}`}>
         {isGridMode ? (
-          <div className={`h-full grid gap-3 ${visibleTiles.length <= 1 ? 'grid-cols-1' : visibleTiles.length === 2 ? 'md:grid-cols-2' : visibleTiles.length <= 4 ? 'sm:grid-cols-2' : 'sm:grid-cols-2 xl:grid-cols-3'}`}>
+          <div className={`h-full min-h-0 grid auto-rows-fr gap-3 ${visibleTiles.length <= 1 ? 'grid-cols-1' : visibleTiles.length === 2 ? 'md:grid-cols-2' : visibleTiles.length <= 4 ? 'sm:grid-cols-2' : 'sm:grid-cols-2 xl:grid-cols-3'}`}>
             {visibleTiles.map((tile) => (
               <VideoTile
                 key={tile.key}
@@ -526,7 +537,7 @@ function CallPage({ navigate, hashParams }) {
             ))}
           </div>
         ) : (
-          <div className={`h-full grid gap-3 ${isCleanMode ? 'grid-cols-1' : sideTiles.length ? 'lg:grid-cols-[1fr_280px]' : 'grid-cols-1'}`}>
+          <div className={`h-full min-h-0 grid gap-3 ${isCleanMode ? 'grid-cols-1' : sideTiles.length ? 'lg:grid-cols-[minmax(0,1fr)_280px]' : 'grid-cols-1'}`}>
             <VideoTile
               tile={mainTile}
               main
@@ -538,7 +549,7 @@ function CallPage({ navigate, hashParams }) {
             {sideTiles.length > 0 && (
               <aside className={isCleanMode
                 ? 'absolute right-3 top-3 z-10 flex flex-col gap-2 w-48 max-h-[calc(100%-7rem)] overflow-y-auto'
-                : 'grid gap-3 content-start'}>
+                : 'grid gap-3 content-start max-h-full overflow-y-auto pr-1'}>
                 {sideTiles.map((tile) => (
                   <VideoTile
                     key={tile.key}
@@ -591,7 +602,7 @@ function VideoTile({ tile, main = false, compact = false, clean = false, fit = '
   const base = compact
     ? 'h-28 cursor-pointer'
     : main
-      ? 'min-h-[42vh] h-full'
+      ? 'h-full min-h-0'
       : 'h-36 sm:h-40 cursor-pointer';
   const rounded = clean ? 'rounded-none' : (main ? 'rounded-2xl' : 'rounded-xl');
   const chrome = clean ? 'ring-0 border-0' : 'ring-1 ring-white/10';
