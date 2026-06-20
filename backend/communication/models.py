@@ -86,6 +86,43 @@ class Conference(UUIDPublicIdMixin, models.Model):
         return f"{self.mentor} → {self.guest} ({self.status})"
 
 
+class ConferenceWhiteboard(models.Model):
+    """Экспортированный конспект с доски созвона."""
+
+    conference = models.OneToOneField(
+        Conference,
+        on_delete=models.CASCADE,
+        related_name="whiteboard",
+        verbose_name=_("Конференция"),
+    )
+    image = models.ImageField(
+        upload_to="whiteboards/%Y/%m/",
+        verbose_name=_("Изображение"),
+    )
+    snapshot_json = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name=_("Snapshot JSON"),
+    )
+    exported_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="exported_whiteboards",
+        verbose_name=_("Экспортировал"),
+    )
+    exported_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Доска конференции")
+        verbose_name_plural = _("Доски конференций")
+
+    def __str__(self):
+        return f"Whiteboard {self.conference_id}"
+
+
 class UserNotification(UUIDPublicIdMixin, models.Model):
     """In-app уведомление пользователя."""
 

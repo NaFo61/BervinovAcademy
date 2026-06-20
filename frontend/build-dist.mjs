@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = __dirname;
@@ -24,3 +25,13 @@ const copy = (from, to) => {
 copy("index.html", "index.html");
 copy("src", "src");
 copy("public", "public");
+
+const whiteboardDir = path.join(root, "whiteboard");
+const whiteboardBuild = spawnSync(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "build"], {
+  cwd: whiteboardDir,
+  stdio: "inherit",
+  shell: process.platform === "win32",
+});
+if (whiteboardBuild.status !== 0) {
+  process.exit(whiteboardBuild.status ?? 1);
+}

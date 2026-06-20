@@ -1,6 +1,16 @@
 from django.contrib import admin
 
-from .models import Conference, UserNotification
+from .models import Conference, ConferenceWhiteboard, UserNotification
+
+
+@admin.register(ConferenceWhiteboard)
+class ConferenceWhiteboardAdmin(admin.ModelAdmin):
+    list_display = ("conference", "exported_by", "exported_at", "created_at")
+    search_fields = (
+        "conference__room_name",
+        "exported_by__email",
+    )
+    readonly_fields = ("exported_at", "created_at")
 
 
 @admin.register(Conference)

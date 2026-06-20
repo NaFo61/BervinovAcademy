@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/whiteboard.bundle.css" />
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
@@ -274,6 +275,29 @@
     border-color: rgba(244, 63, 94, 0.55);
     box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.08);
   }
+
+  .whiteboard-root {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    isolation: isolate;
+    contain: strict;
+    pointer-events: auto !important;
+    touch-action: none;
+  }
+  .whiteboard-root .tl-container {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: auto !important;
+    touch-action: none;
+  }
+  .whiteboard-studio {
+    contain: strict;
+  }
 </style>
 </head>
 <body class="antialiased">
@@ -291,6 +315,7 @@
 <script src="https://unpkg.com/framer-motion@11.18.2/dist/framer-motion.js"></script>
 <script src="https://unpkg.com/recharts@2.15.0/umd/Recharts.js"></script>
 <script src="https://unpkg.com/livekit-client@2.9.9/dist/livekit-client.umd.js"></script>
+<script src="/whiteboard.bundle.js" defer></script>
 
 <script type="text/babel" src="src/shared.jsx"></script>
 <script type="text/babel" src="src/landing.jsx"></script>

@@ -114,9 +114,11 @@ function StartCallPanel({ navigate, onCreated }) {
 }
 
 function ConferencesPage({ navigate }) {
+  const WhiteboardPreviewModal = window.WhiteboardPreviewModal;
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
+  const [previewConf, setPreviewConf] = React.useState(null);
   const token = localStorage.getItem('access_token');
   const payload = token ? window.parseJwtPayload(token) : {};
   const isMentor = payload.role === 'mentor' || payload.role === 'admin';
@@ -162,6 +164,13 @@ function ConferencesPage({ navigate }) {
 
   return (
     <div data-screen-label="Conferences" className="min-h-screen pb-16 bg-paper">
+      {previewConf && WhiteboardPreviewModal && (
+        <WhiteboardPreviewModal
+          conferenceId={previewConf.public_id}
+          title={participantName(otherParty(previewConf))}
+          onClose={() => setPreviewConf(null)}
+        />
+      )}
       <section className="mesh-bg border-b border-black/[0.04] py-10">
         <div className="max-w-4xl mx-auto px-5 sm:px-8">
           <h1 className="text-3xl font-extrabold tracking-tight">Созвоны</h1>
@@ -197,6 +206,13 @@ function ConferencesPage({ navigate }) {
                     {STATUS_LABELS[row.status] || row.status}
                   </span>
                   <div className="flex gap-2">
+                    {row.has_whiteboard && (
+                      <button type="button"
+                        onClick={() => setPreviewConf(row)}
+                        className="h-9 px-4 rounded-lg bg-white ring-1 ring-black/[0.08] text-xs font-semibold">
+                        Конспект
+                      </button>
+                    )}
                     {canRejoin(row) && (
                       <button type="button"
                         onClick={() => window.openConferenceCall(navigate, row.public_id)}

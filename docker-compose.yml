@@ -102,7 +102,7 @@ services:
       start_period: 30s
 
   frontend:
-    image: alpine:3.20
+    image: node:22-bookworm-slim
     container_name: bervinov-academy-frontend
     volumes:
       - ./frontend:/app
@@ -111,8 +111,33 @@ services:
       sh -c "rm -rf dist && mkdir -p dist &&
              cp index.html dist/ &&
              cp -r src dist/ &&
-             (test -d public && cp -r public dist/ || true)"
+             (test -d public && cp -r public dist/ || true) &&
+             cd whiteboard && npm install && npm run build"
     restart: "no"
+
+  tldraw-sync:
+    image: node:22-bookworm-slim
+    container_name: bervinov-academy-tldraw-sync
+    working_dir: /app
+    volumes:
+      - ./services/tldraw-sync:/app
+      - tldraw_sync_node_modules:/app/node_modules
+      - tldraw_sync_data:/app/data
+    environment:
+      DATA_DIR: /app/data
+      PORT: 5858
+      WHITEBOARD_SYNC_SECRET: ${SECRET_KEY}
+    command:
+      - sh
+      - -c
+      - if [ ! -d node_modules/@tldraw/sync-core ]; then npm ci --omit=dev --fetch-retries=5 --fetch-retry-maxtimeout=120000 || npm install --omit=dev --fetch-retries=5 --fetch-retry-maxtimeout=120000; fi && exec npm start
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5858/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 120s
 
   nginx:
     build:
@@ -127,6 +152,8 @@ services:
       frontend:
         condition: service_completed_successfully
       backend:
+        condition: service_healthy
+      tldraw-sync:
         condition: service_healthy
     restart: unless-stopped
 
@@ -246,3 +273,5 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  tldraw_sync_data:
+  tldraw_sync_node_modules:

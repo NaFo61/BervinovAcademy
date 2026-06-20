@@ -95,19 +95,18 @@ scripts\fast-commit.bat
 ### 3. Перезапуск Docker
 
 **Файлы:**
-- `restart-docker.bat` - для Windows
-- `restart-docker.sh` - для Linux/Mac
-
-**Назначение:**
-Останавливает и запускает Docker контейнеры проекта.
+- `restart-docker.bat` / `restart-docker.sh` — быстрый выкл/вкл (БД сохраняется)
+- `full-restart-docker.bat` / `full-restart-docker.sh` — полный сброс (volumes, seed, тесты)
 
 **Использование:**
 ```bash
-# Windows
-scripts\restart-docker.bat
+# Быстрый перезапуск (down + up, без удаления БД)
+scripts\restart-docker.bat          # Windows
+./scripts/restart-docker.sh         # Linux/Mac
 
-# Linux/Mac
-./scripts/restart-docker.sh
+# Полный сброс (удаление volumes, пересборка, seed_data, pytest)
+scripts\full-restart-docker.bat     # Windows
+./scripts/full-restart-docker.sh    # Linux/Mac
 ```
 
 ## 🔧 Требования

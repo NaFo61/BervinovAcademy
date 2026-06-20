@@ -5,6 +5,7 @@ from django.db.models import Q
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,14 +14,17 @@ from mentoring.permissions import IsMentorOrAdmin
 
 from . import services
 from .livekit_tokens import LiveKitNotConfiguredError, issue_room_token
-from .models import Conference, UserNotification
+from .models import Conference, ConferenceWhiteboard, UserNotification
 from .serializers import (
     ConferenceCreateSerializer,
     ConferenceSerializer,
+    ConferenceWhiteboardSerializer,
     JoinConferenceSerializer,
     UserBriefSerializer,
     UserNotificationSerializer,
+    WhiteboardTokenSerializer,
 )
+from .whiteboard_tokens import issue_whiteboard_sync_token
 
 User = get_user_model()
 
@@ -64,9 +68,11 @@ class ConferenceViewSet(
 
     def get_queryset(self):
         user = self.request.user
-        qs = Conference.objects.select_related("mentor", "guest").filter(
-            Q(mentor=user) | Q(guest=user)
-        )
+        qs = Conference.objects.select_related(
+            "mentor",
+            "guest",
+            "whiteboard",
+        ).filter(Q(mentor=user) | Q(guest=user))
         role = self.request.query_params.get("role")
         if role == "mentor":
             qs = qs.filter(mentor=user)
@@ -190,6 +196,114 @@ class ConferenceViewSet(
                 status=status.HTTP_403_FORBIDDEN,
             )
         return Response(ConferenceSerializer(conference).data)
+
+    @action(detail=True, methods=["post"], url_path="whiteboard/token")
+    def whiteboard_token(self, request, public_id=None):
+        conference = self.get_object()
+        if not services.user_may_access_conference(request.user, conference):
+            return Response(
+                {"detail": "Нет доступа."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if conference.status in services.TERMINAL_STATUSES:
+            return Response(
+                {"detail": "Конференция уже завершена."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ttl = settings.WHITEBOARD_TOKEN_TTL_SECONDS
+        token = issue_whiteboard_sync_token(
+            conference.public_id,
+            request.user.public_id,
+            ttl_seconds=ttl,
+        )
+        payload = {
+            "token": token,
+            "room_id": conference.public_id,
+            "expires_in": ttl,
+        }
+        return Response(WhiteboardTokenSerializer(payload).data)
+
+    @action(detail=True, methods=["get"], url_path="whiteboard")
+    def whiteboard(self, request, public_id=None):
+        conference = self.get_object()
+        if not services.user_may_access_conference(request.user, conference):
+            return Response(
+                {"detail": "Нет доступа."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        try:
+            board = conference.whiteboard
+        except ConferenceWhiteboard.DoesNotExist:
+            return Response(
+                {"detail": "Конспект ещё не сохранён."}, status=404
+            )
+        return Response(
+            ConferenceWhiteboardSerializer(
+                board, context={"request": request}
+            ).data
+        )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="whiteboard/export",
+        parser_classes=[JSONParser, MultiPartParser, FormParser],
+    )
+    def whiteboard_export(self, request, public_id=None):
+        conference = self.get_object()
+        if not services.user_may_access_conference(request.user, conference):
+            return Response(
+                {"detail": "Нет доступа."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        image = request.FILES.get("image")
+        if not image:
+            return Response(
+                {"detail": "Нужен файл image (PNG)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if image.size > settings.WHITEBOARD_MAX_EXPORT_BYTES:
+            return Response(
+                {"detail": "Файл слишком большой."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if image.content_type not in {"image/png", "image/jpeg", "image/webp"}:
+            return Response(
+                {"detail": "Допустимы PNG, JPEG или WebP."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        snapshot_json = None
+        raw_snapshot = request.data.get("snapshot")
+        if raw_snapshot:
+            if isinstance(raw_snapshot, (dict, list)):
+                snapshot_json = raw_snapshot
+            else:
+                import json
+
+                try:
+                    snapshot_json = json.loads(raw_snapshot)
+                except json.JSONDecodeError:
+                    return Response(
+                        {"detail": "Некорректный snapshot JSON."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+        board, _created = ConferenceWhiteboard.objects.update_or_create(
+            conference=conference,
+            defaults={
+                "image": image,
+                "snapshot_json": snapshot_json,
+                "exported_by": request.user,
+            },
+        )
+        return Response(
+            ConferenceWhiteboardSerializer(
+                board, context={"request": request}
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
 
     @action(detail=True, methods=["post"])
     def cancel(self, request, public_id=None):

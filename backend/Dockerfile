@@ -8,13 +8,21 @@ WORKDIR /app
 
 # --- Системные зависимости ---
 # gcc оставляем на случай, если есть .tar.gz (если только wheels — можно убрать)
-RUN apt-get update && apt-get install -y \
-    postgresql-client \
-    build-essential \
-    gettext \
-    curl \
-    vim-tiny \
-    && rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+    success=0; \
+    for i in 1 2 3 4 5; do \
+        if apt-get update && apt-get install -y --no-install-recommends \
+            postgresql-client \
+            build-essential \
+            gettext \
+            curl \
+            vim-tiny; then \
+            success=1; break; \
+        fi; \
+        echo "apt failed, retry $i/5..."; sleep 10; \
+    done; \
+    test "$success" -eq 1; \
+    rm -rf /var/lib/apt/lists/*
 
 # --- Зависимости (максимальный кэш Docker) ---
 # Сначала только requirements + wheels → чтобы не пересобирать каждый раз

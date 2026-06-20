@@ -412,6 +412,88 @@ function openConferenceCall(navigate, conferencePublicId) {
   navigate(Routes.CALL, { conf: conferencePublicId });
 }
 
+async function fetchConferenceWhiteboard(conferencePublicId) {
+  return fetchApiJson(
+    `/api/communication/conferences/${encodeURIComponent(conferencePublicId)}/whiteboard/`,
+    { auth: true },
+  );
+}
+
+function WhiteboardPreviewModal({ conferenceId, title, onClose }) {
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
+  const [board, setBoard] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!conferenceId) return undefined;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await fetchConferenceWhiteboard(conferenceId);
+        if (!cancelled) setBoard(data);
+      } catch (e) {
+        if (!cancelled) setError(e.message || 'Не удалось загрузить конспект');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [conferenceId]);
+
+  React.useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === 'Escape') onClose?.();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
+      role="dialog" aria-modal="true" aria-label="Конспект доски">
+      <button type="button" aria-label="Закрыть" onClick={onClose}
+        className="absolute inset-0 bg-ink/55 backdrop-blur-sm"/>
+      <div className="relative w-full max-w-5xl max-h-[90vh] bg-white rounded-2xl shadow-glow ring-1 ring-black/[0.08] overflow-hidden flex flex-col">
+        <div className="px-5 py-4 border-b border-black/[0.06] flex items-center justify-between gap-3">
+          <div>
+            <div className="font-bold text-lg">Конспект доски</div>
+            {title && <div className="text-sm text-ink/55 mt-0.5">{title}</div>}
+          </div>
+          <button type="button" onClick={onClose}
+            className="w-10 h-10 rounded-xl ring-1 ring-black/[0.08] hover:bg-black/[0.03] flex items-center justify-center">
+            <I.X className="w-5 h-5"/>
+          </button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-auto bg-slate-50 p-4 sm:p-6">
+          {loading && <div className="py-16 text-center text-sm text-ink/50">Загрузка…</div>}
+          {!loading && error && (
+            <div className="py-16 text-center text-sm text-red-600">{error}</div>
+          )}
+          {!loading && !error && board?.image_url && (
+            <img src={board.image_url} alt="Конспект доски"
+              className="w-full h-auto rounded-xl ring-1 ring-black/[0.06] bg-white"/>
+          )}
+        </div>
+        {!loading && !error && board?.image_url && (
+          <div className="px-5 py-4 border-t border-black/[0.06] flex flex-wrap items-center justify-between gap-3">
+            <div className="text-xs text-ink/45">
+              {board.exported_at
+                ? `Сохранено ${new Date(board.exported_at).toLocaleString('ru-RU')}`
+                : ''}
+            </div>
+            <a href={board.image_url} download target="_blank" rel="noopener noreferrer"
+              className="h-10 px-4 rounded-xl btn-grad text-white text-sm font-semibold inline-flex items-center">
+              Скачать PNG
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 async function fetchNotifications(unreadOnly = true) {
   const qs = unreadOnly ? '?unread=1' : '';
   return fetchApiJson(`/api/communication/notifications/${qs}`, { auth: true });
@@ -1124,7 +1206,9 @@ Object.assign(window, {
   openStudentProfile,
   createConference,
   openConferenceCall,
+  fetchConferenceWhiteboard,
   fetchNotifications,
+  WhiteboardPreviewModal,
   VideoExplanation,
   mapApiCourseToCard,
   mapApiCourseToCourse,

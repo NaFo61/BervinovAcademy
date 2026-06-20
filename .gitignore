@@ -191,6 +191,8 @@ frontend/node_modules/
 # Build output
 frontend/dist/
 frontend/dist-ssr/
+frontend/whiteboard.bundle.js
+frontend/whiteboard.bundle.js.map
 dist-ssr/
 
 # Logs
