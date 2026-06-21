@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "fixture",
     "drf_spectacular",
     "drf_spectacular_sidecar",
+    "channels",
 ]
 UNFOLD = {
     "SHOW_LANGUAGES": True,
@@ -268,6 +269,21 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "school_platform.wsgi.application"
+ASGI_APPLICATION = "school_platform.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": config(
+            "CHANNEL_LAYERS_BACKEND",
+            default="channels_redis.core.RedisChannelLayer",
+        ),
+        "CONFIG": {
+            "hosts": [
+                config("CHANNEL_LAYERS_REDIS", default="redis://redis:6379/1"),
+            ],
+        },
+    }
+}
 
 DATABASES = {
     "default": {
@@ -372,6 +388,7 @@ WHITEBOARD_TOKEN_TTL_SECONDS = config(
 WHITEBOARD_MAX_EXPORT_BYTES = config(
     "WHITEBOARD_MAX_EXPORT_BYTES", default=10 * 1024 * 1024, cast=int
 )
+TLDRAW_LICENSE_KEY = config("TLDRAW_LICENSE_KEY", default="").strip()
 
 # Kafka (опционально: пустой KAFKA_BOOTSTRAP_SERVERS — не публикуем)
 KAFKA_BOOTSTRAP_SERVERS = config("KAFKA_BOOTSTRAP_SERVERS", default="").strip()

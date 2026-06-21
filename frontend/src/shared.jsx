@@ -17,6 +17,7 @@ const Routes = {
   AUTH: 'auth',
   CALL: 'call',
   CONFERENCES: 'conferences',
+  MESSAGES: 'messages',
 };
 
 function parseHashRoute() {
@@ -65,6 +66,76 @@ initApiBase();
 function getApiBase() {
   const b = typeof window !== 'undefined' && window.__API_BASE__;
   return typeof b === 'string' ? b.replace(/\/$/, '') : '';
+}
+
+function getWsBase() {
+  const api = getApiBase();
+  if (api) {
+    return api.replace(/^https/i, 'wss').replace(/^http/i, 'ws');
+  }
+  if (typeof window === 'undefined') return '';
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${window.location.host}`;
+}
+
+function openChatThreadWs(threadPublicId, onEvent) {
+  const token = localStorage.getItem('access_token');
+  if (!token || !threadPublicId) return () => {};
+  const url = `${getWsBase()}/ws/chat/threads/${encodeURIComponent(threadPublicId)}/?token=${encodeURIComponent(token)}`;
+  let ws;
+  let stopped = false;
+  let retryTimer = null;
+
+  const connect = () => {
+    if (stopped) return;
+    ws = new WebSocket(url);
+    ws.onopen = () => {
+      try { ws.send(JSON.stringify({ event: 'ping' })); } catch (_) { /* ignore */ }
+    };
+    ws.onmessage = (event) => {
+      try {
+        onEvent?.(JSON.parse(event.data));
+      } catch (_) { /* ignore malformed */ }
+    };
+    ws.onclose = () => {
+      if (!stopped) {
+        retryTimer = setTimeout(connect, 3000);
+      }
+    };
+  };
+
+  connect();
+
+  return () => {
+    stopped = true;
+    if (retryTimer) clearTimeout(retryTimer);
+    if (ws && ws.readyState <= WebSocket.OPEN) {
+      try { ws.close(); } catch (_) { /* ignore */ }
+    }
+  };
+}
+
+function openChatWithUser(navigate, userPublicId) {
+  if (!userPublicId) return;
+  navigate(Routes.MESSAGES, { user: userPublicId });
+}
+
+function openChatWithCourse(navigate, coursePublicId) {
+  if (!coursePublicId) return;
+  navigate(Routes.MESSAGES, { course: coursePublicId });
+}
+
+async function fetchChatUnreadTotal() {
+  try {
+    const data = await fetchApiJson('/api/communication/chat/threads/unread_total/', { auth: true });
+    return Number(data?.total) || 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
+function refreshChatUnread() {
+  window.dispatchEvent(new CustomEvent('chat-unread-changed'));
 }
 
 const COURSE_PALETTE = [
@@ -423,6 +494,8 @@ function WhiteboardPreviewModal({ conferenceId, title, onClose }) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [board, setBoard] = React.useState(null);
+  const [viewMode, setViewMode] = React.useState('auto');
+  const viewerRef = React.useRef(null);
 
   React.useEffect(() => {
     if (!conferenceId) return undefined;
@@ -432,7 +505,10 @@ function WhiteboardPreviewModal({ conferenceId, title, onClose }) {
       setError('');
       try {
         const data = await fetchConferenceWhiteboard(conferenceId);
-        if (!cancelled) setBoard(data);
+        if (!cancelled) {
+          setBoard(data);
+          setViewMode(data?.has_snapshot ? 'board' : 'image');
+        }
       } catch (e) {
         if (!cancelled) setError(e.message || 'Не удалось загрузить конспект');
       } finally {
@@ -443,12 +519,28 @@ function WhiteboardPreviewModal({ conferenceId, title, onClose }) {
   }, [conferenceId]);
 
   React.useEffect(() => {
+    const host = viewerRef.current;
+    const api = window.BervinovWhiteboard;
+    if (!host || !board?.has_snapshot || viewMode !== 'board' || !api?.mountReadOnly) {
+      return undefined;
+    }
+    api.mountReadOnly(host, {
+      snapshot: board.snapshot_json,
+      licenseKey: board.license_key || '',
+    });
+    return () => api.unmount?.(host);
+  }, [board, viewMode]);
+
+  React.useEffect(() => {
     const onKey = (event) => {
       if (event.key === 'Escape') onClose?.();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  const showBoard = !loading && !error && viewMode === 'board' && board?.has_snapshot;
+  const showImage = !loading && !error && viewMode === 'image' && board?.image_url;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
@@ -461,17 +553,37 @@ function WhiteboardPreviewModal({ conferenceId, title, onClose }) {
             <div className="font-bold text-lg">Конспект доски</div>
             {title && <div className="text-sm text-ink/55 mt-0.5">{title}</div>}
           </div>
-          <button type="button" onClick={onClose}
-            className="w-10 h-10 rounded-xl ring-1 ring-black/[0.08] hover:bg-black/[0.03] flex items-center justify-center">
-            <I.X className="w-5 h-5"/>
-          </button>
+          <div className="flex items-center gap-2">
+            {board?.has_snapshot && board?.image_url && (
+              <div className="flex rounded-lg ring-1 ring-black/[0.08] p-0.5 text-xs font-semibold">
+                <button type="button" onClick={() => setViewMode('board')}
+                  className={`px-3 py-1.5 rounded-md ${viewMode === 'board' ? 'bg-violet-500/10 text-violet-600' : 'text-ink/55'}`}>
+                  Доска
+                </button>
+                <button type="button" onClick={() => setViewMode('image')}
+                  className={`px-3 py-1.5 rounded-md ${viewMode === 'image' ? 'bg-violet-500/10 text-violet-600' : 'text-ink/55'}`}>
+                  PNG
+                </button>
+              </div>
+            )}
+            <button type="button" onClick={onClose}
+              className="w-10 h-10 rounded-xl ring-1 ring-black/[0.08] hover:bg-black/[0.03] flex items-center justify-center">
+              <I.X className="w-5 h-5"/>
+            </button>
+          </div>
         </div>
         <div className="flex-1 min-h-0 overflow-auto bg-slate-50 p-4 sm:p-6">
           {loading && <div className="py-16 text-center text-sm text-ink/50">Загрузка…</div>}
           {!loading && error && (
             <div className="py-16 text-center text-sm text-red-600">{error}</div>
           )}
-          {!loading && !error && board?.image_url && (
+          {!loading && !error && !board?.has_snapshot && !board?.image_url && (
+            <div className="py-16 text-center text-sm text-ink/50">Конспект ещё не сохранён</div>
+          )}
+          {showBoard && (
+            <div ref={viewerRef} className="relative w-full min-h-[min(60vh,520px)] rounded-xl ring-1 ring-black/[0.06] bg-white overflow-hidden"/>
+          )}
+          {showImage && (
             <img src={board.image_url} alt="Конспект доски"
               className="w-full h-auto rounded-xl ring-1 ring-black/[0.06] bg-white"/>
           )}
@@ -889,7 +1001,16 @@ function NotificationBell({ navigate }) {
 function TopNav({ route, navigate }) {
   const [session, setSession] = React.useState(() => !!localStorage.getItem('access_token'));
   const [searchDraft, setSearchDraft] = React.useState('');
+  const [chatUnread, setChatUnread] = React.useState(0);
   const searchRef = React.useRef(null);
+
+  const syncChatUnread = React.useCallback(async () => {
+    if (!localStorage.getItem('access_token')) {
+      setChatUnread(0);
+      return;
+    }
+    setChatUnread(await fetchChatUnreadTotal());
+  }, []);
 
   React.useEffect(() => {
     const sync = () => setSession(!!localStorage.getItem('access_token'));
@@ -900,6 +1021,21 @@ function TopNav({ route, navigate }) {
       window.removeEventListener('storage', sync);
     };
   }, []);
+
+  React.useEffect(() => {
+    if (!session) {
+      setChatUnread(0);
+      return undefined;
+    }
+    syncChatUnread();
+    const onUnread = () => syncChatUnread();
+    window.addEventListener('chat-unread-changed', onUnread);
+    const timerId = setInterval(syncChatUnread, 60000);
+    return () => {
+      window.removeEventListener('chat-unread-changed', onUnread);
+      clearInterval(timerId);
+    };
+  }, [session, syncChatUnread]);
 
   React.useEffect(() => {
     const onKey = (e) => {
@@ -944,6 +1080,7 @@ function TopNav({ route, navigate }) {
     { id: Routes.LANDING, label: 'Главная' },
     { id: Routes.CATALOG, label: 'Каталог' },
     { id: Routes.PROFILE, label: 'Профиль' },
+    ...(session ? [{ id: Routes.MESSAGES, label: 'Сообщения' }] : []),
     ...(isMentor ? [{ id: Routes.MENTOR, label: 'Ментор' }] : []),
   ];
 
@@ -961,8 +1098,13 @@ function TopNav({ route, navigate }) {
           <nav className="hidden md:flex items-center gap-1 ml-4">
             {links.map((l) => (
               <button key={l.id} onClick={() => navigate(l.id)}
-                className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${route === l.id ? 'bg-violet-500/10 text-violet-600' : 'text-ink/70 hover:bg-black/[0.03] hover:text-ink'}`}>
+                className={`relative px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${route === l.id ? 'bg-violet-500/10 text-violet-600' : 'text-ink/70 hover:bg-black/[0.03] hover:text-ink'}`}>
                 {l.label}
+                {l.id === Routes.MESSAGES && chatUnread > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center">
+                    {chatUnread > 99 ? '99+' : chatUnread}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -1188,6 +1330,12 @@ Object.assign(window, {
   Routes,
   useHashRoute,
   getApiBase,
+  getWsBase,
+  openChatThreadWs,
+  openChatWithUser,
+  openChatWithCourse,
+  fetchChatUnreadTotal,
+  refreshChatUnread,
   apiJson: fetchApiJson,
   fetchApiJson,
   fetchApiForm,

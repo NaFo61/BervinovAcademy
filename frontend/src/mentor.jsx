@@ -370,6 +370,7 @@ function MentorPage({ navigate }) {
                     <td className="p-4">
                       <div className="flex flex-wrap gap-x-3 gap-y-1">
                         <MentorLink onClick={() => openProfile(s.user_public_id)}>Профиль</MentorLink>
+                        <MentorLink onClick={() => window.openChatWithUser(navigate, s.user_public_id)}>Написать</MentorLink>
                         <MentorLink onClick={() => startCallWith(s.user_public_id)}>Созвон</MentorLink>
                         <MentorLink onClick={() => { setSelectedStudent(s.user_public_id); setTab('code'); }}>Код</MentorLink>
                         <MentorLink onClick={() => { setSelectedStudent(s.user_public_id); setTab('quiz'); }}>Тесты</MentorLink>

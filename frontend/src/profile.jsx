@@ -257,6 +257,10 @@ function ProfileHeader({ user, navigate, isOwnProfile }) {
               </>
             ) : isMentorViewer ? (
               <>
+                <button type="button" onClick={() => window.openChatWithUser(navigate, user.public_id)}
+                  className="h-10 px-4 rounded-xl bg-white border border-black/[0.06] text-sm font-medium hover:border-violet-300 transition-colors">
+                  Написать
+                </button>
                 <button type="button" disabled={callBusy} onClick={startCall}
                   className="h-10 px-4 rounded-xl btn-grad btn-shimmer text-white text-sm font-semibold inline-flex items-center gap-1.5 disabled:opacity-60">
                   <I.Video className="w-3.5 h-3.5"/> {callBusy ? 'Создаём…' : 'Начать созвон'}

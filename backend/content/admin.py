@@ -219,6 +219,7 @@ class CourseAdmin(ModelAdmin):
                     "description",
                     "image",
                     "technology",
+                    "mentor",
                     "is_active",
                 ),
             },

@@ -16,6 +16,7 @@ const MentorPage = window.MentorPage;
 const ExamPage = window.ExamPage;
 const CallPage = window.CallPage;
 const ConferencesPage = window.ConferencesPage;
+const MessagesPage = window.MessagesPage;
 
 const NO_FOOTER_ROUTES = new Set([Routes.PROBLEM, Routes.AUTH, Routes.LEARN, Routes.EXAM, Routes.CALL]);
 
@@ -36,6 +37,7 @@ function App() {
     [Routes.AUTH]: AuthPage,
     [Routes.CALL]: CallPage,
     [Routes.CONFERENCES]: ConferencesPage,
+    [Routes.MESSAGES]: MessagesPage,
   }[route] || LandingPage;
 
   const pageProps = { navigate, hashParams, route };

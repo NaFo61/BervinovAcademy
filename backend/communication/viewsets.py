@@ -221,6 +221,9 @@ class ConferenceViewSet(
             "room_id": conference.public_id,
             "expires_in": ttl,
         }
+        license_key = settings.TLDRAW_LICENSE_KEY
+        if license_key:
+            payload["license_key"] = license_key
         return Response(WhiteboardTokenSerializer(payload).data)
 
     @action(detail=True, methods=["get"], url_path="whiteboard")

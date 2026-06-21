@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from .models import (
@@ -13,6 +14,17 @@ from .models import (
     TestCase,
 )
 from .video_utils import build_video_payload
+
+User = get_user_model()
+
+
+class CourseMentorBriefSerializer(serializers.ModelSerializer):
+    public_id = serializers.UUIDField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = ("public_id", "first_name", "last_name", "avatar", "role")
+        read_only_fields = fields
 
 
 def _serialize_video(serializer, obj):
@@ -216,6 +228,7 @@ class CourseListSerializer(serializers.ModelSerializer):
 
 class CourseDetailSerializer(serializers.ModelSerializer):
     technology = TechnologySerializer(many=True, read_only=True)
+    mentor = CourseMentorBriefSerializer(read_only=True)
     modules = serializers.SerializerMethodField()
     exams = serializers.SerializerMethodField()
     course_lessons = serializers.SerializerMethodField()
@@ -256,6 +269,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             "is_active",
             "created_at",
             "technology",
+            "mentor",
             "modules",
             "exams",
             "course_lessons",

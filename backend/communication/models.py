@@ -171,3 +171,145 @@ class UserNotification(UUIDPublicIdMixin, models.Model):
 
     def __str__(self):
         return f"{self.user}: {self.title}"
+
+
+class DirectThread(UUIDPublicIdMixin, models.Model):
+    """Единый диалог ментор ↔ студент."""
+
+    mentor = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="mentor_chat_threads",
+        verbose_name=_("Ментор"),
+    )
+    student = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="student_chat_threads",
+        verbose_name=_("Студент"),
+    )
+    last_message_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name=_("Последнее сообщение"),
+    )
+    mentor_last_read_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Ментор прочитал до"),
+    )
+    student_last_read_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Студент прочитал до"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Диалог")
+        verbose_name_plural = _("Диалоги")
+        ordering = ("-last_message_at", "-created_at")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("mentor", "student"),
+                name="communicati_mentor__chat_uniq",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["mentor", "-last_message_at"],
+                name="communicati_mentor__chat_idx",
+            ),
+            models.Index(
+                fields=["student", "-last_message_at"],
+                name="communicati_student_chat_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.mentor} ↔ {self.student}"
+
+
+class ChatMessage(UUIDPublicIdMixin, models.Model):
+    """Сообщение в диалоге ментор ↔ студент."""
+
+    class Kind(models.TextChoices):
+        TEXT = "text", _("Текст")
+        SYSTEM = "system", _("Системное")
+
+    class SystemEvent(models.TextChoices):
+        CONFERENCE_INVITED = "conference_invited", _("Приглашение на созвон")
+        CONFERENCE_STARTED = "conference_started", _("Созвон начался")
+        CONFERENCE_REJOINED = "conference_rejoined", _("Вернулся в созвон")
+        CONFERENCE_ENDED = "conference_ended", _("Созвон завершён")
+        CONFERENCE_DECLINED = "conference_declined", _("Созвон отклонён")
+        CONFERENCE_CANCELLED = "conference_cancelled", _("Созвон отменён")
+
+    thread = models.ForeignKey(
+        DirectThread,
+        on_delete=models.CASCADE,
+        related_name="messages",
+        verbose_name=_("Диалог"),
+    )
+    kind = models.CharField(
+        max_length=16,
+        choices=Kind.choices,
+        default=Kind.TEXT,
+        db_index=True,
+        verbose_name=_("Тип"),
+    )
+    sender = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="chat_messages_sent",
+        verbose_name=_("Отправитель"),
+    )
+    body = models.TextField(verbose_name=_("Текст"))
+    is_deleted = models.BooleanField(default=False, verbose_name=_("Удалено"))
+    edited_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Изменено"),
+    )
+    show_edited = models.BooleanField(
+        default=False,
+        verbose_name=_("Показывать метку «изменено»"),
+    )
+    conference = models.ForeignKey(
+        Conference,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="chat_messages",
+        verbose_name=_("Конференция"),
+    )
+    system_event = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name=_("Системное событие"),
+    )
+    system_payload = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name=_("Данные события"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = _("Сообщение чата")
+        verbose_name_plural = _("Сообщения чата")
+        ordering = ("created_at",)
+        indexes = [
+            models.Index(
+                fields=["thread", "-created_at"],
+                name="communicati_thread__chat_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"ChatMessage {self.public_id}"

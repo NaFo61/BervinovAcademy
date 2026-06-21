@@ -6,6 +6,13 @@ from rest_framework.test import APIClient
 from users.models import User
 
 
+@pytest.fixture(autouse=True)
+def inmemory_channel_layer(settings):
+    settings.CHANNEL_LAYERS = {
+        "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"},
+    }
+
+
 @pytest.fixture
 def mentor_user(db):
     return User.objects.create_user(

@@ -486,31 +486,38 @@ function CourseSidebar({ course, navigate, totalLessons, totalQuizzes, totalHour
       </M.div>
 
       {/* mentor card */}
+      {course.mentor && (
       <M.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
         className="bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft p-5">
-        <div className="text-xs font-semibold uppercase tracking-widest text-ink/50 mb-4">Ведущий ментор</div>
+        <div className="text-xs font-semibold uppercase tracking-widest text-ink/50 mb-4">Ментор курса</div>
         <div className="flex items-center gap-3 mb-4">
           <div className="avatar-ring">
-            <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-sm font-bold grad-text">КБ</div>
+            {course.mentor.avatar ? (
+              <img src={window.mediaUrl(course.mentor.avatar)} alt=""
+                className="w-12 h-12 rounded-full object-cover bg-white"/>
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-sm font-bold grad-text">
+                {(course.mentor.first_name || '?').slice(0, 1)}
+              </div>
+            )}
           </div>
           <div>
-            <div className="font-bold">Кирилл Бервинов</div>
-            <div className="text-xs text-ink/55 flex items-center gap-1.5 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulseDot"/>
-              Онлайн · отвечает за 1 час
+            <div className="font-bold">
+              {[course.mentor.first_name, course.mentor.last_name].filter(Boolean).join(' ') || 'Ментор'}
             </div>
+            <div className="text-xs text-ink/55 mt-0.5">Ответственный за курс</div>
           </div>
         </div>
-        <p className="text-sm text-ink/65 leading-relaxed">
-          8 лет опыта в Python и системном дизайне. Через меня прошло 5 600+ учеников. Отвечаю лично, без шаблонов.
-        </p>
-        <div className="mt-4 flex items-center gap-4 text-xs text-ink/55">
-          <span className="flex items-center gap-1"><I.Star className="w-3.5 h-3.5 text-amber-400"/> 4.9</span>
-          <span className="flex items-center gap-1"><I.Users className="w-3.5 h-3.5"/> 5 600+ учеников</span>
-          <span className="flex items-center gap-1"><I.Book className="w-3.5 h-3.5"/> 6 курсов</span>
-        </div>
+        {enrollment && (
+          <button type="button"
+            onClick={() => window.openChatWithCourse(navigate, course.public_id || course.publicId)}
+            className="w-full h-10 rounded-xl btn-grad text-white text-sm font-semibold">
+            Написать ментору
+          </button>
+        )}
       </M.div>
+      )}
     </div>
   );
 }

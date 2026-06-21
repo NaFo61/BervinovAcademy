@@ -3,7 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { useSync } from '@tldraw/sync';
 import {
   AssetRecordType,
+  createTLStore,
   getHashForString,
+  getSnapshot,
+  loadSnapshot,
   Tldraw,
   uniqueId,
 } from 'tldraw';
@@ -150,7 +153,7 @@ function bindViewportBounds(editor, rootEl) {
   };
 }
 
-function WhiteboardEditor({ container, roomId, syncBaseUrl, syncToken }) {
+function WhiteboardEditor({ container, roomId, syncBaseUrl, syncToken, licenseKey }) {
   const rootRef = React.useRef(null);
   const editorRef = React.useRef(null);
   const cleanupRef = React.useRef(null);
@@ -205,6 +208,8 @@ function WhiteboardEditor({ container, roomId, syncBaseUrl, syncToken }) {
         store={store.store}
         inferDarkMode={false}
         autoFocus
+        licenseKey={licenseKey || undefined}
+        options={{ maxPages: 1 }}
         onMount={(editor) => {
           editorRef.current = editor;
           const entry = mounts.get(container);
@@ -219,7 +224,7 @@ function WhiteboardEditor({ container, roomId, syncBaseUrl, syncToken }) {
   );
 }
 
-function WhiteboardApp({ container, roomId, syncBaseUrl, syncToken }) {
+function WhiteboardApp({ container, roomId, syncBaseUrl, syncToken, licenseKey }) {
   if (!syncToken) {
     return <WhiteboardStatus loadingText="Получение доступа к доске…" />;
   }
@@ -230,6 +235,7 @@ function WhiteboardApp({ container, roomId, syncBaseUrl, syncToken }) {
       roomId={roomId}
       syncBaseUrl={syncBaseUrl}
       syncToken={syncToken}
+      licenseKey={licenseKey}
     />
   );
 }
@@ -248,6 +254,7 @@ function mount(container, options = {}) {
       roomId={roomId}
       syncBaseUrl={options.syncBaseUrl}
       syncToken={options.syncToken}
+      licenseKey={options.licenseKey}
     />,
   );
   mounts.set(container, { root, roomId: String(roomId), editor: null });
@@ -285,4 +292,58 @@ async function exportPngBlob() {
   return result.blob;
 }
 
-window.BervinovWhiteboard = { mount, unmount, exportPngBlob };
+function exportSnapshotJson() {
+  let editor = null;
+  for (const entry of mounts.values()) {
+    if (entry.editor) {
+      editor = entry.editor;
+      break;
+    }
+  }
+  if (!editor) {
+    throw new Error('Доска не активна');
+  }
+  return getSnapshot(editor.store);
+}
+
+function WhiteboardReadOnly({ container, snapshot, licenseKey }) {
+  const rootRef = React.useRef(null);
+  const store = React.useMemo(() => {
+    const next = createTLStore();
+    if (snapshot) {
+      loadSnapshot(next, snapshot);
+    }
+    return next;
+  }, [snapshot]);
+
+  return (
+    <div ref={rootRef} className="whiteboard-root absolute inset-0 z-[2]">
+      <Tldraw
+        store={store}
+        inferDarkMode={false}
+        licenseKey={licenseKey || undefined}
+        options={{ maxPages: 1 }}
+        onMount={(editor) => {
+          editor.updateInstanceState({ isReadonly: true });
+          bindViewportBounds(editor, rootRef.current);
+        }}
+      />
+    </div>
+  );
+}
+
+function mountReadOnly(container, options = {}) {
+  if (!container || !options.snapshot) return;
+  unmount(container);
+  const root = createRoot(container);
+  root.render(
+    <WhiteboardReadOnly
+      container={container}
+      snapshot={options.snapshot}
+      licenseKey={options.licenseKey}
+    />,
+  );
+  mounts.set(container, { root, roomId: 'readonly', editor: null });
+}
+
+window.BervinovWhiteboard = { mount, unmount, exportPngBlob, exportSnapshotJson, mountReadOnly };

@@ -170,11 +170,19 @@ function CallPage({ navigate, hashParams }) {
   const [displayMode, setDisplayMode] = React.useState('focus');
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const [whiteboardSyncToken, setWhiteboardSyncToken] = React.useState('');
+  const [whiteboardLicenseKey, setWhiteboardLicenseKey] = React.useState('');
   const [whiteboardNotice, setWhiteboardNotice] = React.useState('');
   const [whiteboardSaving, setWhiteboardSaving] = React.useState(false);
   const [whiteboardSaved, setWhiteboardSaved] = React.useState(false);
   const [endedWhiteboard, setEndedWhiteboard] = React.useState(null);
   const [showEndedPreview, setShowEndedPreview] = React.useState(false);
+  const [chatOpen, setChatOpen] = React.useState(true);
+  const [chatThread, setChatThread] = React.useState(null);
+  const [chatLoadError, setChatLoadError] = React.useState('');
+  const [callChatUnread, setCallChatUnread] = React.useState(0);
+  const [callWhiteboardPreview, setCallWhiteboardPreview] = React.useState(null);
+
+  const ChatThreadView = window.ChatThreadView;
 
   const callRootRef = React.useRef(null);
   const roomRef = React.useRef(null);
@@ -192,7 +200,58 @@ function CallPage({ navigate, hashParams }) {
 
   React.useEffect(() => {
     if (!confId || phase !== 'in_call') {
+      setChatThread(null);
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      setChatLoadError('');
+      try {
+        const thread = await window.fetchApiJson(
+          `/api/communication/chat/threads/open/?conference=${encodeURIComponent(confId)}`,
+          { auth: true },
+        );
+        if (!cancelled) setChatThread(thread);
+      } catch (e) {
+        if (!cancelled) {
+          setChatThread(null);
+          setChatLoadError(e.message || 'Не удалось открыть чат');
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [confId, phase]);
+
+  React.useEffect(() => {
+    if (phase !== 'in_call') return undefined;
+    const onKey = (event) => {
+      if (event.key === 'Escape' && chatOpen) setChatOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [phase, chatOpen]);
+
+  React.useEffect(() => {
+    if (chatOpen) setCallChatUnread(0);
+  }, [chatOpen]);
+
+  React.useEffect(() => {
+    if (!confId) return undefined;
+    const stored = localStorage.getItem(`call-chat-open-${confId}`);
+    if (stored === '0') setChatOpen(false);
+    return undefined;
+  }, [confId]);
+
+  React.useEffect(() => {
+    if (!confId) return undefined;
+    localStorage.setItem(`call-chat-open-${confId}`, chatOpen ? '1' : '0');
+    return undefined;
+  }, [confId, chatOpen]);
+
+  React.useEffect(() => {
+    if (!confId || phase !== 'in_call') {
       setWhiteboardSyncToken('');
+      setWhiteboardLicenseKey('');
       return undefined;
     }
 
@@ -205,9 +264,15 @@ function CallPage({ navigate, hashParams }) {
           `/api/communication/conferences/${encodeURIComponent(confId)}/whiteboard/token/`,
           { method: 'POST', auth: true },
         );
-        if (!cancelled) setWhiteboardSyncToken(data.token || '');
+        if (!cancelled) {
+          setWhiteboardSyncToken(data.token || '');
+          setWhiteboardLicenseKey(data.license_key || '');
+        }
       } catch (_) {
-        if (!cancelled) setWhiteboardSyncToken('');
+        if (!cancelled) {
+          setWhiteboardSyncToken('');
+          setWhiteboardLicenseKey('');
+        }
       }
     };
 
@@ -238,6 +303,12 @@ function CallPage({ navigate, hashParams }) {
       const blob = await api.exportPngBlob();
       const form = new FormData();
       form.append('image', blob, 'whiteboard.png');
+      if (api.exportSnapshotJson) {
+        try {
+          const snapshot = api.exportSnapshotJson();
+          form.append('snapshot', JSON.stringify(snapshot));
+        } catch (_) { /* snapshot optional */ }
+      }
       await window.fetchApiForm(
         `/api/communication/conferences/${encodeURIComponent(confId)}/whiteboard/export/`,
         form,
@@ -622,7 +693,39 @@ function CallPage({ navigate, hashParams }) {
 
   return (
     <div ref={callRootRef} data-screen-label="Call"
-      className={`${isFullscreen ? 'h-screen max-h-screen' : 'h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)]'} overflow-hidden bg-[#070b18] text-white flex flex-col`}>
+      className={`${isFullscreen ? 'h-screen max-h-screen' : 'h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)]'} overflow-hidden bg-[#070b18] text-white flex flex-col relative`}>
+      {callWhiteboardPreview && WhiteboardPreviewModal && (
+        <WhiteboardPreviewModal
+          conferenceId={callWhiteboardPreview}
+          onClose={() => setCallWhiteboardPreview(null)}
+        />
+      )}
+      {chatThread && ChatThreadView && phase === 'in_call' && (
+        <aside className={`absolute inset-y-0 right-0 z-30 w-full sm:w-[min(100%,380px)] shadow-2xl border-l border-white/10 flex flex-col min-h-0 ${
+          chatOpen ? '' : 'hidden'
+        }`}>
+          <ChatThreadView
+            thread={chatThread}
+            compact
+            embedded
+            inCall
+            navigate={navigate}
+            markReadOnView={chatOpen}
+            onBack={() => setChatOpen(false)}
+            onOpenWhiteboard={(id) => setCallWhiteboardPreview(id)}
+            onUnreadMessage={() => setCallChatUnread((n) => n + 1)}
+            onMarkedRead={() => {
+              setCallChatUnread(0);
+              window.refreshChatUnread?.();
+            }}
+          />
+        </aside>
+      )}
+      {!chatOpen && phase === 'in_call' && !chatThread && chatLoadError && (
+        <aside className="absolute inset-y-0 right-0 z-30 w-full sm:w-[min(100%,380px)] bg-[#0a1020] border-l border-white/10 p-4 flex items-center justify-center text-sm text-red-300">
+          {chatLoadError}
+        </aside>
+      )}
       {!isCleanMode && (
         <div className="px-4 sm:px-6 py-3 flex items-center justify-between border-b border-white/10 bg-white/[0.03]">
           <div>
@@ -670,6 +773,7 @@ function CallPage({ navigate, hashParams }) {
                 fit="contain"
                 roomId={confId}
                 syncToken={whiteboardSyncToken}
+                licenseKey={whiteboardLicenseKey}
                 selected={tile.key === selectedTileKey}
                 onSelect={() => selectTile(tile.key)}
                 isGridMode
@@ -685,6 +789,7 @@ function CallPage({ navigate, hashParams }) {
               fit="contain"
               roomId={confId}
               syncToken={whiteboardSyncToken}
+              licenseKey={whiteboardLicenseKey}
               isGridMode={false}
               onSelect={() => selectTile(mainTile?.key)}
             />
@@ -702,6 +807,7 @@ function CallPage({ navigate, hashParams }) {
                     fit="contain"
                     roomId={confId}
                     syncToken={whiteboardSyncToken}
+                licenseKey={whiteboardLicenseKey}
                     isGridMode={false}
                     selected={tile.key === selectedTileKey}
                     onSelect={() => selectTile(tile.key)}
@@ -729,6 +835,9 @@ function CallPage({ navigate, hashParams }) {
         <CallControl label={sharing ? 'Стоп экран' : 'Экран'} active={sharing} onClick={toggleScreen}>
           <I.Monitor className="w-5 h-5" />
         </CallControl>
+        <CallControl label={chatOpen ? 'Скрыть чат' : 'Чат'} active={chatOpen} onClick={() => setChatOpen((v) => !v)} badge={callChatUnread}>
+          <I.Chat className="w-5 h-5" />
+        </CallControl>
         {isMentor && whiteboardEnabled && (
           <CallControl
             label={whiteboardSaving ? 'Сохранение…' : 'Сохранить доску'}
@@ -751,7 +860,7 @@ function CallPage({ navigate, hashParams }) {
   );
 }
 
-function VideoTile({ tile, main = false, compact = false, clean = false, fit = 'cover', selected = false, onSelect, roomId, syncToken, isGridMode = false }) {
+function VideoTile({ tile, main = false, compact = false, clean = false, fit = 'cover', selected = false, onSelect, roomId, syncToken, licenseKey, isGridMode = false }) {
   const base = compact
     ? 'h-28 cursor-pointer'
     : main
@@ -771,7 +880,7 @@ function VideoTile({ tile, main = false, compact = false, clean = false, fit = '
     if (whiteboardActive) {
       return (
         <div className={shellClass} aria-label={tileLabel}>
-          <WhiteboardTile roomId={roomId} syncToken={syncToken} />
+          <WhiteboardTile roomId={roomId} syncToken={syncToken} licenseKey={licenseKey} />
           {!clean && (
             <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent pointer-events-none z-10">
               <div className="flex items-center gap-2">
@@ -841,7 +950,7 @@ function VideoTile({ tile, main = false, compact = false, clean = false, fit = '
   );
 }
 
-function WhiteboardTile({ roomId, syncToken }) {
+function WhiteboardTile({ roomId, syncToken, licenseKey }) {
   const hostRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -849,12 +958,12 @@ function WhiteboardTile({ roomId, syncToken }) {
     const api = window.BervinovWhiteboard;
     if (!host || !roomId || !syncToken || !api?.mount) return undefined;
 
-    api.mount(host, { roomId, syncToken });
+    api.mount(host, { roomId, syncToken, licenseKey });
 
     return () => {
       api.unmount?.(host);
     };
-  }, [roomId, syncToken]);
+  }, [roomId, syncToken, licenseKey]);
 
   if (!window.BervinovWhiteboard?.mount) {
     return (
@@ -886,14 +995,19 @@ function ModeButton({ active, onClick, children }) {
   );
 }
 
-function CallControl({ children, label, active, onClick }) {
+function CallControl({ children, label, active, onClick, badge = 0 }) {
   return (
     <button type="button" onClick={onClick} title={label}
-      className={`flex flex-col items-center gap-1 min-w-[72px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-300 rounded-xl ${active ? 'text-cyan-200' : 'text-white/90'}`}>
-      <span className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+      className={`relative flex flex-col items-center gap-1 min-w-[72px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-300 rounded-xl ${active ? 'text-cyan-200' : 'text-white/90'}`}>
+      <span className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
         active ? 'bg-cyan-500/70' : 'bg-white/12 hover:bg-white/20'
       }`}>
         {children}
+        {badge > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
       </span>
       <span className="text-[10px] text-white/60">{label}</span>
     </button>

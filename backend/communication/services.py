@@ -9,8 +9,9 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 
+from . import chat_conference_events
 from .livekit_tokens import livekit_configured
-from .models import Conference, UserNotification
+from .models import ChatMessage, Conference, UserNotification
 
 User = get_user_model()
 
@@ -131,6 +132,11 @@ def create_conference(*, mentor, guest) -> Conference:
         body=f"{mentor_name} приглашает вас на видеозвонок.",
         conference=conference,
     )
+    chat_conference_events.append_conference_chat_event(
+        conference=conference,
+        event=ChatMessage.SystemEvent.CONFERENCE_INVITED,
+        actor=mentor,
+    )
     return conference
 
 
@@ -143,7 +149,15 @@ def mark_conference_joined(*, conference: Conference, user) -> Conference:
         return conference
 
     now = timezone.now()
+    became_active = False
+    rejoined = False
+
     if user.pk == conference.guest_id:
+        rejoined = (
+            conference.status == Conference.Status.ACTIVE
+            and conference.last_guest_left_at is not None
+        )
+        became_active = conference.status == Conference.Status.WAITING
         conference.guest_in_room = True
         conference.guest_joined_at = conference.guest_joined_at or now
         conference.last_guest_left_at = None
@@ -160,6 +174,10 @@ def mark_conference_joined(*, conference: Conference, user) -> Conference:
             ]
         )
     elif user.pk == conference.mentor_id:
+        rejoined = (
+            conference.status == Conference.Status.ACTIVE
+            and conference.last_mentor_left_at is not None
+        )
         conference.mentor_in_room = True
         conference.mentor_joined_at = conference.mentor_joined_at or now
         conference.last_mentor_left_at = None
@@ -170,6 +188,13 @@ def mark_conference_joined(*, conference: Conference, user) -> Conference:
                 "last_mentor_left_at",
             ]
         )
+
+    chat_conference_events.maybe_emit_conference_join_event(
+        conference=conference,
+        user=user,
+        became_active=became_active,
+        rejoined=rejoined,
+    )
     return conference
 
 
@@ -191,6 +216,10 @@ def end_conference(*, conference: Conference, user) -> Conference:
         ]
     )
     delete_livekit_room(conference.room_name)
+    chat_conference_events.maybe_emit_conference_ended_event(
+        conference=conference,
+        user=user,
+    )
     return conference
 
 
@@ -218,6 +247,11 @@ def decline_conference(*, conference: Conference, user) -> Conference:
         user=user,
         dismissed_at__isnull=True,
     ).update(dismissed_at=timezone.now())
+    chat_conference_events.append_conference_chat_event(
+        conference=conference,
+        event=ChatMessage.SystemEvent.CONFERENCE_DECLINED,
+        actor=user,
+    )
     return conference
 
 
@@ -241,6 +275,11 @@ def cancel_conference(*, conference: Conference, user) -> Conference:
         ]
     )
     delete_livekit_room(conference.room_name)
+    chat_conference_events.append_conference_chat_event(
+        conference=conference,
+        event=ChatMessage.SystemEvent.CONFERENCE_CANCELLED,
+        actor=user,
+    )
     return conference
 
 
@@ -411,6 +450,10 @@ def apply_livekit_webhook_event(event) -> Conference | None:
                 "mentor_in_room",
                 "guest_in_room",
             ]
+        )
+        chat_conference_events.maybe_emit_conference_ended_event(
+            conference=conference,
+            user=conference.mentor,
         )
         return conference
 
