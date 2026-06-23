@@ -27,11 +27,12 @@ import logging
 from common.drf import UUID_LOOKUP_REGEX
 from django.db.models import Exists, OuterRef
 from rest_framework import mixins, status, viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from .models import (
     CodeSubmission,
+    LessonUserComment,
     UserAnswerCheckBox,
     UserAnswerRadio,
     UserLessonTheoryRead,
@@ -39,6 +40,7 @@ from .models import (
 from .serializers import (
     CodeSubmissionCreateSerializer,
     CodeSubmissionSerializer,
+    LessonUserCommentSerializer,
     UserAnswerCheckBoxSerializer,
     UserAnswerRadioSerializer,
     UserLessonTheoryReadSerializer,
@@ -247,3 +249,50 @@ class UserLessonTheoryReadViewSet(
             out.data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
+
+
+class LessonUserCommentViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    Комментарии пользователей к урокам.
+
+    - ``GET /progress/lesson-comments/?lesson_kind=theory&lesson=<uuid>``
+    - ``POST /progress/lesson-comments/`` — только для авторизованных
+    - ``DELETE /progress/lesson-comments/{public_id}/`` — только свой комментарий
+    """
+
+    serializer_class = LessonUserCommentSerializer
+    lookup_field = "public_id"
+    lookup_value_regex = UUID_LOOKUP_REGEX
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [IsAuthenticated()]
+        if self.action == "destroy":
+            return [IsAuthenticated()]
+        return [AllowAny()]
+
+    def get_queryset(self):
+        qs = (
+            LessonUserComment.objects.filter(is_hidden=False)
+            .select_related("user")
+            .order_by("created_at")
+        )
+        kind = self.request.query_params.get("lesson_kind")
+        lesson = self.request.query_params.get("lesson")
+        if kind:
+            qs = qs.filter(lesson_kind=kind)
+        if lesson:
+            qs = qs.filter(lesson_public_id=lesson)
+        return qs
+
+    def perform_destroy(self, instance):
+        if instance.user_id != self.request.user.id:
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("Можно удалить только свой комментарий.")
+        instance.delete()

@@ -1,5 +1,11 @@
 from django.urls import path
 
+from content.editor_views import (
+    CourseEditorOutlineView,
+    LessonEditorCreateView,
+    LessonEditorView,
+)
+
 from .views import (
     MentorChallengeDetailView,
     MentorCodeSubmissionsView,
@@ -35,5 +41,20 @@ urlpatterns = [
         "mentoring/quiz-answers/",
         MentorQuizAnswersView.as_view(),
         name="quiz-answers",
+    ),
+    path(
+        "mentoring/editor/courses/<uuid:course_public_id>/",
+        CourseEditorOutlineView.as_view(),
+        name="editor-course-outline",
+    ),
+    path(
+        "mentoring/editor/modules/<uuid:module_public_id>/lessons/",
+        LessonEditorCreateView.as_view(),
+        name="editor-lesson-create",
+    ),
+    path(
+        "mentoring/editor/lessons/<str:kind>/<uuid:public_id>/",
+        LessonEditorView.as_view(),
+        name="editor-lesson-detail",
     ),
 ]

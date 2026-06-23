@@ -108,6 +108,10 @@ class UserAnswerCheckBox(UUIDPublicIdMixin, models.Model):
         default=0,
         verbose_name=_("Получено баллов"),
     )
+    failed_attempts = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Число неверных попыток"),
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("Дата ответа"),
@@ -388,3 +392,59 @@ class UserAchievement(UUIDPublicIdMixin, models.Model):
 
     def __str__(self):
         return f"{self.user} — {self.achievement.title}"
+
+
+class LessonUserComment(UUIDPublicIdMixin, models.Model):
+    """Комментарий пользователя к уроку (теория, quiz, задача с кодом)."""
+
+    class LessonKind(models.TextChoices):
+        THEORY = "theory", _("Теория")
+        RADIO = "radio", _("Radio")
+        CHECKBOX = "checkbox", _("Checkbox")
+        CODING = "coding", _("Код")
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="lesson_comments",
+        verbose_name=_("Автор"),
+    )
+    lesson_kind = models.CharField(
+        max_length=16,
+        choices=LessonKind.choices,
+        db_index=True,
+        verbose_name=_("Тип урока"),
+    )
+    lesson_public_id = models.UUIDField(
+        db_index=True,
+        verbose_name=_("Урок (public_id)"),
+    )
+    body = models.TextField(verbose_name=_("Текст комментария"))
+    is_hidden = models.BooleanField(
+        default=False,
+        verbose_name=_("Скрыт модератором"),
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Создан"),
+        db_index=True,
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Обновлён"),
+    )
+
+    class Meta:
+        verbose_name = _("Комментарий к уроку")
+        verbose_name_plural = _("Комментарии к урокам")
+        ordering = ("created_at",)
+        indexes = [
+            models.Index(
+                fields=["lesson_kind", "lesson_public_id", "created_at"]
+            ),
+            models.Index(fields=["user", "-created_at"]),
+        ]
+
+    def __str__(self):
+        preview = (self.body[:40] + "…") if len(self.body) > 40 else self.body
+        return f"{self.user} — {self.lesson_kind}:{self.lesson_public_id} — {preview}"

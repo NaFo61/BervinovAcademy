@@ -7,11 +7,6 @@ from progress.kafka_results_consumer import (
 )
 from progress.models import CodeSubmission
 
-pytest_plugins = (
-    "content.tests.conftest",
-    "users.tests.conftest",
-)
-
 
 @pytest.mark.django_db
 def test_apply_result_accepted_maps_to_completed(

@@ -91,22 +91,27 @@ class TestModuleModel:
         assert str(module) == f"{course.title} - Module 1"
 
     def test_module_unique_order_per_course(self, db, course):
-        Module.objects.create(course=course, title="Module 1", order_index=1)
+        m1 = Module.objects.create(course=course, title="Module 1")
+        m2 = Module.objects.create(course=course, title="Module 2")
+        m2.order_index = m1.order_index
         with pytest.raises(IntegrityError):
-            Module.objects.create(
-                course=course, title="Module 2", order_index=1
-            )
+            m2.save(update_fields=["order_index"])
 
-    def test_module_ordering(self, db, course):
-        module2 = Module.objects.create(
-            course=course, title="Module 2", order_index=2
+    def test_module_auto_order_on_create(self, db, course):
+        m2 = Module.objects.create(
+            course=course, title="Module 2", order_index=99
         )
-        module1 = Module.objects.create(
+        m1 = Module.objects.create(
             course=course, title="Module 1", order_index=1
         )
-        modules = Module.objects.all()
-        assert modules[0] == module1
-        assert modules[1] == module2
+        assert m2.order_index == 1
+        assert m1.order_index == 2
+
+    def test_module_ordering(self, db, course):
+        module1 = Module.objects.create(course=course, title="Module 1")
+        module2 = Module.objects.create(course=course, title="Module 2")
+        modules = list(Module.objects.filter(course=course))
+        assert modules == [module1, module2]
 
     def test_module_delete_reorders(self, db, course):
         Module.objects.create(course=course, title="Module 1", order_index=1)
@@ -139,19 +144,20 @@ class TestLessonTheoryModel:
         assert lesson.title == "Introduction"
         assert lesson.content == "Welcome to the course"
         assert lesson.is_active is True
-        assert str(lesson) == f"{module.title} - Introduction"
+        assert str(lesson) == f"{module} - Introduction"
 
-    def test_lesson_unique_order_per_module(self, db, module):
-        LessonTheory.objects.create(
+    def test_lesson_auto_order_on_conflict(self, db, module):
+        l1 = LessonTheory.objects.create(
             module=module, title="Lesson 1", content="Content 1", order_index=1
         )
-        with pytest.raises(IntegrityError):
-            LessonTheory.objects.create(
-                module=module,
-                title="Lesson 2",
-                content="Content 2",
-                order_index=1,
-            )
+        l2 = LessonTheory.objects.create(
+            module=module,
+            title="Lesson 2",
+            content="Content 2",
+            order_index=1,
+        )
+        assert l1.order_index == 1
+        assert l2.order_index == 2
 
     def test_lesson_ordering(self, db, module):
         lesson2 = LessonTheory.objects.create(
@@ -179,16 +185,19 @@ class TestLessonTheoryModel:
         lesson3.refresh_from_db()
         assert lesson3.order_index == 2
 
-    def test_lesson_clean_method(self, db, module):
+    def test_lesson_clean_rejects_duplicate_order(self, db, module):
         LessonTheory.objects.create(
             module=module, title="Lesson 1", content="Content 1", order_index=1
         )
-        lesson3 = LessonTheory(
-            module=module, title="Lesson 3", content="Content 3", order_index=3
+        lesson2 = LessonTheory(
+            module=module,
+            title="Lesson 2",
+            content="Content 2",
+            order_index=1,
         )
 
         with pytest.raises(ValidationError):
-            lesson3.clean()
+            lesson2.full_clean()
 
 
 class TestRadioQuestionModel:
@@ -205,7 +214,7 @@ class TestRadioQuestionModel:
         assert question.title == "Test Question"
         assert question.points == 5
         assert question.get_correct_answer() is None
-        assert str(question) == f"{module.title} - Test Question"
+        assert str(question) == f"{module} - Test Question"
 
     def test_get_correct_answer(self, db, radio_question, radio_answers):
         correct = radio_question.get_correct_answer()
@@ -224,16 +233,19 @@ class TestAnswerOptionModel:
         assert answer.is_correct is False
         assert str(answer).startswith(radio_question.title[:50])
 
-    def test_answer_ordering(self, db, radio_question):
-        answer2 = RadioAnswerOption.objects.create(
-            question=radio_question, text="Answer 2", order_index=2
-        )
+    def test_answer_auto_order_on_create(self, db, radio_question):
         answer1 = RadioAnswerOption.objects.create(
-            question=radio_question, text="Answer 1", order_index=1
+            question=radio_question, text="Answer 1", order_index=99
         )
-        answers = RadioAnswerOption.objects.all()
-        assert answers[0] == answer1
-        assert answers[1] == answer2
+        answer2 = RadioAnswerOption.objects.create(
+            question=radio_question, text="Answer 2", order_index=1
+        )
+        assert answer1.order_index == 1
+        assert answer2.order_index == 2
+        answers = list(
+            RadioAnswerOption.objects.filter(question=radio_question)
+        )
+        assert answers == [answer1, answer2]
 
 
 class TestCheckboxQuestionModel:
@@ -249,7 +261,7 @@ class TestCheckboxQuestionModel:
         assert question.title == "Checkbox Test"
         assert question.points == 10
         assert question.get_correct_answers().count() == 0
-        assert str(question) == f"{module.title} - Checkbox Test"
+        assert str(question) == f"{module} - Checkbox Test"
 
     def test_get_correct_answers(
         self, db, checkbox_question, checkbox_answers

@@ -1,8 +1,11 @@
 from common.drf import UUID_LOOKUP_REGEX
 from rest_framework import mixins, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from content.challenge_stats import get_course_challenge_stats
 from content.lesson_querysets import public_lesson_parent_q
 from content.models import (
     CodingChallenge,
@@ -67,8 +70,10 @@ class CourseViewSet(
         """
         Возвращает queryset активных курсов с оптимизацией запросов.
         Предварительно загружаются технологии, модули и уроки модулей.
+
+        Фильтр list: ``?technology=Python`` — по названию технологии (без учёта регистра).
         """
-        return (
+        qs = (
             Course.objects.filter(is_active=True)
             .prefetch_related(
                 "technology",
@@ -87,6 +92,11 @@ class CourseViewSet(
             )
             .order_by("-created_at")
         )
+        if self.action == "list":
+            tech = (self.request.query_params.get("technology") or "").strip()
+            if tech:
+                qs = qs.filter(technology__name__iexact=tech).distinct()
+        return qs
 
     def get_serializer_class(self):
         """
@@ -375,3 +385,32 @@ class CodingChallengeViewSet(
             instance, context={"request": request}
         )
         return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="course-stats")
+    def course_stats(self, request):
+        """
+        Статистика задач с кодом по курсу.
+
+        Query: ``course_slug=python-backend`` или ``course_public_id=<uuid>``.
+        """
+        slug = (request.query_params.get("course_slug") or "").strip()
+        course_pub = (
+            request.query_params.get("course_public_id") or ""
+        ).strip()
+        if bool(slug) == bool(course_pub):
+            raise ValidationError(
+                {
+                    "detail": "Укажите ровно один параметр: course_slug или course_public_id."
+                }
+            )
+
+        qs = Course.objects.filter(is_active=True)
+        try:
+            if slug:
+                course = qs.get(slug=slug)
+            else:
+                course = qs.get(public_id=course_pub)
+        except Course.DoesNotExist as exc:
+            raise NotFound("Курс не найден.") from exc
+
+        return Response(get_course_challenge_stats(course))

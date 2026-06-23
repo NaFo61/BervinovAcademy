@@ -27,7 +27,8 @@ def test_request_code_always_returns_generic_message(client):
     assert "отправили" in resp.data["message"].lower()
 
 
-def test_confirm_resets_password(client):
+def test_confirm_resets_password(client, settings):
+    settings.DEBUG = True
     user = make_user(email="reset@academy.com")
     req = client.post(
         "/api/auth/password-reset/request/",

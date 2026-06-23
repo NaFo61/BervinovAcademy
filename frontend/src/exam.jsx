@@ -285,6 +285,7 @@ function ExamTheoryPanel({ lesson, marked, onMark }) {
         className="theory-content mt-6"
         dangerouslySetInnerHTML={{ __html: lesson.content || '<p>Текст теории.</p>' }}
       />
+      <window.LessonInstructorNote text={lesson.comment} />
       <div className="mt-8 flex items-center gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
         <span className="check-dot"/>
         <span className="text-sm font-semibold text-emerald-700">
@@ -513,7 +514,6 @@ function ExamCodingPanel({ lesson, step, attemptId, onUpdated }) {
         <p>{lesson.description}</p>
         {lesson.instructions && <p className="whitespace-pre-wrap">{lesson.instructions}</p>}
       </div>
-      <window.VideoExplanation video={lesson.video} title="Разбор"/>
       <div className="mt-6 rounded-2xl overflow-hidden ring-1 ring-black/[0.06] bg-[#0f172a]">
         <div className="px-4 py-2 border-b border-white/10 text-xs text-slate-400 font-mono">solution.py</div>
         <textarea value={code} onChange={(e) => setCode(e.target.value)} disabled={answered && passed}

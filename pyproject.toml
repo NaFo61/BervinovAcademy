@@ -71,14 +71,13 @@ addopts = [
     "-v",
 ]
 testpaths = [
-    "backend",
     "backend/users/tests",
     "backend/content/tests",
     "backend/education/tests",
     "backend/progress/tests",
     "backend/mentoring/tests",
     "backend/communication/tests",
-    "backend/translations/tests",
+    "backend/exams/tests",
 ]
 
 markers = [

@@ -6,11 +6,6 @@ from education.models import Enrollment
 from progress.models import CodeSubmission, UserAnswerRadio
 from users.models import User
 
-pytest_plugins = (
-    "content.tests.conftest",
-    "progress.tests.conftest",
-)
-
 
 @pytest.fixture
 def mentor_user(db):

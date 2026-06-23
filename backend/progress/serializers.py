@@ -176,6 +176,23 @@ class UserAnswerCheckBoxSerializer(serializers.ModelSerializer):
         }
 
         if not is_correct:
+            instance, _created = UserAnswerCheckBox.objects.get_or_create(
+                user=user,
+                question=question,
+            )
+            instance.failed_attempts = (instance.failed_attempts or 0) + 1
+            instance.selected_answers.set(selected_answers)
+            instance.is_correct = False
+            instance.points_earned = 0
+            instance.save(
+                update_fields=[
+                    "failed_attempts",
+                    "is_correct",
+                    "points_earned",
+                    "updated_at",
+                ]
+            )
+            base["failed_attempts"] = instance.failed_attempts
             return None, base
 
         instance, _created = UserAnswerCheckBox.objects.get_or_create(
@@ -334,3 +351,105 @@ class CodeSubmissionCreateSerializer(serializers.ModelSerializer):
         return CodeSubmission.objects.create(
             status="pending", **validated_data
         )
+
+
+class LessonUserCommentAuthorSerializer(serializers.Serializer):
+    public_id = serializers.UUIDField()
+    display_name = serializers.CharField()
+    avatar = serializers.CharField(allow_null=True)
+
+
+class LessonUserCommentSerializer(serializers.ModelSerializer):
+    author = serializers.SerializerMethodField()
+    is_mine = serializers.SerializerMethodField()
+
+    class Meta:
+        from progress.models import LessonUserComment
+
+        model = LessonUserComment
+        fields = (
+            "public_id",
+            "lesson_kind",
+            "lesson_public_id",
+            "body",
+            "author",
+            "is_mine",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = (
+            "public_id",
+            "author",
+            "is_mine",
+            "created_at",
+            "updated_at",
+        )
+
+    def get_author(self, obj):
+        user = obj.user
+        avatar = None
+        if user.avatar:
+            request = self.context.get("request")
+            try:
+                url = user.avatar.url
+                if (
+                    request
+                    and url
+                    and not url.startswith(("http://", "https://"))
+                ):
+                    url = request.build_absolute_uri(url)
+                avatar = url
+            except ValueError:
+                avatar = None
+        name = (
+            user.get_full_name().strip() or user.email or str(user.public_id)
+        )
+        return {
+            "public_id": user.public_id,
+            "display_name": name,
+            "avatar": avatar,
+        }
+
+    def get_is_mine(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user or request.user.is_anonymous:
+            return False
+        return obj.user_id == request.user.id
+
+    def validate_lesson_kind(self, value):
+        from progress.lesson_comments import LESSON_KINDS
+
+        if value not in LESSON_KINDS:
+            raise serializers.ValidationError(_("Неизвестный тип урока."))
+        return value
+
+    def validate_body(self, value):
+        text = (value or "").strip()
+        if not text:
+            raise serializers.ValidationError(
+                _("Комментарий не может быть пустым.")
+            )
+        if len(text) > 4000:
+            raise serializers.ValidationError(
+                _("Комментарий не должен превышать 4000 символов.")
+            )
+        return text
+
+    def validate(self, attrs):
+        from progress.lesson_comments import lesson_exists
+
+        kind = attrs.get("lesson_kind") or getattr(
+            self.instance, "lesson_kind", None
+        )
+        lesson_id = attrs.get("lesson_public_id") or getattr(
+            self.instance, "lesson_public_id", None
+        )
+        if kind and lesson_id and not lesson_exists(kind, lesson_id):
+            raise serializers.ValidationError(
+                {"lesson_public_id": _("Урок не найден или неактивен.")}
+            )
+        return attrs
+
+    def create(self, validated_data):
+        validated_data["user"] = self.context["request"].user
+        return super().create(validated_data)

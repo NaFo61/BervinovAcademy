@@ -13,6 +13,16 @@ from .models import (
     Technology,
     TestCase,
 )
+from .solution_access import (
+    build_reference_solution,
+    checkbox_solution_unlocked,
+    checkbox_wrong_attempts,
+    coding_solution_unlocked,
+    coding_wrong_attempts,
+    has_reference_solution_content,
+    radio_solution_unlocked,
+    radio_wrong_attempts,
+)
 from .video_utils import build_video_payload
 
 User = get_user_model()
@@ -68,6 +78,7 @@ class LessonTheorySerializer(serializers.ModelSerializer):
             "module_public_id",
             "title",
             "content",
+            "comment",
             "video",
             "order_index",
             "is_active",
@@ -318,10 +329,32 @@ class LessonRadioDetailSerializer(serializers.ModelSerializer):
         source="module.public_id", read_only=True
     )
     answer_options = serializers.SerializerMethodField()
-    video = serializers.SerializerMethodField()
+    solution_unlocked = serializers.SerializerMethodField()
+    wrong_attempts = serializers.SerializerMethodField()
+    has_reference_solution = serializers.SerializerMethodField()
+    reference_solution = serializers.SerializerMethodField()
 
-    def get_video(self, obj):
-        return _serialize_video(self, obj)
+    def _user(self):
+        request = self.context.get("request")
+        if not request or not request.user or request.user.is_anonymous:
+            return None
+        return request.user
+
+    def get_has_reference_solution(self, obj):
+        return has_reference_solution_content(obj)
+
+    def get_solution_unlocked(self, obj):
+        return radio_solution_unlocked(self._user(), obj)
+
+    def get_wrong_attempts(self, obj):
+        return radio_wrong_attempts(self._user(), obj)
+
+    def get_reference_solution(self, obj):
+        return build_reference_solution(
+            obj,
+            self.context.get("request"),
+            unlocked=radio_solution_unlocked(self._user(), obj),
+        )
 
     class Meta:
         model = LessonRadioQuestion
@@ -330,8 +363,12 @@ class LessonRadioDetailSerializer(serializers.ModelSerializer):
             "module_public_id",
             "title",
             "question_text",
+            "comment",
             "explanation",
-            "video",
+            "solution_unlocked",
+            "wrong_attempts",
+            "has_reference_solution",
+            "reference_solution",
             "order_index",
             "points",
             "is_active",
@@ -367,10 +404,32 @@ class LessonCheckBoxDetailSerializer(serializers.ModelSerializer):
         source="module.public_id", read_only=True
     )
     answer_options = serializers.SerializerMethodField()
-    video = serializers.SerializerMethodField()
+    solution_unlocked = serializers.SerializerMethodField()
+    wrong_attempts = serializers.SerializerMethodField()
+    has_reference_solution = serializers.SerializerMethodField()
+    reference_solution = serializers.SerializerMethodField()
 
-    def get_video(self, obj):
-        return _serialize_video(self, obj)
+    def _user(self):
+        request = self.context.get("request")
+        if not request or not request.user or request.user.is_anonymous:
+            return None
+        return request.user
+
+    def get_has_reference_solution(self, obj):
+        return has_reference_solution_content(obj)
+
+    def get_solution_unlocked(self, obj):
+        return checkbox_solution_unlocked(self._user(), obj)
+
+    def get_wrong_attempts(self, obj):
+        return checkbox_wrong_attempts(self._user(), obj)
+
+    def get_reference_solution(self, obj):
+        return build_reference_solution(
+            obj,
+            self.context.get("request"),
+            unlocked=checkbox_solution_unlocked(self._user(), obj),
+        )
 
     class Meta:
         model = LessonCheckBoxQuestion
@@ -379,8 +438,12 @@ class LessonCheckBoxDetailSerializer(serializers.ModelSerializer):
             "module_public_id",
             "title",
             "question_text",
+            "comment",
             "explanation",
-            "video",
+            "solution_unlocked",
+            "wrong_attempts",
+            "has_reference_solution",
+            "reference_solution",
             "order_index",
             "points",
             "is_active",
@@ -456,7 +519,10 @@ class CodingChallengeDetailSerializer(serializers.ModelSerializer):
     )
     test_cases = serializers.SerializerMethodField()
     user_solved = serializers.SerializerMethodField()
-    video = serializers.SerializerMethodField()
+    solution_unlocked = serializers.SerializerMethodField()
+    wrong_attempts = serializers.SerializerMethodField()
+    has_reference_solution = serializers.SerializerMethodField()
+    reference_solution = serializers.SerializerMethodField()
     course_public_id = serializers.UUIDField(
         source="course.public_id",
         read_only=True,
@@ -468,8 +534,27 @@ class CodingChallengeDetailSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
 
-    def get_video(self, obj):
-        return _serialize_video(self, obj)
+    def _user(self):
+        request = self.context.get("request")
+        if not request or not request.user or request.user.is_anonymous:
+            return None
+        return request.user
+
+    def get_has_reference_solution(self, obj):
+        return has_reference_solution_content(obj)
+
+    def get_solution_unlocked(self, obj):
+        return coding_solution_unlocked(self._user(), obj)
+
+    def get_wrong_attempts(self, obj):
+        return coding_wrong_attempts(self._user(), obj)
+
+    def get_reference_solution(self, obj):
+        return build_reference_solution(
+            obj,
+            self.context.get("request"),
+            unlocked=coding_solution_unlocked(self._user(), obj),
+        )
 
     class Meta:
         model = CodingChallenge
@@ -480,7 +565,11 @@ class CodingChallengeDetailSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "instructions",
-            "video",
+            "comment",
+            "solution_unlocked",
+            "wrong_attempts",
+            "has_reference_solution",
+            "reference_solution",
             "initial_code",
             "difficulty",
             "difficulty_display",

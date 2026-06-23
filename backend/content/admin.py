@@ -92,6 +92,8 @@ def _clone_course(original):
                 module=new_module,
                 title=lesson.title,
                 content=lesson.content,
+                comment=lesson.comment,
+                solution_text=lesson.solution_text,
                 video_url=lesson.video_url,
                 is_active=lesson.is_active,
             )
@@ -101,7 +103,9 @@ def _clone_course(original):
                 module=new_module,
                 title=question.title,
                 question_text=question.question_text,
+                comment=question.comment,
                 explanation=question.explanation,
+                solution_text=question.solution_text,
                 video_url=question.video_url,
                 points=question.points,
                 is_active=question.is_active,
@@ -120,7 +124,9 @@ def _clone_course(original):
                 module=new_module,
                 title=question.title,
                 question_text=question.question_text,
+                comment=question.comment,
                 explanation=question.explanation,
+                solution_text=question.solution_text,
                 video_url=question.video_url,
                 points=question.points,
                 is_active=question.is_active,
@@ -139,6 +145,8 @@ def _clone_course(original):
                 title=challenge.title,
                 description=challenge.description,
                 instructions=challenge.instructions,
+                comment=challenge.comment,
+                solution_text=challenge.solution_text,
                 video_url=challenge.video_url,
                 difficulty=challenge.difficulty,
                 points=challenge.points,
@@ -783,6 +791,7 @@ class LessonTheoryAdmin(ModelAdmin):
                     "module",
                     "title",
                     "content",
+                    "comment",
                     "video_url",
                     "video_file",
                     "is_active",
@@ -951,7 +960,9 @@ class LessonRadioQuestionAdmin(ModelAdmin):
                     "module",
                     "title",
                     "question_text",
+                    "comment",
                     "explanation",
+                    "solution_text",
                     "video_url",
                     "video_file",
                     "points",
@@ -1214,7 +1225,9 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
                     "module",
                     "title",
                     "question_text",
+                    "comment",
                     "explanation",
+                    "solution_text",
                     "video_url",
                     "video_file",
                     "points",
@@ -1416,10 +1429,7 @@ class LessonCheckBoxQuestionAdmin(ModelAdmin):
 
 @admin.register(CodingChallenge)
 class CodingChallengeAdmin(ModelAdmin):
-    """Редактирование задачи (код, тесты) — открывается из модуля курса."""
-
-    def has_module_permission(self, request):
-        return False
+    """Задачи с кодом — список, создание и редактирование с тестами."""
 
     list_display = (
         "title",
@@ -1458,6 +1468,8 @@ class CodingChallengeAdmin(ModelAdmin):
                     "title",
                     "description",
                     "instructions",
+                    "comment",
+                    "solution_text",
                     "video_url",
                     "video_file",
                     "difficulty",

@@ -268,9 +268,24 @@ function LearnPage({ navigate, hashParams }) {
     const path = paths[lessonType];
     if (!path) { setLessonLoading(false); return; }
 
-    window.fetchApiJson(path)
+    window.fetchApiJson(path, { auth: true })
       .then(d => { setLessonData(d); setLessonLoading(false); })
       .catch(() => setLessonLoading(false));
+  }, [lessonType, lessonId, examParam]);
+
+  const refreshLesson = React.useCallback(() => {
+    if (!lessonType || !lessonId) return Promise.resolve();
+    const paths = {
+      theory:   `/api/content/lessons-theory/${encodeURIComponent(lessonId)}/`,
+      radio:    `/api/content/lessons-radio/${encodeURIComponent(lessonId)}/`,
+      checkbox: `/api/content/lessons-checkbox/${encodeURIComponent(lessonId)}/`,
+      coding:   `/api/content/challenges/${encodeURIComponent(lessonId)}/`,
+    };
+    const path = paths[lessonType];
+    if (!path) return Promise.resolve();
+    return window.fetchApiJson(path, { auth: true })
+      .then((d) => { setLessonData(d); return d; })
+      .catch(() => {});
   }, [lessonType, lessonId]);
 
   // ── auto-mark theory as read on view ──
@@ -667,6 +682,7 @@ function LearnPage({ navigate, hashParams }) {
                   markDone('theory', lessonData.public_id);
                   refreshCourseProgress();
                 }}
+                onLogin={() => navigate(Routes.AUTH)}
               />
 
             ) : lessonType === 'radio' && lessonData ? (
@@ -680,6 +696,7 @@ function LearnPage({ navigate, hashParams }) {
                 onSubmit={handleRadioSubmit}
                 onRetry={handleRadioRetry}
                 onLogin={() => navigate(Routes.AUTH)}
+                onRefreshLesson={refreshLesson}
               />
 
             ) : lessonType === 'checkbox' && lessonData ? (
@@ -693,6 +710,7 @@ function LearnPage({ navigate, hashParams }) {
                 onSubmit={handleBoxSubmit}
                 onRetry={handleBoxRetry}
                 onLogin={() => navigate(Routes.AUTH)}
+                onRefreshLesson={refreshLesson}
               />
 
             ) : lessonType === 'coding' && lessonData ? (
@@ -704,6 +722,7 @@ function LearnPage({ navigate, hashParams }) {
                   refreshCourseProgress();
                 }}
                 onLogin={() => navigate(Routes.AUTH)}
+                onRefreshLesson={refreshLesson}
               />
 
             ) : (
@@ -777,20 +796,19 @@ print(solve())`;
 
 // ─── Theory lesson ───────────────────────────────────────────────────────────
 
-function TheoryLesson({ lesson, isDone, onComplete }) {
+function TheoryLesson({ lesson, isDone, onComplete, onLogin }) {
   return (
     <div>
       <LessonHeader type="theory" title={lesson.title} label="Теоретический урок"/>
 
       <window.VideoExplanation video={lesson.video} title="Видео-объяснение"/>
 
-      {/* content */}
       <div
         className="theory-content mt-6"
         dangerouslySetInnerHTML={{ __html: lesson.content || '<p>Содержимое урока ещё добавляется.</p>' }}
       />
+      <window.LessonInstructorNote text={lesson.comment} />
 
-      {/* done indicator / button */}
       <div className="mt-10">
         {isDone ? (
           <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
@@ -804,28 +822,60 @@ function TheoryLesson({ lesson, isDone, onComplete }) {
           </div>
         )}
       </div>
+
+      <window.LessonUserComments
+        lessonKind="theory"
+        lessonId={lesson.public_id}
+        onLogin={onLogin}
+      />
     </div>
   );
 }
 
 // ─── Radio question ──────────────────────────────────────────────────────────
 
-function RadioLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin }) {
+function RadioLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson }) {
   const loggedIn  = !!localStorage.getItem('access_token');
   const isCorrect = result?.is_correct;
+  const [sessionFails, setSessionFails] = React.useState(0);
+  const prevResultId = React.useRef(null);
+
+  React.useEffect(() => {
+    setSessionFails(0);
+    prevResultId.current = null;
+  }, [lesson.public_id]);
+
+  const effectiveFails = loggedIn ? 0 : sessionFails;
+  const solutionUnlocked = window.computeSolutionUnlocked(lesson, effectiveFails, isCorrect);
+
+  React.useEffect(() => {
+    if (!submitted) return;
+    const resultKey = result?.public_id || 'anon';
+    if (prevResultId.current === resultKey) return;
+    prevResultId.current = resultKey;
+
+    if (loggedIn && result) {
+      onRefreshLesson?.();
+    } else if (!loggedIn) {
+      setSessionFails((n) => n + 1);
+    }
+  }, [submitted, result, loggedIn, onRefreshLesson]);
+
+  React.useEffect(() => {
+    if (!solutionUnlocked || !loggedIn || lesson.reference_solution) return;
+    onRefreshLesson?.();
+  }, [solutionUnlocked, loggedIn, lesson.public_id, lesson.reference_solution, onRefreshLesson]);
 
   return (
     <div>
       <LessonHeader type="radio" title={lesson.title} label="Вопрос — один правильный ответ"/>
 
-      {/* question text */}
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
         <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
       </div>
 
-      <window.VideoExplanation video={lesson.video} title="Разбор задания"/>
+      <window.LessonInstructorNote text={lesson.comment} />
 
-      {/* options */}
       <div className="mt-5 space-y-3">
         {(lesson.answer_options || []).map(opt => {
           const isSel     = selected === opt.public_id;
@@ -847,7 +897,6 @@ function RadioLesson({ lesson, selected, setSelected, submitted, result, loading
                 checked={isSel}
                 onChange={() => !submitted && setSelected(opt.public_id)}
               />
-              {/* custom radio */}
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all
                 ${showOk  ? 'border-emerald-500 bg-emerald-500' : ''}
                 ${showBad ? 'border-red-500 bg-red-500' : ''}
@@ -889,17 +938,58 @@ function RadioLesson({ lesson, selected, setSelected, submitted, result, loading
           loggedIn={loggedIn}
           onLogin={onLogin}
           onRetry={!isCorrect ? onRetry : undefined}
+          solutionUnlocked={solutionUnlocked}
+          hasReferenceSolution={window.hasReferenceSolutionMaterial(lesson)}
         />
       )}
+
+      <window.LessonDiscussionSection
+        lessonKind="radio"
+        lessonId={lesson.public_id}
+        onLogin={onLogin}
+        showReferenceSolution={window.hasReferenceSolutionMaterial(lesson)}
+        referenceSolution={lesson.reference_solution}
+        solutionUnlocked={solutionUnlocked}
+        wrongAttempts={lesson.wrong_attempts}
+        sessionFails={effectiveFails}
+      />
     </div>
   );
 }
 
 // ─── Checkbox question ───────────────────────────────────────────────────────
 
-function CheckboxLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin }) {
+function CheckboxLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson }) {
   const loggedIn  = !!localStorage.getItem('access_token');
   const isCorrect = result?.is_correct;
+  const [sessionFails, setSessionFails] = React.useState(0);
+  const prevSubmitKey = React.useRef(null);
+
+  React.useEffect(() => {
+    setSessionFails(0);
+    prevSubmitKey.current = null;
+  }, [lesson.public_id]);
+
+  const effectiveFails = loggedIn ? 0 : sessionFails;
+  const solutionUnlocked = window.computeSolutionUnlocked(lesson, effectiveFails, isCorrect);
+
+  React.useEffect(() => {
+    if (!submitted) return;
+    const key = JSON.stringify(result || {});
+    if (prevSubmitKey.current === key) return;
+    prevSubmitKey.current = key;
+
+    if (loggedIn) {
+      onRefreshLesson?.();
+    } else if (!isCorrect) {
+      setSessionFails((n) => n + 1);
+    }
+  }, [submitted, result, isCorrect, loggedIn, onRefreshLesson]);
+
+  React.useEffect(() => {
+    if (!solutionUnlocked || !loggedIn || lesson.reference_solution) return;
+    onRefreshLesson?.();
+  }, [solutionUnlocked, loggedIn, lesson.public_id, lesson.reference_solution, onRefreshLesson]);
 
   const toggle = (id) => {
     if (submitted) return;
@@ -918,7 +1008,7 @@ function CheckboxLesson({ lesson, selected, setSelected, submitted, result, load
         <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
       </div>
 
-      <window.VideoExplanation video={lesson.video} title="Разбор задания"/>
+      <window.LessonInstructorNote text={lesson.comment} />
 
       <div className="mt-4 text-[11px] text-ink/40 flex items-center gap-1.5 mb-4">
         <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -942,7 +1032,6 @@ function CheckboxLesson({ lesson, selected, setSelected, submitted, result, load
                 checked={isSel}
                 onChange={() => toggle(opt.public_id)}
               />
-              {/* custom checkbox */}
               <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all
                 ${isSel
                   ? 'border-cyan-600 bg-cyan-600'
@@ -979,8 +1068,21 @@ function CheckboxLesson({ lesson, selected, setSelected, submitted, result, load
           loggedIn={loggedIn}
           onLogin={onLogin}
           onRetry={!isCorrect ? onRetry : undefined}
+          solutionUnlocked={solutionUnlocked}
+          hasReferenceSolution={window.hasReferenceSolutionMaterial(lesson)}
         />
       )}
+
+      <window.LessonDiscussionSection
+        lessonKind="checkbox"
+        lessonId={lesson.public_id}
+        onLogin={onLogin}
+        showReferenceSolution={window.hasReferenceSolutionMaterial(lesson)}
+        referenceSolution={lesson.reference_solution}
+        solutionUnlocked={solutionUnlocked}
+        wrongAttempts={lesson.wrong_attempts}
+        sessionFails={effectiveFails}
+      />
     </div>
   );
 }
@@ -1042,7 +1144,7 @@ function QuizActions({ disabled, loading, loggedIn, onSubmit, onLogin }) {
   );
 }
 
-function QuizResult({ isCorrect, hasResult, explanation, pointsEarned, loggedIn, onLogin, onRetry }) {
+function QuizResult({ isCorrect, hasResult, explanation, pointsEarned, loggedIn, onLogin, onRetry, solutionUnlocked, hasReferenceSolution }) {
   const showScore = hasResult && isCorrect !== undefined;
   return (
     <div className={`mt-7 p-5 rounded-2xl border ${
@@ -1077,6 +1179,14 @@ function QuizResult({ isCorrect, hasResult, explanation, pointsEarned, loggedIn,
       {explanation && (
         <p className="text-[13.5px] text-ink/70 leading-relaxed mt-1">{explanation}</p>
       )}
+      {solutionUnlocked && hasReferenceSolution && (
+        <button type="button" onClick={() => window.scrollToLessonReferenceSolution?.()}
+          className="mt-4 h-11 px-5 rounded-xl bg-white border border-violet-200 text-sm font-semibold text-violet-700
+            hover:border-violet-300 hover:bg-violet-50 transition-colors inline-flex items-center gap-2">
+          <I.Play className="w-4 h-4"/>
+          Разбор ниже ↓
+        </button>
+      )}
       {onRetry && (
         <button type="button" onClick={onRetry}
           className="mt-4 h-11 px-5 rounded-xl bg-white border border-rose-200 text-sm font-semibold text-rose-700
@@ -1097,7 +1207,7 @@ function QuizResult({ isCorrect, hasResult, explanation, pointsEarned, loggedIn,
 
 // ─── Coding challenge ────────────────────────────────────────────────────────
 
-function CodeSubmissionResult({ result, points, loggedIn, onLogin, onRetry }) {
+function CodeSubmissionResult({ result, points, loggedIn, onLogin, onRetry, solutionUnlocked, hasReferenceSolution }) {
   if (!result) return null;
 
   const passed = result.status === 'completed';
@@ -1179,6 +1289,15 @@ function CodeSubmissionResult({ result, points, loggedIn, onLogin, onRetry }) {
         </button>
       )}
 
+      {solutionUnlocked && hasReferenceSolution && (
+        <button type="button" onClick={() => window.scrollToLessonReferenceSolution?.()}
+          className="mt-4 h-11 px-5 rounded-xl bg-white border border-violet-200 text-sm font-semibold text-violet-700
+            hover:border-violet-300 hover:bg-violet-50 transition-colors inline-flex items-center gap-2">
+          <I.Play className="w-4 h-4"/>
+          Разбор ниже ↓
+        </button>
+      )}
+
       {!loggedIn && (
         <button onClick={onLogin}
           className="mt-3 text-[12px] text-violet-600 underline underline-offset-2 hover:text-violet-800 transition-colors">
@@ -1189,7 +1308,7 @@ function CodeSubmissionResult({ result, points, loggedIn, onLogin, onRetry }) {
   );
 }
 
-function CodingLesson({ lesson, isDone, onComplete, onLogin }) {
+function CodingLesson({ lesson, isDone, onComplete, onLogin, onRefreshLesson }) {
   const loggedIn = !!localStorage.getItem('access_token');
   const [code, setCode] = React.useState(lesson.initial_code || DEFAULT_PYTHON_CODE);
   const [submitLoading, setSubmitLoading] = React.useState(false);
@@ -1206,6 +1325,15 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin }) {
   const tests = (lesson.test_cases || []).slice().sort(
     (a, b) => (a.order_index || 0) - (b.order_index || 0),
   );
+
+  const solved = isDone || submitResult?.status === 'completed';
+  const failed = submitResult && isCodeSubmissionFinal(submitResult.status) && submitResult.status !== 'completed';
+  const solutionUnlocked = window.computeSolutionUnlocked(lesson, 0, solved);
+
+  React.useEffect(() => {
+    if (!solutionUnlocked || !loggedIn || lesson.reference_solution) return;
+    onRefreshLesson?.();
+  }, [solutionUnlocked, loggedIn, lesson.public_id, lesson.reference_solution, onRefreshLesson]);
 
   const handleSubmit = async () => {
     if (submitLoading) return;
@@ -1233,21 +1361,20 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin }) {
 
       if (isCodeSubmissionFinal(created.status)) {
         if (created.status === 'completed') onComplete();
+        else onRefreshLesson?.();
         return;
       }
 
       const final = await pollCodeSubmission(created.public_id);
       setSubmitResult(final);
       if (final.status === 'completed') onComplete();
+      else onRefreshLesson?.();
     } catch (e) {
       setSubmitError(e.message || 'Не удалось отправить решение');
     } finally {
       setSubmitLoading(false);
     }
   };
-
-  const solved = isDone || submitResult?.status === 'completed';
-  const failed = submitResult && isCodeSubmissionFinal(submitResult.status) && submitResult.status !== 'completed';
 
   const handleRetry = () => {
     setSubmitResult(null);
@@ -1270,7 +1397,7 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin }) {
         </div>
       )}
 
-      <window.VideoExplanation video={lesson.video} title="Видео-разбор задачи"/>
+      <window.LessonInstructorNote text={lesson.comment} />
 
       {lesson.instructions && (
         <div className="mt-5">
@@ -1337,6 +1464,8 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin }) {
         loggedIn={loggedIn}
         onLogin={onLogin}
         onRetry={failed ? handleRetry : undefined}
+        solutionUnlocked={solutionUnlocked}
+        hasReferenceSolution={window.hasReferenceSolutionMaterial(lesson)}
       />
 
       {solved && !submitLoading && (
@@ -1345,6 +1474,17 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin }) {
           <span className="text-sm font-semibold text-emerald-700">Задача решена</span>
         </div>
       )}
+
+      <window.LessonDiscussionSection
+        lessonKind="coding"
+        lessonId={lesson.public_id}
+        onLogin={onLogin}
+        showReferenceSolution={window.hasReferenceSolutionMaterial(lesson)}
+        referenceSolution={lesson.reference_solution}
+        solutionUnlocked={solutionUnlocked}
+        wrongAttempts={lesson.wrong_attempts}
+        sessionFails={0}
+      />
     </div>
   );
 }

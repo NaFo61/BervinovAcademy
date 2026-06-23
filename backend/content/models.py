@@ -285,18 +285,30 @@ class LessonTheory(UUIDPublicIdMixin, models.Model):
     )
     title = models.CharField(max_length=200, verbose_name=_("Название урока"))
     content = models.TextField(verbose_name=_("Содержание урока"))
+    comment = models.TextField(
+        verbose_name=_("Заметка преподавателя"),
+        blank=True,
+        help_text=_(
+            "Пояснение от преподавателя на вкладке материала (не путать с комментариями учеников)"
+        ),
+    )
+    solution_text = models.TextField(
+        verbose_name=_("Текст эталонного решения"),
+        blank=True,
+        help_text=_("Только для заданий с ответом; у теории не используется"),
+    )
     video_url = models.URLField(
         max_length=500,
         blank=True,
         verbose_name=_("Ссылка на видео"),
-        help_text=VIDEO_URL_HELP,
+        help_text=_("Видео к уроку (не эталонное решение)"),
     )
     video_file = models.FileField(
         upload_to=_lesson_video_upload_to,
         blank=True,
         null=True,
         verbose_name=_("Видеофайл"),
-        help_text=_("Или загрузите MP4/WebM как объяснение"),
+        help_text=_("Видео к уроку (не эталонное решение)"),
     )
     order_index = models.PositiveIntegerField(
         default=1,
@@ -360,22 +372,37 @@ class LessonRadioQuestion(UUIDPublicIdMixin, models.Model):
         max_length=200, verbose_name=_("Название вопроса")
     )
     question_text = models.TextField(verbose_name=_("Текст вопроса"))
+    comment = models.TextField(
+        verbose_name=_("Заметка преподавателя"),
+        blank=True,
+        help_text=_("Пояснение к заданию на вкладке «Задание»"),
+    )
     explanation = models.TextField(
         verbose_name=_("Пояснение"),
         blank=True,
-        help_text=_("Пояснение правильного ответа, показываемое после ответа"),
+        help_text=_(
+            "Краткий комментарий после ответа (правильного или неверного)"
+        ),
+    )
+    solution_text = models.TextField(
+        verbose_name=_("Текст эталонного решения"),
+        blank=True,
+        help_text=_(
+            "HTML или текст: код в <pre><code>, картинки, списки — показывается в обсуждении после разблокировки"
+        ),
     )
     video_url = models.URLField(
         max_length=500,
         blank=True,
         verbose_name=_("Ссылка на видео"),
-        help_text=VIDEO_URL_HELP,
+        help_text=_("Видео-разбор в блоке обсуждения"),
     )
     video_file = models.FileField(
         upload_to=_lesson_video_upload_to,
         blank=True,
         null=True,
         verbose_name=_("Видеофайл"),
+        help_text=_("Видео-разбор в блоке обсуждения"),
     )
     order_index = models.PositiveIntegerField(
         default=1,
@@ -478,22 +505,37 @@ class LessonCheckBoxQuestion(UUIDPublicIdMixin, models.Model):
         max_length=200, verbose_name=_("Название вопроса")
     )
     question_text = models.TextField(verbose_name=_("Текст вопроса"))
+    comment = models.TextField(
+        verbose_name=_("Заметка преподавателя"),
+        blank=True,
+        help_text=_("Пояснение к заданию на вкладке «Задание»"),
+    )
     explanation = models.TextField(
         verbose_name=_("Пояснение"),
         blank=True,
-        help_text=_("Пояснение правильных ответов, показываемое после ответа"),
+        help_text=_(
+            "Краткий комментарий после ответа (правильного или неверного)"
+        ),
+    )
+    solution_text = models.TextField(
+        verbose_name=_("Текст эталонного решения"),
+        blank=True,
+        help_text=_(
+            "HTML или текст: код в <pre><code>, картинки, списки — показывается в обсуждении после разблокировки"
+        ),
     )
     video_url = models.URLField(
         max_length=500,
         blank=True,
         verbose_name=_("Ссылка на видео"),
-        help_text=VIDEO_URL_HELP,
+        help_text=_("Видео-разбор в блоке обсуждения"),
     )
     video_file = models.FileField(
         upload_to=_lesson_video_upload_to,
         blank=True,
         null=True,
         verbose_name=_("Видеофайл"),
+        help_text=_("Видео-разбор в блоке обсуждения"),
     )
     order_index = models.PositiveIntegerField(
         default=1,
@@ -588,17 +630,30 @@ class CodingChallenge(UUIDPublicIdMixin, models.Model):
         verbose_name=_("Инструкция по выполнению"),
         help_text=_("Подробная инструкция для пользователя"),
     )
+    comment = models.TextField(
+        verbose_name=_("Заметка преподавателя"),
+        blank=True,
+        help_text=_("Пояснение к задаче на вкладке «Задание»"),
+    )
+    solution_text = models.TextField(
+        verbose_name=_("Текст эталонного решения"),
+        blank=True,
+        help_text=_(
+            "HTML или текст: код в <pre><code>, картинки, списки — показывается в обсуждении после разблокировки"
+        ),
+    )
     video_url = models.URLField(
         max_length=500,
         blank=True,
         verbose_name=_("Ссылка на видео"),
-        help_text=VIDEO_URL_HELP,
+        help_text=_("Видео-разбор в блоке обсуждения"),
     )
     video_file = models.FileField(
         upload_to=_lesson_video_upload_to,
         blank=True,
         null=True,
         verbose_name=_("Видеофайл"),
+        help_text=_("Видео-разбор в блоке обсуждения"),
     )
     initial_code = models.TextField(
         verbose_name=_("Начальный код"),

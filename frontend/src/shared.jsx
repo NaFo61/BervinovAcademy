@@ -642,6 +642,317 @@ function VideoExplanation({ video, title }) {
   );
 }
 
+const SOLUTION_FAIL_THRESHOLD = 3;
+
+function LessonInstructorNote({ text }) {
+  if (!text || !String(text).trim()) return null;
+  return (
+    <div className="mt-5 p-4 rounded-xl bg-violet-50/80 border border-violet-100">
+      <div className="text-[11px] font-semibold uppercase tracking-widest text-violet-600/80 mb-2">
+        Заметка преподавателя
+      </div>
+      <p className="text-[14px] text-ink/75 leading-relaxed whitespace-pre-wrap">{text}</p>
+    </div>
+  );
+}
+
+function formatCommentDate(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleString('ru-RU', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch (_) {
+    return '';
+  }
+}
+
+function pluralErrors(n) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'ошибка';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'ошибки';
+  return 'ошибок';
+}
+
+function scrollToLessonReferenceSolution() {
+  document.getElementById('lesson-reference-solution')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function ReferenceSolutionContent({ referenceSolution }) {
+  if (!referenceSolution || (!referenceSolution.video && !referenceSolution.text)) {
+    return (
+      <p className="text-[13px] text-ink/45 text-center py-2">
+        Материал эталонного решения ещё не добавлен.
+      </p>
+    );
+  }
+  return (
+    <>
+      <VideoExplanation video={referenceSolution.video} title="Видео-разбор"/>
+      {referenceSolution.text && (
+        <div
+          className={`theory-content text-[15px] text-ink/85 leading-relaxed ${referenceSolution.video ? 'mt-6' : ''}`}
+          dangerouslySetInnerHTML={{ __html: referenceSolution.text }}
+        />
+      )}
+    </>
+  );
+}
+
+function InlineReferenceSolution({ referenceSolution, unlocked, loggedIn, onLogin, wrongAttempts, sessionFails }) {
+  const fails = (wrongAttempts || 0) + (sessionFails || 0);
+  const remaining = Math.max(0, SOLUTION_FAIL_THRESHOLD - fails);
+
+  if (unlocked && loggedIn) {
+    return (
+      <div id="lesson-reference-solution" className="rounded-2xl ring-1 ring-violet-200/60 bg-white p-5 shadow-soft">
+        <div className="flex items-center gap-2 mb-4">
+          <I.Play className="w-4 h-4 text-violet-600"/>
+          <h3 className="text-[14px] font-bold text-ink">Эталонное решение</h3>
+        </div>
+        <ReferenceSolutionContent referenceSolution={referenceSolution} />
+      </div>
+    );
+  }
+
+  return (
+    <div id="lesson-reference-solution" className="relative rounded-2xl overflow-hidden ring-1 ring-black/[0.06] bg-white">
+      <div className="p-5 blur-md select-none pointer-events-none opacity-70" aria-hidden="true">
+        <div className="aspect-video bg-gradient-to-br from-violet-100/80 to-cyan-100/80 rounded-xl mb-4 flex items-center justify-center">
+          <div className="w-14 h-14 rounded-full bg-white/60 flex items-center justify-center">
+            <I.Play className="w-6 h-6 text-violet-400"/>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="h-3 bg-black/[0.08] rounded-full w-full"/>
+          <div className="h-3 bg-black/[0.08] rounded-full w-4/5"/>
+          <pre className="mt-3 p-3 rounded-lg bg-black/[0.04] text-[11px] font-mono text-ink/40 leading-relaxed">{`def solve():\n    return answer`}</pre>
+        </div>
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center bg-white/55 backdrop-blur-[2px]">
+        <div className="text-center px-6 py-4 max-w-sm">
+          {!unlocked ? (
+            <>
+              <div className="text-2xl mb-2 opacity-80">🔒</div>
+              <p className="text-[14px] font-semibold text-ink/80">Эталонное решение</p>
+              <p className="text-[12px] text-ink/50 mt-2 leading-relaxed">
+                Откроется после правильного ответа
+                {remaining > 0 && (
+                  <> или ещё {remaining} {pluralErrors(remaining)} ({fails} из {SOLUTION_FAIL_THRESHOLD})</>
+                )}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-[14px] font-semibold text-violet-800">Разбор доступен</p>
+              <p className="text-[12px] text-ink/50 mt-1 mb-3">Войдите, чтобы посмотреть</p>
+              {onLogin && (
+                <button type="button" onClick={onLogin}
+                  className="h-10 px-5 rounded-xl btn-grad text-white text-sm font-semibold">
+                  Войти
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LessonCommentsBlock({ lessonKind, lessonId, onLogin, className }) {
+  const loggedIn = !!localStorage.getItem('access_token');
+  const [items, setItems] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [text, setText] = React.useState('');
+  const [submitting, setSubmitting] = React.useState(false);
+  const [error, setError] = React.useState('');
+
+  const load = React.useCallback(() => {
+    if (!lessonKind || !lessonId) return Promise.resolve();
+    setLoading(true);
+    const qs = `?lesson_kind=${encodeURIComponent(lessonKind)}&lesson=${encodeURIComponent(lessonId)}`;
+    return window.fetchApiJson(`/api/progress/lesson-comments/${qs}`)
+      .then((data) => {
+        setItems(Array.isArray(data) ? data : (data?.results || []));
+      })
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  }, [lessonKind, lessonId]);
+
+  React.useEffect(() => {
+    load();
+  }, [load]);
+
+  const submit = async () => {
+    const body = (text || '').trim();
+    if (!body || submitting) return;
+    if (!loggedIn) {
+      onLogin?.();
+      return;
+    }
+    setSubmitting(true);
+    setError('');
+    try {
+      const created = await window.fetchApiJson('/api/progress/lesson-comments/', {
+        method: 'POST',
+        body: {
+          lesson_kind: lessonKind,
+          lesson_public_id: lessonId,
+          body,
+        },
+        auth: true,
+      });
+      setItems((prev) => [...prev, created]);
+      setText('');
+    } catch (e) {
+      setError(e.message || 'Не удалось отправить комментарий');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const remove = async (publicId) => {
+    if (!loggedIn || !publicId) return;
+    try {
+      await window.fetchApiJson(
+        `/api/progress/lesson-comments/${encodeURIComponent(publicId)}/`,
+        { method: 'DELETE', auth: true },
+      );
+      setItems((prev) => prev.filter((c) => c.public_id !== publicId));
+    } catch (e) {
+      setError(e.message || 'Не удалось удалить комментарий');
+    }
+  };
+
+  return (
+    <div className={className || 'mt-12 pt-8 border-t border-black/[0.06]'}>
+      <div className="flex items-center gap-2 mb-5">
+        <I.Chat className="w-4 h-4 text-ink/45"/>
+        <h2 className="text-[15px] font-bold text-ink">Обсуждение</h2>
+        <span className="text-[11px] text-ink/40">{items.length}</span>
+      </div>
+
+      {loading ? (
+        <p className="text-sm text-ink/45">Загружаем комментарии…</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-ink/45 mb-5">Пока нет комментариев. Будьте первым!</p>
+      ) : (
+        <div className="space-y-4 mb-6">
+          {items.map((c) => (
+            <div key={c.public_id} className="flex gap-3">
+              <div className="w-9 h-9 rounded-full bg-violet-500/10 shrink-0 overflow-hidden flex items-center justify-center text-sm font-bold text-violet-600">
+                {c.author?.avatar ? (
+                  <img src={c.author.avatar} alt="" className="w-full h-full object-cover"/>
+                ) : (
+                  (c.author?.display_name || '?').slice(0, 1).toUpperCase()
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-[13px] font-semibold text-ink">
+                    {c.author?.display_name || 'Пользователь'}
+                  </span>
+                  <span className="text-[11px] text-ink/40">{formatCommentDate(c.created_at)}</span>
+                  {c.is_mine && (
+                    <button type="button" onClick={() => remove(c.public_id)}
+                      className="text-[11px] text-rose-500 hover:text-rose-700 ml-auto">
+                      Удалить
+                    </button>
+                  )}
+                </div>
+                <p className="mt-1 text-[14px] text-ink/75 leading-relaxed whitespace-pre-wrap">{c.body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {loggedIn ? (
+        <div className="rounded-2xl ring-1 ring-black/[0.06] bg-white p-4 shadow-soft">
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={3}
+            maxLength={4000}
+            placeholder="Напишите комментарий…"
+            className="w-full resize-y text-[14px] text-ink/80 placeholder:text-ink/35 focus:outline-none"
+          />
+          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+          <div className="mt-3 flex justify-end">
+            <button type="button" onClick={submit} disabled={!text.trim() || submitting}
+              className="h-10 px-5 rounded-xl btn-grad text-white text-sm font-semibold disabled:opacity-40">
+              {submitting ? 'Отправка…' : 'Отправить'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={onLogin}
+          className="text-sm text-violet-600 font-semibold hover:text-violet-800 transition-colors">
+          Войдите, чтобы оставить комментарий →
+        </button>
+      )}
+    </div>
+  );
+}
+
+function LessonUserComments(props) {
+  return <LessonCommentsBlock {...props} />;
+}
+
+function LessonDiscussionSection({
+  lessonKind,
+  lessonId,
+  onLogin,
+  showReferenceSolution,
+  referenceSolution,
+  solutionUnlocked,
+  wrongAttempts,
+  sessionFails,
+}) {
+  const loggedIn = !!localStorage.getItem('access_token');
+
+  return (
+    <div id="lesson-discussion" className="mt-12 pt-8 border-t border-black/[0.06]">
+      {showReferenceSolution && (
+        <InlineReferenceSolution
+          referenceSolution={referenceSolution}
+          unlocked={solutionUnlocked}
+          loggedIn={loggedIn}
+          onLogin={onLogin}
+          wrongAttempts={wrongAttempts}
+          sessionFails={sessionFails}
+        />
+      )}
+      <LessonCommentsBlock
+        lessonKind={lessonKind}
+        lessonId={lessonId}
+        onLogin={onLogin}
+        className={showReferenceSolution ? 'mt-8' : ''}
+      />
+    </div>
+  );
+}
+
+function hasReferenceSolutionMaterial(lesson) {
+  if (!lesson) return false;
+  if (lesson.has_reference_solution === true) return true;
+  if (lesson.has_reference_solution === false) return false;
+  if (lesson.reference_solution) return true;
+  return false;
+}
+
+function computeSolutionUnlocked(lesson, sessionFails, justCorrect) {
+  if (!lesson) return false;
+  if (justCorrect || lesson.solution_unlocked) return true;
+  const fails = (lesson.wrong_attempts || 0) + (sessionFails || 0);
+  return fails >= SOLUTION_FAIL_THRESHOLD;
+}
+
 // ------- Icons (line, 1.6 stroke) -------
 const I = {
   Logo: ({ className = 'w-8 h-8' }) =>
@@ -1358,6 +1669,13 @@ Object.assign(window, {
   fetchNotifications,
   WhiteboardPreviewModal,
   VideoExplanation,
+  LessonInstructorNote,
+  LessonUserComments,
+  LessonDiscussionSection,
+  scrollToLessonReferenceSolution,
+  hasReferenceSolutionMaterial,
+  computeSolutionUnlocked,
+  SOLUTION_FAIL_THRESHOLD,
   mapApiCourseToCard,
   mapApiCourseToCourse,
   mapApiModules,

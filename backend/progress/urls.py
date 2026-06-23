@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from progress.views import CourseProgressView
 from progress.viewsets import (
+    LessonUserCommentViewSet,
     UserAnswerCheckBoxViewSet,
     UserAnswerRadioViewSet,
     UserCodeSubmissionViewSet,
@@ -23,6 +24,11 @@ answers_router.register(
 )
 answers_router.register(
     r"theory", UserLessonTheoryReadViewSet, basename="reads-theory"
+)
+answers_router.register(
+    r"lesson-comments",
+    LessonUserCommentViewSet,
+    basename="lesson-comments",
 )
 
 app_name = "progress"

@@ -254,12 +254,13 @@ function MentorPage({ navigate }) {
         )}
 
         <div className="flex flex-wrap gap-2">
-          {['courses', 'students', 'code', 'quiz', 'calls'].map((id) => (
+          {['courses', 'editor', 'students', 'code', 'quiz', 'calls'].map((id) => (
             <button key={id} type="button" onClick={() => setTab(id)}
               className={`h-10 px-4 rounded-xl text-sm font-semibold transition-colors ${
                 tab === id ? 'grad-bg text-white shadow-soft' : 'bg-white ring-1 ring-black/[0.06] text-ink/70'
               }`}>
               {id === 'courses' && 'Курсы'}
+              {id === 'editor' && 'Редактор'}
               {id === 'students' && 'Ученики'}
               {id === 'code' && 'Код'}
               {id === 'quiz' && 'Тесты'}
@@ -295,6 +296,16 @@ function MentorPage({ navigate }) {
 
         {loading ? (
           <div className="py-16 text-center text-ink/50 text-sm">Загрузка…</div>
+        ) : tab === 'editor' ? (
+          selectedCourse ? (
+            <window.ContentEditorPanel
+              courseId={selectedCourse}
+              courses={courses}
+              onCourseChange={(id) => { setSelectedCourse(id); setSelectedStudent(null); }}
+            />
+          ) : (
+            <div className="py-16 text-center text-ink/50 text-sm">Выберите курс выше</div>
+          )
         ) : tab === 'courses' ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {courses.map((c) => (
@@ -308,6 +319,9 @@ function MentorPage({ navigate }) {
                   <div><span className="text-ink/45">Завершили</span><div className="font-semibold">{c.completed_count}</div></div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-3">
+                  <MentorLink onClick={() => { setSelectedCourse(c.course_public_id); setTab('editor'); }}>
+                    Редактор →
+                  </MentorLink>
                   <MentorLink onClick={() => { setSelectedCourse(c.course_public_id); setTab('students'); }}>
                     Ученики →
                   </MentorLink>

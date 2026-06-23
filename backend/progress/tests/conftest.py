@@ -2,11 +2,6 @@ import pytest
 
 from content.models import CodingChallenge
 
-pytest_plugins = (
-    "content.tests.conftest",
-    "users.tests.conftest",
-)
-
 
 @pytest.fixture(autouse=True)
 def _disable_kafka_in_progress_tests(settings):

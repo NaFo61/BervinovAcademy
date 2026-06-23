@@ -5,7 +5,12 @@ from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 from unfold.decorators import action, display
 
-from progress.models import CodeSubmission, UserAnswerCheckBox, UserAnswerRadio
+from progress.models import (
+    CodeSubmission,
+    LessonUserComment,
+    UserAnswerCheckBox,
+    UserAnswerRadio,
+)
 
 
 @admin.register(UserAnswerRadio)
@@ -910,3 +915,35 @@ class CodeSubmissionAdmin(ModelAdmin):
             obj.total_tests,
             percent_label,
         )
+
+
+@admin.register(LessonUserComment)
+class LessonUserCommentAdmin(ModelAdmin):
+    list_display = (
+        "author_name",
+        "lesson_kind",
+        "lesson_public_id",
+        "body_preview",
+        "is_hidden",
+        "created_at",
+    )
+    list_filter = ("lesson_kind", "is_hidden", "created_at")
+    search_fields = (
+        "body",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+        "lesson_public_id",
+    )
+    readonly_fields = ("public_id", "created_at", "updated_at")
+    list_per_page = 30
+    ordering = ("-created_at",)
+
+    @admin.display(description=_("Автор"))
+    def author_name(self, obj):
+        return obj.user.get_full_name() or obj.user.email
+
+    @admin.display(description=_("Текст"))
+    def body_preview(self, obj):
+        text = obj.body or ""
+        return text[:80] + ("…" if len(text) > 80 else "")
