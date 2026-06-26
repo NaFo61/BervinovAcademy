@@ -176,23 +176,24 @@ class UserAnswerCheckBoxSerializer(serializers.ModelSerializer):
         }
 
         if not is_correct:
-            instance, _created = UserAnswerCheckBox.objects.get_or_create(
-                user=user,
-                question=question,
-            )
-            instance.failed_attempts = (instance.failed_attempts or 0) + 1
-            instance.selected_answers.set(selected_answers)
-            instance.is_correct = False
-            instance.points_earned = 0
-            instance.save(
-                update_fields=[
-                    "failed_attempts",
-                    "is_correct",
-                    "points_earned",
-                    "updated_at",
-                ]
-            )
-            base["failed_attempts"] = instance.failed_attempts
+            if selected_answers:
+                instance, _created = UserAnswerCheckBox.objects.get_or_create(
+                    user=user,
+                    question=question,
+                )
+                instance.failed_attempts = (instance.failed_attempts or 0) + 1
+                instance.selected_answers.set(selected_answers)
+                instance.is_correct = False
+                instance.points_earned = 0
+                instance.save(
+                    update_fields=[
+                        "failed_attempts",
+                        "is_correct",
+                        "points_earned",
+                        "updated_at",
+                    ]
+                )
+                base["failed_attempts"] = instance.failed_attempts
             return None, base
 
         instance, _created = UserAnswerCheckBox.objects.get_or_create(

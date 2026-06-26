@@ -53,6 +53,10 @@ class TestWhiteboardTokens:
 
 @pytest.mark.django_db
 class TestWhiteboardApi:
+    @pytest.fixture(autouse=True)
+    def enable_whiteboard(self, settings):
+        settings.WHITEBOARD_ENABLED = True
+
     @override_settings(
         **{
             "LIVEKIT_URL": "wss://test.livekit.cloud",

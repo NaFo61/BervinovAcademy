@@ -129,7 +129,6 @@ jobs:
           DB_PORT: 5432
           SECRET_KEY: django-insecure-test-key-12345
           DEBUG: "False"
-          WHITEBOARD_ENABLED: "False"
           CELERY_BROKER_URL: redis://localhost:6379/0
           CELERY_RESULT_BACKEND: redis://localhost:6379/0
         run: pytest -n auto

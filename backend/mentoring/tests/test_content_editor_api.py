@@ -45,7 +45,8 @@ class TestContentEditorApi:
             == "Разбор решения"
         )
 
-    def test_student_forbidden(self, client, student_user, course):
+    def test_student_forbidden(self, student_user, course):
+        client = APIClient()
         client.force_authenticate(user=student_user)
         response = client.get(
             f"/api/mentoring/editor/courses/{course.public_id}/"

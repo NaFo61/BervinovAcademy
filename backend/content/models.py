@@ -105,7 +105,7 @@ class Course(UUIDPublicIdMixin, models.Model):
     class Meta:
         verbose_name = _("Курс")
         verbose_name_plural = _("Курсы")
-        ordering = ("-created_at",)
+        ordering = ("-created_at", "-pk")
 
     def __str__(self):
         return self.title
