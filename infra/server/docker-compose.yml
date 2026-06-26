@@ -1,15 +1,9 @@
 # На сервере только этот файл + .env
-# Образы собираются в CI и пушатся в GHCR.
+# Образы: Docker Hub (публичные репозитории — login на сервере не нужен)
 #
-# Запуск:
-#   docker compose pull
-#   docker compose run --rm code-check-sandbox true
-#   docker compose up -d
+#   docker compose pull && docker compose run --rm code-check-sandbox true && docker compose up -d
 
 name: bervinov_academy
-
-x-image: &default-image
-  pull_policy: always
 
 services:
   db:
@@ -83,8 +77,8 @@ services:
       - internal
 
   backend:
-    <<: *default-image
-    image: ${IMAGE_REGISTRY}/backend:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USER}/bervinov-academy-backend:${IMAGE_TAG:-latest}
+    pull_policy: always
     restart: unless-stopped
     env_file: .env
     volumes:
@@ -117,8 +111,8 @@ services:
       - internal
 
   celery:
-    <<: *default-image
-    image: ${IMAGE_REGISTRY}/backend:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USER}/bervinov-academy-backend:${IMAGE_TAG:-latest}
+    pull_policy: always
     restart: unless-stopped
     env_file: .env
     environment:
@@ -141,8 +135,8 @@ services:
       - internal
 
   celery-beat:
-    <<: *default-image
-    image: ${IMAGE_REGISTRY}/backend:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USER}/bervinov-academy-backend:${IMAGE_TAG:-latest}
+    pull_policy: always
     restart: unless-stopped
     env_file: .env
     environment:
@@ -163,8 +157,8 @@ services:
       - internal
 
   kafka-results-consumer:
-    <<: *default-image
-    image: ${IMAGE_REGISTRY}/backend:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USER}/bervinov-academy-backend:${IMAGE_TAG:-latest}
+    pull_policy: always
     restart: unless-stopped
     env_file: .env
     environment:
@@ -186,16 +180,16 @@ services:
       - internal
 
   code-check-sandbox:
-    <<: *default-image
-    image: ${IMAGE_REGISTRY}/code-sandbox:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USER}/bervinov-academy-code-sandbox:${IMAGE_TAG:-latest}
+    pull_policy: always
     entrypoint: ["/bin/true"]
     restart: "no"
     networks:
       - internal
 
   code-check-runner:
-    <<: *default-image
-    image: ${IMAGE_REGISTRY}/code-check-runner:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USER}/bervinov-academy-code-check-runner:${IMAGE_TAG:-latest}
+    pull_policy: always
     restart: unless-stopped
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
@@ -203,7 +197,7 @@ services:
       KAFKA_TOPIC_CODE_RESULTS: code-submission-results
       KAFKA_GROUP_ID: code-check-runner
       KAFKA_AUTO_OFFSET_RESET: earliest
-      SANDBOX_IMAGE: ${IMAGE_REGISTRY}/code-sandbox:${IMAGE_TAG:-latest}
+      SANDBOX_IMAGE: ${DOCKERHUB_USER}/bervinov-academy-code-sandbox:${IMAGE_TAG:-latest}
       MAX_CONCURRENT_RUNS: "2"
       DOCKER_RUN_TIMEOUT_BUFFER_SEC: "5"
       LOG_LEVEL: INFO
@@ -224,8 +218,8 @@ services:
       - internal
 
   nginx:
-    <<: *default-image
-    image: ${IMAGE_REGISTRY}/nginx:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USER}/bervinov-academy-nginx:${IMAGE_TAG:-latest}
+    pull_policy: always
     restart: unless-stopped
     ports:
       - "127.0.0.1:18080:18080"
