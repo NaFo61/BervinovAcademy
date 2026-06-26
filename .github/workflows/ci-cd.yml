@@ -1,52 +1,114 @@
-name: CI/CD Pipeline
+name: CI/CD
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "22"
 
 jobs:
-  test:
-    name: 🧪 Запуск тестов
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Python tools
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pre-commit
+
+      - name: Install frontend deps (eslint)
+        working-directory: frontend
+        run: npm ci
+
+      - name: Pre-commit
+        run: pre-commit run --all-files
+
+      - name: Django system check
+        working-directory: backend
+        env:
+          SECRET_KEY: ci-django-check-key
+          DEBUG: "False"
+        run: python manage.py check
+
+      - name: No missing migrations
+        working-directory: backend
+        env:
+          SECRET_KEY: ci-django-check-key
+          DB_ENGINE: django.db.backends.sqlite3
+          DB_NAME: ":memory:"
+        run: python manage.py makemigrations --check --dry-run
+
+  # ---------------------------------------------------------------------------
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:15
+        image: postgres:15-alpine
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: test_db
         ports:
           - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-      
+        options: >-
+          --health-cmd "pg_isready -U postgres -d test_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
       redis:
-        image: redis:7
+        image: redis:7-alpine
         ports:
           - 6379:6379
-        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Установить Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
-      
-      - name: Установить зависимости
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -e .[dev,test]  # Устанавливаем проект с dev и test зависимостями
+          pip install -r requirements.txt
 
-      - name: Pre-commit проверки
-        run: pre-commit run --all-files || true
-
-      - name: Миграции
-        working-directory: ./backend
+      - name: Migrate
+        working-directory: backend
         env:
           DB_ENGINE: django.db.backends.postgresql
           DB_NAME: test_db
@@ -55,10 +117,9 @@ jobs:
           DB_HOST: localhost
           DB_PORT: 5432
           SECRET_KEY: django-insecure-test-key-12345
-        run: python manage.py migrate
+        run: python manage.py migrate --noinput
 
-      - name: Запустить тесты
-        working-directory: ./backend
+      - name: Pytest
         env:
           DB_ENGINE: django.db.backends.postgresql
           DB_NAME: test_db
@@ -68,7 +129,182 @@ jobs:
           DB_PORT: 5432
           SECRET_KEY: django-insecure-test-key-12345
           DEBUG: "False"
+          WHITEBOARD_ENABLED: "False"
           CELERY_BROKER_URL: redis://localhost:6379/0
           CELERY_RESULT_BACKEND: redis://localhost:6379/0
-        run: |
-          pytest -v -n auto --reuse-db
+        run: pytest -n auto
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-coverage
+          path: backend/.coverage
+          if-no-files-found: ignore
+
+  # ---------------------------------------------------------------------------
+  docker-validate:
+    name: Docker build (PR)
+    needs: [lint, test]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: false
+          load: true
+          tags: bervinov-academy-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build nginx image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: nginx/Dockerfile.prod
+          push: false
+          load: true
+          tags: bervinov-academy-nginx:ci
+          build-args: |
+            SUB_PATH=/academy
+            ENABLE_WHITEBOARD=false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------------------
+  build:
+    name: Push to Docker Hub
+    needs: [lint, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/bervinov-academy-backend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/bervinov-academy-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Push nginx
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: nginx/Dockerfile.prod
+          push: true
+          build-args: |
+            SUB_PATH=/academy
+            ENABLE_WHITEBOARD=false
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/bervinov-academy-nginx:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/bervinov-academy-nginx:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Push code-check-runner
+        uses: docker/build-push-action@v6
+        with:
+          context: services/code_check_emulator
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/bervinov-academy-code-check-runner:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/bervinov-academy-code-check-runner:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Push code-sandbox
+        uses: docker/build-push-action@v6
+        with:
+          context: services/code_check_sandbox
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/bervinov-academy-code-sandbox:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/bervinov-academy-code-sandbox:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy docker-compose.yml
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: infra/server/docker-compose.yml
+          target: /opt/bervinov_academy/
+          strip_components: 2
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/bervinov_academy
+            docker compose pull
+            docker compose run --rm code-check-sandbox true
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
+      - name: Health check
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              if curl -fsS "http://127.0.0.1:18080/academy/health/" >/dev/null; then
+                echo "Health OK"
+                exit 0
+              fi
+              echo "Waiting for backend... ($i/10)"
+              sleep 10
+            done
+            echo "Health check failed"
+            docker compose -f /opt/bervinov_academy/docker-compose.yml ps
+            docker compose -f /opt/bervinov_academy/docker-compose.yml logs --tail=50 backend nginx
+            exit 1
