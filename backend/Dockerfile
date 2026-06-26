@@ -24,16 +24,16 @@ RUN set -eux; \
     test "$success" -eq 1; \
     rm -rf /var/lib/apt/lists/*
 
-# --- Зависимости (максимальный кэш Docker) ---
-# Сначала только requirements + wheels → чтобы не пересобирать каждый раз
+# --- Зависимости ---
 COPY requirements.txt /app/
-COPY wheels /wheels
 
 RUN pip install --upgrade pip \
-    && pip install --prefer-binary --find-links=/wheels -r requirements.txt
+    && pip install --prefer-binary -r requirements.txt
 
 # --- Код приложения (после зависимостей) ---
 COPY backend/ /app/backend/
+
+RUN chmod +x /app/backend/docker-entrypoint.prod.sh
 
 WORKDIR /app/backend
 

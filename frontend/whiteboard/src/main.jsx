@@ -37,9 +37,12 @@ function resolveSyncUrls(syncBaseUrl) {
     };
   }
 
+  const meta = document.querySelector('meta[name="app-base"]');
+  const appBase = (meta?.getAttribute('content') || '').replace(/\/$/, '');
+
   return {
-    wsBase: `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/whiteboard-sync`,
-    httpBase: `${window.location.protocol}//${window.location.host}/whiteboard-sync`,
+    wsBase: `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}${appBase}/whiteboard-sync`,
+    httpBase: `${window.location.protocol}//${window.location.host}${appBase}/whiteboard-sync`,
   };
 }
 
@@ -66,7 +69,7 @@ function createAssetStore(httpBase) {
         throw new Error(`Upload failed: ${response.statusText}`);
       }
       return {
-        src: `/whiteboard-sync/uploads/${encodeURIComponent(objectName)}`,
+        src: `${document.querySelector('meta[name="app-base"]')?.getAttribute('content')?.replace(/\/$/, '') || ''}/whiteboard-sync/uploads/${encodeURIComponent(objectName)}`,
       };
     },
     resolve(asset) {

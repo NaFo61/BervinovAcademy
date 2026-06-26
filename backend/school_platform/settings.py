@@ -22,6 +22,11 @@ CSRF_TRUSTED_ORIGINS = config(
     "CSRF_TRUSTED_ORIGINS", default="http://localhost:8000"
 ).split(",")
 
+USE_X_FORWARDED_HOST = config(
+    "USE_X_FORWARDED_HOST", default=not DEBUG, cast=bool
+)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 INSTALLED_APPS = [
     "unfold",
     "modeltranslation",
@@ -239,8 +244,12 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
+    origin.strip()
+    for origin in config(
+        "CORS_ALLOWED_ORIGINS",
+        default="http://localhost:3000,http://127.0.0.1:3000",
+    ).split(",")
+    if origin.strip()
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -387,6 +396,7 @@ CONFERENCE_MENTOR_ABSENCE_MINUTES = config(
 )
 
 WHITEBOARD_SYNC_SECRET = config("WHITEBOARD_SYNC_SECRET", default="").strip()
+WHITEBOARD_ENABLED = config("WHITEBOARD_ENABLED", default=True, cast=bool)
 WHITEBOARD_TOKEN_TTL_SECONDS = config(
     "WHITEBOARD_TOKEN_TTL_SECONDS", default=3600, cast=int
 )

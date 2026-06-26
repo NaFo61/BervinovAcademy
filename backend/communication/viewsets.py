@@ -199,6 +199,11 @@ class ConferenceViewSet(
 
     @action(detail=True, methods=["post"], url_path="whiteboard/token")
     def whiteboard_token(self, request, public_id=None):
+        if not settings.WHITEBOARD_ENABLED:
+            return Response(
+                {"detail": "Доска отключена."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         conference = self.get_object()
         if not services.user_may_access_conference(request.user, conference):
             return Response(
@@ -228,6 +233,11 @@ class ConferenceViewSet(
 
     @action(detail=True, methods=["get"], url_path="whiteboard")
     def whiteboard(self, request, public_id=None):
+        if not settings.WHITEBOARD_ENABLED:
+            return Response(
+                {"detail": "Доска отключена."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         conference = self.get_object()
         if not services.user_may_access_conference(request.user, conference):
             return Response(
@@ -253,6 +263,11 @@ class ConferenceViewSet(
         parser_classes=[JSONParser, MultiPartParser, FormParser],
     )
     def whiteboard_export(self, request, public_id=None):
+        if not settings.WHITEBOARD_ENABLED:
+            return Response(
+                {"detail": "Доска отключена."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         conference = self.get_object()
         if not services.user_may_access_conference(request.user, conference):
             return Response(

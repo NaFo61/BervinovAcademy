@@ -15,6 +15,14 @@ const STATUS_LABELS = {
 const WHITEBOARD_TILE_KEY = 'shared:whiteboard';
 const WHITEBOARD_DATA_TOPIC = 'whiteboard_visibility';
 
+function isWhiteboardFeatureEnabled() {
+  if (typeof document === 'undefined') return false;
+  const meta = document.querySelector('meta[name="whiteboard-enabled"]');
+  return meta?.getAttribute('content') !== 'false';
+}
+
+const WHITEBOARD_FEATURE_ENABLED = isWhiteboardFeatureEnabled();
+
 function participantName(p) {
   if (!p) return 'Участник';
   if (typeof p.name === 'string' && p.name.trim()) return p.name.trim();
@@ -162,7 +170,7 @@ function CallPage({ navigate, hashParams }) {
   const [muted, setMuted] = React.useState(false);
   const [videoOff, setVideoOff] = React.useState(false);
   const [sharing, setSharing] = React.useState(false);
-  const [whiteboardEnabled, setWhiteboardEnabled] = React.useState(true);
+  const [whiteboardEnabled, setWhiteboardEnabled] = React.useState(WHITEBOARD_FEATURE_ENABLED);
   const [mediaWarning, setMediaWarning] = React.useState('');
   const [isMentor, setIsMentor] = React.useState(false);
   const [layoutTick, setLayoutTick] = React.useState(0);
@@ -249,7 +257,7 @@ function CallPage({ navigate, hashParams }) {
   }, [confId, chatOpen]);
 
   React.useEffect(() => {
-    if (!confId || phase !== 'in_call') {
+    if (!WHITEBOARD_FEATURE_ENABLED || !confId || phase !== 'in_call') {
       setWhiteboardSyncToken('');
       setWhiteboardLicenseKey('');
       return undefined;
@@ -838,7 +846,7 @@ function CallPage({ navigate, hashParams }) {
         <CallControl label={chatOpen ? 'Скрыть чат' : 'Чат'} active={chatOpen} onClick={() => setChatOpen((v) => !v)} badge={callChatUnread}>
           <I.Chat className="w-5 h-5" />
         </CallControl>
-        {isMentor && whiteboardEnabled && (
+        {WHITEBOARD_FEATURE_ENABLED && isMentor && whiteboardEnabled && (
           <CallControl
             label={whiteboardSaving ? 'Сохранение…' : 'Сохранить доску'}
             active={whiteboardSaving}
@@ -847,7 +855,7 @@ function CallPage({ navigate, hashParams }) {
             <I.Check className="w-5 h-5" />
           </CallControl>
         )}
-        {isMentor && (
+        {WHITEBOARD_FEATURE_ENABLED && isMentor && (
           <CallControl label={whiteboardEnabled ? 'Скрыть доску' : 'Доска'} active={whiteboardEnabled} onClick={toggleWhiteboard}>
             <I.Layers className="w-5 h-5" />
           </CallControl>

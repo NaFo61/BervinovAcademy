@@ -1,0 +1,171 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io/nafo61/bervinov-academy
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python setup
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e .[dev,test]
+
+      - name: Migrate
+        working-directory: ./backend
+        env:
+          DB_ENGINE: django.db.backends.postgresql
+          DB_NAME: test_db
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_HOST: localhost
+          DB_PORT: 5432
+          SECRET_KEY: django-insecure-test-key-12345
+        run: python manage.py migrate
+
+      - name: Pytest
+        working-directory: ./backend
+        env:
+          DB_ENGINE: django.db.backends.postgresql
+          DB_NAME: test_db
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_HOST: localhost
+          DB_PORT: 5432
+          SECRET_KEY: django-insecure-test-key-12345
+          DEBUG: "False"
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+        run: pytest -v -n auto --reuse-db
+
+  build:
+    name: Build images
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/backend:latest
+            ${{ env.REGISTRY }}/backend:${{ github.sha }}
+
+      - name: Build and push nginx
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: nginx/Dockerfile.prod
+          push: true
+          build-args: |
+            SUB_PATH=/academy
+            ENABLE_WHITEBOARD=false
+          tags: |
+            ${{ env.REGISTRY }}/nginx:latest
+            ${{ env.REGISTRY }}/nginx:${{ github.sha }}
+
+      - name: Build and push code-check-runner
+        uses: docker/build-push-action@v6
+        with:
+          context: services/code_check_emulator
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/code-check-runner:latest
+            ${{ env.REGISTRY }}/code-check-runner:${{ github.sha }}
+
+      - name: Build and push code-sandbox
+        uses: docker/build-push-action@v6
+        with:
+          context: services/code_check_sandbox
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/code-sandbox:latest
+            ${{ env.REGISTRY }}/code-sandbox:${{ github.sha }}
+
+  deploy:
+    name: Deploy to server
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy compose file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: infra/server/docker-compose.yml
+          target: /opt/bervinov_academy/
+          strip_components: 2
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/bervinov_academy
+            echo "${{ secrets.GHCR_PULL_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose pull
+            docker compose run --rm code-check-sandbox true
+            docker compose up -d --remove-orphans
+            docker image prune -f

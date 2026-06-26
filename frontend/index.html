@@ -3,11 +3,14 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="app-base" content="" />
 <title>Bervinov Academy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/whiteboard.bundle.css" />
+<!-- WHITEBOARD_ASSETS_START -->
+<link rel="stylesheet" href="whiteboard.bundle.css" />
+<!-- WHITEBOARD_ASSETS_END -->
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
@@ -315,7 +318,9 @@
 <script src="https://unpkg.com/framer-motion@11.18.2/dist/framer-motion.js"></script>
 <script src="https://unpkg.com/recharts@2.15.0/umd/Recharts.js"></script>
 <script src="https://unpkg.com/livekit-client@2.9.9/dist/livekit-client.umd.js"></script>
-<script src="/whiteboard.bundle.js" defer></script>
+<!-- WHITEBOARD_ASSETS_START -->
+<script src="whiteboard.bundle.js" defer></script>
+<!-- WHITEBOARD_ASSETS_END -->
 
 <script type="text/babel" src="src/shared.jsx"></script>
 <script type="text/babel" src="src/landing.jsx"></script>

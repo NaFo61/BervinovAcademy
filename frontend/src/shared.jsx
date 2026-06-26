@@ -51,14 +51,22 @@ function useHashRoute() {
   return [state.path, navigate, state.params];
 }
 
+function getAppBase() {
+  if (typeof document === 'undefined') return '';
+  const meta = document.querySelector('meta[name="app-base"]');
+  const content = meta?.getAttribute('content') || '';
+  return content.replace(/\/$/, '');
+}
+
 function initApiBase() {
   if (typeof window === 'undefined') return;
   if (typeof window.__API_BASE__ === 'string') return;
   const { hostname, port } = window.location;
+  const appBase = getAppBase();
   if ((hostname === 'localhost' || hostname === '127.0.0.1') && port === '3000') {
     window.__API_BASE__ = 'http://127.0.0.1:8000';
   } else {
-    window.__API_BASE__ = '';
+    window.__API_BASE__ = appBase;
   }
 }
 initApiBase();
@@ -71,7 +79,11 @@ function getApiBase() {
 function getWsBase() {
   const api = getApiBase();
   if (api) {
-    return api.replace(/^https/i, 'wss').replace(/^http/i, 'ws');
+    if (/^https?:\/\//i.test(api)) {
+      return api.replace(/^https/i, 'wss').replace(/^http/i, 'ws');
+    }
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${proto}//${window.location.host}${api}`;
   }
   if (typeof window === 'undefined') return '';
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

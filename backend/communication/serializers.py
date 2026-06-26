@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import serializers
 
 from users.models import User
@@ -70,10 +71,14 @@ class ConferenceSerializer(serializers.ModelSerializer):
         return None
 
     def get_has_whiteboard(self, obj):
+        if not settings.WHITEBOARD_ENABLED:
+            return False
         board = getattr(obj, "whiteboard", None)
         return bool(board and board.image)
 
     def get_whiteboard_exported_at(self, obj):
+        if not settings.WHITEBOARD_ENABLED:
+            return None
         board = getattr(obj, "whiteboard", None)
         if not board or not board.image:
             return None
@@ -203,6 +208,8 @@ class ChatConferenceBriefSerializer(serializers.ModelSerializer):
         return None
 
     def get_has_whiteboard(self, obj):
+        if not settings.WHITEBOARD_ENABLED:
+            return False
         board = getattr(obj, "whiteboard", None)
         return bool(board and board.image)
 

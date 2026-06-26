@@ -1,0 +1,288 @@
+# Production stack — на сервере: /opt/bervinov_academy + .env
+# Запуск: docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+
+name: bervinov_academy
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+    networks:
+      - internal
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - internal
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_INTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_INTERNAL://kafka:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "kafka-broker-api-versions",
+          "--bootstrap-server",
+          "localhost:9092",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 45s
+    networks:
+      - internal
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: bervinov-academy-backend:prod
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - media_data:/app/backend/media
+      - static_data:/app/backend/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/app/backend/docker-entrypoint.prod.sh"]
+    command:
+      [
+        "daphne",
+        "-b",
+        "0.0.0.0",
+        "-p",
+        "8000",
+        "school_platform.asgi:application",
+      ]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - internal
+
+  celery:
+    image: bervinov-academy-backend:prod
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SKIP_MIGRATE: "1"
+      SKIP_COLLECTSTATIC: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    entrypoint: ["/app/backend/docker-entrypoint.prod.sh"]
+    command: ["celery", "-A", "school_platform", "worker", "--loglevel=info"]
+    healthcheck:
+      disable: true
+    networks:
+      - internal
+
+  celery-beat:
+    image: bervinov-academy-backend:prod
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SKIP_MIGRATE: "1"
+      SKIP_COLLECTSTATIC: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    entrypoint: ["/app/backend/docker-entrypoint.prod.sh"]
+    command: ["celery", "-A", "school_platform", "beat", "--loglevel=info"]
+    healthcheck:
+      disable: true
+    networks:
+      - internal
+
+  kafka-results-consumer:
+    image: bervinov-academy-backend:prod
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SKIP_MIGRATE: "1"
+      SKIP_COLLECTSTATIC: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    entrypoint: ["/app/backend/docker-entrypoint.prod.sh"]
+    command: ["python", "manage.py", "consume_code_submission_results"]
+    healthcheck:
+      disable: true
+    networks:
+      - internal
+
+  tldraw-sync:
+    build:
+      context: ./services/tldraw-sync
+    image: bervinov-academy-tldraw-sync:prod
+    restart: unless-stopped
+    environment:
+      DATA_DIR: /app/data
+      PORT: 5858
+      WHITEBOARD_SYNC_SECRET: ${SECRET_KEY}
+    volumes:
+      - tldraw_sync_data:/app/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5858/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
+    networks:
+      - internal
+
+  code-check-sandbox:
+    image: bervinov-academy-code-sandbox:prod
+    build:
+      context: ./services/code_check_sandbox
+    entrypoint: ["/bin/true"]
+    restart: "no"
+    networks:
+      - internal
+
+  code-check-runner:
+    build:
+      context: ./services/code_check_emulator
+    image: bervinov-academy-code-check-runner:prod
+    restart: unless-stopped
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_TOPIC_IN: code-submissions
+      KAFKA_TOPIC_CODE_RESULTS: code-submission-results
+      KAFKA_GROUP_ID: code-check-runner
+      KAFKA_AUTO_OFFSET_RESET: earliest
+      SANDBOX_IMAGE: bervinov-academy-code-sandbox:prod
+      MAX_CONCURRENT_RUNS: "2"
+      DOCKER_RUN_TIMEOUT_BUFFER_SEC: "5"
+      LOG_LEVEL: INFO
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      kafka:
+        condition: service_healthy
+      code-check-sandbox:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - internal
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        SUB_PATH: ${SUB_PATH:-/academy}
+    image: bervinov-academy-frontend:prod
+    restart: "no"
+    volumes:
+      - frontend_dist:/output
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+      args:
+        NGINX_CONF: nginx.prod.conf
+    image: bervinov-academy-nginx:prod
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18080:18080"
+    volumes:
+      - frontend_dist:/usr/share/nginx/html:ro
+    depends_on:
+      frontend:
+        condition: service_completed_successfully
+      backend:
+        condition: service_healthy
+      tldraw-sync:
+        condition: service_healthy
+    networks:
+      - internal
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_data:
+  static_data:
+  tldraw_sync_data:
+  frontend_dist:
+
+networks:
+  internal:
+    driver: bridge

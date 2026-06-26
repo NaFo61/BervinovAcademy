@@ -1,11 +1,10 @@
 FROM nginx:alpine
 
-# Копируем кастомную конфигурацию nginx
-COPY nginx.conf /etc/nginx/nginx.conf
+ARG NGINX_CONF=nginx.conf
+COPY ${NGINX_CONF} /etc/nginx/nginx.conf
 
-# Создаем директорию для статики
 RUN mkdir -p /usr/share/nginx/html
 
-EXPOSE 80
+EXPOSE 80 18080
 
 CMD ["nginx", "-g", "daemon off;"]
