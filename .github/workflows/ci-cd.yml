@@ -287,6 +287,12 @@ jobs:
           script: |
             set -euo pipefail
             cd /opt/bervinov_academy
+            # DOCKERHUB_USER должен совпадать с secrets.DOCKERHUB_USERNAME (без кириллицы в имени образа)
+            if grep -q '^DOCKERHUB_USER=' .env 2>/dev/null; then
+              sed -i "s/^DOCKERHUB_USER=.*/DOCKERHUB_USER=${{ secrets.DOCKERHUB_USERNAME }}/" .env
+            else
+              echo "DOCKERHUB_USER=${{ secrets.DOCKERHUB_USERNAME }}" >> .env
+            fi
             docker compose pull
             docker compose run --rm code-check-sandbox true
             docker compose up -d --remove-orphans
