@@ -267,13 +267,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Copy docker-compose.yml
+      - name: Copy server infra files
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: infra/server/docker-compose.yml
+          source: infra/server/docker-compose.yml,infra/server/restart.sh,infra/server/full-restart.sh
           target: /opt/bervinov_academy/
           strip_components: 2
 
@@ -287,6 +287,7 @@ jobs:
           script: |
             set -euo pipefail
             cd /opt/bervinov_academy
+            chmod +x restart.sh full-restart.sh
             # DOCKERHUB_USER должен совпадать с secrets.DOCKERHUB_USERNAME (без кириллицы в имени образа)
             if grep -q '^DOCKERHUB_USER=' .env 2>/dev/null; then
               sed -i "s/^DOCKERHUB_USER=.*/DOCKERHUB_USER=${{ secrets.DOCKERHUB_USERNAME }}/" .env

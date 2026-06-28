@@ -1,7 +1,8 @@
-# На сервере только этот файл + .env
+# На сервере: docker-compose.yml, .env, restart.sh, full-restart.sh
 # Образы: Docker Hub (публичные репозитории — login на сервере не нужен)
 #
-#   docker compose pull && docker compose run --rm code-check-sandbox true && docker compose up -d
+#   ./restart.sh           — перезапуск без потери БД
+#   ./full-restart.sh      — сброс volumes, образов и seed_data
 
 name: bervinov_academy
 
