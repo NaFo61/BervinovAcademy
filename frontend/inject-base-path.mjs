@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const subPath = (process.env.SUB_PATH || "/academy").replace(/\/$/, "");
+const subPath = (process.env.SUB_PATH ?? "").replace(/\/$/, "");
 const whiteboardEnabled = process.env.ENABLE_WHITEBOARD !== "false";
 const distDir = path.join(__dirname, "dist");
 const indexPath = path.join(distDir, "index.html");

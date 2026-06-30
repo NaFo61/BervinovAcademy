@@ -13,11 +13,6 @@ print_error() { echo -e "${RED}✗ $1${NC}"; }
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$APP_DIR"
 
-if [[ "${EUID:-}" -eq 0 ]]; then
-  print_error "Не запускай от root — используй пользователя с доступом к docker."
-  exit 1
-fi
-
 if ! command -v docker >/dev/null 2>&1; then
   print_error "Docker не найден."
   exit 1
@@ -25,7 +20,7 @@ fi
 
 wait_for_health() {
   for i in 1 2 3 4 5 6 7 8 9 10; do
-    if curl -fsS "http://127.0.0.1:18080/academy/health/" >/dev/null; then
+    if curl -fsS "http://127.0.0.1:18080/health/" >/dev/null; then
       print_success "Health check OK"
       return 0
     fi

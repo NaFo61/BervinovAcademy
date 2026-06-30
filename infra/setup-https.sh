@@ -30,7 +30,7 @@ if [[ -n "$DOMAIN" ]]; then
   sed -i 's/\r$//' "$GATEWAY"
   nginx -t && systemctl reload nginx
   certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email --redirect
-  echo "Готово: https://${DOMAIN}/academy/"
+  echo "Готово: https://${DOMAIN}/"
 else
   openssl req -x509 -nodes -days 825 -newkey rsa:2048 \
     -keyout "$SSL_DIR/server.key" \
@@ -41,7 +41,7 @@ else
   cp "$REPO_GATEWAY" "$GATEWAY"
   sed -i 's/\r$//' "$GATEWAY"
   nginx -t && systemctl reload nginx
-  echo "Готово (самоподписанный): https://161.104.46.236/academy/"
+  echo "Готово (самоподписанный): https://161.104.46.236/"
   echo "Браузер покажет предупреждение — это нормально для IP без домена."
   echo "Для нормального HTTPS: sudo $0 ваш-домен.ru"
 fi

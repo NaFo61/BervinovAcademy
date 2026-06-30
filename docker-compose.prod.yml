@@ -247,7 +247,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.prod
       args:
-        SUB_PATH: ${SUB_PATH:-/academy}
+        SUB_PATH: ${SUB_PATH:-}
     image: bervinov-academy-frontend:prod
     restart: "no"
     volumes:

@@ -181,7 +181,7 @@ jobs:
           load: true
           tags: bervinov-academy-nginx:ci
           build-args: |
-            SUB_PATH=/academy
+            SUB_PATH=
             ENABLE_WHITEBOARD=false
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -226,7 +226,7 @@ jobs:
           file: nginx/Dockerfile.prod
           push: true
           build-args: |
-            SUB_PATH=/academy
+            SUB_PATH=
             ENABLE_WHITEBOARD=false
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/bervinov-academy-nginx:latest
@@ -294,6 +294,16 @@ jobs:
             else
               echo "DOCKERHUB_USER=${{ secrets.DOCKERHUB_USERNAME }}" >> .env
             fi
+            if grep -q '^SUB_PATH=' .env 2>/dev/null; then
+              sed -i 's/^SUB_PATH=.*/SUB_PATH=/' .env
+            else
+              echo 'SUB_PATH=' >> .env
+            fi
+            if grep -q '^FRONTEND_URL=' .env 2>/dev/null; then
+              sed -i 's|^FRONTEND_URL=.*|FRONTEND_URL=https://academy.bervinov-miron.ru|' .env
+            else
+              echo 'FRONTEND_URL=https://academy.bervinov-miron.ru' >> .env
+            fi
             docker compose pull
             docker compose run --rm code-check-sandbox true
             docker compose up -d --remove-orphans
@@ -309,7 +319,7 @@ jobs:
           script: |
             set -euo pipefail
             for i in 1 2 3 4 5 6 7 8 9 10; do
-              if curl -fsS "http://127.0.0.1:18080/academy/health/" >/dev/null; then
+              if curl -fsS "http://127.0.0.1:18080/health/" >/dev/null; then
                 echo "Health OK"
                 exit 0
               fi
