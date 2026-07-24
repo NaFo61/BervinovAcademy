@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Полный перезапуск: удаление volumes и старых образов, seed_data.
-# Запуск: /opt/bervinov_academy/full-restart.sh
+# Запуск: /opt/bervinov-academy/full-restart.sh
 set -euo pipefail
 
 RED='\033[0;31m'

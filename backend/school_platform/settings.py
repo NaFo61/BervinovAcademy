@@ -58,29 +58,16 @@ INSTALLED_APPS = [
 ]
 UNFOLD = {
     "SHOW_LANGUAGES": True,
-    "LANGUAGES": {
-        "navigation": [
-            {
-                "code": "en",
-                "name": "English",
-                "name_local": "English",
-                "bidi": False,
-            },
-            {
-                "code": "ru",
-                "name": "Russian",
-                "name_local": "Русский",
-                "bidi": False,
-            },
-        ]
-    },
+    "SITE_TITLE": _("Академия Бервинова"),
     "SITE_HEADER": _("Академия Бервинова"),
     "SITE_ICON": {
         "light": lambda request: static("img/logo.ico"),
         "dark": lambda request: static("img/logo.ico"),
     },
     "SITE_URL": "/",
-    "STYLES": ["/static/admin/css/base.css"],
+    "STYLES": [
+        lambda request: static("admin/css/index.css"),
+    ],
     "COLORS": {
         "primary": {
             "500": "168 85 247",
@@ -225,7 +212,6 @@ UNFOLD = {
             },
         ],
     },
-    "DARK_MODE": True,
     "DASHBOARD_CALLBACK": "school_platform.admin.views.dashboard_callback",
 }
 
@@ -234,6 +220,7 @@ AUTH_USER_MODEL = "users.User"
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -353,6 +340,14 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

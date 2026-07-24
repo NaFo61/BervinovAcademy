@@ -1,0 +1,36 @@
+---
+description: Django/DRF backend conventions for Bervinov Academy
+globs: backend/**/*.py,services/code_check_*/**/*
+alwaysApply: false
+---
+
+# Backend
+
+## Layout
+
+- Project: `backend/school_platform/` (settings, urls, asgi)
+- Apps: `users`, `content`, `progress`, `education`, `mentoring`, `exams`, `communication`, `translations`, `subscriptions`, `fixture`, `common`
+- APIs mount under `/api/` via app `urls.py` + ViewSets
+
+## Must follow
+
+- Public API IDs: `public_id` (`UUIDPublicIdMixin` in `common/models.py`). Never expose internal PKs in new endpoints.
+- ViewSets + `DefaultRouter`; `lookup_field = "public_id"` + `UUID_LOOKUP_REGEX` from `common/drf.py`.
+- Default auth: JWT + `IsAuthenticated`. Public endpoints need explicit `AllowAny`.
+- JWT `USER_ID_FIELD` is `public_id` — keep claims consistent when touching auth.
+- Prefer `prefetch_related` / `select_related` in `get_queryset`; split list/detail serializers when needed.
+- Style: Black/isort/flake8, **line length 79**; skip formatting migrations.
+- Migrations required for model changes; CI checks `makemigrations --check --dry-run`.
+
+## Tests
+
+- From repo root: `pytest -v` (or `pytest path/to/test_file.py -v`)
+- Config: root `pyproject.toml`; `pythonpath = ["backend"]`
+- Fixtures: `backend/*/tests/conftest.py`; root `backend/conftest.py` mocks translation signals
+- Put new tests next to the app: `backend/<app>/tests/`
+
+## Do not
+
+- Invent a parallel auth or fetch layer
+- Change `deploy/` / CI unless asked
+- Break Kafka contract (progress ↔ code_check_emulator topics) without updating both sides

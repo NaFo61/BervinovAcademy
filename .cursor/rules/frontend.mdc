@@ -1,0 +1,40 @@
+---
+description: React CDN SPA conventions for Bervinov Academy frontend
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# Frontend
+
+## Stack (critical)
+
+- React 18 + ReactDOM from **CDN UMD**, Babel standalone (`type="text/babel"`)
+- Tailwind via CDN in `frontend/index.html`
+- **Not** Vite/CRA/modules. Root `@tanstack/react-router` is unused — do not adopt it for the live SPA.
+
+## Structure
+
+- Entry: `frontend/index.html` → `#root`
+- Shell: `frontend/src/app.jsx`
+- Shared API + chrome: `frontend/src/shared.jsx` (exports on `window`)
+- One page ≈ one file: `landing`, `catalog`, `course`, `learn`, `exam`, `problem`, `profile`, `auth`, `chat`, etc.
+
+## Must follow
+
+- Routing: **hash** (`#/catalog`, …) via `Routes` / `useHashRoute` in `shared.jsx` — extend both `shared.jsx` and `app.jsx` for new routes.
+- New page: add `src/<page>.jsx`, register script in `index.html`, assign to `window`, wire into `app.jsx`.
+- API: reuse `fetchApiJson` / `apiJson` / `fetchApiForm` from `shared.jsx` (token refresh, Bearer). Do not invent a second client.
+- Tokens: `localStorage` `access_token` / `refresh_token`.
+- Paths: absolute `/api/...`. `getApiBase()` empty behind nginx; on `:3000` → `http://127.0.0.1:8000`.
+
+## Scripts
+
+- `npm run dev` — serve on 3000
+- `npm run build` — `build-dist.mjs` → `dist/`
+- ESLint on `frontend/src/` via pre-commit
+
+## Do not
+
+- Convert to Vite/webpack unless explicitly requested
+- Hardcode API host in page files
+- Touch `deploy/` / backend unless asked

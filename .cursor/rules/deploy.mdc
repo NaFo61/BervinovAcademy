@@ -1,0 +1,33 @@
+---
+description: Deploy, Docker, nginx, and CI conventions for Bervinov Academy
+globs: deploy/**/*,nginx/**/*,docker-compose*.yml,.github/workflows/**/*,.env*.example
+alwaysApply: false
+---
+
+# Deploy
+
+## Mental model
+
+- **Local:** root `docker-compose.yml` — build from source, mounts, nginx `:80`
+- **Prod (canonical):** `deploy/docker-compose.yml` — pull prebuilt images only
+- Server layout: `/opt/bervinov-academy/{docker-compose.yml,.env,restart.sh,full-restart.sh}` — **no git tree / no source build on host**
+- Images: Docker Hub `bervinov-academy-*` built by CI on push to `main`
+
+## Must follow
+
+- Change deploy via `deploy/` + `.github/workflows/ci-cd.yml` + Dockerfiles — not “git pull on server”
+- Normal update: `./restart.sh` (pull + up, keeps DB)
+- Host nginx: `deploy/nginx-snippet.conf` → upstream `127.0.0.1:18080`
+- Env template: `.env.prod.example` → server `.env` (never commit real secrets)
+- Prefer `deploy/docker-compose.yml` over obsolete root `docker-compose.prod.yml` for server
+
+## CI pipeline (ci-cd.yml)
+
+1. lint → 2. test (Postgres/Redis + pytest) → 3. build/push images → 4. SCP + SSH deploy + health
+
+## Do not
+
+- Run `full-restart.sh` unless user explicitly confirms (destructive: volumes + reseed)
+- Assume whiteboard/tldraw-sync is on in prod (often `ENABLE_WHITEBOARD=false`)
+- Expose container `:80` as public — host TLS terminates, proxy to **18080**
+- Put secrets in compose files or commit `.env`

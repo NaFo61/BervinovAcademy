@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Перезапуск стека на сервере (БД и volumes сохраняются).
-# Запуск: /opt/bervinov_academy/restart.sh
+# Запуск: /opt/bervinov-academy/restart.sh
 set -euo pipefail
 
 RED='\033[0;31m'

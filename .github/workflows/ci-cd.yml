@@ -267,15 +267,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Copy server infra files
+      - name: Copy deploy files
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: infra/server/docker-compose.yml,infra/server/restart.sh,infra/server/full-restart.sh
-          target: /opt/bervinov_academy/
-          strip_components: 2
+          source: deploy/docker-compose.yml,deploy/restart.sh,deploy/full-restart.sh
+          target: /opt/bervinov-academy/
+          strip_components: 1
 
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
@@ -286,7 +286,7 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
-            cd /opt/bervinov_academy
+            cd /opt/bervinov-academy
             chmod +x restart.sh full-restart.sh
             # DOCKERHUB_USER должен совпадать с secrets.DOCKERHUB_USERNAME (без кириллицы в имени образа)
             if grep -q '^DOCKERHUB_USER=' .env 2>/dev/null; then
@@ -327,6 +327,6 @@ jobs:
               sleep 10
             done
             echo "Health check failed"
-            docker compose -f /opt/bervinov_academy/docker-compose.yml ps
-            docker compose -f /opt/bervinov_academy/docker-compose.yml logs --tail=50 backend nginx
+            docker compose -f /opt/bervinov-academy/docker-compose.yml ps
+            docker compose -f /opt/bervinov-academy/docker-compose.yml logs --tail=50 backend nginx
             exit 1

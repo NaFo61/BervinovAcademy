@@ -149,6 +149,8 @@ services:
       - "80:80"
     volumes:
       - ./frontend/dist:/usr/share/nginx/html:ro
+      - ./backend/staticfiles:/var/www/django-static:ro
+      - ./backend/media:/var/www/django-media:ro
     depends_on:
       frontend:
         condition: service_completed_successfully

@@ -1,56 +1,81 @@
-import random
+from datetime import timedelta
+import json
 
 from django.contrib.auth import get_user_model
-from django.utils.translation import gettext_lazy as _
+from django.db.models import Count
+from django.utils import timezone
+from django.utils.translation import gettext as _
 
 User = get_user_model()
 
 
 def dashboard_callback(request, context):
-    # Фейковые числовые показатели
-    total_users = 1843  # Всего пользователей
-    total_courses = 27  # Всего курсов
-    active_students = 1560  # Активных студентов
-    completed_courses = 820  # Завершенных курсов
+    now = timezone.now()
+    month_ago = now - timedelta(days=30)
 
-    # Фейковые данные для графиков
-    months = [
-        _("Янв"),
-        _("Фев"),
-        _("Мар"),
-        _("Апр"),
-        _("Май"),
-        _("Июн"),
-        _("Июл"),
-        _("Авг"),
-        _("Сен"),
-        _("Окт"),
-        _("Ноя"),
-        _("Дек"),
-    ]
-    activity_data = [random.randint(20, 100) for _ in months]
-    course_names = [
-        _("Python"),
-        _("Django"),
-        _("JavaScript"),
-        _("React"),
-        _("SQL"),
-        _("Машинное обучение"),
-        _("UI/UX дизайн"),
-    ]
-    course_counts = [random.randint(30, 150) for _ in course_names]
+    total_users = User.objects.count()
+    total_courses = 0
+    active_students = 0
+    completed_courses = 0
+    course_names = []
+    course_counts = []
 
-    # Добавляем в контекст
+    try:
+        from content.models import Course
+        from education.models import Enrollment
+
+        total_courses = Course.objects.count()
+        active_students = (
+            Enrollment.objects.filter(status=Enrollment.Status.ACTIVE)
+            .values("user_id")
+            .distinct()
+            .count()
+        )
+        completed_courses = Enrollment.objects.filter(
+            status=Enrollment.Status.COMPLETED
+        ).count()
+
+        top = (
+            Enrollment.objects.values("course__title")
+            .annotate(c=Count("id"))
+            .order_by("-c")[:7]
+        )
+        course_names = [row["course__title"] or "—" for row in top]
+        course_counts = [row["c"] for row in top]
+    except Exception:
+        pass
+
+    months = []
+    activity_data = []
+    for i in range(5, -1, -1):
+        month_start = (now.replace(day=1) - timedelta(days=32 * i)).replace(
+            day=1
+        )
+        months.append(month_start.strftime("%b"))
+        next_month = (month_start + timedelta(days=32)).replace(day=1)
+        activity_data.append(
+            User.objects.filter(
+                date_joined__gte=month_start, date_joined__lt=next_month
+            ).count()
+        )
+
+    if not course_names:
+        course_names = [_("Нет данных")]
+        course_counts = [0]
+
     context.update(
         {
             "total_users": total_users,
             "total_courses": total_courses,
             "active_students": active_students,
             "completed_courses": completed_courses,
-            "months": months,
-            "activity_data": activity_data,
-            "course_names": course_names,
-            "course_counts": course_counts,
+            "months_json": json.dumps(months, ensure_ascii=False),
+            "activity_data_json": json.dumps(activity_data),
+            "course_names_json": json.dumps(course_names, ensure_ascii=False),
+            "course_counts_json": json.dumps(course_counts),
+            "users_last_30_days": User.objects.filter(
+                date_joined__gte=month_ago
+            ).count(),
         }
     )
     return context

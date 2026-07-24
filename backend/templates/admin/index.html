@@ -49,11 +49,10 @@
 </div>
 
 <script>
-  // Передаём данные из Django в JS
-  window.months = {{ months|safe }};
-  window.activity_data = {{ activity_data|safe }};
-  window.course_names = {{ course_names|safe }};
-  window.course_counts = {{ course_counts|safe }};
+  window.months = {{ months_json|safe }};
+  window.activity_data = {{ activity_data_json|safe }};
+  window.course_names = {{ course_names_json|safe }};
+  window.course_counts = {{ course_counts_json|safe }};
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{% static 'admin/js/index.js' %}"></script>

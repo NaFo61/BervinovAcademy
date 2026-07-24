@@ -1,0 +1,31 @@
+---
+description: Core workflow for Bervinov Academy — agent routing and gates
+alwaysApply: true
+---
+
+# Bervinov Academy — core
+
+## Agent routing
+
+| Area | Skill | Paths |
+|------|-------|-------|
+| Backend / API / DB / tests | `backend-agent` | `backend/**`, `services/code_check_*/**` |
+| Frontend / UI / SPA | `frontend-agent` | `frontend/**` |
+| Deploy / Docker / CI / nginx | `deploy-agent` | `deploy/**`, `nginx/**`, `docker-compose*.yml`, `.github/workflows/**` |
+| Full feature (ТЗ → code) | `feature-pipeline` | when user asks for a full feature |
+
+Use the matching skill. Do not cross domains unless the user asks (e.g. backend-only → no frontend edits).
+
+## Gates
+
+1. Prefer Plan / ТЗ first for non-trivial features; wait for user `APPROVED` when they require it.
+2. Never commit secrets (`.env`, tokens, keys).
+3. Never run `deploy/full-restart.sh` unless the user explicitly asks (wipes DB/volumes).
+4. Prefer small focused diffs; match existing patterns in neighboring files.
+5. Language: respond in the user's language (usually Russian); code/identifiers stay English.
+
+## Stack snapshot
+
+- Backend: Django + DRF + JWT + Celery + Channels + Kafka + Postgres
+- Frontend: React via CDN + Babel + hash router (not Vite/CRA)
+- Prod: image-only on server (`deploy/`), CI builds Docker Hub images
