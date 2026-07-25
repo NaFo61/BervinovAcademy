@@ -74,7 +74,6 @@ def clear_reset_code(login: str) -> None:
 
 
 def deliver_reset_code(user: User, code: str) -> None:
-    contact = user.email or user.phone or "пользователь"
     message = (
         f"Код для восстановления пароля в Bervinov Academy: {code}\n"
         f"Код действует 15 минут."
@@ -90,7 +89,7 @@ def deliver_reset_code(user: User, code: str) -> None:
             fail_silently=True,
         )
         return
-    logger.info("Password reset code for %s: %s", contact, code)
+    logger.info("Password reset requested for phone user id=%s", user.pk)
 
 
 def issue_reset_code(login: str) -> tuple[bool, str | None]:

@@ -125,7 +125,6 @@ class ChatThreadViewSet(
             sender=request.user,
             kind=kind,
             body=data.get("body") or "",
-            code_language=data.get("code_language") or "python",
             reply_to_public_id=(
                 str(data["reply_to"]) if data.get("reply_to") else None
             ),

@@ -1115,6 +1115,22 @@ const I = {
       <path d="m4 12 16-8-6 18-3-7-7-3z" strokeLinejoin="round" />
     </svg>,
 
+  Paperclip: ({ className }) =>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className={className}>
+      <path d="m21.4 11.6-8.5 8.5a5 5 0 0 1-7.1-7.1l9.2-9.2a3.2 3.2 0 0 1 4.5 4.5l-9.2 9.2a1.4 1.4 0 0 1-2-2l8.1-8.1" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>,
+
+  Copy: ({ className }) =>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className={className}>
+      <rect x="8" y="8" width="12" height="12" rx="2" />
+      <path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeLinecap="round" />
+    </svg>,
+
+  More: ({ className }) =>
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" />
+    </svg>,
+
   Refresh: ({ className }) =>
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className={className}>
       <path d="M4 4v5h5M20 20v-5h-5" strokeLinecap="round" strokeLinejoin="round" />
@@ -1411,7 +1427,6 @@ function TopNav({ route, navigate }) {
     { id: Routes.LANDING, label: 'Главная' },
     { id: Routes.CATALOG, label: 'Каталог' },
     { id: Routes.PROFILE, label: 'Профиль' },
-    ...(session ? [{ id: Routes.MESSAGES, label: 'Сообщения' }] : []),
     ...(isMentor ? [{ id: Routes.MENTOR, label: 'Ментор' }] : []),
   ];
 
@@ -1431,11 +1446,6 @@ function TopNav({ route, navigate }) {
               <button key={l.id} onClick={() => navigate(l.id)}
                 className={`relative px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${route === l.id ? 'bg-violet-500/10 text-violet-600' : 'text-ink/70 hover:bg-black/[0.03] hover:text-ink'}`}>
                 {l.label}
-                {l.id === Routes.MESSAGES && chatUnread > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center">
-                    {chatUnread > 99 ? '99+' : chatUnread}
-                  </span>
-                )}
               </button>
             ))}
           </nav>
@@ -1454,7 +1464,24 @@ function TopNav({ route, navigate }) {
             <kbd className="shrink-0 text-[10px] px-1.5 py-0.5 rounded border border-black/10 text-ink/40 font-mono">⌘K</kbd>
           </form>
           {session ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <button
+                type="button"
+                onClick={() => navigate(Routes.MESSAGES)}
+                aria-label={chatUnread > 0 ? `Сообщения, непрочитанных: ${chatUnread}` : 'Сообщения'}
+                className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                  route === Routes.MESSAGES
+                    ? 'bg-violet-500/10 text-violet-600'
+                    : 'text-ink/70 hover:bg-black/[0.04]'
+                }`}
+              >
+                <I.Chat className="w-5 h-5" />
+                {chatUnread > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center">
+                    {chatUnread > 99 ? '99+' : chatUnread}
+                  </span>
+                )}
+              </button>
               <NotificationBell navigate={navigate} />
               {displayName ? (
                 <span className="hidden sm:inline max-w-[140px] truncate text-sm text-ink/70" title={displayName}>

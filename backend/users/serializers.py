@@ -63,23 +63,19 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 "Необходимо указать login (email или телефон) для регистрации."
             )
 
-        # Проверка формата login (email или телефон)
         if "@" in login:
-            # Это email
             if User.objects.filter(email=login).exists():
                 raise serializers.ValidationError(
                     {"login": "Пользователь с таким email уже существует."}
                 )
             attrs["email"] = login
         else:
-            # Это телефон
             if User.objects.filter(phone=login).exists():
                 raise serializers.ValidationError(
                     {"login": "Пользователь с таким телефоном уже существует."}
                 )
             attrs["phone"] = login
 
-        # Проверка совпадения паролей
         if password != password_confirm:
             raise serializers.ValidationError(
                 {"password_confirm": "Пароли не совпадают."}
@@ -89,15 +85,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop("password_confirm")
-        validated_data.pop("login")  # Удаляем login, используем email/phone
+        validated_data.pop("login")
         password = validated_data.pop("password")
-
-        # Создание пользователя с ролью student
-        user = User.objects.create_user(
+        return User.objects.create_user(
             role="student", password=password, **validated_data
         )
-
-        return user
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):
@@ -162,7 +154,6 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
                 "Необходимо указать login (email или телефон) и пароль."
             )
 
-        # Поиск пользователя по email или телефону
         user = None
         try:
             user = User.objects.get(email=login)
@@ -172,14 +163,12 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
             except User.DoesNotExist:
                 pass
 
-        # Проверка пароля и статуса
         if not user or not user.check_password(password):
             raise serializers.ValidationError("Неверные учетные данные.")
 
         if not user.is_active:
             raise serializers.ValidationError("Учетная запись неактивна.")
 
-        # Генерация токенов
         refresh = RefreshToken.for_user(user)
         access = refresh.access_token
         inject_access_claims(access, user)

@@ -410,12 +410,6 @@ class ChatMessageCreateSerializer(serializers.Serializer):
         required=False,
         default="text",
     )
-    code_language = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        max_length=32,
-        default="python",
-    )
     reply_to = serializers.UUIDField(required=False, allow_null=True)
     file = serializers.FileField(required=False, allow_null=True)
     files = serializers.ListField(

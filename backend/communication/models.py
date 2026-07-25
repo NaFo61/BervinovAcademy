@@ -237,7 +237,19 @@ def chat_attachment_upload_to(instance, filename):
 
     from django.utils import timezone
 
-    ext = Path(filename).suffix.lower()[:16]
+    allowed = {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".webp",
+        ".gif",
+        ".mp4",
+        ".webm",
+        ".mov",
+    }
+    ext = Path(filename).suffix.lower()
+    if ext not in allowed:
+        ext = ".bin"
     return f"chat/{timezone.now():%Y/%m}/{uuid.uuid4().hex}{ext}"
 
 

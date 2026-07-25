@@ -10,15 +10,6 @@ Python **3.11+** · Django · PostgreSQL · Redis · Celery · Kafka · React
 
 ---
 
-<!-- ═══════════════════════════════════════════════════════════════════
-     HERO / АНИМАЦИЯ — вставьте сюда демо
-     Варианты:
-     1) GIF: <img src="docs/images/demo.gif" alt="Demo" width="720" />
-     2) Видео: <video src="docs/images/demo.webm" autoplay muted loop />
-     3) Lottie: в README.md напрямую Lottie не рендерится — используйте
-        ссылку на страницу или статичный превью-кадр + GIF ниже.
-     ═══════════════════════════════════════════════════════════════════ -->
-
 <p align="center">
   <a href="#-быстрый-старт-docker">Запуск</a>
   &nbsp;·&nbsp;
@@ -29,12 +20,6 @@ Python **3.11+** · Django · PostgreSQL · Redis · Celery · Kafka · React
   <a href="#-архитектура-сервисов">Архитектура</a>
   &nbsp;·&nbsp;
   <a href="#-гайд-по-проекту">Гайд</a>
-</p>
-
-<p align="center">
-  <!-- TODO: положите файл и раскомментируйте строку ниже -->
-  <!-- <img src="docs/images/hero-demo.gif" alt="Bervinov Academy demo" width="780" /> -->
-  <img src="https://via.placeholder.com/780x320/1a1a2e/eeeef7?text=Hero+%2F+Animation+%E2%86%92+docs%2Fimages%2Fhero-demo.gif" alt="Место под анимацию: добавьте docs/images/hero-demo.gif" width="780" />
 </p>
 
 ---

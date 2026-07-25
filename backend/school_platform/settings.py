@@ -538,13 +538,6 @@ SIMPLE_JWT = {
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
     "TOKEN_TYPE_CLAIM": "token_type",
     "JTI_CLAIM": "jti",
-    "CUSTOM_PAYLOAD": {
-        "email": "email",
-        "phone": "phone",
-        "role": "role",
-        "first_name": "first_name",
-        "last_name": "last_name",
-    },
 }
 
 MODELTRANSLATION_AUTO_POPULATE = False

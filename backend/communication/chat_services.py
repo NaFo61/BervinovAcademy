@@ -32,10 +32,6 @@ CHAT_MAX_IMAGE_BYTES = 10 * 1024 * 1024
 CHAT_MAX_VIDEO_BYTES = 50 * 1024 * 1024
 CHAT_MAX_ALBUM_ITEMS = 10
 CODE_LANGUAGE_PYTHON = "python"
-IMAGE_CONTENT_TYPES = frozenset(
-    {"image/jpeg", "image/png", "image/webp", "image/gif"}
-)
-VIDEO_CONTENT_TYPES = frozenset({"video/mp4", "video/webm", "video/quicktime"})
 EDITABLE_KINDS = frozenset({ChatMessage.Kind.TEXT, ChatMessage.Kind.CODE})
 DELETABLE_KINDS = frozenset(
     {
@@ -305,36 +301,74 @@ def _resolve_reply_to(
     return reply
 
 
-def _detect_upload_kind(upload) -> str:
-    content_type = (getattr(upload, "content_type", "") or "").lower()
-    name = (getattr(upload, "name", "") or "").lower()
-    if content_type in IMAGE_CONTENT_TYPES:
-        return ChatMessageAttachment.Kind.IMAGE
-    if content_type in VIDEO_CONTENT_TYPES:
-        return ChatMessageAttachment.Kind.VIDEO
-    if name.endswith((".jpg", ".jpeg", ".png", ".webp", ".gif")):
-        return ChatMessageAttachment.Kind.IMAGE
-    if name.endswith((".mp4", ".webm", ".mov")):
-        return ChatMessageAttachment.Kind.VIDEO
-    raise ValidationError(
-        {
-            "files": "Допустимы изображения (JPEG/PNG/WebP/GIF) или видео (MP4/WebM/MOV)."
-        }
-    )
+def _read_upload_header(upload, size: int = 64) -> bytes:
+    pos = upload.tell() if hasattr(upload, "tell") else None
+    header = upload.read(size) or b""
+    if hasattr(upload, "seek"):
+        try:
+            upload.seek(pos or 0)
+        except Exception:
+            upload.seek(0)
+    return header
 
 
-def _validate_upload(*, kind: str, upload) -> None:
+def _sniff_chat_upload(upload) -> tuple[str, str]:
+    """Определяет тип по magic bytes. Возвращает (kind, safe_ext)."""
     if upload is None:
         raise ValidationError({"files": "Нужен файл."})
     size = getattr(upload, "size", 0) or 0
-    if kind == ChatMessageAttachment.Kind.IMAGE:
-        if size > CHAT_MAX_IMAGE_BYTES:
-            raise ValidationError({"files": "Изображение не больше 10 МБ."})
-    elif kind == ChatMessageAttachment.Kind.VIDEO:
-        if size > CHAT_MAX_VIDEO_BYTES:
-            raise ValidationError({"files": "Видео не больше 50 МБ."})
-    else:
-        raise ValidationError({"kind": "Некорректный тип вложения."})
+    header = _read_upload_header(upload)
+
+    kind = None
+    ext = None
+    if header.startswith(b"\xff\xd8\xff"):
+        kind, ext = ChatMessageAttachment.Kind.IMAGE, ".jpg"
+    elif header.startswith(b"\x89PNG\r\n\x1a\n"):
+        kind, ext = ChatMessageAttachment.Kind.IMAGE, ".png"
+    elif header.startswith((b"GIF87a", b"GIF89a")):
+        kind, ext = ChatMessageAttachment.Kind.IMAGE, ".gif"
+    elif (
+        len(header) >= 12
+        and header.startswith(b"RIFF")
+        and header[8:12] == b"WEBP"
+    ):
+        kind, ext = ChatMessageAttachment.Kind.IMAGE, ".webp"
+    elif len(header) >= 12 and header[4:8] == b"ftyp":
+        brand = header[8:12]
+        if brand in (
+            b"qt  ",
+            b"isom",
+            b"iso2",
+            b"mp41",
+            b"mp42",
+            b"M4V ",
+            b"avc1",
+        ) or brand.startswith(b"mp4"):
+            kind, ext = ChatMessageAttachment.Kind.VIDEO, ".mp4"
+        else:
+            # QuickTime / generic ISO BMFF — treat as video
+            kind, ext = ChatMessageAttachment.Kind.VIDEO, ".mp4"
+    elif header.startswith(b"\x1aE\xdf\xa3"):
+        kind, ext = ChatMessageAttachment.Kind.VIDEO, ".webm"
+
+    if kind is None:
+        raise ValidationError(
+            {
+                "files": "Допустимы изображения (JPEG/PNG/WebP/GIF) или видео (MP4/WebM/MOV)."
+            }
+        )
+
+    if (
+        kind == ChatMessageAttachment.Kind.IMAGE
+        and size > CHAT_MAX_IMAGE_BYTES
+    ):
+        raise ValidationError({"files": "Изображение не больше 10 МБ."})
+    if (
+        kind == ChatMessageAttachment.Kind.VIDEO
+        and size > CHAT_MAX_VIDEO_BYTES
+    ):
+        raise ValidationError({"files": "Видео не больше 50 МБ."})
+    return kind, ext
 
 
 def _normalize_uploads(*, upload=None, uploads=None) -> list:
@@ -374,17 +408,31 @@ def message_preview_text(msg: ChatMessage) -> str:
 
 
 def _save_message_attachments(
-    *, message: ChatMessage, files: list, item_kinds: list[str]
+    *,
+    message: ChatMessage,
+    files: list,
+    item_kinds: list[str],
+    safe_exts: list[str],
 ) -> None:
+    from django.core.files.base import ContentFile
+
     first_path = None
-    for index, (upload, item_kind) in enumerate(zip(files, item_kinds)):
+    for index, (upload, item_kind, ext) in enumerate(
+        zip(files, item_kinds, safe_exts)
+    ):
+        raw = upload.read()
+        if hasattr(upload, "seek"):
+            upload.seek(0)
         attachment = ChatMessageAttachment(
             message=message,
             kind=item_kind,
             sort_order=index,
         )
-        attachment.file = upload
-        attachment.save()
+        attachment.file.save(
+            f"upload{ext}",
+            ContentFile(raw),
+            save=True,
+        )
         if first_path is None:
             first_path = attachment.file.name
     if first_path:
@@ -401,7 +449,6 @@ def create_message(
     body: str = "",
     reply_to: ChatMessage | None = None,
     reply_to_public_id: str | None = None,
-    code_language: str = "",
     upload=None,
     uploads=None,
 ) -> ChatMessage:
@@ -416,6 +463,7 @@ def create_message(
     text = (body or "").strip()
     files = _normalize_uploads(upload=upload, uploads=uploads)
     item_kinds: list[str] = []
+    safe_exts: list[str] = []
 
     if files:
         if len(files) > CHAT_MAX_ALBUM_ITEMS:
@@ -425,9 +473,9 @@ def create_message(
                 }
             )
         for upload_file in files:
-            item_kind = _detect_upload_kind(upload_file)
-            _validate_upload(kind=item_kind, upload=upload_file)
+            item_kind, ext = _sniff_chat_upload(upload_file)
             item_kinds.append(item_kind)
+            safe_exts.append(ext)
         kind = _message_kind_for_items(item_kinds)
         if len(text) > MAX_MESSAGE_LENGTH:
             raise ValidationError(
@@ -466,7 +514,10 @@ def create_message(
     message.save()
     if files:
         _save_message_attachments(
-            message=message, files=files, item_kinds=item_kinds
+            message=message,
+            files=files,
+            item_kinds=item_kinds,
+            safe_exts=safe_exts,
         )
 
     thread.last_message_at = now
@@ -531,6 +582,7 @@ def forward_message(
 
         copied = []
         item_kinds = []
+        safe_exts = []
         for item in source_attachments:
             item.file.open("rb")
             try:
@@ -538,10 +590,16 @@ def forward_message(
             finally:
                 item.file.close()
             name = Path(item.file.name).name
-            copied.append(ContentFile(content, name=name))
-            item_kinds.append(item.kind)
+            blob = ContentFile(content, name=name)
+            kind, ext = _sniff_chat_upload(blob)
+            copied.append(blob)
+            item_kinds.append(kind)
+            safe_exts.append(ext)
         _save_message_attachments(
-            message=message, files=copied, item_kinds=item_kinds
+            message=message,
+            files=copied,
+            item_kinds=item_kinds,
+            safe_exts=safe_exts,
         )
     elif source.attachment:
         from pathlib import Path
@@ -554,19 +612,13 @@ def forward_message(
         finally:
             source.attachment.close()
         name = Path(source.attachment.name).name
-        kind = (
-            source.kind
-            if source.kind
-            in (
-                ChatMessageAttachment.Kind.IMAGE,
-                ChatMessageAttachment.Kind.VIDEO,
-            )
-            else ChatMessageAttachment.Kind.IMAGE
-        )
+        blob = ContentFile(content, name=name)
+        kind, ext = _sniff_chat_upload(blob)
         _save_message_attachments(
             message=message,
-            files=[ContentFile(content, name=name)],
+            files=[blob],
             item_kinds=[kind],
+            safe_exts=[ext],
         )
 
     target_thread.last_message_at = now
