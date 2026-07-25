@@ -650,7 +650,7 @@ function ChatComposer({
       </div>
       {!embedded && (
         <div className="text-[11px] text-ink/40 mt-2">
-          Enter — отправить · несколько фото = альбом · </> — Python с подсветкой
+          Enter — отправить · несколько фото = альбом · кнопка {'</>'} — Python с подсветкой
         </div>
       )}
     </div>
