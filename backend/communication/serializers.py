@@ -214,11 +214,37 @@ class ChatConferenceBriefSerializer(serializers.ModelSerializer):
         return bool(board and board.image)
 
 
+class ChatMessageRefSerializer(serializers.ModelSerializer):
+    """Краткое превью для reply / forward."""
+
+    public_id = serializers.UUIDField(read_only=True)
+    sender = ChatParticipantSerializer(read_only=True)
+    body_preview = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ChatMessage
+        fields = (
+            "public_id",
+            "kind",
+            "sender",
+            "body_preview",
+            "is_deleted",
+        )
+
+    def get_body_preview(self, obj):
+        from . import chat_services
+
+        return chat_services.message_preview_text(obj)
+
+
 class ChatMessageSerializer(serializers.ModelSerializer):
     public_id = serializers.UUIDField(read_only=True)
     sender = ChatParticipantSerializer(read_only=True)
     conference = ChatConferenceBriefSerializer(read_only=True)
     system_payload = serializers.JSONField(read_only=True)
+    attachment_url = serializers.SerializerMethodField()
+    reply_to = ChatMessageRefSerializer(read_only=True)
+    forwarded_from = ChatMessageRefSerializer(read_only=True)
 
     class Meta:
         model = ChatMessage
@@ -227,6 +253,10 @@ class ChatMessageSerializer(serializers.ModelSerializer):
             "kind",
             "sender",
             "body",
+            "code_language",
+            "attachment_url",
+            "reply_to",
+            "forwarded_from",
             "is_deleted",
             "edited_at",
             "show_edited",
@@ -236,10 +266,21 @@ class ChatMessageSerializer(serializers.ModelSerializer):
             "created_at",
         )
 
+    def get_attachment_url(self, obj):
+        if not obj.attachment:
+            return None
+        request = self.context.get("request")
+        url = obj.attachment.url
+        if request is not None:
+            return request.build_absolute_uri(url)
+        return url
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.is_deleted:
             data["body"] = ""
+            data["attachment_url"] = None
+            data["code_language"] = ""
         return data
 
 
@@ -276,6 +317,8 @@ class DirectThreadSerializer(serializers.ModelSerializer):
         return ChatParticipantSerializer(other).data
 
     def get_last_message_preview(self, obj):
+        from . import chat_services
+
         msg = (
             obj.messages.select_related("sender")
             .order_by("-created_at")
@@ -283,11 +326,7 @@ class DirectThreadSerializer(serializers.ModelSerializer):
         )
         if not msg:
             return None
-        if msg.is_deleted:
-            return "Сообщение удалено"
-        if msg.kind == ChatMessage.Kind.SYSTEM:
-            return (msg.body or "")[:120]
-        return (msg.body or "")[:120]
+        return chat_services.message_preview_text(msg)
 
     def get_unread_count(self, obj):
         user = self._request_user()
@@ -299,4 +338,26 @@ class DirectThreadSerializer(serializers.ModelSerializer):
 
 
 class ChatMessageCreateSerializer(serializers.Serializer):
-    body = serializers.CharField(max_length=4000, trim_whitespace=True)
+    body = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=16000,
+        trim_whitespace=False,
+    )
+    kind = serializers.ChoiceField(
+        choices=["text", "code", "image", "video"],
+        required=False,
+        default="text",
+    )
+    code_language = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=32,
+        default="",
+    )
+    reply_to = serializers.UUIDField(required=False, allow_null=True)
+    file = serializers.FileField(required=False, allow_null=True)
+
+
+class ChatMessageForwardSerializer(serializers.Serializer):
+    thread = serializers.UUIDField()

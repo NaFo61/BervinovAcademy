@@ -47,7 +47,45 @@ function messagePreview(message) {
   if (!message) return '';
   if (message.is_deleted) return 'Сообщение удалено';
   if (message.kind === 'system') return message.body || '';
+  if (message.kind === 'image') {
+    const c = (message.body || '').trim();
+    return c ? `Фото: ${c.slice(0, 100)}` : 'Фото';
+  }
+  if (message.kind === 'video') {
+    const c = (message.body || '').trim();
+    return c ? `Видео: ${c.slice(0, 100)}` : 'Видео';
+  }
+  if (message.kind === 'code') {
+    const lang = (message.code_language || '').trim();
+    return lang ? `Код (${lang})` : 'Код';
+  }
   return (message.body || '').slice(0, 120);
+}
+
+function mediaSrc(message) {
+  return window.mediaUrl?.(message.attachment_url) || message.attachment_url || '';
+}
+
+function ReplyQuote({ reply, mine, onClick }) {
+  if (!reply) return null;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left mb-2 px-3 py-2 rounded-xl border-l-2 text-xs ${
+        mine
+          ? 'bg-white/15 border-white/70 text-white/90'
+          : 'bg-black/[0.04] border-violet-500 text-ink/80'
+      }`}
+    >
+      <div className="font-semibold opacity-80 mb-0.5">
+        {reply.sender ? chatParticipantName(reply.sender) : 'Сообщение'}
+      </div>
+      <div className="opacity-75 line-clamp-2">
+        {reply.is_deleted ? 'Сообщение удалено' : (reply.body_preview || '')}
+      </div>
+    </button>
+  );
 }
 
 function upsertChatMessage(prev, payload) {
@@ -101,10 +139,26 @@ function ConferenceSystemBubble({ message, navigate, inCall, onOpenWhiteboard })
   );
 }
 
-function ChatBubble({ message, mine, onEdit, onDelete, editing, onSaveEdit, onCancelEdit, editBusy, navigate, inCall, onOpenWhiteboard }) {
+function ChatBubble({
+  message,
+  mine,
+  onEdit,
+  onDelete,
+  onReply,
+  onForward,
+  editing,
+  onSaveEdit,
+  onCancelEdit,
+  editBusy,
+  navigate,
+  inCall,
+  onOpenWhiteboard,
+}) {
   const [editText, setEditText] = React.useState(message.body || '');
   const [menuOpen, setMenuOpen] = React.useState(false);
   const menuRef = React.useRef(null);
+  const canEdit = mine && (message.kind === 'text' || message.kind === 'code');
+  const canDelete = mine && message.kind !== 'system';
 
   React.useEffect(() => {
     if (editing) setEditText(message.body || '');
@@ -150,8 +204,10 @@ function ChatBubble({ message, mine, onEdit, onDelete, editing, onSaveEdit, onCa
             value={editText}
             disabled={editBusy}
             onChange={(e) => setEditText(e.target.value)}
-            rows={3}
-            className="w-full px-4 py-3 rounded-xl ring-1 ring-violet-300 text-sm resize-y outline-none"
+            rows={message.kind === 'code' ? 8 : 3}
+            className={`w-full px-4 py-3 rounded-xl ring-1 ring-violet-300 text-sm resize-y outline-none ${
+              message.kind === 'code' ? 'font-mono text-xs' : ''
+            }`}
           />
           <div className="flex gap-2 justify-end">
             <button type="button" disabled={editBusy} onClick={onCancelEdit}
@@ -168,34 +224,99 @@ function ChatBubble({ message, mine, onEdit, onDelete, editing, onSaveEdit, onCa
     );
   }
 
+  const src = mediaSrc(message);
+
   return (
     <div className={`group flex ${mine ? 'justify-end' : 'justify-start'} my-1.5`}>
-      <div className={`relative max-w-[85%] sm:max-w-[70%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words ${
+      <div className={`relative max-w-[85%] sm:max-w-[70%] px-4 py-2.5 rounded-2xl text-sm break-words ${
         mine
           ? 'bg-violet-600 text-white rounded-br-md'
           : 'bg-white ring-1 ring-black/[0.06] text-ink rounded-bl-md'
       }`}>
-        {mine && (
-          <div className="absolute -left-9 top-1 opacity-0 group-hover:opacity-100 transition-opacity" ref={menuRef}>
-            <button type="button" onClick={() => setMenuOpen((v) => !v)}
-              className="w-7 h-7 rounded-lg bg-white ring-1 ring-black/[0.08] text-ink/60 text-xs font-bold">
-              ⋮
-            </button>
-            {menuOpen && (
-              <div className="absolute right-0 mt-1 z-10 min-w-[120px] bg-white rounded-xl ring-1 ring-black/[0.08] shadow-soft py-1 text-left">
+        <div className={`absolute top-1 opacity-0 group-hover:opacity-100 transition-opacity ${
+          mine ? '-left-9' : '-right-9'
+        }`} ref={menuRef}>
+          <button type="button" onClick={() => setMenuOpen((v) => !v)}
+            className="w-7 h-7 rounded-lg bg-white ring-1 ring-black/[0.08] text-ink/60 text-xs font-bold">
+            ⋮
+          </button>
+          {menuOpen && (
+            <div className={`absolute mt-1 z-10 min-w-[132px] bg-white rounded-xl ring-1 ring-black/[0.08] shadow-soft py-1 text-left ${
+              mine ? 'right-0' : 'left-0'
+            }`}>
+              <button type="button" onClick={() => { setMenuOpen(false); onReply?.(message); }}
+                className="w-full px-3 py-2 text-xs font-semibold text-left hover:bg-black/[0.03] text-ink">
+                Ответить
+              </button>
+              <button type="button" onClick={() => { setMenuOpen(false); onForward?.(message); }}
+                className="w-full px-3 py-2 text-xs font-semibold text-left hover:bg-black/[0.03] text-ink">
+                Переслать
+              </button>
+              {canEdit && (
                 <button type="button" onClick={() => { setMenuOpen(false); onEdit?.(); }}
-                  className="w-full px-3 py-2 text-xs font-semibold text-left hover:bg-black/[0.03]">
+                  className="w-full px-3 py-2 text-xs font-semibold text-left hover:bg-black/[0.03] text-ink">
                   Изменить
                 </button>
+              )}
+              {canDelete && (
                 <button type="button" onClick={() => { setMenuOpen(false); onDelete?.(); }}
                   className="w-full px-3 py-2 text-xs font-semibold text-left text-red-600 hover:bg-red-50">
                   Удалить
                 </button>
-              </div>
-            )}
+              )}
+            </div>
+          )}
+        </div>
+
+        {message.forwarded_from && (
+          <div className={`text-[10px] font-semibold uppercase tracking-wide mb-1 ${
+            mine ? 'text-white/70' : 'text-ink/45'
+          }`}>
+            Переслано
           </div>
         )}
-        <div>{message.body}</div>
+
+        <ReplyQuote reply={message.reply_to} mine={mine} />
+
+        {message.kind === 'image' && src && (
+          <a href={src} target="_blank" rel="noreferrer" className="block mb-2 -mx-1">
+            <img
+              src={src}
+              alt={message.body || 'Фото'}
+              className="max-h-72 w-auto max-w-full rounded-xl object-contain bg-black/10"
+              loading="lazy"
+            />
+          </a>
+        )}
+
+        {message.kind === 'video' && src && (
+          <video
+            controls
+            preload="metadata"
+            src={src}
+            className="mb-2 -mx-1 max-h-80 w-full rounded-xl bg-black"
+          />
+        )}
+
+        {message.kind === 'code' ? (
+          <div className="space-y-1">
+            {message.code_language ? (
+              <div className={`text-[10px] font-semibold uppercase tracking-wide ${
+                mine ? 'text-white/65' : 'text-ink/45'
+              }`}>
+                {message.code_language}
+              </div>
+            ) : null}
+            <pre className={`overflow-x-auto rounded-xl px-3 py-2 text-[11px] leading-relaxed font-mono whitespace-pre ${
+              mine ? 'bg-black/25 text-white' : 'bg-black/[0.04] text-ink'
+            }`}>
+              <code>{message.body}</code>
+            </pre>
+          </div>
+        ) : message.body ? (
+          <div className="whitespace-pre-wrap">{message.body}</div>
+        ) : null}
+
         <div className={`mt-1 text-[10px] ${mine ? 'text-white/65' : 'text-ink/40'}`}>
           {formatChatTime(message.created_at)}
           {message.show_edited && message.edited_at ? ' · изменено' : ''}
@@ -205,48 +326,265 @@ function ChatBubble({ message, mine, onEdit, onDelete, editing, onSaveEdit, onCa
   );
 }
 
-function ChatComposer({ disabled, onSend, sending, embedded = false }) {
+const CODE_LANGS = [
+  '', 'python', 'javascript', 'typescript', 'html', 'css', 'sql', 'bash', 'json', 'java', 'c++',
+];
+
+function ChatComposer({
+  disabled,
+  onSend,
+  sending,
+  embedded = false,
+  replyTo = null,
+  onCancelReply,
+}) {
   const [text, setText] = React.useState('');
+  const [mode, setMode] = React.useState('text'); // text | code
+  const [lang, setLang] = React.useState('python');
+  const [pendingFile, setPendingFile] = React.useState(null);
+  const [previewUrl, setPreviewUrl] = React.useState('');
   const inputRef = React.useRef(null);
+  const fileRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!pendingFile) {
+      setPreviewUrl('');
+      return undefined;
+    }
+    const url = URL.createObjectURL(pendingFile);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pendingFile]);
+
+  const clearFile = () => {
+    setPendingFile(null);
+    if (fileRef.current) fileRef.current.value = '';
+  };
 
   const submit = async () => {
+    if (disabled || sending) return;
     const body = text.trim();
-    if (!body || disabled || sending) return;
+    if (pendingFile) {
+      const isVideo = pendingFile.type.startsWith('video/');
+      await onSend({
+        kind: isVideo ? 'video' : 'image',
+        body,
+        file: pendingFile,
+        reply_to: replyTo?.public_id || null,
+      });
+      setText('');
+      clearFile();
+      onCancelReply?.();
+      inputRef.current?.focus();
+      return;
+    }
+    if (!body) return;
+    await onSend({
+      kind: mode === 'code' ? 'code' : 'text',
+      body,
+      code_language: mode === 'code' ? lang : '',
+      reply_to: replyTo?.public_id || null,
+    });
     setText('');
-    await onSend(body);
+    onCancelReply?.();
     inputRef.current?.focus();
   };
 
+  const canSend = !disabled && !sending && (pendingFile || text.trim());
+
   return (
     <div className={`border-t p-3 sm:p-4 ${embedded ? 'border-white/10 bg-[#0a1020]' : 'border-black/[0.06] bg-white'}`}>
+      {replyTo && (
+        <div className={`mb-2 flex items-start gap-2 rounded-xl px-3 py-2 ${
+          embedded ? 'bg-white/8 text-white/85' : 'bg-violet-500/[0.08] text-ink/80'
+        }`}>
+          <div className="flex-1 min-w-0 text-xs">
+            <div className="font-semibold">
+              Ответ · {replyTo.sender ? chatParticipantName(replyTo.sender) : 'сообщение'}
+            </div>
+            <div className="opacity-70 truncate">
+              {replyTo.body_preview || messagePreview(replyTo)}
+            </div>
+          </div>
+          <button type="button" onClick={onCancelReply}
+            className={`w-7 h-7 rounded-lg text-sm font-bold ${
+              embedded ? 'bg-white/10' : 'bg-white ring-1 ring-black/[0.08]'
+            }`}>
+            ×
+          </button>
+        </div>
+      )}
+
+      {pendingFile && (
+        <div className={`mb-2 flex items-center gap-3 rounded-xl px-3 py-2 ${
+          embedded ? 'bg-white/8' : 'bg-black/[0.03]'
+        }`}>
+          {pendingFile.type.startsWith('image/') && previewUrl ? (
+            <img src={previewUrl} alt="" className="h-14 w-14 rounded-lg object-cover" />
+          ) : (
+            <div className={`h-14 w-14 rounded-lg flex items-center justify-center text-xs font-semibold ${
+              embedded ? 'bg-white/10 text-white/70' : 'bg-white ring-1 ring-black/[0.08]'
+            }`}>
+              VIDEO
+            </div>
+          )}
+          <div className={`flex-1 min-w-0 text-xs ${embedded ? 'text-white/80' : 'text-ink/70'}`}>
+            <div className="font-semibold truncate">{pendingFile.name}</div>
+            <div className="opacity-60">{Math.round(pendingFile.size / 1024)} КБ</div>
+          </div>
+          <button type="button" onClick={clearFile}
+            className={`h-8 px-3 rounded-lg text-xs font-semibold ${
+              embedded ? 'bg-white/10 text-white' : 'bg-white ring-1 ring-black/[0.08]'
+            }`}>
+            Убрать
+          </button>
+        </div>
+      )}
+
       <div className="flex gap-2 items-end">
-        <textarea
-          ref={inputRef}
-          rows={1}
-          value={text}
-          disabled={disabled || sending}
-          placeholder="Напишите сообщение…"
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              submit();
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) {
+              setPendingFile(f);
+              setMode('text');
             }
           }}
-          className={`flex-1 min-h-[44px] max-h-32 px-4 py-3 rounded-xl text-sm resize-y outline-none disabled:opacity-50 ${
-            embedded
-              ? 'bg-white/10 ring-1 ring-white/15 text-white placeholder:text-white/40 focus:ring-violet-400'
-              : 'ring-1 ring-black/[0.08] focus:ring-violet-400'
-          }`}
         />
-        <button type="button" disabled={disabled || sending || !text.trim()} onClick={submit}
+        <button
+          type="button"
+          disabled={disabled || sending}
+          title="Фото или видео"
+          onClick={() => fileRef.current?.click()}
+          className={`h-11 w-11 rounded-xl shrink-0 flex items-center justify-center text-lg disabled:opacity-50 ${
+            embedded
+              ? 'bg-white/10 ring-1 ring-white/15 text-white hover:bg-white/15'
+              : 'bg-white ring-1 ring-black/[0.08] text-ink/70 hover:bg-black/[0.03]'
+          }`}
+        >
+          📎
+        </button>
+        <button
+          type="button"
+          disabled={disabled || sending || !!pendingFile}
+          title="Режим кода"
+          onClick={() => setMode((m) => (m === 'code' ? 'text' : 'code'))}
+          className={`h-11 w-11 rounded-xl shrink-0 flex items-center justify-center text-xs font-bold disabled:opacity-50 ${
+            mode === 'code'
+              ? 'btn-grad text-white'
+              : embedded
+                ? 'bg-white/10 ring-1 ring-white/15 text-white hover:bg-white/15'
+                : 'bg-white ring-1 ring-black/[0.08] text-ink/70 hover:bg-black/[0.03]'
+          }`}
+        >
+          {'</>'}
+        </button>
+        <div className="flex-1 min-w-0 space-y-2">
+          {mode === 'code' && !pendingFile && (
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              className={`h-8 px-2 rounded-lg text-xs outline-none ${
+                embedded
+                  ? 'bg-white/10 ring-1 ring-white/15 text-white'
+                  : 'bg-white ring-1 ring-black/[0.08]'
+              }`}
+            >
+              {CODE_LANGS.map((l) => (
+                <option key={l || 'plain'} value={l}>
+                  {l || 'plain'}
+                </option>
+              ))}
+            </select>
+          )}
+          <textarea
+            ref={inputRef}
+            rows={mode === 'code' ? 4 : 1}
+            value={text}
+            disabled={disabled || sending}
+            placeholder={
+              pendingFile
+                ? 'Подпись (необязательно)…'
+                : mode === 'code'
+                  ? 'Вставьте код…'
+                  : 'Напишите сообщение…'
+            }
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && mode !== 'code') {
+                e.preventDefault();
+                submit();
+              }
+            }}
+            onPaste={(e) => {
+              const items = e.clipboardData?.items;
+              if (!items) return;
+              for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                  const f = item.getAsFile();
+                  if (f) {
+                    e.preventDefault();
+                    setPendingFile(f);
+                    setMode('text');
+                  }
+                  break;
+                }
+              }
+            }}
+            className={`w-full min-h-[44px] max-h-40 px-4 py-3 rounded-xl text-sm resize-y outline-none disabled:opacity-50 ${
+              mode === 'code' ? 'font-mono text-xs' : ''
+            } ${
+              embedded
+                ? 'bg-white/10 ring-1 ring-white/15 text-white placeholder:text-white/40 focus:ring-violet-400'
+                : 'ring-1 ring-black/[0.08] focus:ring-violet-400'
+            }`}
+          />
+        </div>
+        <button type="button" disabled={!canSend} onClick={submit}
           className="h-11 px-5 rounded-xl btn-grad text-white text-sm font-semibold disabled:opacity-50 shrink-0">
           {sending ? '…' : 'Отправить'}
         </button>
       </div>
       {!embedded && (
-      <div className="text-[11px] text-ink/40 mt-2">Enter — отправить, Shift+Enter — новая строка</div>
+        <div className="text-[11px] text-ink/40 mt-2">
+          Enter — отправить · Shift+Enter — новая строка · можно вставить фото из буфера
+        </div>
       )}
+    </div>
+  );
+}
+
+function ForwardModal({ open, threads, currentThreadId, onClose, onPick, busy }) {
+  if (!open) return null;
+  const options = (threads || []).filter((t) => t.public_id !== currentThreadId);
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-soft overflow-hidden">
+        <div className="px-4 py-3 border-b border-black/[0.06] flex items-center justify-between">
+          <div className="font-bold">Переслать в диалог</div>
+          <button type="button" onClick={onClose} className="w-8 h-8 rounded-lg ring-1 ring-black/[0.08]">×</button>
+        </div>
+        <div className="max-h-80 overflow-y-auto p-2">
+          {options.length === 0 ? (
+            <div className="px-3 py-8 text-center text-sm text-ink/50">Нет других диалогов</div>
+          ) : options.map((t) => (
+            <button
+              key={t.public_id}
+              type="button"
+              disabled={busy}
+              onClick={() => onPick(t)}
+              className="w-full text-left px-3 py-3 rounded-xl hover:bg-black/[0.03] disabled:opacity-50"
+            >
+              <div className="font-semibold text-sm">{chatParticipantName(t.other_participant)}</div>
+              <div className="text-xs text-ink/45 truncate">{t.last_message_preview || '—'}</div>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -263,6 +601,7 @@ function ChatThreadView({
   markReadOnView = true,
   onUnreadMessage,
   onMarkedRead,
+  threads = [],
 }) {
   const [messages, setMessages] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -272,6 +611,9 @@ function ChatThreadView({
   const [sending, setSending] = React.useState(false);
   const [editBusy, setEditBusy] = React.useState(false);
   const [editingId, setEditingId] = React.useState(null);
+  const [replyTo, setReplyTo] = React.useState(null);
+  const [forwardMsg, setForwardMsg] = React.useState(null);
+  const [forwardBusy, setForwardBusy] = React.useState(false);
   const [wsState, setWsState] = React.useState('connecting');
   const listRef = React.useRef(null);
   const stickToBottomRef = React.useRef(true);
@@ -406,22 +748,69 @@ function ChatThreadView({
     if (!loading) scrollToBottom(true);
   }, [thread?.public_id, loading, scrollToBottom]);
 
-  const sendMessage = async (body) => {
+  const sendMessage = async (payload) => {
     if (!thread?.public_id) return;
     setSending(true);
     setError('');
     try {
-      const msg = await window.fetchApiJson(
-        `/api/communication/chat/threads/${encodeURIComponent(thread.public_id)}/messages/`,
-        { method: 'POST', body: { body }, auth: true },
-      );
+      let msg;
+      const replyId = payload.reply_to || null;
+      if (payload.file) {
+        const fd = new FormData();
+        fd.append('kind', payload.kind);
+        fd.append('file', payload.file);
+        if (payload.body) fd.append('body', payload.body);
+        if (replyId) fd.append('reply_to', replyId);
+        msg = await window.fetchApiForm(
+          `/api/communication/chat/threads/${encodeURIComponent(thread.public_id)}/messages/`,
+          fd,
+          { method: 'POST', auth: true },
+        );
+      } else {
+        const body = {
+          kind: payload.kind || 'text',
+          body: payload.body,
+        };
+        if (payload.code_language) body.code_language = payload.code_language;
+        if (replyId) body.reply_to = replyId;
+        msg = await window.fetchApiJson(
+          `/api/communication/chat/threads/${encodeURIComponent(thread.public_id)}/messages/`,
+          { method: 'POST', body, auth: true },
+        );
+      }
       setMessages((prev) => upsertChatMessage(prev, msg));
       notifyActivity(msg);
       scrollToBottom(true);
     } catch (e) {
       setError(e.message || 'Не удалось отправить');
+      throw e;
     } finally {
       setSending(false);
+    }
+  };
+
+  const forwardToThread = async (targetThread) => {
+    if (!forwardMsg?.public_id || !targetThread?.public_id) return;
+    setForwardBusy(true);
+    setError('');
+    try {
+      await window.fetchApiJson(
+        `/api/communication/chat/messages/${encodeURIComponent(forwardMsg.public_id)}/forward/`,
+        {
+          method: 'POST',
+          body: { thread: targetThread.public_id },
+          auth: true,
+        },
+      );
+      setForwardMsg(null);
+      if (targetThread.public_id === thread?.public_id) {
+        // same thread — reload recent via activity
+      }
+      notifyActivity({ created_at: new Date().toISOString() });
+    } catch (e) {
+      setError(e.message || 'Не удалось переслать');
+    } finally {
+      setForwardBusy(false);
     }
   };
 
@@ -545,6 +934,13 @@ function ChatThreadView({
                   onCancelEdit={() => setEditingId(null)}
                   onSaveEdit={(body) => saveEdit(msg.public_id, body)}
                   onDelete={() => deleteMessage(msg.public_id)}
+                  onReply={(m) => setReplyTo({
+                    public_id: m.public_id,
+                    sender: m.sender,
+                    body_preview: messagePreview(m),
+                    kind: m.kind,
+                  })}
+                  onForward={(m) => setForwardMsg(m)}
                   navigate={navigate}
                   inCall={inCall}
                   onOpenWhiteboard={onOpenWhiteboard}
@@ -571,8 +967,19 @@ function ChatThreadView({
           onSend={sendMessage}
           sending={sending}
           embedded={embedded}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
         />
       </div>
+
+      <ForwardModal
+        open={!!forwardMsg}
+        threads={threads}
+        currentThreadId={thread?.public_id}
+        busy={forwardBusy}
+        onClose={() => setForwardMsg(null)}
+        onPick={forwardToThread}
+      />
     </div>
   );
 }
@@ -770,6 +1177,7 @@ function MessagesPage({ navigate, hashParams }) {
             {activeThread ? (
               <ChatThreadView
                 thread={activeThread}
+                threads={threads}
                 onBack={() => setActiveThread(null)}
                 onThreadActivity={handleThreadActivity}
                 onMarkedRead={onActiveThreadMarkedRead}

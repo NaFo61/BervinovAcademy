@@ -231,12 +231,25 @@ class DirectThread(UUIDPublicIdMixin, models.Model):
         return f"{self.mentor} ↔ {self.student}"
 
 
+def chat_attachment_upload_to(instance, filename):
+    from pathlib import Path
+    import uuid
+
+    from django.utils import timezone
+
+    ext = Path(filename).suffix.lower()[:16]
+    return f"chat/{timezone.now():%Y/%m}/{uuid.uuid4().hex}{ext}"
+
+
 class ChatMessage(UUIDPublicIdMixin, models.Model):
     """Сообщение в диалоге ментор ↔ студент."""
 
     class Kind(models.TextChoices):
         TEXT = "text", _("Текст")
         SYSTEM = "system", _("Системное")
+        IMAGE = "image", _("Изображение")
+        VIDEO = "video", _("Видео")
+        CODE = "code", _("Код")
 
     class SystemEvent(models.TextChoices):
         CONFERENCE_INVITED = "conference_invited", _("Приглашение на созвон")
@@ -267,7 +280,39 @@ class ChatMessage(UUIDPublicIdMixin, models.Model):
         related_name="chat_messages_sent",
         verbose_name=_("Отправитель"),
     )
-    body = models.TextField(verbose_name=_("Текст"))
+    body = models.TextField(
+        blank=True,
+        default="",
+        verbose_name=_("Текст"),
+    )
+    attachment = models.FileField(
+        upload_to=chat_attachment_upload_to,
+        blank=True,
+        null=True,
+        verbose_name=_("Вложение"),
+    )
+    code_language = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        verbose_name=_("Язык кода"),
+    )
+    reply_to = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="replies",
+        verbose_name=_("Ответ на"),
+    )
+    forwarded_from = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="forwards",
+        verbose_name=_("Переслано из"),
+    )
     is_deleted = models.BooleanField(default=False, verbose_name=_("Удалено"))
     edited_at = models.DateTimeField(
         null=True,

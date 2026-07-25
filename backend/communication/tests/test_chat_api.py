@@ -356,3 +356,78 @@ class TestChatApi:
         page1_ids = {m["public_id"] for m in page1.data["results"]}
         page2_ids = {m["public_id"] for m in page2.data["results"]}
         assert page1_ids.isdisjoint(page2_ids)
+
+    def test_send_code_reply_and_image(
+        self, mentor_client, student_client, student_user, mentor_user
+    ):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        open_resp = mentor_client.get(
+            "/api/communication/chat/threads/open/",
+            {"user": str(student_user.public_id)},
+        )
+        thread_id = open_resp.data["public_id"]
+
+        code_resp = mentor_client.post(
+            f"/api/communication/chat/threads/{thread_id}/messages/",
+            {
+                "kind": "code",
+                "body": "print('hi')\n",
+                "code_language": "python",
+            },
+            format="json",
+        )
+        assert code_resp.status_code == status.HTTP_201_CREATED
+        assert code_resp.data["kind"] == "code"
+        assert code_resp.data["code_language"] == "python"
+        code_id = code_resp.data["public_id"]
+
+        reply_resp = student_client.post(
+            f"/api/communication/chat/threads/{thread_id}/messages/",
+            {
+                "body": "Ок, посмотрел",
+                "reply_to": code_id,
+            },
+            format="json",
+        )
+        assert reply_resp.status_code == status.HTTP_201_CREATED
+        assert reply_resp.data["reply_to"]["public_id"] == code_id
+
+        png = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+            b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00"
+            b"\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05"
+            b"\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        image = SimpleUploadedFile("shot.png", png, content_type="image/png")
+        img_resp = mentor_client.post(
+            f"/api/communication/chat/threads/{thread_id}/messages/",
+            {"kind": "image", "body": "скрин", "file": image},
+            format="multipart",
+        )
+        assert img_resp.status_code == status.HTTP_201_CREATED
+        assert img_resp.data["kind"] == "image"
+        assert img_resp.data["attachment_url"]
+        assert "скрин" in img_resp.data["body"]
+
+        # second thread for forward
+        other = student_user.__class__.objects.create_user(
+            email="other-student@example.com",
+            password="pass12345",
+            role="student",
+            first_name="Other",
+        )
+        open2 = mentor_client.get(
+            "/api/communication/chat/threads/open/",
+            {"user": str(other.public_id)},
+        )
+        target_id = open2.data["public_id"]
+        fwd = mentor_client.post(
+            f"/api/communication/chat/messages/{code_id}/forward/",
+            {"thread": target_id},
+            format="json",
+        )
+        assert fwd.status_code == status.HTTP_201_CREATED
+        assert fwd.data["kind"] == "code"
+        assert fwd.data["forwarded_from"]["public_id"] == code_id
+        assert fwd.data["body"].startswith("print")

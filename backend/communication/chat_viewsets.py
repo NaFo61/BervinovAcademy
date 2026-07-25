@@ -3,12 +3,15 @@ from django.utils.dateparse import parse_datetime
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from . import chat_services
+from .models import ChatMessage
 from .serializers import (
     ChatMessageCreateSerializer,
+    ChatMessageForwardSerializer,
     ChatMessageSerializer,
     DirectThreadSerializer,
 )
@@ -23,6 +26,7 @@ class ChatThreadViewSet(
     lookup_field = "public_id"
     lookup_value_regex = UUID_LOOKUP_REGEX
     serializer_class = DirectThreadSerializer
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get_queryset(self):
         return chat_services.threads_for_user(self.request.user)
@@ -97,20 +101,38 @@ class ChatThreadViewSet(
                 )
             return Response(
                 {
-                    "results": ChatMessageSerializer(rows, many=True).data,
+                    "results": ChatMessageSerializer(
+                        rows, many=True, context={"request": request}
+                    ).data,
                     "has_more": has_more,
                 }
             )
 
         ser = ChatMessageCreateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        message = chat_services.create_text_message(
+        data = ser.validated_data
+        kind = data.get("kind") or ChatMessage.Kind.TEXT
+        if request.FILES.get("file") and kind == ChatMessage.Kind.TEXT:
+            upload = request.FILES["file"]
+            ctype = (getattr(upload, "content_type", "") or "").lower()
+            if ctype.startswith("video/"):
+                kind = ChatMessage.Kind.VIDEO
+            else:
+                kind = ChatMessage.Kind.IMAGE
+
+        message = chat_services.create_message(
             thread=thread,
             sender=request.user,
-            body=ser.validated_data["body"],
+            kind=kind,
+            body=data.get("body") or "",
+            code_language=data.get("code_language") or "",
+            reply_to_public_id=(
+                str(data["reply_to"]) if data.get("reply_to") else None
+            ),
+            upload=request.FILES.get("file") or data.get("file"),
         )
         return Response(
-            ChatMessageSerializer(message).data,
+            ChatMessageSerializer(message, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
         )
 
@@ -120,7 +142,8 @@ class ChatMessageViewSet(viewsets.GenericViewSet):
     lookup_field = "public_id"
     lookup_value_regex = UUID_LOOKUP_REGEX
     serializer_class = ChatMessageSerializer
-    http_method_names = ["patch", "delete", "head", "options"]
+    http_method_names = ["patch", "delete", "post", "head", "options"]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def partial_update(self, request, public_id=None):
         message = chat_services.message_for_user(
@@ -132,9 +155,11 @@ class ChatMessageViewSet(viewsets.GenericViewSet):
         message = chat_services.update_text_message(
             message=message,
             editor=request.user,
-            body=ser.validated_data["body"],
+            body=ser.validated_data.get("body") or "",
         )
-        return Response(ChatMessageSerializer(message).data)
+        return Response(
+            ChatMessageSerializer(message, context={"request": request}).data
+        )
 
     def destroy(self, request, public_id=None):
         message = chat_services.message_for_user(
@@ -145,4 +170,28 @@ class ChatMessageViewSet(viewsets.GenericViewSet):
             message=message,
             deleter=request.user,
         )
-        return Response(ChatMessageSerializer(message).data)
+        return Response(
+            ChatMessageSerializer(message, context={"request": request}).data
+        )
+
+    @action(detail=True, methods=["post"])
+    def forward(self, request, public_id=None):
+        source = chat_services.message_for_user(
+            user=request.user,
+            message_public_id=public_id,
+        )
+        ser = ChatMessageForwardSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        target = chat_services.thread_for_user(
+            user=request.user,
+            thread_public_id=str(ser.validated_data["thread"]),
+        )
+        message = chat_services.forward_message(
+            source=source,
+            actor=request.user,
+            target_thread=target,
+        )
+        return Response(
+            ChatMessageSerializer(message, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )

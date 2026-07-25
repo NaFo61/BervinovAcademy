@@ -22,6 +22,22 @@ from .models import ChatMessage, Conference, DirectThread
 User = get_user_model()
 
 MAX_MESSAGE_LENGTH = 4000
+MAX_CODE_LENGTH = 16000
+CHAT_MAX_IMAGE_BYTES = 10 * 1024 * 1024
+CHAT_MAX_VIDEO_BYTES = 50 * 1024 * 1024
+IMAGE_CONTENT_TYPES = frozenset(
+    {"image/jpeg", "image/png", "image/webp", "image/gif"}
+)
+VIDEO_CONTENT_TYPES = frozenset({"video/mp4", "video/webm", "video/quicktime"})
+EDITABLE_KINDS = frozenset({ChatMessage.Kind.TEXT, ChatMessage.Kind.CODE})
+DELETABLE_KINDS = frozenset(
+    {
+        ChatMessage.Kind.TEXT,
+        ChatMessage.Kind.CODE,
+        ChatMessage.Kind.IMAGE,
+        ChatMessage.Kind.VIDEO,
+    }
+)
 
 
 def is_mentor_user(user) -> bool:
@@ -239,30 +255,211 @@ def broadcast_chat_event(
 
 @transaction.atomic
 def create_text_message(
-    *, thread: DirectThread, sender, body: str
+    *,
+    thread: DirectThread,
+    sender,
+    body: str,
+    reply_to: ChatMessage | None = None,
 ) -> ChatMessage:
-    text = (body or "").strip()
-    if not text:
-        raise ValidationError({"body": "Сообщение не может быть пустым."})
-    if len(text) > MAX_MESSAGE_LENGTH:
+    return create_message(
+        thread=thread,
+        sender=sender,
+        kind=ChatMessage.Kind.TEXT,
+        body=body,
+        reply_to=reply_to,
+    )
+
+
+def _resolve_reply_to(
+    *, thread: DirectThread, reply_to_public_id: str | None
+) -> ChatMessage | None:
+    if not reply_to_public_id:
+        return None
+    try:
+        reply = ChatMessage.objects.get(public_id=reply_to_public_id)
+    except ChatMessage.DoesNotExist as exc:
+        raise ValidationError({"reply_to": "Сообщение не найдено."}) from exc
+    if reply.thread_id != thread.pk:
         raise ValidationError(
-            {"body": f"Не более {MAX_MESSAGE_LENGTH} символов."}
+            {
+                "reply_to": "Можно ответить только на сообщение из этого диалога."
+            }
         )
+    if reply.is_deleted:
+        raise ValidationError({"reply_to": "Нельзя ответить на удалённое."})
+    return reply
+
+
+def _validate_upload(*, kind: str, upload) -> None:
+    if upload is None:
+        raise ValidationError({"file": "Нужен файл."})
+    content_type = (getattr(upload, "content_type", "") or "").lower()
+    size = getattr(upload, "size", 0) or 0
+    if kind == ChatMessage.Kind.IMAGE:
+        if content_type not in IMAGE_CONTENT_TYPES:
+            raise ValidationError(
+                {"file": "Допустимы JPEG, PNG, WebP или GIF."}
+            )
+        if size > CHAT_MAX_IMAGE_BYTES:
+            raise ValidationError({"file": "Изображение не больше 10 МБ."})
+    elif kind == ChatMessage.Kind.VIDEO:
+        if content_type not in VIDEO_CONTENT_TYPES:
+            raise ValidationError({"file": "Допустимы MP4, WebM или MOV."})
+        if size > CHAT_MAX_VIDEO_BYTES:
+            raise ValidationError({"file": "Видео не больше 50 МБ."})
+    else:
+        raise ValidationError({"kind": "Некорректный тип вложения."})
+
+
+def message_preview_text(msg: ChatMessage) -> str:
+    if msg.is_deleted:
+        return "Сообщение удалено"
+    if msg.kind == ChatMessage.Kind.SYSTEM:
+        return (msg.body or "")[:120]
+    if msg.kind == ChatMessage.Kind.IMAGE:
+        caption = (msg.body or "").strip()
+        return f"Фото{': ' + caption[:100] if caption else ''}"
+    if msg.kind == ChatMessage.Kind.VIDEO:
+        caption = (msg.body or "").strip()
+        return f"Видео{': ' + caption[:100] if caption else ''}"
+    if msg.kind == ChatMessage.Kind.CODE:
+        lang = (msg.code_language or "").strip()
+        return f"Код{f' ({lang})' if lang else ''}"
+    return (msg.body or "")[:120]
+
+
+@transaction.atomic
+def create_message(
+    *,
+    thread: DirectThread,
+    sender,
+    kind: str = ChatMessage.Kind.TEXT,
+    body: str = "",
+    reply_to: ChatMessage | None = None,
+    reply_to_public_id: str | None = None,
+    code_language: str = "",
+    upload=None,
+) -> ChatMessage:
     if not user_in_thread(sender, thread):
         raise PermissionDenied("Нет доступа к этому диалогу.")
 
+    if reply_to is None:
+        reply_to = _resolve_reply_to(
+            thread=thread, reply_to_public_id=reply_to_public_id
+        )
+
+    text = (body or "").strip()
+    language = (code_language or "").strip()[:32]
+
+    if kind == ChatMessage.Kind.TEXT:
+        if not text:
+            raise ValidationError({"body": "Сообщение не может быть пустым."})
+        if len(text) > MAX_MESSAGE_LENGTH:
+            raise ValidationError(
+                {"body": f"Не более {MAX_MESSAGE_LENGTH} символов."}
+            )
+    elif kind == ChatMessage.Kind.CODE:
+        if not text:
+            raise ValidationError({"body": "Вставьте код."})
+        if len(text) > MAX_CODE_LENGTH:
+            raise ValidationError(
+                {"body": f"Не более {MAX_CODE_LENGTH} символов."}
+            )
+    elif kind in (ChatMessage.Kind.IMAGE, ChatMessage.Kind.VIDEO):
+        _validate_upload(kind=kind, upload=upload)
+        if len(text) > MAX_MESSAGE_LENGTH:
+            raise ValidationError(
+                {"body": f"Подпись не более {MAX_MESSAGE_LENGTH} символов."}
+            )
+    else:
+        raise ValidationError({"kind": "Неподдерживаемый тип сообщения."})
+
     now = timezone.now()
-    message = ChatMessage.objects.create(
+    message = ChatMessage(
         thread=thread,
-        kind=ChatMessage.Kind.TEXT,
+        kind=kind,
         sender=sender,
         body=text,
+        code_language=language if kind == ChatMessage.Kind.CODE else "",
+        reply_to=reply_to,
     )
+    if upload is not None:
+        message.attachment = upload
+    message.save()
+
     thread.last_message_at = now
     thread.save(update_fields=["last_message_at"])
 
+    message = ChatMessage.objects.select_related(
+        "sender",
+        "reply_to",
+        "reply_to__sender",
+        "forwarded_from",
+        "forwarded_from__sender",
+        "conference",
+        "conference__whiteboard",
+    ).get(pk=message.pk)
+
     broadcast_chat_event(
         thread=thread,
+        event="message.new",
+        payload=_serialize_message_for_ws(message),
+    )
+    return message
+
+
+@transaction.atomic
+def forward_message(
+    *,
+    source: ChatMessage,
+    actor,
+    target_thread: DirectThread,
+) -> ChatMessage:
+    if source.is_deleted:
+        raise ValidationError({"detail": "Нельзя переслать удалённое."})
+    if source.kind == ChatMessage.Kind.SYSTEM:
+        raise ValidationError(
+            {"detail": "Системные сообщения нельзя пересылать."}
+        )
+    if not user_in_thread(actor, source.thread):
+        raise PermissionDenied("Нет доступа к исходному сообщению.")
+    if not user_in_thread(actor, target_thread):
+        raise PermissionDenied("Нет доступа к целевому диалогу.")
+
+    now = timezone.now()
+    message = ChatMessage(
+        thread=target_thread,
+        kind=source.kind,
+        sender=actor,
+        body=source.body,
+        code_language=source.code_language,
+        forwarded_from=source,
+    )
+    if source.attachment:
+        from pathlib import Path
+
+        from django.core.files.base import ContentFile
+
+        source.attachment.open("rb")
+        try:
+            content = source.attachment.read()
+        finally:
+            source.attachment.close()
+        name = Path(source.attachment.name).name
+        message.attachment.save(name, ContentFile(content), save=False)
+    message.save()
+
+    target_thread.last_message_at = now
+    target_thread.save(update_fields=["last_message_at"])
+
+    message = ChatMessage.objects.select_related(
+        "sender",
+        "forwarded_from",
+        "forwarded_from__sender",
+    ).get(pk=message.pk)
+
+    broadcast_chat_event(
+        thread=target_thread,
         event="message.new",
         payload=_serialize_message_for_ws(message),
     )
@@ -273,7 +470,13 @@ def list_thread_messages(
     *, thread: DirectThread, before=None, limit: int = 50
 ):
     qs = thread.messages.select_related(
-        "sender", "conference", "conference__whiteboard"
+        "sender",
+        "conference",
+        "conference__whiteboard",
+        "reply_to",
+        "reply_to__sender",
+        "forwarded_from",
+        "forwarded_from__sender",
     ).order_by("-created_at")
     if before:
         qs = qs.filter(created_at__lt=before)
@@ -288,9 +491,14 @@ def list_thread_messages(
 
 def message_for_user(*, user, message_public_id) -> ChatMessage:
     try:
-        message = ChatMessage.objects.select_related("sender", "thread").get(
-            public_id=message_public_id
-        )
+        message = ChatMessage.objects.select_related(
+            "sender",
+            "thread",
+            "reply_to",
+            "reply_to__sender",
+            "forwarded_from",
+            "forwarded_from__sender",
+        ).get(public_id=message_public_id)
     except ChatMessage.DoesNotExist as exc:
         raise NotFound("Сообщение не найдено.") from exc
     if not user_in_thread(user, message.thread):
@@ -298,10 +506,10 @@ def message_for_user(*, user, message_public_id) -> ChatMessage:
     return message
 
 
-def _validate_own_text_message(*, message: ChatMessage, actor) -> None:
-    if message.kind != ChatMessage.Kind.TEXT:
+def _validate_own_editable_message(*, message: ChatMessage, actor) -> None:
+    if message.kind not in EDITABLE_KINDS:
         raise ValidationError(
-            {"detail": "Системные сообщения нельзя изменять."}
+            {"detail": "Этот тип сообщения нельзя изменить."}
         )
     if message.is_deleted:
         raise ValidationError({"detail": "Сообщение уже удалено."})
@@ -309,18 +517,32 @@ def _validate_own_text_message(*, message: ChatMessage, actor) -> None:
         raise PermissionDenied("Можно изменять только свои сообщения.")
 
 
+def _validate_own_deletable_message(*, message: ChatMessage, actor) -> None:
+    if message.kind not in DELETABLE_KINDS:
+        raise ValidationError(
+            {"detail": "Системные сообщения нельзя удалять."}
+        )
+    if message.is_deleted:
+        raise ValidationError({"detail": "Сообщение уже удалено."})
+    if message.sender_id != actor.pk:
+        raise PermissionDenied("Можно удалять только свои сообщения.")
+
+
 @transaction.atomic
 def update_text_message(
     *, message: ChatMessage, editor, body: str
 ) -> ChatMessage:
-    _validate_own_text_message(message=message, actor=editor)
+    _validate_own_editable_message(message=message, actor=editor)
     text = (body or "").strip()
     if not text:
         raise ValidationError({"body": "Сообщение не может быть пустым."})
-    if len(text) > MAX_MESSAGE_LENGTH:
-        raise ValidationError(
-            {"body": f"Не более {MAX_MESSAGE_LENGTH} символов."}
-        )
+    max_len = (
+        MAX_CODE_LENGTH
+        if message.kind == ChatMessage.Kind.CODE
+        else MAX_MESSAGE_LENGTH
+    )
+    if len(text) > max_len:
+        raise ValidationError({"body": f"Не более {max_len} символов."})
 
     message.body = text
     message.edited_at = timezone.now()
@@ -337,9 +559,13 @@ def update_text_message(
 
 @transaction.atomic
 def delete_text_message(*, message: ChatMessage, deleter) -> ChatMessage:
-    _validate_own_text_message(message=message, actor=deleter)
+    _validate_own_deletable_message(message=message, actor=deleter)
+    if message.attachment:
+        message.attachment.delete(save=False)
+        message.attachment = None
+    message.body = ""
     message.is_deleted = True
-    message.save(update_fields=["is_deleted"])
+    message.save(update_fields=["is_deleted", "body", "attachment"])
 
     broadcast_chat_event(
         thread=message.thread,

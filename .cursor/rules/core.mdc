@@ -23,6 +23,7 @@ Use the matching skill. Do not cross domains unless the user asks (e.g. backend-
 3. Never run `deploy/full-restart.sh` unless the user explicitly asks (wipes DB/volumes).
 4. Prefer small focused diffs; match existing patterns in neighboring files.
 5. Language: respond in the user's language (usually Russian); code/identifiers stay English.
+6. Never add `Co-authored-by: Cursor`, `Made-with: Cursor`, or any Cursor attribution to commits/PRs.
 
 ## Stack snapshot
 
