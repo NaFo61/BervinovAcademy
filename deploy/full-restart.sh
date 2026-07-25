@@ -13,27 +13,14 @@ print_error() { echo -e "${RED}✗ $1${NC}"; }
 print_warning() { echo -e "${YELLOW}⚠ $1${NC}"; }
 
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib.sh
+source "${APP_DIR}/lib.sh"
 cd "$APP_DIR"
 
 if ! command -v docker >/dev/null 2>&1; then
   print_error "Docker не найден."
   exit 1
 fi
-
-wait_for_health() {
-  for i in 1 2 3 4 5 6 7 8 9 10; do
-    if curl -fsS "http://127.0.0.1:18080/health/" >/dev/null; then
-      print_success "Health check OK"
-      return 0
-    fi
-    echo "Ожидание backend... ($i/10)"
-    sleep 10
-  done
-  print_error "Health check не прошёл"
-  docker compose ps
-  docker compose logs --tail=50 backend nginx
-  return 1
-}
 
 echo "========================================"
 echo "  Полный перезапуск (сброс БД и данных)"
@@ -59,17 +46,17 @@ print_success "Volumes удалены"
 
 echo
 echo "[3/7] Удаляем неиспользуемые образы..."
-docker image prune -af
+docker image prune -af || true
 print_success "Старые образы удалены"
 
 echo
-echo "[4/7] Загружаем свежие образы..."
-docker compose pull
+echo "[4/7] Загружаем свежие образы (с повторами)..."
+compose_pull
 print_success "Образы загружены"
 
 echo
 echo "[5/7] Подтягиваем образ песочницы..."
-docker compose run --rm code-check-sandbox true
+warmup_sandbox
 print_success "Образ code-check-sandbox готов"
 
 echo
@@ -79,7 +66,12 @@ print_success "Контейнеры запущены"
 
 echo
 echo "Ожидание миграций и health check..."
-wait_for_health
+if ! wait_for_health "http://127.0.0.1:18080/health/" 15; then
+  print_error "Health check не прошёл"
+  docker compose ps
+  docker compose logs --tail=50 backend nginx
+  exit 1
+fi
 
 echo
 echo "[7/7] Наполнение БД (seed_data)..."

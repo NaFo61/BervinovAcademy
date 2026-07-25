@@ -273,7 +273,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: "deploy/docker-compose.yml,deploy/restart.sh,deploy/full-restart.sh"
+          source: "deploy/docker-compose.yml,deploy/restart.sh,deploy/full-restart.sh,deploy/ci-deploy.sh,deploy/lib.sh"
           target: /opt/bervinov-academy
           strip_components: 1
           overwrite: true
@@ -292,58 +292,24 @@ jobs:
             ls -la /opt/bervinov-academy
             test -f /opt/bervinov-academy/docker-compose.yml
             test -f /opt/bervinov-academy/restart.sh
-            chmod +x /opt/bervinov-academy/restart.sh /opt/bervinov-academy/full-restart.sh || true
+            test -f /opt/bervinov-academy/ci-deploy.sh
+            test -f /opt/bervinov-academy/lib.sh
+            chmod +x /opt/bervinov-academy/restart.sh /opt/bervinov-academy/full-restart.sh /opt/bervinov-academy/ci-deploy.sh
 
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          FRONTEND_URL: https://academy.bervinov-miron.ru
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script_stop: true
+          command_timeout: 30m
+          envs: DOCKERHUB_USER,FRONTEND_URL
           script: |
             set -euo pipefail
             cd /opt/bervinov-academy
-            chmod +x restart.sh full-restart.sh
-            # DOCKERHUB_USER должен совпадать с secrets.DOCKERHUB_USERNAME
-            if grep -q '^DOCKERHUB_USER=' .env 2>/dev/null; then
-              sed -i "s/^DOCKERHUB_USER=.*/DOCKERHUB_USER=${{ secrets.DOCKERHUB_USERNAME }}/" .env
-            else
-              echo "DOCKERHUB_USER=${{ secrets.DOCKERHUB_USERNAME }}" >> .env
-            fi
-            if grep -q '^SUB_PATH=' .env 2>/dev/null; then
-              sed -i 's/^SUB_PATH=.*/SUB_PATH=/' .env
-            else
-              echo 'SUB_PATH=' >> .env
-            fi
-            if grep -q '^FRONTEND_URL=' .env 2>/dev/null; then
-              sed -i 's|^FRONTEND_URL=.*|FRONTEND_URL=https://academy.bervinov-miron.ru|' .env
-            else
-              echo 'FRONTEND_URL=https://academy.bervinov-miron.ru' >> .env
-            fi
-            docker compose pull
-            docker compose run --rm code-check-sandbox true
-            docker compose up -d --remove-orphans
-            docker image prune -f
-
-      - name: Health check
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script_stop: true
-          script: |
-            set -euo pipefail
-            for i in 1 2 3 4 5 6 7 8 9 10; do
-              if curl -fsS "http://127.0.0.1:18080/health/" >/dev/null; then
-                echo "Health OK"
-                exit 0
-              fi
-              echo "Waiting for backend... ($i/10)"
-              sleep 10
-            done
-            echo "Health check failed"
-            docker compose -f /opt/bervinov-academy/docker-compose.yml ps
-            docker compose -f /opt/bervinov-academy/docker-compose.yml logs --tail=50 backend nginx
-            exit 1
+            chmod +x restart.sh full-restart.sh ci-deploy.sh
+            ./ci-deploy.sh

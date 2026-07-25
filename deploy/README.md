@@ -6,11 +6,16 @@
 /opt/bervinov-academy/
 ├── docker-compose.yml
 ├── .env
+├── lib.sh
+├── ci-deploy.sh
 ├── restart.sh
 └── full-restart.sh
 ```
 
 Образы: Docker Hub `bervinov-academy-*` (собираются в CI).
+
+CI вызывает `./ci-deploy.sh` (pull с ретраями, health внутри сессии, timeout 30m).
+Вручную:
 
 ```bash
 ./restart.sh
