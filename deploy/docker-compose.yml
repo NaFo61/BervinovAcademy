@@ -225,7 +225,6 @@ services:
     ports:
       - "127.0.0.1:18080:18080"
     volumes:
-      - static_data:/var/www/django-static:ro
       - media_data:/var/www/django-media:ro
     depends_on:
       backend:

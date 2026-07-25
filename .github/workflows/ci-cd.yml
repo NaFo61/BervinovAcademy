@@ -273,9 +273,26 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: deploy/docker-compose.yml,deploy/restart.sh,deploy/full-restart.sh
-          target: /opt/bervinov-academy/
+          source: "deploy/docker-compose.yml,deploy/restart.sh,deploy/full-restart.sh"
+          target: /opt/bervinov-academy
           strip_components: 1
+          overwrite: true
+          rm: false
+
+      - name: Ensure deploy dir layout
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            mkdir -p /opt/bervinov-academy
+            ls -la /opt/bervinov-academy
+            test -f /opt/bervinov-academy/docker-compose.yml
+            test -f /opt/bervinov-academy/restart.sh
+            chmod +x /opt/bervinov-academy/restart.sh /opt/bervinov-academy/full-restart.sh || true
 
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
@@ -288,7 +305,7 @@ jobs:
             set -euo pipefail
             cd /opt/bervinov-academy
             chmod +x restart.sh full-restart.sh
-            # DOCKERHUB_USER должен совпадать с secrets.DOCKERHUB_USERNAME (без кириллицы в имени образа)
+            # DOCKERHUB_USER должен совпадать с secrets.DOCKERHUB_USERNAME
             if grep -q '^DOCKERHUB_USER=' .env 2>/dev/null; then
               sed -i "s/^DOCKERHUB_USER=.*/DOCKERHUB_USER=${{ secrets.DOCKERHUB_USERNAME }}/" .env
             else

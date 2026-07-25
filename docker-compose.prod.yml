@@ -265,7 +265,6 @@ services:
       - "127.0.0.1:18080:18080"
     volumes:
       - frontend_dist:/usr/share/nginx/html:ro
-      - static_data:/var/www/django-static:ro
       - media_data:/var/www/django-media:ro
     depends_on:
       frontend:
