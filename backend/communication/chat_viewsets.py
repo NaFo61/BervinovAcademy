@@ -112,24 +112,24 @@ class ChatThreadViewSet(
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
         kind = data.get("kind") or ChatMessage.Kind.TEXT
-        if request.FILES.get("file") and kind == ChatMessage.Kind.TEXT:
-            upload = request.FILES["file"]
-            ctype = (getattr(upload, "content_type", "") or "").lower()
-            if ctype.startswith("video/"):
-                kind = ChatMessage.Kind.VIDEO
-            else:
-                kind = ChatMessage.Kind.IMAGE
+        uploads = list(request.FILES.getlist("files"))
+        if not uploads and request.FILES.get("file"):
+            uploads = [request.FILES["file"]]
+        if not uploads and data.get("files"):
+            uploads = list(data.get("files") or [])
+        if not uploads and data.get("file"):
+            uploads = [data["file"]]
 
         message = chat_services.create_message(
             thread=thread,
             sender=request.user,
             kind=kind,
             body=data.get("body") or "",
-            code_language=data.get("code_language") or "",
+            code_language=data.get("code_language") or "python",
             reply_to_public_id=(
                 str(data["reply_to"]) if data.get("reply_to") else None
             ),
-            upload=request.FILES.get("file") or data.get("file"),
+            uploads=uploads or None,
         )
         return Response(
             ChatMessageSerializer(message, context={"request": request}).data,

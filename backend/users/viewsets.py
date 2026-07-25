@@ -4,19 +4,20 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import User
 from .password_reset import confirm_reset_code, issue_reset_code
 from .serializers import (
     CustomTokenObtainPairSerializer,
+    CustomTokenRefreshSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     UserListSerializer,
     UserPrivateProfileSerializer,
     UserPublicProfileSerializer,
     UserRegistrationSerializer,
+    inject_access_claims,
 )
 
 
@@ -67,13 +68,7 @@ class UserRegistrationViewSet(viewsets.GenericViewSet):
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
         access = refresh.access_token
-
-        # Add custom claims to access token
-        access["email"] = user.email
-        access["phone"] = user.phone
-        access["role"] = user.role
-        access["first_name"] = user.first_name
-        access["last_name"] = user.last_name
+        inject_access_claims(access, user)
 
         return Response(
             {"refresh": str(refresh), "access": str(access)},
@@ -243,10 +238,10 @@ class TokenRefreshViewSet(viewsets.GenericViewSet):
 
         Принимает refresh токен и возвращает новый access токен.
         """
-        serializer = TokenRefreshSerializer(data=request.data)
+        serializer = CustomTokenRefreshSerializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
-        except (InvalidToken, User.DoesNotExist):
+        except (InvalidToken, TokenError, User.DoesNotExist):
             return Response(
                 {"error": "Недействительный refresh токен"},
                 status=status.HTTP_401_UNAUTHORIZED,

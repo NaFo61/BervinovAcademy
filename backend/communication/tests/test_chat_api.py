@@ -408,7 +408,30 @@ class TestChatApi:
         assert img_resp.status_code == status.HTTP_201_CREATED
         assert img_resp.data["kind"] == "image"
         assert img_resp.data["attachment_url"]
+        assert len(img_resp.data["attachments"]) == 1
         assert "скрин" in img_resp.data["body"]
+        assert img_resp.data["is_mine"] is True
+
+        png2 = png
+        album = mentor_client.post(
+            f"/api/communication/chat/threads/{thread_id}/messages/",
+            {
+                "body": "альбом",
+                "files": [
+                    SimpleUploadedFile(
+                        "a.png", png2, content_type="image/png"
+                    ),
+                    SimpleUploadedFile(
+                        "b.png", png2, content_type="image/png"
+                    ),
+                ],
+            },
+            format="multipart",
+        )
+        assert album.status_code == status.HTTP_201_CREATED
+        assert album.data["kind"] == "album"
+        assert len(album.data["attachments"]) == 2
+        assert album.data["is_mine"] is True
 
         # second thread for forward
         other = student_user.__class__.objects.create_user(

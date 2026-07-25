@@ -5,6 +5,7 @@ from users.models import User
 
 from .models import (
     ChatMessage,
+    ChatMessageAttachment,
     Conference,
     ConferenceWhiteboard,
     DirectThread,
@@ -237,14 +238,33 @@ class ChatMessageRefSerializer(serializers.ModelSerializer):
         return chat_services.message_preview_text(obj)
 
 
+class ChatAttachmentSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ChatMessageAttachment
+        fields = ("kind", "url", "sort_order")
+
+    def get_url(self, obj):
+        if not obj.file:
+            return None
+        request = self.context.get("request")
+        url = obj.file.url
+        if request is not None:
+            return request.build_absolute_uri(url)
+        return url
+
+
 class ChatMessageSerializer(serializers.ModelSerializer):
     public_id = serializers.UUIDField(read_only=True)
     sender = ChatParticipantSerializer(read_only=True)
     conference = ChatConferenceBriefSerializer(read_only=True)
     system_payload = serializers.JSONField(read_only=True)
     attachment_url = serializers.SerializerMethodField()
+    attachments = serializers.SerializerMethodField()
     reply_to = ChatMessageRefSerializer(read_only=True)
     forwarded_from = ChatMessageRefSerializer(read_only=True)
+    is_mine = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatMessage
@@ -255,8 +275,10 @@ class ChatMessageSerializer(serializers.ModelSerializer):
             "body",
             "code_language",
             "attachment_url",
+            "attachments",
             "reply_to",
             "forwarded_from",
+            "is_mine",
             "is_deleted",
             "edited_at",
             "show_edited",
@@ -266,20 +288,59 @@ class ChatMessageSerializer(serializers.ModelSerializer):
             "created_at",
         )
 
-    def get_attachment_url(self, obj):
-        if not obj.attachment:
+    def _absolute_media_url(self, file_field):
+        if not file_field:
             return None
         request = self.context.get("request")
-        url = obj.attachment.url
+        url = file_field.url
         if request is not None:
             return request.build_absolute_uri(url)
         return url
+
+    def get_attachments(self, obj):
+        if obj.is_deleted:
+            return []
+        items = list(obj.attachments.all())
+        if not items and obj.attachment:
+            kind = (
+                obj.kind
+                if obj.kind
+                in (
+                    ChatMessageAttachment.Kind.IMAGE,
+                    ChatMessageAttachment.Kind.VIDEO,
+                )
+                else ChatMessageAttachment.Kind.IMAGE
+            )
+            return [
+                {
+                    "kind": kind,
+                    "url": self._absolute_media_url(obj.attachment),
+                    "sort_order": 0,
+                }
+            ]
+        return ChatAttachmentSerializer(
+            items, many=True, context=self.context
+        ).data
+
+    def get_attachment_url(self, obj):
+        attachments = self.get_attachments(obj)
+        if attachments:
+            return attachments[0].get("url")
+        return None
+
+    def get_is_mine(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not getattr(user, "is_authenticated", False):
+            return False
+        return obj.sender_id == user.pk
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.is_deleted:
             data["body"] = ""
             data["attachment_url"] = None
+            data["attachments"] = []
             data["code_language"] = ""
         return data
 
@@ -345,7 +406,7 @@ class ChatMessageCreateSerializer(serializers.Serializer):
         trim_whitespace=False,
     )
     kind = serializers.ChoiceField(
-        choices=["text", "code", "image", "video"],
+        choices=["text", "code", "image", "video", "album"],
         required=False,
         default="text",
     )
@@ -353,10 +414,15 @@ class ChatMessageCreateSerializer(serializers.Serializer):
         required=False,
         allow_blank=True,
         max_length=32,
-        default="",
+        default="python",
     )
     reply_to = serializers.UUIDField(required=False, allow_null=True)
     file = serializers.FileField(required=False, allow_null=True)
+    files = serializers.ListField(
+        child=serializers.FileField(),
+        required=False,
+        allow_empty=True,
+    )
 
 
 class ChatMessageForwardSerializer(serializers.Serializer):

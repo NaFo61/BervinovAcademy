@@ -461,6 +461,14 @@ function parseJwtPayload(token) {
   }
 }
 
+/** UUID текущего пользователя из access JWT (public_id или user_id после refresh). */
+function currentUserPublicId(payloadOrToken) {
+  const payload = typeof payloadOrToken === 'string'
+    ? parseJwtPayload(payloadOrToken)
+    : (payloadOrToken || {});
+  return String(payload.public_id || payload.user_id || '');
+}
+
 function buildLearnQuery(courseId, moduleId, lessonType, lessonId) {
   if (!courseId || !moduleId || !lessonType || !lessonId) return null;
   return {
@@ -1671,6 +1679,7 @@ Object.assign(window, {
   formatDrfError,
   mediaUrl,
   parseJwtPayload,
+  currentUserPublicId,
   notifyAuthChanged,
   buildLearnQuery,
   buildExamQuery,

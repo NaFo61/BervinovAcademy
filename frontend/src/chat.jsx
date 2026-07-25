@@ -47,6 +47,12 @@ function messagePreview(message) {
   if (!message) return '';
   if (message.is_deleted) return 'Сообщение удалено';
   if (message.kind === 'system') return message.body || '';
+  if (message.kind === 'album') {
+    const n = (message.attachments || []).length;
+    const c = (message.body || '').trim();
+    const label = n > 1 ? `Альбом (${n})` : 'Альбом';
+    return c ? `${label}: ${c.slice(0, 100)}` : label;
+  }
   if (message.kind === 'image') {
     const c = (message.body || '').trim();
     return c ? `Фото: ${c.slice(0, 100)}` : 'Фото';
@@ -56,14 +62,130 @@ function messagePreview(message) {
     return c ? `Видео: ${c.slice(0, 100)}` : 'Видео';
   }
   if (message.kind === 'code') {
-    const lang = (message.code_language || '').trim();
-    return lang ? `Код (${lang})` : 'Код';
+    return 'Код (python)';
   }
   return (message.body || '').slice(0, 120);
 }
 
-function mediaSrc(message) {
-  return window.mediaUrl?.(message.attachment_url) || message.attachment_url || '';
+function messageAttachments(message) {
+  if (!message || message.is_deleted) return [];
+  if (Array.isArray(message.attachments) && message.attachments.length) {
+    return message.attachments
+      .map((a) => ({
+        kind: a.kind,
+        url: window.mediaUrl?.(a.url) || a.url || '',
+        sort_order: a.sort_order ?? 0,
+      }))
+      .filter((a) => a.url)
+      .sort((a, b) => a.sort_order - b.sort_order);
+  }
+  const legacy = window.mediaUrl?.(message.attachment_url) || message.attachment_url || '';
+  if (!legacy) return [];
+  const kind = message.kind === 'video' ? 'video' : 'image';
+  return [{ kind, url: legacy, sort_order: 0 }];
+}
+
+function isChatMessageMine(message, myId) {
+  if (typeof message?.is_mine === 'boolean') return message.is_mine;
+  if (!myId || !message?.sender?.public_id) return false;
+  return String(message.sender.public_id) === String(myId);
+}
+
+function PythonCodeBlock({ code }) {
+  const html = React.useMemo(() => {
+    const src = code || '';
+    if (window.Prism?.languages?.python) {
+      try {
+        return window.Prism.highlight(src, window.Prism.languages.python, 'python');
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }, [code]);
+
+  return (
+    <div className="space-y-1">
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-300/80">
+        Python
+      </div>
+      <pre className="chat-code-block overflow-x-auto rounded-xl px-3 py-2.5 whitespace-pre language-python">
+        {html ? (
+          <code className="language-python" dangerouslySetInnerHTML={{ __html: html }} />
+        ) : (
+          <code className="language-python">{code}</code>
+        )}
+      </pre>
+    </div>
+  );
+}
+
+function AlbumGrid({ items }) {
+  const n = items.length;
+  if (n === 0) return null;
+  if (n === 1) {
+    const item = items[0];
+    if (item.kind === 'video') {
+      return (
+        <video
+          controls
+          preload="metadata"
+          src={item.url}
+          className="mb-2 -mx-1 max-h-80 w-full rounded-xl bg-black"
+        />
+      );
+    }
+    return (
+      <a href={item.url} target="_blank" rel="noreferrer" className="block mb-2 -mx-1">
+        <img
+          src={item.url}
+          alt=""
+          className="max-h-72 w-auto max-w-full rounded-xl object-contain bg-black/10"
+          loading="lazy"
+        />
+      </a>
+    );
+  }
+
+  const cols = n === 2 || n === 4 ? 2 : n === 3 ? 2 : 3;
+  return (
+    <div
+      className={`mb-2 -mx-1 grid gap-1 rounded-xl overflow-hidden ${
+        cols === 2 ? 'grid-cols-2' : 'grid-cols-3'
+      }`}
+    >
+      {items.map((item, idx) => {
+        const tall = n === 3 && idx === 0;
+        const cell = (
+          <div
+            key={`${item.url}-${idx}`}
+            className={`relative bg-black/20 overflow-hidden ${
+              tall ? 'row-span-2 min-h-[220px]' : 'min-h-[110px] aspect-square'
+            }`}
+          >
+            {item.kind === 'video' ? (
+              <video
+                controls
+                preload="metadata"
+                src={item.url}
+                className="absolute inset-0 h-full w-full object-cover bg-black"
+              />
+            ) : (
+              <a href={item.url} target="_blank" rel="noreferrer" className="absolute inset-0 block">
+                <img
+                  src={item.url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              </a>
+            )}
+          </div>
+        );
+        return cell;
+      })}
+    </div>
+  );
 }
 
 function ReplyQuote({ reply, mine, onClick }) {
@@ -224,7 +346,7 @@ function ChatBubble({
     );
   }
 
-  const src = mediaSrc(message);
+  const media = messageAttachments(message);
 
   return (
     <div className={`group flex ${mine ? 'justify-end' : 'justify-start'} my-1.5`}>
@@ -278,41 +400,12 @@ function ChatBubble({
 
         <ReplyQuote reply={message.reply_to} mine={mine} />
 
-        {message.kind === 'image' && src && (
-          <a href={src} target="_blank" rel="noreferrer" className="block mb-2 -mx-1">
-            <img
-              src={src}
-              alt={message.body || 'Фото'}
-              className="max-h-72 w-auto max-w-full rounded-xl object-contain bg-black/10"
-              loading="lazy"
-            />
-          </a>
-        )}
-
-        {message.kind === 'video' && src && (
-          <video
-            controls
-            preload="metadata"
-            src={src}
-            className="mb-2 -mx-1 max-h-80 w-full rounded-xl bg-black"
-          />
+        {(message.kind === 'image' || message.kind === 'video' || message.kind === 'album') && media.length > 0 && (
+          <AlbumGrid items={media} />
         )}
 
         {message.kind === 'code' ? (
-          <div className="space-y-1">
-            {message.code_language ? (
-              <div className={`text-[10px] font-semibold uppercase tracking-wide ${
-                mine ? 'text-white/65' : 'text-ink/45'
-              }`}>
-                {message.code_language}
-              </div>
-            ) : null}
-            <pre className={`overflow-x-auto rounded-xl px-3 py-2 text-[11px] leading-relaxed font-mono whitespace-pre ${
-              mine ? 'bg-black/25 text-white' : 'bg-black/[0.04] text-ink'
-            }`}>
-              <code>{message.body}</code>
-            </pre>
-          </div>
+          <PythonCodeBlock code={message.body} />
         ) : message.body ? (
           <div className="whitespace-pre-wrap">{message.body}</div>
         ) : null}
@@ -326,9 +419,7 @@ function ChatBubble({
   );
 }
 
-const CODE_LANGS = [
-  '', 'python', 'javascript', 'typescript', 'html', 'css', 'sql', 'bash', 'json', 'java', 'c++',
-];
+const CHAT_MAX_ALBUM = 10;
 
 function ChatComposer({
   disabled,
@@ -340,40 +431,49 @@ function ChatComposer({
 }) {
   const [text, setText] = React.useState('');
   const [mode, setMode] = React.useState('text'); // text | code
-  const [lang, setLang] = React.useState('python');
-  const [pendingFile, setPendingFile] = React.useState(null);
-  const [previewUrl, setPreviewUrl] = React.useState('');
+  const [pendingFiles, setPendingFiles] = React.useState([]);
+  const [previewUrls, setPreviewUrls] = React.useState([]);
   const inputRef = React.useRef(null);
   const fileRef = React.useRef(null);
 
   React.useEffect(() => {
-    if (!pendingFile) {
-      setPreviewUrl('');
-      return undefined;
-    }
-    const url = URL.createObjectURL(pendingFile);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [pendingFile]);
+    const urls = pendingFiles.map((f) => URL.createObjectURL(f));
+    setPreviewUrls(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [pendingFiles]);
 
-  const clearFile = () => {
-    setPendingFile(null);
+  const clearFiles = () => {
+    setPendingFiles([]);
     if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const addFiles = (fileList) => {
+    const incoming = Array.from(fileList || []).filter((f) => (
+      f.type.startsWith('image/') || f.type.startsWith('video/')
+    ));
+    if (!incoming.length) return;
+    setPendingFiles((prev) => {
+      const next = [...prev, ...incoming].slice(0, CHAT_MAX_ALBUM);
+      return next;
+    });
+    setMode('text');
+  };
+
+  const removeFileAt = (index) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const submit = async () => {
     if (disabled || sending) return;
     const body = text.trim();
-    if (pendingFile) {
-      const isVideo = pendingFile.type.startsWith('video/');
+    if (pendingFiles.length) {
       await onSend({
-        kind: isVideo ? 'video' : 'image',
         body,
-        file: pendingFile,
+        files: pendingFiles,
         reply_to: replyTo?.public_id || null,
       });
       setText('');
-      clearFile();
+      clearFiles();
       onCancelReply?.();
       inputRef.current?.focus();
       return;
@@ -382,7 +482,7 @@ function ChatComposer({
     await onSend({
       kind: mode === 'code' ? 'code' : 'text',
       body,
-      code_language: mode === 'code' ? lang : '',
+      code_language: mode === 'code' ? 'python' : '',
       reply_to: replyTo?.public_id || null,
     });
     setText('');
@@ -390,7 +490,7 @@ function ChatComposer({
     inputRef.current?.focus();
   };
 
-  const canSend = !disabled && !sending && (pendingFile || text.trim());
+  const canSend = !disabled && !sending && (pendingFiles.length > 0 || text.trim());
 
   return (
     <div className={`border-t p-3 sm:p-4 ${embedded ? 'border-white/10 bg-[#0a1020]' : 'border-black/[0.06] bg-white'}`}>
@@ -415,29 +515,42 @@ function ChatComposer({
         </div>
       )}
 
-      {pendingFile && (
-        <div className={`mb-2 flex items-center gap-3 rounded-xl px-3 py-2 ${
-          embedded ? 'bg-white/8' : 'bg-black/[0.03]'
-        }`}>
-          {pendingFile.type.startsWith('image/') && previewUrl ? (
-            <img src={previewUrl} alt="" className="h-14 w-14 rounded-lg object-cover" />
-          ) : (
-            <div className={`h-14 w-14 rounded-lg flex items-center justify-center text-xs font-semibold ${
-              embedded ? 'bg-white/10 text-white/70' : 'bg-white ring-1 ring-black/[0.08]'
-            }`}>
-              VIDEO
+      {pendingFiles.length > 0 && (
+        <div className={`mb-2 rounded-xl px-3 py-2 ${embedded ? 'bg-white/8' : 'bg-black/[0.03]'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <div className={`text-xs font-semibold ${embedded ? 'text-white/80' : 'text-ink/70'}`}>
+              {pendingFiles.length === 1 ? 'Вложение' : `Альбом · ${pendingFiles.length}`}
+              {pendingFiles.length >= CHAT_MAX_ALBUM ? ' (макс.)' : ''}
             </div>
-          )}
-          <div className={`flex-1 min-w-0 text-xs ${embedded ? 'text-white/80' : 'text-ink/70'}`}>
-            <div className="font-semibold truncate">{pendingFile.name}</div>
-            <div className="opacity-60">{Math.round(pendingFile.size / 1024)} КБ</div>
+            <button type="button" onClick={clearFiles}
+              className={`h-7 px-2 rounded-lg text-xs font-semibold ${
+                embedded ? 'bg-white/10 text-white' : 'bg-white ring-1 ring-black/[0.08]'
+              }`}>
+              Очистить
+            </button>
           </div>
-          <button type="button" onClick={clearFile}
-            className={`h-8 px-3 rounded-lg text-xs font-semibold ${
-              embedded ? 'bg-white/10 text-white' : 'bg-white ring-1 ring-black/[0.08]'
-            }`}>
-            Убрать
-          </button>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {pendingFiles.map((f, idx) => (
+              <div key={`${f.name}-${idx}`} className="relative shrink-0">
+                {f.type.startsWith('image/') && previewUrls[idx] ? (
+                  <img src={previewUrls[idx]} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                ) : (
+                  <div className={`h-16 w-16 rounded-lg flex items-center justify-center text-[10px] font-semibold ${
+                    embedded ? 'bg-white/10 text-white/70' : 'bg-white ring-1 ring-black/[0.08]'
+                  }`}>
+                    VIDEO
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeFileAt(idx)}
+                  className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-black/70 text-white text-xs leading-none"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -445,20 +558,18 @@ function ChatComposer({
         <input
           ref={fileRef}
           type="file"
+          multiple
           accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
           className="hidden"
           onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) {
-              setPendingFile(f);
-              setMode('text');
-            }
+            addFiles(e.target.files);
+            e.target.value = '';
           }}
         />
         <button
           type="button"
-          disabled={disabled || sending}
-          title="Фото или видео"
+          disabled={disabled || sending || pendingFiles.length >= CHAT_MAX_ALBUM}
+          title="Фото или видео (можно несколько)"
           onClick={() => fileRef.current?.click()}
           className={`h-11 w-11 rounded-xl shrink-0 flex items-center justify-center text-lg disabled:opacity-50 ${
             embedded
@@ -470,8 +581,8 @@ function ChatComposer({
         </button>
         <button
           type="button"
-          disabled={disabled || sending || !!pendingFile}
-          title="Режим кода"
+          disabled={disabled || sending || pendingFiles.length > 0}
+          title="Python-код"
           onClick={() => setMode((m) => (m === 'code' ? 'text' : 'code'))}
           className={`h-11 w-11 rounded-xl shrink-0 flex items-center justify-center text-xs font-bold disabled:opacity-50 ${
             mode === 'code'
@@ -484,33 +595,21 @@ function ChatComposer({
           {'</>'}
         </button>
         <div className="flex-1 min-w-0 space-y-2">
-          {mode === 'code' && !pendingFile && (
-            <select
-              value={lang}
-              onChange={(e) => setLang(e.target.value)}
-              className={`h-8 px-2 rounded-lg text-xs outline-none ${
-                embedded
-                  ? 'bg-white/10 ring-1 ring-white/15 text-white'
-                  : 'bg-white ring-1 ring-black/[0.08]'
-              }`}
-            >
-              {CODE_LANGS.map((l) => (
-                <option key={l || 'plain'} value={l}>
-                  {l || 'plain'}
-                </option>
-              ))}
-            </select>
+          {mode === 'code' && !pendingFiles.length && (
+            <div className={`text-[11px] font-semibold ${embedded ? 'text-emerald-300/80' : 'text-ink/50'}`}>
+              Python
+            </div>
           )}
           <textarea
             ref={inputRef}
-            rows={mode === 'code' ? 4 : 1}
+            rows={mode === 'code' ? 5 : 1}
             value={text}
             disabled={disabled || sending}
             placeholder={
-              pendingFile
-                ? 'Подпись (необязательно)…'
+              pendingFiles.length
+                ? 'Подпись к альбому (необязательно)…'
                 : mode === 'code'
-                  ? 'Вставьте код…'
+                  ? 'Вставьте Python-код…'
                   : 'Напишите сообщение…'
             }
             onChange={(e) => setText(e.target.value)}
@@ -523,19 +622,19 @@ function ChatComposer({
             onPaste={(e) => {
               const items = e.clipboardData?.items;
               if (!items) return;
+              const files = [];
               for (const item of items) {
                 if (item.type.startsWith('image/')) {
                   const f = item.getAsFile();
-                  if (f) {
-                    e.preventDefault();
-                    setPendingFile(f);
-                    setMode('text');
-                  }
-                  break;
+                  if (f) files.push(f);
                 }
               }
+              if (files.length) {
+                e.preventDefault();
+                addFiles(files);
+              }
             }}
-            className={`w-full min-h-[44px] max-h-40 px-4 py-3 rounded-xl text-sm resize-y outline-none disabled:opacity-50 ${
+            className={`w-full min-h-[44px] max-h-48 px-4 py-3 rounded-xl text-sm resize-y outline-none disabled:opacity-50 ${
               mode === 'code' ? 'font-mono text-xs' : ''
             } ${
               embedded
@@ -551,7 +650,7 @@ function ChatComposer({
       </div>
       {!embedded && (
         <div className="text-[11px] text-ink/40 mt-2">
-          Enter — отправить · Shift+Enter — новая строка · можно вставить фото из буфера
+          Enter — отправить · несколько фото = альбом · </> — Python с подсветкой
         </div>
       )}
     </div>
@@ -622,7 +721,11 @@ function ChatThreadView({
   const onUnreadMessageRef = React.useRef(onUnreadMessage);
   const prevMarkReadRef = React.useRef(markReadOnView);
   const token = localStorage.getItem('access_token');
-  const me = token ? window.parseJwtPayload(token) : null;
+  const myId = window.currentUserPublicId
+    ? window.currentUserPublicId(token)
+    : String((token ? window.parseJwtPayload(token) : {}).public_id
+      || (token ? window.parseJwtPayload(token) : {}).user_id
+      || '');
   const other = thread?.other_participant;
 
   React.useEffect(() => { onMarkedReadRef.current = onMarkedRead; }, [onMarkedRead]);
@@ -704,7 +807,7 @@ function ChatThreadView({
       if (data.event === 'message.new') {
         setMessages((prev) => upsertChatMessage(prev, payload));
         notifyActivity(payload);
-        const fromOther = payload.sender?.public_id && payload.sender.public_id !== me?.public_id;
+        const fromOther = !isChatMessageMine(payload, myId);
         if (fromOther && !markReadOnView) {
           onUnreadMessageRef.current?.(payload);
         } else {
@@ -722,7 +825,7 @@ function ChatThreadView({
       close?.();
       setWsState('offline');
     };
-  }, [thread?.public_id, notifyActivity, scrollToBottom, markReadOnView, me?.public_id]);
+  }, [thread?.public_id, notifyActivity, scrollToBottom, markReadOnView, myId]);
 
   React.useEffect(() => {
     const openedHiddenChat = !prevMarkReadRef.current && markReadOnView;
@@ -755,10 +858,10 @@ function ChatThreadView({
     try {
       let msg;
       const replyId = payload.reply_to || null;
-      if (payload.file) {
+      const files = payload.files || (payload.file ? [payload.file] : []);
+      if (files.length) {
         const fd = new FormData();
-        fd.append('kind', payload.kind);
-        fd.append('file', payload.file);
+        files.forEach((f) => fd.append('files', f));
         if (payload.body) fd.append('body', payload.body);
         if (replyId) fd.append('reply_to', replyId);
         msg = await window.fetchApiForm(
@@ -771,7 +874,7 @@ function ChatThreadView({
           kind: payload.kind || 'text',
           body: payload.body,
         };
-        if (payload.code_language) body.code_language = payload.code_language;
+        if (payload.kind === 'code') body.code_language = 'python';
         if (replyId) body.reply_to = replyId;
         msg = await window.fetchApiJson(
           `/api/communication/chat/threads/${encodeURIComponent(thread.public_id)}/messages/`,
@@ -927,7 +1030,7 @@ function ChatThreadView({
                 )}
                 <ChatBubble
                   message={msg}
-                  mine={msg.sender?.public_id === me?.public_id}
+                  mine={isChatMessageMine(msg, myId)}
                   editing={editingId === msg.public_id}
                   editBusy={editBusy}
                   onEdit={() => setEditingId(msg.public_id)}

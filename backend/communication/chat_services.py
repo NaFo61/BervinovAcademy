@@ -17,7 +17,12 @@ from rest_framework.exceptions import (
 from content.models import Course
 from education.models import Enrollment
 
-from .models import ChatMessage, Conference, DirectThread
+from .models import (
+    ChatMessage,
+    ChatMessageAttachment,
+    Conference,
+    DirectThread,
+)
 
 User = get_user_model()
 
@@ -25,6 +30,8 @@ MAX_MESSAGE_LENGTH = 4000
 MAX_CODE_LENGTH = 16000
 CHAT_MAX_IMAGE_BYTES = 10 * 1024 * 1024
 CHAT_MAX_VIDEO_BYTES = 50 * 1024 * 1024
+CHAT_MAX_ALBUM_ITEMS = 10
+CODE_LANGUAGE_PYTHON = "python"
 IMAGE_CONTENT_TYPES = frozenset(
     {"image/jpeg", "image/png", "image/webp", "image/gif"}
 )
@@ -36,6 +43,14 @@ DELETABLE_KINDS = frozenset(
         ChatMessage.Kind.CODE,
         ChatMessage.Kind.IMAGE,
         ChatMessage.Kind.VIDEO,
+        ChatMessage.Kind.ALBUM,
+    }
+)
+MEDIA_KINDS = frozenset(
+    {
+        ChatMessage.Kind.IMAGE,
+        ChatMessage.Kind.VIDEO,
+        ChatMessage.Kind.ALBUM,
     }
 )
 
@@ -290,25 +305,51 @@ def _resolve_reply_to(
     return reply
 
 
+def _detect_upload_kind(upload) -> str:
+    content_type = (getattr(upload, "content_type", "") or "").lower()
+    name = (getattr(upload, "name", "") or "").lower()
+    if content_type in IMAGE_CONTENT_TYPES:
+        return ChatMessageAttachment.Kind.IMAGE
+    if content_type in VIDEO_CONTENT_TYPES:
+        return ChatMessageAttachment.Kind.VIDEO
+    if name.endswith((".jpg", ".jpeg", ".png", ".webp", ".gif")):
+        return ChatMessageAttachment.Kind.IMAGE
+    if name.endswith((".mp4", ".webm", ".mov")):
+        return ChatMessageAttachment.Kind.VIDEO
+    raise ValidationError(
+        {
+            "files": "Допустимы изображения (JPEG/PNG/WebP/GIF) или видео (MP4/WebM/MOV)."
+        }
+    )
+
+
 def _validate_upload(*, kind: str, upload) -> None:
     if upload is None:
-        raise ValidationError({"file": "Нужен файл."})
-    content_type = (getattr(upload, "content_type", "") or "").lower()
+        raise ValidationError({"files": "Нужен файл."})
     size = getattr(upload, "size", 0) or 0
-    if kind == ChatMessage.Kind.IMAGE:
-        if content_type not in IMAGE_CONTENT_TYPES:
-            raise ValidationError(
-                {"file": "Допустимы JPEG, PNG, WebP или GIF."}
-            )
+    if kind == ChatMessageAttachment.Kind.IMAGE:
         if size > CHAT_MAX_IMAGE_BYTES:
-            raise ValidationError({"file": "Изображение не больше 10 МБ."})
-    elif kind == ChatMessage.Kind.VIDEO:
-        if content_type not in VIDEO_CONTENT_TYPES:
-            raise ValidationError({"file": "Допустимы MP4, WebM или MOV."})
+            raise ValidationError({"files": "Изображение не больше 10 МБ."})
+    elif kind == ChatMessageAttachment.Kind.VIDEO:
         if size > CHAT_MAX_VIDEO_BYTES:
-            raise ValidationError({"file": "Видео не больше 50 МБ."})
+            raise ValidationError({"files": "Видео не больше 50 МБ."})
     else:
         raise ValidationError({"kind": "Некорректный тип вложения."})
+
+
+def _normalize_uploads(*, upload=None, uploads=None) -> list:
+    files = [f for f in (uploads or []) if f is not None]
+    if not files and upload is not None:
+        files = [upload]
+    return files
+
+
+def _message_kind_for_items(item_kinds: list[str]) -> str:
+    if not item_kinds:
+        raise ValidationError({"files": "Нужен хотя бы один файл."})
+    if len(item_kinds) == 1:
+        return item_kinds[0]
+    return ChatMessage.Kind.ALBUM
 
 
 def message_preview_text(msg: ChatMessage) -> str:
@@ -322,10 +363,33 @@ def message_preview_text(msg: ChatMessage) -> str:
     if msg.kind == ChatMessage.Kind.VIDEO:
         caption = (msg.body or "").strip()
         return f"Видео{': ' + caption[:100] if caption else ''}"
+    if msg.kind == ChatMessage.Kind.ALBUM:
+        caption = (msg.body or "").strip()
+        count = msg.attachments.count() if msg.pk else 0
+        label = f"Альбом ({count})" if count else "Альбом"
+        return f"{label}{': ' + caption[:100] if caption else ''}"
     if msg.kind == ChatMessage.Kind.CODE:
-        lang = (msg.code_language or "").strip()
-        return f"Код{f' ({lang})' if lang else ''}"
+        return "Код (python)"
     return (msg.body or "")[:120]
+
+
+def _save_message_attachments(
+    *, message: ChatMessage, files: list, item_kinds: list[str]
+) -> None:
+    first_path = None
+    for index, (upload, item_kind) in enumerate(zip(files, item_kinds)):
+        attachment = ChatMessageAttachment(
+            message=message,
+            kind=item_kind,
+            sort_order=index,
+        )
+        attachment.file = upload
+        attachment.save()
+        if first_path is None:
+            first_path = attachment.file.name
+    if first_path:
+        message.attachment = first_path
+        message.save(update_fields=["attachment"])
 
 
 @transaction.atomic
@@ -339,6 +403,7 @@ def create_message(
     reply_to_public_id: str | None = None,
     code_language: str = "",
     upload=None,
+    uploads=None,
 ) -> ChatMessage:
     if not user_in_thread(sender, thread):
         raise PermissionDenied("Нет доступа к этому диалогу.")
@@ -349,9 +414,28 @@ def create_message(
         )
 
     text = (body or "").strip()
-    language = (code_language or "").strip()[:32]
+    files = _normalize_uploads(upload=upload, uploads=uploads)
+    item_kinds: list[str] = []
 
-    if kind == ChatMessage.Kind.TEXT:
+    if files:
+        if len(files) > CHAT_MAX_ALBUM_ITEMS:
+            raise ValidationError(
+                {
+                    "files": f"Не больше {CHAT_MAX_ALBUM_ITEMS} файлов в альбоме."
+                }
+            )
+        for upload_file in files:
+            item_kind = _detect_upload_kind(upload_file)
+            _validate_upload(kind=item_kind, upload=upload_file)
+            item_kinds.append(item_kind)
+        kind = _message_kind_for_items(item_kinds)
+        if len(text) > MAX_MESSAGE_LENGTH:
+            raise ValidationError(
+                {"body": f"Подпись не более {MAX_MESSAGE_LENGTH} символов."}
+            )
+    elif kind in MEDIA_KINDS:
+        raise ValidationError({"files": "Нужен файл."})
+    elif kind == ChatMessage.Kind.TEXT:
         if not text:
             raise ValidationError({"body": "Сообщение не может быть пустым."})
         if len(text) > MAX_MESSAGE_LENGTH:
@@ -365,12 +449,6 @@ def create_message(
             raise ValidationError(
                 {"body": f"Не более {MAX_CODE_LENGTH} символов."}
             )
-    elif kind in (ChatMessage.Kind.IMAGE, ChatMessage.Kind.VIDEO):
-        _validate_upload(kind=kind, upload=upload)
-        if len(text) > MAX_MESSAGE_LENGTH:
-            raise ValidationError(
-                {"body": f"Подпись не более {MAX_MESSAGE_LENGTH} символов."}
-            )
     else:
         raise ValidationError({"kind": "Неподдерживаемый тип сообщения."})
 
@@ -380,25 +458,33 @@ def create_message(
         kind=kind,
         sender=sender,
         body=text,
-        code_language=language if kind == ChatMessage.Kind.CODE else "",
+        code_language=(
+            CODE_LANGUAGE_PYTHON if kind == ChatMessage.Kind.CODE else ""
+        ),
         reply_to=reply_to,
     )
-    if upload is not None:
-        message.attachment = upload
     message.save()
+    if files:
+        _save_message_attachments(
+            message=message, files=files, item_kinds=item_kinds
+        )
 
     thread.last_message_at = now
     thread.save(update_fields=["last_message_at"])
 
-    message = ChatMessage.objects.select_related(
-        "sender",
-        "reply_to",
-        "reply_to__sender",
-        "forwarded_from",
-        "forwarded_from__sender",
-        "conference",
-        "conference__whiteboard",
-    ).get(pk=message.pk)
+    message = (
+        ChatMessage.objects.select_related(
+            "sender",
+            "reply_to",
+            "reply_to__sender",
+            "forwarded_from",
+            "forwarded_from__sender",
+            "conference",
+            "conference__whiteboard",
+        )
+        .prefetch_related("attachments")
+        .get(pk=message.pk)
+    )
 
     broadcast_chat_event(
         thread=thread,
@@ -435,7 +521,29 @@ def forward_message(
         code_language=source.code_language,
         forwarded_from=source,
     )
-    if source.attachment:
+    message.save()
+
+    source_attachments = list(source.attachments.order_by("sort_order", "id"))
+    if source_attachments:
+        from pathlib import Path
+
+        from django.core.files.base import ContentFile
+
+        copied = []
+        item_kinds = []
+        for item in source_attachments:
+            item.file.open("rb")
+            try:
+                content = item.file.read()
+            finally:
+                item.file.close()
+            name = Path(item.file.name).name
+            copied.append(ContentFile(content, name=name))
+            item_kinds.append(item.kind)
+        _save_message_attachments(
+            message=message, files=copied, item_kinds=item_kinds
+        )
+    elif source.attachment:
         from pathlib import Path
 
         from django.core.files.base import ContentFile
@@ -446,17 +554,33 @@ def forward_message(
         finally:
             source.attachment.close()
         name = Path(source.attachment.name).name
-        message.attachment.save(name, ContentFile(content), save=False)
-    message.save()
+        kind = (
+            source.kind
+            if source.kind
+            in (
+                ChatMessageAttachment.Kind.IMAGE,
+                ChatMessageAttachment.Kind.VIDEO,
+            )
+            else ChatMessageAttachment.Kind.IMAGE
+        )
+        _save_message_attachments(
+            message=message,
+            files=[ContentFile(content, name=name)],
+            item_kinds=[kind],
+        )
 
     target_thread.last_message_at = now
     target_thread.save(update_fields=["last_message_at"])
 
-    message = ChatMessage.objects.select_related(
-        "sender",
-        "forwarded_from",
-        "forwarded_from__sender",
-    ).get(pk=message.pk)
+    message = (
+        ChatMessage.objects.select_related(
+            "sender",
+            "forwarded_from",
+            "forwarded_from__sender",
+        )
+        .prefetch_related("attachments")
+        .get(pk=message.pk)
+    )
 
     broadcast_chat_event(
         thread=target_thread,
@@ -469,15 +593,19 @@ def forward_message(
 def list_thread_messages(
     *, thread: DirectThread, before=None, limit: int = 50
 ):
-    qs = thread.messages.select_related(
-        "sender",
-        "conference",
-        "conference__whiteboard",
-        "reply_to",
-        "reply_to__sender",
-        "forwarded_from",
-        "forwarded_from__sender",
-    ).order_by("-created_at")
+    qs = (
+        thread.messages.select_related(
+            "sender",
+            "conference",
+            "conference__whiteboard",
+            "reply_to",
+            "reply_to__sender",
+            "forwarded_from",
+            "forwarded_from__sender",
+        )
+        .prefetch_related("attachments")
+        .order_by("-created_at")
+    )
     if before:
         qs = qs.filter(created_at__lt=before)
     limit = max(1, min(limit, 100))
@@ -491,14 +619,18 @@ def list_thread_messages(
 
 def message_for_user(*, user, message_public_id) -> ChatMessage:
     try:
-        message = ChatMessage.objects.select_related(
-            "sender",
-            "thread",
-            "reply_to",
-            "reply_to__sender",
-            "forwarded_from",
-            "forwarded_from__sender",
-        ).get(public_id=message_public_id)
+        message = (
+            ChatMessage.objects.select_related(
+                "sender",
+                "thread",
+                "reply_to",
+                "reply_to__sender",
+                "forwarded_from",
+                "forwarded_from__sender",
+            )
+            .prefetch_related("attachments")
+            .get(public_id=message_public_id)
+        )
     except ChatMessage.DoesNotExist as exc:
         raise NotFound("Сообщение не найдено.") from exc
     if not user_in_thread(user, message.thread):
@@ -560,9 +692,15 @@ def update_text_message(
 @transaction.atomic
 def delete_text_message(*, message: ChatMessage, deleter) -> ChatMessage:
     _validate_own_deletable_message(message=message, actor=deleter)
-    if message.attachment:
+    deleted_paths: set[str] = set()
+    for item in list(message.attachments.all()):
+        if item.file:
+            deleted_paths.add(item.file.name)
+            item.file.delete(save=False)
+        item.delete()
+    if message.attachment and message.attachment.name not in deleted_paths:
         message.attachment.delete(save=False)
-        message.attachment = None
+    message.attachment = None
     message.body = ""
     message.is_deleted = True
     message.save(update_fields=["is_deleted", "body", "attachment"])

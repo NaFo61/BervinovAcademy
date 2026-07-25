@@ -1,5 +1,7 @@
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from education.services import build_enrollments_payload
@@ -10,6 +12,17 @@ from progress.profile_serializers import (
 from progress.stats import build_activity_payload
 
 from .models import User
+
+
+def inject_access_claims(access_token, user):
+    """Добавляет публичные claims в access JWT (login / register / refresh)."""
+    access_token["email"] = user.email
+    access_token["phone"] = user.phone
+    access_token["role"] = user.role
+    access_token["public_id"] = str(user.public_id)
+    access_token["first_name"] = user.first_name
+    access_token["last_name"] = user.last_name
+    return access_token
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -169,14 +182,28 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
         # Генерация токенов
         refresh = RefreshToken.for_user(user)
         access = refresh.access_token
-
-        # Добавление пользовательских claims в access токен
-        access["email"] = user.email
-        access["phone"] = user.phone
-        access["role"] = user.role
-        access["public_id"] = str(user.public_id)
+        inject_access_claims(access, user)
 
         return {"refresh": str(refresh), "access": str(access)}
+
+
+class CustomTokenRefreshSerializer(TokenRefreshSerializer):
+    """Refresh с теми же claims, что и при логине (public_id, role, …)."""
+
+    def validate(self, attrs):
+        refresh = self.token_class(attrs["refresh"])
+        user_id = refresh[api_settings.USER_ID_CLAIM]
+        try:
+            user = User.objects.get(**{api_settings.USER_ID_FIELD: user_id})
+        except User.DoesNotExist as exc:
+            raise serializers.ValidationError(
+                "Пользователь не найден."
+            ) from exc
+        data = super().validate(attrs)
+        access = refresh.access_token
+        inject_access_claims(access, user)
+        data["access"] = str(access)
+        return data
 
 
 class UserSerializer(serializers.ModelSerializer):

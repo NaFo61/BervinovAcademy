@@ -249,6 +249,7 @@ class ChatMessage(UUIDPublicIdMixin, models.Model):
         SYSTEM = "system", _("Системное")
         IMAGE = "image", _("Изображение")
         VIDEO = "video", _("Видео")
+        ALBUM = "album", _("Альбом")
         CODE = "code", _("Код")
 
     class SystemEvent(models.TextChoices):
@@ -358,3 +359,40 @@ class ChatMessage(UUIDPublicIdMixin, models.Model):
 
     def __str__(self):
         return f"ChatMessage {self.public_id}"
+
+
+class ChatMessageAttachment(models.Model):
+    """Файл в сообщении чата (одно фото/видео или элемент альбома)."""
+
+    class Kind(models.TextChoices):
+        IMAGE = "image", _("Изображение")
+        VIDEO = "video", _("Видео")
+
+    message = models.ForeignKey(
+        ChatMessage,
+        on_delete=models.CASCADE,
+        related_name="attachments",
+        verbose_name=_("Сообщение"),
+    )
+    file = models.FileField(
+        upload_to=chat_attachment_upload_to,
+        verbose_name=_("Файл"),
+    )
+    kind = models.CharField(
+        max_length=16,
+        choices=Kind.choices,
+        verbose_name=_("Тип"),
+    )
+    sort_order = models.PositiveSmallIntegerField(
+        default=0,
+        verbose_name=_("Порядок"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Вложение чата")
+        verbose_name_plural = _("Вложения чата")
+        ordering = ("sort_order", "id")
+
+    def __str__(self):
+        return f"ChatAttachment {self.pk} ({self.kind})"

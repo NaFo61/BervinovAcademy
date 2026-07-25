@@ -411,7 +411,10 @@ function CallPage({ navigate, hashParams }) {
         if (cancelled) return;
 
         const payload = window.parseJwtPayload(localStorage.getItem('access_token') || '');
-        const mentor = join.conference?.mentor?.public_id === payload.public_id;
+        const myId = window.currentUserPublicId
+          ? window.currentUserPublicId(payload)
+          : String(payload.public_id || payload.user_id || '');
+        const mentor = join.conference?.mentor?.public_id === myId;
         const room = new LK.Room({ adaptiveStream: true, dynacast: true });
         roomRef.current = room;
         setConference(join.conference);
