@@ -510,15 +510,57 @@ function CourseSidebar({ course, navigate, totalLessons, totalQuizzes, totalHour
           </div>
         </div>
         {enrollment && (
-          <button type="button"
-            onClick={() => window.openChatWithCourse(navigate, course.public_id || course.publicId)}
-            className="w-full h-10 rounded-xl btn-grad text-white text-sm font-semibold">
-            Написать ментору
-          </button>
+          <ProMentorButton course={course} navigate={navigate} />
         )}
       </M.div>
       )}
     </div>
+  );
+}
+
+function ProMentorButton({ course, navigate }) {
+  const [isPro, setIsPro] = React.useState(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await window.apiJson('/api/users/me/', { auth: true });
+        if (!cancelled) setIsPro(!!me?.subscription?.is_pro);
+      } catch (_) {
+        if (!cancelled) setIsPro(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (isPro === null) {
+    return (
+      <button type="button" disabled
+        className="w-full h-10 rounded-xl bg-black/[0.04] text-ink/40 text-sm font-semibold">
+        Загрузка…
+      </button>
+    );
+  }
+
+  if (!isPro) {
+    return (
+      <div className="rounded-xl ring-1 ring-amber-200/80 bg-amber-50/70 p-3">
+        <p className="text-[13px] font-semibold text-ink">Чат с ментором — тариф Про</p>
+        <p className="text-[12px] text-ink/55 mt-1 leading-relaxed">
+          Курсы бесплатные. Про даёт чат с ментором, видео-разборы и созвоны.
+          Напишите администратору, чтобы получить доступ.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <button type="button"
+      onClick={() => window.openChatWithCourse(navigate, course.public_id || course.publicId)}
+      className="w-full h-10 rounded-xl btn-grad text-white text-sm font-semibold">
+      Написать ментору
+    </button>
   );
 }
 

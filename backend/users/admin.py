@@ -45,6 +45,25 @@ class CustomUserAdmin(ModelAdmin):
     ordering = ("-date_joined",)
     readonly_fields = ("last_login", "date_joined")
     icon = "person"
+    actions = ("grant_pro_month",)
+
+    @admin.action(description=_("Выдать тариф Про (1 месяц)"))
+    def grant_pro_month(self, request, queryset):
+        from subscriptions.services import grant_pro
+
+        count = 0
+        for user in queryset:
+            grant_pro(
+                user=user,
+                granted_by=request.user,
+                note="admin user action",
+            )
+            count += 1
+        self.message_user(
+            request,
+            _("Выдан тариф Про: %(n)s польз.") % {"n": count},
+            messages.SUCCESS,
+        )
 
     fieldsets = (
         (_("Основная информация"), {"fields": ("email", "phone", "password")}),

@@ -27,7 +27,7 @@ def mentor_user(db):
 
 @pytest.fixture
 def student_user(db):
-    return User.objects.create_user(
+    user = User.objects.create_user(
         email="student-conf@academy.com",
         phone="+79001110002",
         password="password",
@@ -35,6 +35,10 @@ def student_user(db):
         last_name="Созвон",
         role="student",
     )
+    from subscriptions.services import grant_pro
+
+    grant_pro(user=user, note="test fixture")
+    return user
 
 
 @pytest.fixture

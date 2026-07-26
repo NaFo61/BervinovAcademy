@@ -116,6 +116,11 @@ def create_conference(*, mentor, guest) -> Conference:
     if mentor.pk == guest.pk:
         raise ValueError("Нельзя создать созвон с самим собой.")
 
+    from subscriptions.services import FEATURE_CONFERENCE, user_has_feature
+
+    if not user_has_feature(guest, FEATURE_CONFERENCE):
+        raise ValueError("Созвон доступен ученикам с тарифом Про.")
+
     _cancel_stale_waiting(mentor, guest)
 
     conference = Conference.objects.create(
@@ -141,7 +146,13 @@ def create_conference(*, mentor, guest) -> Conference:
 
 
 def user_may_access_conference(user, conference: Conference) -> bool:
-    return user.pk in (conference.mentor_id, conference.guest_id)
+    if user.pk not in (conference.mentor_id, conference.guest_id):
+        return False
+    if user.pk == conference.guest_id:
+        from subscriptions.services import FEATURE_CONFERENCE, user_has_feature
+
+        return user_has_feature(user, FEATURE_CONFERENCE)
+    return True
 
 
 def mark_conference_joined(*, conference: Conference, user) -> Conference:

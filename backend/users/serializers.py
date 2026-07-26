@@ -308,11 +308,18 @@ class UserPublicProfileSerializer(serializers.ModelSerializer):
 class UserPrivateProfileSerializer(UserPublicProfileSerializer):
     email = serializers.EmailField(allow_null=True, read_only=True)
     phone = serializers.CharField(allow_null=True, read_only=True)
+    subscription = serializers.SerializerMethodField()
+
+    def get_subscription(self, obj):
+        from subscriptions.services import subscription_payload
+
+        return subscription_payload(obj)
 
     class Meta(UserPublicProfileSerializer.Meta):
         fields: tuple[str, ...] = UserPublicProfileSerializer.Meta.fields + (
             "email",
             "phone",
+            "subscription",
         )
         read_only_fields: tuple[str, ...] = (
             "public_id",
@@ -324,6 +331,7 @@ class UserPrivateProfileSerializer(UserPublicProfileSerializer):
             "achievements",
             "email",
             "phone",
+            "subscription",
         )
 
 

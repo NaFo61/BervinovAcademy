@@ -109,6 +109,10 @@ def mark_thread_read(*, thread: DirectThread, user, at=None) -> DirectThread:
 def student_may_message_mentor(*, student, mentor) -> bool:
     if not is_mentor_user(mentor) or not is_student_user(student):
         return False
+    from subscriptions.services import FEATURE_MENTOR_CHAT, user_has_feature
+
+    if not user_has_feature(student, FEATURE_MENTOR_CHAT):
+        return False
     return Enrollment.objects.filter(
         user=student,
         course__mentor=mentor,
@@ -132,6 +136,14 @@ def can_open_thread(*, actor, other) -> bool:
 
 
 def normalize_thread_participants(*, actor, other) -> tuple[User, User]:
+    if is_student_user(actor) and is_mentor_user(other):
+        from subscriptions.services import (
+            FEATURE_MENTOR_CHAT,
+            user_has_feature,
+        )
+
+        if not user_has_feature(actor, FEATURE_MENTOR_CHAT):
+            raise PermissionDenied("Чат с ментором доступен по тарифу Про.")
     if not can_open_thread(actor=actor, other=other):
         raise PermissionDenied("Нет доступа к диалогу с этим пользователем.")
     if is_mentor_user(actor):
@@ -161,6 +173,13 @@ def resolve_open_target(*, actor, user_public_id=None, course_public_id=None):
             raise ValidationError({"course": "У курса не назначен ментор."})
         if not Enrollment.objects.filter(user=actor, course=course).exists():
             raise PermissionDenied("Вы не записаны на этот курс.")
+        from subscriptions.services import (
+            FEATURE_MENTOR_CHAT,
+            user_has_feature,
+        )
+
+        if not user_has_feature(actor, FEATURE_MENTOR_CHAT):
+            raise PermissionDenied("Чат с ментором доступен по тарифу Про.")
         return course.mentor
 
     if not user_public_id:

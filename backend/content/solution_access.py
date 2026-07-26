@@ -102,13 +102,27 @@ def coding_solution_unlocked(user, challenge) -> bool:
 def build_reference_solution(obj, request, *, unlocked: bool) -> dict | None:
     if not unlocked:
         return None
+    from subscriptions.services import (
+        FEATURE_SOLUTION_VIDEO,
+        user_has_feature,
+    )
+
     from .video_utils import build_video_payload
 
-    video = build_video_payload(obj, request)
+    full_video = build_video_payload(obj, request)
+    has_video = bool(full_video)
     text = (getattr(obj, "solution_text", None) or "").strip()
-    if not video and not text:
+    if not has_video and not text:
         return None
-    return {"video": video, "text": text}
+
+    user = _authenticated_user(request)
+    can_see_video = user_has_feature(user, FEATURE_SOLUTION_VIDEO)
+    return {
+        "text": text,
+        "video": full_video if can_see_video else None,
+        "has_video": has_video,
+        "video_requires_pro": has_video and not can_see_video,
+    }
 
 
 def has_reference_solution_content(obj) -> bool:

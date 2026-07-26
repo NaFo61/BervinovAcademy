@@ -703,7 +703,9 @@ function scrollToLessonReferenceSolution() {
 }
 
 function ReferenceSolutionContent({ referenceSolution }) {
-  if (!referenceSolution || (!referenceSolution.video && !referenceSolution.text)) {
+  const hasText = !!(referenceSolution && referenceSolution.text);
+  const hasVideoContent = !!(referenceSolution && (referenceSolution.video || referenceSolution.has_video || referenceSolution.video_requires_pro));
+  if (!referenceSolution || (!hasText && !hasVideoContent)) {
     return (
       <p className="text-[13px] text-ink/45 text-center py-2">
         Материал эталонного решения ещё не добавлен.
@@ -712,10 +714,24 @@ function ReferenceSolutionContent({ referenceSolution }) {
   }
   return (
     <>
-      <VideoExplanation video={referenceSolution.video} title="Видео-разбор"/>
-      {referenceSolution.text && (
+      {referenceSolution.video ? (
+        <VideoExplanation video={referenceSolution.video} title="Видео-разбор"/>
+      ) : referenceSolution.video_requires_pro ? (
+        <div className={`rounded-xl ring-1 ring-amber-200/80 bg-amber-50/80 p-4 ${hasText ? 'mb-6' : ''}`}>
+          <div className="flex items-start gap-3">
+            <I.Play className="w-5 h-5 text-amber-700 shrink-0 mt-0.5"/>
+            <div>
+              <p className="text-[14px] font-semibold text-ink">Видео-разбор — в тарифе Про</p>
+              <p className="text-[12px] text-ink/55 mt-1 leading-relaxed">
+                Текст эталона доступен всем. Видео с объяснением открывается по тарифу Про.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {hasText && (
         <div
-          className={`theory-content text-[15px] text-ink/85 leading-relaxed ${referenceSolution.video ? 'mt-6' : ''}`}
+          className={`theory-content text-[15px] text-ink/85 leading-relaxed ${referenceSolution.video || referenceSolution.video_requires_pro ? 'mt-6' : ''}`}
           dangerouslySetInnerHTML={{ __html: referenceSolution.text }}
         />
       )}
