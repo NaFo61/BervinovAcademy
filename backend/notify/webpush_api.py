@@ -15,11 +15,25 @@ def vapid_public_key() -> str:
     return (getattr(settings, "VAPID_PUBLIC_KEY", "") or "").strip()
 
 
+def _private_key_material() -> str:
+    raw = (getattr(settings, "VAPID_PRIVATE_KEY", "") or "").strip()
+    if not raw:
+        return ""
+    # path to PEM on disk
+    if raw.startswith("/") or raw.endswith(".pem"):
+        try:
+            with open(raw, encoding="utf-8") as fh:
+                return fh.read()
+        except OSError:
+            logger.exception(
+                "Не удалось прочитать VAPID_PRIVATE_KEY path=%s", raw
+            )
+            return ""
+    return raw.replace("\\n", "\n")
+
+
 def is_configured() -> bool:
-    return bool(
-        vapid_public_key()
-        and (getattr(settings, "VAPID_PRIVATE_KEY", "") or "").strip()
-    )
+    return bool(vapid_public_key() and _private_key_material())
 
 
 def send_web_push(
@@ -29,7 +43,8 @@ def send_web_push(
     body: str,
     url: str = "",
 ) -> bool:
-    if not is_configured():
+    private_key = _private_key_material()
+    if not vapid_public_key() or not private_key:
         return False
     try:
         from pywebpush import WebPushException, webpush
@@ -55,7 +70,7 @@ def send_web_push(
                 },
             },
             data=payload,
-            vapid_private_key=settings.VAPID_PRIVATE_KEY,
+            vapid_private_key=private_key,
             vapid_claims={
                 "sub": getattr(
                     settings, "VAPID_ADMIN_EMAIL", "mailto:admin@example.com"
