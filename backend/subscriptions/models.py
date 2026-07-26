@@ -45,7 +45,9 @@ class Plan(UUIDPublicIdMixin, models.Model):
         default=list,
         blank=True,
         verbose_name=_("Фичи"),
-        help_text=_("Коды фич: mentor_chat, solution_video, conference"),
+        help_text=_(
+            "Список кодов фич: mentor_chat, solution_video, conference"
+        ),
     )
 
     class Meta:
