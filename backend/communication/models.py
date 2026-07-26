@@ -132,6 +132,9 @@ class UserNotification(UUIDPublicIdMixin, models.Model):
             "subscription_expiring",
             _("Скоро закончится тариф"),
         )
+        MENTOR_MESSAGE = "mentor_message", _("Сообщение от ментора")
+        STUDY_REMINDER = "study_reminder", _("Напоминание об учёбе")
+        STREAK_REMINDER = "streak_reminder", _("Streak под угрозой")
 
     user = models.ForeignKey(
         User,

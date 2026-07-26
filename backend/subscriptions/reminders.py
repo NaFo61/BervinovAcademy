@@ -42,7 +42,9 @@ def send_expiry_reminders(*, days: int = EXPIRY_REMINDER_DAYS) -> int:
     sent = 0
     for ent in qs:
         ends_label = _format_ends_at(ent.ends_at)
-        UserNotification.objects.create(
+        from notify.dispatch import create_and_deliver, site_url
+
+        create_and_deliver(
             user=ent.user,
             kind=UserNotification.Kind.SUBSCRIPTION_EXPIRING,
             title="Тариф Про скоро закончится",
@@ -51,6 +53,7 @@ def send_expiry_reminders(*, days: int = EXPIRY_REMINDER_DAYS) -> int:
                 "Напишите администратору, чтобы продлить доступ "
                 "к чату с ментором, видео-разборам и созвонам."
             ),
+            url=site_url("/pro"),
         )
         ent.expiry_reminder_sent_at = now
         ent.save(update_fields=["expiry_reminder_sent_at"])

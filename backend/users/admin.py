@@ -69,7 +69,17 @@ class CustomUserAdmin(ModelAdmin):
         (_("Основная информация"), {"fields": ("email", "phone", "password")}),
         (
             _("Личная информация"),
-            {"fields": ("first_name", "last_name", "avatar", "bio")},
+            {
+                "fields": (
+                    "first_name",
+                    "last_name",
+                    "avatar",
+                    "bio",
+                    "telegram_id",
+                    "telegram_username",
+                    "telegram_linked_at",
+                )
+            },
         ),
         (
             _("Права доступа"),

@@ -29,3 +29,5 @@ channels==4.2.2
 channels-redis==4.2.1
 daphne==4.1.2
 whitenoise==6.9.0
+requests>=2.31.0
+pywebpush>=2.0.0

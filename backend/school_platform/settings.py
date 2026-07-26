@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "exams",
     "content",
     "communication",
+    "notify",
     "translations",
     "fixture",
     "drf_spectacular",
@@ -378,6 +379,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "subscriptions.send_pro_expiry_reminders",
         "schedule": crontab(hour=9, minute=0),
     },
+    "send-study-reminders": {
+        "task": "notify.send_study_reminders",
+        "schedule": crontab(hour=18, minute=0),
+    },
 }
 
 # LiveKit (видеоконференции ментор ↔ участник)
@@ -403,6 +408,16 @@ WHITEBOARD_MAX_EXPORT_BYTES = config(
     "WHITEBOARD_MAX_EXPORT_BYTES", default=10 * 1024 * 1024, cast=int
 )
 TLDRAW_LICENSE_KEY = config("TLDRAW_LICENSE_KEY", default="").strip()
+
+FRONTEND_URL = config("FRONTEND_URL", default="").strip()
+TELEGRAM_BOT_TOKEN = config("TELEGRAM_BOT_TOKEN", default="").strip()
+TELEGRAM_BOT_USERNAME = config("TELEGRAM_BOT_USERNAME", default="").strip()
+TELEGRAM_WEBHOOK_SECRET = config("TELEGRAM_WEBHOOK_SECRET", default="").strip()
+VAPID_PUBLIC_KEY = config("VAPID_PUBLIC_KEY", default="").strip()
+VAPID_PRIVATE_KEY = config("VAPID_PRIVATE_KEY", default="").strip()
+VAPID_ADMIN_EMAIL = config(
+    "VAPID_ADMIN_EMAIL", default="mailto:admin@bervinov-academy.local"
+).strip()
 
 # Kafka (опционально: пустой KAFKA_BOOTSTRAP_SERVERS — не публикуем)
 KAFKA_BOOTSTRAP_SERVERS = config("KAFKA_BOOTSTRAP_SERVERS", default="").strip()

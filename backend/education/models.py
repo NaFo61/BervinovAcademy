@@ -43,6 +43,11 @@ class Enrollment(UUIDPublicIdMixin, models.Model):
         auto_now=True,
         verbose_name=_("Последняя активность"),
     )
+    last_study_reminder_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Последнее напоминание об учёбе"),
+    )
     completed_at = models.DateTimeField(
         null=True,
         blank=True,

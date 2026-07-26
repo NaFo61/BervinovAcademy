@@ -161,6 +161,24 @@ class User(UUIDPublicIdMixin, AbstractBaseUser, PermissionsMixin):
         help_text=_("Биография пользователя"),
         blank=True,
     )
+    telegram_id = models.BigIntegerField(
+        verbose_name=_("Telegram ID"),
+        null=True,
+        blank=True,
+        unique=True,
+        help_text=_("ID чата Telegram для уведомлений"),
+    )
+    telegram_username = models.CharField(
+        verbose_name=_("Telegram username"),
+        max_length=64,
+        blank=True,
+        default="",
+    )
+    telegram_linked_at = models.DateTimeField(
+        verbose_name=_("Telegram привязан"),
+        null=True,
+        blank=True,
+    )
     date_joined = models.DateTimeField(
         verbose_name=_("Дата регистрации"),
         default=timezone.now,

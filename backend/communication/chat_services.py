@@ -561,6 +561,44 @@ def create_message(
         event="message.new",
         payload=_serialize_message_for_ws(message),
     )
+
+    # Уведомление собеседнику (ментор → студент и наоборот)
+    if kind != ChatMessage.Kind.SYSTEM and sender is not None:
+        recipient = (
+            thread.student if sender.pk == thread.mentor_id else thread.mentor
+        )
+        if recipient and recipient.pk != sender.pk:
+            preview = (text or "").strip()
+            if not preview and kind in MEDIA_KINDS:
+                preview = "Медиа"
+            if kind == ChatMessage.Kind.CODE:
+                preview = "Код (Python)"
+            preview = preview[:180] or "Новое сообщение"
+            sender_name = (
+                f"{sender.first_name} {sender.last_name}".strip()
+                or "Собеседник"
+            )
+            from notify.dispatch import create_and_deliver, site_url
+
+            from communication.models import UserNotification
+
+            # In-app только для студента (ментор и так в кабинете);
+            # Telegram/Push — обоим.
+            persist = recipient.pk == thread.student_id
+            other_id = (
+                thread.mentor.public_id
+                if recipient.pk == thread.student_id
+                else thread.student.public_id
+            )
+            create_and_deliver(
+                user=recipient,
+                kind=UserNotification.Kind.MENTOR_MESSAGE,
+                title=f"Сообщение от {sender_name}",
+                body=preview,
+                url=site_url(f"/messages?user={other_id}"),
+                persist=persist,
+            )
+
     return message
 
 

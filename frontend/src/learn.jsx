@@ -1314,13 +1314,36 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin, onRefreshLesson }) 
   const [submitLoading, setSubmitLoading] = React.useState(false);
   const [submitError, setSubmitError] = React.useState(null);
   const [submitResult, setSubmitResult] = React.useState(null);
+  const [history, setHistory] = React.useState([]);
+  const [historyLoading, setHistoryLoading] = React.useState(false);
+
+  const loadHistory = React.useCallback(async () => {
+    if (!loggedIn || !lesson?.public_id) {
+      setHistory([]);
+      return;
+    }
+    setHistoryLoading(true);
+    try {
+      const data = await window.fetchApiJson(
+        `/api/progress/code/?challenge_public_id=${encodeURIComponent(lesson.public_id)}`,
+        { auth: true },
+      );
+      const rows = Array.isArray(data) ? data : (data.results || []);
+      setHistory(rows.slice(0, 12));
+    } catch (_) {
+      setHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [lesson?.public_id, loggedIn]);
 
   React.useEffect(() => {
     setCode(lesson.initial_code || DEFAULT_PYTHON_CODE);
     setSubmitLoading(false);
     setSubmitError(null);
     setSubmitResult(null);
-  }, [lesson.public_id, lesson.initial_code]);
+    loadHistory();
+  }, [lesson.public_id, lesson.initial_code, loadHistory]);
 
   const tests = (lesson.test_cases || []).slice().sort(
     (a, b) => (a.order_index || 0) - (b.order_index || 0),
@@ -1362,6 +1385,7 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin, onRefreshLesson }) 
       if (isCodeSubmissionFinal(created.status)) {
         if (created.status === 'completed') onComplete();
         else onRefreshLesson?.();
+        loadHistory();
         return;
       }
 
@@ -1369,6 +1393,7 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin, onRefreshLesson }) 
       setSubmitResult(final);
       if (final.status === 'completed') onComplete();
       else onRefreshLesson?.();
+      loadHistory();
     } catch (e) {
       setSubmitError(e.message || 'Не удалось отправить решение');
     } finally {
@@ -1462,6 +1487,55 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin, onRefreshLesson }) 
         solutionUnlocked={solutionUnlocked}
         hasReferenceSolution={window.hasReferenceSolutionMaterial(lesson)}
       />
+
+      {loggedIn && (
+        <div className="mt-8 rounded-2xl ring-1 ring-black/[0.06] bg-white overflow-hidden">
+          <div className="px-4 py-3 border-b border-black/[0.06] flex items-center justify-between">
+            <div className="text-sm font-bold">История проверок</div>
+            {historyLoading && <span className="text-[11px] text-ink/40">загрузка…</span>}
+          </div>
+          {!history.length ? (
+            <div className="px-4 py-6 text-sm text-ink/45">Пока нет отправок по этой задаче.</div>
+          ) : (
+            <ul className="divide-y divide-black/[0.05]">
+              {history.map((row) => {
+                const ok = row.status === 'completed';
+                const when = row.submitted_at
+                  ? new Date(row.submitted_at).toLocaleString('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                  : '';
+                return (
+                  <li key={row.public_id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className={`font-semibold ${ok ? 'text-emerald-700' : 'text-rose-600'}`}>
+                          {ok ? 'Принято' : (row.status || 'ошибка')}
+                        </span>
+                        {row.total_tests > 0 && (
+                          <span className="text-ink/45 text-xs font-mono">{row.tests_passed}/{row.total_tests}</span>
+                        )}
+                        <span className="text-ink/35 text-xs">{when}</span>
+                      </div>
+                      {row.error_message && (
+                        <div className="mt-1 text-xs text-ink/55 line-clamp-2">{row.error_message}</div>
+                      )}
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <button type="button" onClick={() => setCode(row.code || '')}
+                        className="h-9 px-3 rounded-lg text-xs font-semibold ring-1 ring-black/[0.08] hover:bg-black/[0.03]">
+                        В редактор
+                      </button>
+                      <button type="button" onClick={() => window.openPlaygroundWithCode?.(null, row.code || '')}
+                        className="h-9 px-3 rounded-lg text-xs font-semibold text-cyan-800 bg-cyan-50 ring-1 ring-cyan-200/80 hover:bg-cyan-100">
+                        Интерпретатор
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
 
       {solved && !submitLoading && (
         <div className="mt-6 flex items-center gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200">

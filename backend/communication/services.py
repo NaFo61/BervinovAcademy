@@ -130,12 +130,15 @@ def create_conference(*, mentor, guest) -> Conference:
     )
 
     mentor_name = _display_name(mentor)
-    UserNotification.objects.create(
+    from notify.dispatch import create_and_deliver, site_url
+
+    create_and_deliver(
         user=guest,
         kind=UserNotification.Kind.CONFERENCE_INVITE,
         title=f"Приглашение на созвон от {mentor_name}",
         body=f"{mentor_name} приглашает вас на видеозвонок.",
         conference=conference,
+        url=site_url(f"/call?conf={conference.public_id}"),
     )
     chat_conference_events.append_conference_chat_event(
         conference=conference,

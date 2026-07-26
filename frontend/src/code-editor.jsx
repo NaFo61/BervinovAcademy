@@ -101,8 +101,7 @@ function openPlaygroundWithCode(navigate, code, stdin) {
     navigate(window.Routes.PLAYGROUND);
     return;
   }
-  const base = typeof window.getAppBase === 'function' ? window.getAppBase() : '';
-  const url = `${base}/playground`;
+  const url = '/playground';
   history.pushState(null, '', url);
   window.dispatchEvent(new PopStateEvent('popstate'));
 }

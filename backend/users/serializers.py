@@ -309,17 +309,26 @@ class UserPrivateProfileSerializer(UserPublicProfileSerializer):
     email = serializers.EmailField(allow_null=True, read_only=True)
     phone = serializers.CharField(allow_null=True, read_only=True)
     subscription = serializers.SerializerMethodField()
+    telegram = serializers.SerializerMethodField()
 
     def get_subscription(self, obj):
         from subscriptions.services import subscription_payload
 
         return subscription_payload(obj)
 
+    def get_telegram(self, obj):
+        return {
+            "linked": bool(obj.telegram_id),
+            "username": obj.telegram_username or "",
+            "linked_at": obj.telegram_linked_at,
+        }
+
     class Meta(UserPublicProfileSerializer.Meta):
         fields: tuple[str, ...] = UserPublicProfileSerializer.Meta.fields + (
             "email",
             "phone",
             "subscription",
+            "telegram",
         )
         read_only_fields: tuple[str, ...] = (
             "public_id",
@@ -332,6 +341,7 @@ class UserPrivateProfileSerializer(UserPublicProfileSerializer):
             "email",
             "phone",
             "subscription",
+            "telegram",
         )
 
 

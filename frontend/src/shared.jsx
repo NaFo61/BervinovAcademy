@@ -1294,6 +1294,59 @@ const COURSES = [
 
 
 // ------- Layout chrome -------
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = window.atob(base64);
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+}
+
+async function enableWebPushNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    window.alert('Браузер не поддерживает Web Push.');
+    return false;
+  }
+  if (!localStorage.getItem('access_token')) {
+    window.alert('Сначала войди в аккаунт.');
+    return false;
+  }
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    const vapid = await fetchApiJson('/api/push/vapid/', { auth: true });
+    if (!vapid.configured || !vapid.public_key) {
+      window.alert('Web Push ещё не настроен на сервере (VAPID).');
+      return false;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') {
+      window.alert('Разреши уведомления в браузере.');
+      return false;
+    }
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapid.public_key),
+      });
+    }
+    const json = sub.toJSON();
+    await fetchApiJson('/api/push/subscribe/', {
+      method: 'POST',
+      auth: true,
+      body: {
+        endpoint: json.endpoint,
+        keys: json.keys,
+      },
+    });
+    window.alert('Push включены — будем слать важные уведомления.');
+    return true;
+  } catch (e) {
+    window.alert(e.message || 'Не удалось включить Push');
+    return false;
+  }
+}
+
 function NotificationBell({ navigate }) {
   const [open, setOpen] = React.useState(false);
   const [items, setItems] = React.useState([]);
@@ -1406,14 +1459,35 @@ function NotificationBell({ navigate }) {
                       </button>
                     </div>
                   )}
+                  {(note.kind === 'mentor_message' || note.kind === 'study_reminder' || note.kind === 'streak_reminder') && (
+                    <div className="mt-2 flex gap-2">
+                      <button type="button" onClick={() => {
+                        dismiss(note);
+                        setOpen(false);
+                        if (note.kind === 'mentor_message') navigate(Routes.MESSAGES);
+                        else if (note.kind === 'study_reminder' || note.kind === 'streak_reminder') navigate(Routes.CATALOG);
+                      }}
+                        className="h-8 px-3 rounded-lg btn-grad text-white text-xs font-semibold">
+                        Открыть
+                      </button>
+                      <button type="button" onClick={() => dismiss(note)}
+                        className="h-8 px-3 rounded-lg text-xs font-semibold text-ink/55 hover:bg-black/[0.04]">
+                        Скрыть
+                      </button>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
           )}
-          <div className="px-4 py-2 border-t border-black/[0.06]">
+          <div className="px-4 py-2 border-t border-black/[0.06] flex items-center justify-between gap-2">
             <button type="button" onClick={() => { setOpen(false); navigate(Routes.CONFERENCES); }}
               className="text-xs font-semibold text-violet-600 hover:underline">
               Все созвоны
+            </button>
+            <button type="button" onClick={() => window.enableWebPushNotifications?.()}
+              className="text-xs font-semibold text-ink/45 hover:text-violet-600">
+              Push в браузере
             </button>
           </div>
         </div>
@@ -1795,6 +1869,7 @@ Object.assign(window, {
   openStudentProfile,
   createConference,
   openConferenceCall,
+  enableWebPushNotifications,
   fetchConferenceWhiteboard,
   fetchNotifications,
   WhiteboardPreviewModal,
