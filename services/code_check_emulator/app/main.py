@@ -86,7 +86,8 @@ async def _handle_message(
         )
 
 
-async def _consume_loop(settings: Settings) -> None:
+async def _consume_once(settings: Settings) -> None:
+    """Один цикл подключения к Kafka. Падает при обрыве — вызывающий ретраит."""
     hosts = _bootstrap_list(settings.kafka_bootstrap_servers)
     semaphore = asyncio.Semaphore(settings.max_concurrent_runs)
     consumer = AIOKafkaConsumer(
@@ -104,18 +105,40 @@ async def _consume_loop(settings: Settings) -> None:
     )
     await consumer.start()
     await producer.start()
+    logger.info(
+        "Kafka consumer готов: topic=%s group=%s",
+        settings.kafka_topic_in,
+        settings.kafka_group_id,
+    )
     try:
         async for msg in consumer:
             await _handle_message(
                 msg.value, producer, settings, semaphore
             )
-    except asyncio.CancelledError:
-        logger.info("Остановка consumer…")
-        raise
     finally:
         await producer.stop()
         await consumer.stop()
         logger.info("Kafka consumer/producer остановлены.")
+
+
+async def _consume_loop(settings: Settings) -> None:
+    """Держит consumer живым: после ребута Kafka / сетевых сбоев переподключается."""
+    delay = 3.0
+    while True:
+        try:
+            await _consume_once(settings)
+            delay = 3.0
+        except asyncio.CancelledError:
+            logger.info("Остановка consumer…")
+            raise
+        except Exception:
+            logger.exception(
+                "Kafka consumer упал, повтор через %.0f с "
+                "(health остаётся ок — без ретрая проверки зависают)",
+                delay,
+            )
+            await asyncio.sleep(delay)
+            delay = min(delay * 1.5, 30.0)
 
 
 @asynccontextmanager

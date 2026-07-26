@@ -1,0 +1,45 @@
+---
+description: Production server SSH access for diagnostics and deploy checks
+alwaysApply: true
+---
+
+# Server access (prod)
+
+Owner wants the agent to **use SSH key access** for health checks, logs, docker status, and analysis — without asking for a password each time.
+
+## Connect (Windows / this machine)
+
+| | |
+|--|--|
+| Host | `161.104.46.236` |
+| User | `root` |
+| Key | `C:\Users\Dir\.ssh\id_ed25519` (comment `dir_61@bk.ru`) |
+| Alias | `ssh bervinov` (from `~/.ssh/config`) |
+| App dir | `/opt/bervinov-academy` |
+| Site | `https://academy.bervinov-miron.ru` |
+
+```bash
+ssh -o BatchMode=yes -o IdentitiesOnly=yes -i C:/Users/Dir/.ssh/id_ed25519 root@161.104.46.236 "COMMAND"
+```
+
+Or OpenSSH alias: `ssh bervinov "COMMAND"`.
+
+From Python (paramiko): load `Ed25519Key` from `id_ed25519`, **no password**, `look_for_keys=False`.
+
+## Auth rules
+
+- Prefer **publickey only**. Do not store or reuse root passwords in rules/scripts/chat.
+- If key auth fails, say so and ask the user — do not invent credentials.
+- Never commit private keys or dump them into the repo / chat.
+- Destructive ops (`full-restart`, wipe volumes, disable SSH password) only with explicit user OK.
+
+## Typical checks
+
+```bash
+free -h; uptime; df -h /
+cd /opt/bervinov-academy && docker compose ps
+docker stats --no-stream
+curl -sS -m 5 http://127.0.0.1:18080/health/
+```
+
+External: `https://academy.bervinov-miron.ru/health/`

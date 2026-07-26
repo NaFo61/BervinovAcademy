@@ -80,7 +80,7 @@ function EmptyState({ icon: Icon = I.Send, title, children, action }) {
     {action}
   </div>;
 }
-function PythonCodeBlock({ code }) {
+function PythonCodeBlock({ code, navigate }) {
   const [copied, setCopied] = React.useState(false);
   const html = React.useMemo(() => {
     try { return window.Prism?.languages?.python ? window.Prism.highlight(code || '', window.Prism.languages.python, 'python') : null; } catch (_) { return null; }
@@ -88,9 +88,21 @@ function PythonCodeBlock({ code }) {
   const copy = async () => {
     try { await navigator.clipboard.writeText(code || ''); setCopied(true); setTimeout(() => setCopied(false), 1400); } catch (_) { /* clipboard unavailable */ }
   };
+  const openInterpreter = () => {
+    if (window.openPlaygroundWithCode) window.openPlaygroundWithCode(navigate, code || '');
+    else navigate?.(window.Routes.PLAYGROUND);
+  };
   return <div className="space-y-1">
-    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-violet-200">
-      <span>Python</span><button type="button" onClick={copy} aria-label="Скопировать код" className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-white/10"><I.Copy className="h-3 w-3" />{copied ? 'Готово' : 'Копировать'}</button>
+    <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-widest text-violet-200">
+      <span>Python</span>
+      <span className="flex items-center gap-0.5">
+        <button type="button" onClick={openInterpreter} aria-label="Открыть в интерпретаторе" className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-white/10 text-cyan-200">
+          <I.Play className="h-3 w-3" />Интерпретатор
+        </button>
+        <button type="button" onClick={copy} aria-label="Скопировать код" className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-white/10">
+          <I.Copy className="h-3 w-3" />{copied ? 'Готово' : 'Копировать'}
+        </button>
+      </span>
     </div>
     <pre className="chat-code-block overflow-x-auto rounded-xl border border-violet-300/30 bg-slate-950/90 px-3 py-2.5 whitespace-pre language-python"><code className="language-python" {...(html ? { dangerouslySetInnerHTML: { __html: html } } : {})}>{html ? undefined : code}</code></pre>
   </div>;
@@ -167,7 +179,7 @@ function ChatBubble({ message, mine, editing, editBusy, onEdit, onDelete, onRepl
     {source && <div className={`mb-1 text-[10px] font-bold uppercase tracking-wide ${mine ? 'text-white/70' : 'text-ink/45'}`}>Переслано{sourceName ? ` от ${sourceName}` : ''}</div>}
     <ReplyQuote reply={message.reply_to} mine={mine} onJumpTo={onJumpTo} />
     {media.length > 0 && <AlbumGrid items={media} onOpen={setLightbox} />}
-    {message.kind === 'code' ? <PythonCodeBlock code={message.body} /> : message.body && <div className="whitespace-pre-wrap">{message.body}</div>}
+    {message.kind === 'code' ? <PythonCodeBlock code={message.body} navigate={navigate} /> : message.body && <div className="whitespace-pre-wrap">{message.body}</div>}
     <div className={`mt-1 text-[10px] ${mine ? 'text-white/65' : 'text-ink/40'}`}>{message.pending ? 'Отправка…' : formatChatTime(message.created_at)}{message.show_edited && message.edited_at ? ' · изменено' : ''}</div>
   </div></div>{lightbox && <MediaLightbox item={lightbox} onClose={() => setLightbox(null)} />}</>;
 }

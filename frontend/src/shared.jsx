@@ -19,6 +19,7 @@ const Routes = {
   CONFERENCES: 'conferences',
   MESSAGES: 'messages',
   PRO: 'pro',
+  PLAYGROUND: 'playground',
 };
 
 const KNOWN_ROUTES = new Set(Object.values(Routes));
@@ -1502,6 +1503,7 @@ function TopNav({ route, navigate }) {
   const links = [
     { id: Routes.LANDING, label: 'Главная' },
     { id: Routes.CATALOG, label: 'Каталог' },
+    { id: Routes.PLAYGROUND, label: 'Python' },
     { id: Routes.PRO, label: 'Про' },
     { id: Routes.PROFILE, label: 'Профиль' },
     ...(isMentor ? [{ id: Routes.MENTOR, label: 'Ментор' }] : []),
@@ -1603,6 +1605,7 @@ function Footer({ navigate }) {
         </div>
         <FooterCol title="Учёба" items={[
         { label: 'Каталог курсов', onClick: () => navigate(Routes.CATALOG) },
+        { label: 'Python-интерпретатор', onClick: () => navigate(Routes.PLAYGROUND) },
         { label: 'Тариф Про', onClick: () => navigate(Routes.PRO) },
         { label: 'Мой профиль', onClick: () => navigate(Routes.PROFILE) },
         { label: 'Сертификаты', onClick: () => {} }]

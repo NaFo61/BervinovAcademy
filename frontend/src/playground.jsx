@@ -1,0 +1,195 @@
+// Browser Python interpreter (Pyodide) — code / stdin / stdout, no tests
+
+const PYODIDE_VERSION = '0.27.5';
+const PYODIDE_INDEX = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
+const DEFAULT_PLAYGROUND_CODE = `# Пиши код и жми «Запустить»
+name = input("Как тебя зовут? ")
+print(f"Привет, {name}!")
+`;
+
+function ensurePyodide(onStatus) {
+  if (window.__pyodideInstance) return Promise.resolve(window.__pyodideInstance);
+  if (window.__pyodideLoading) return window.__pyodideLoading;
+
+  window.__pyodideLoading = (async () => {
+    onStatus?.('Загрузка Python в браузере…');
+    if (!window.loadPyodide) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = `${PYODIDE_INDEX}pyodide.js`;
+        s.async = true;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('Не удалось загрузить Pyodide'));
+        document.head.appendChild(s);
+      });
+    }
+    onStatus?.('Инициализация интерпретатора…');
+    const pyodide = await window.loadPyodide({ indexURL: PYODIDE_INDEX });
+    window.__pyodideInstance = pyodide;
+    onStatus?.('Готово');
+    return pyodide;
+  })().catch((err) => {
+    window.__pyodideLoading = null;
+    throw err;
+  });
+
+  return window.__pyodideLoading;
+}
+
+async function runPythonInBrowser(code, stdinText) {
+  const pyodide = await ensurePyodide();
+  const stdin = String(stdinText ?? '');
+  const chunks = [];
+  const push = (s) => { if (s != null && s !== '') chunks.push(String(s)); };
+
+  pyodide.setStdout({ batched: (s) => push(s) });
+  pyodide.setStderr({ batched: (s) => push(s) });
+
+  // Кормим input() из поля «Входные данные» (по строкам).
+  await pyodide.runPythonAsync(`
+import sys
+from io import StringIO
+sys.stdin = StringIO(${JSON.stringify(stdin)})
+`);
+
+  try {
+    await pyodide.runPythonAsync(code || '');
+  } catch (err) {
+    const msg = err?.message || String(err);
+    push(msg);
+    return { ok: false, output: chunks.join('') };
+  }
+  return { ok: true, output: chunks.join('') };
+}
+
+function PlaygroundPage({ navigate }) {
+  const stash = React.useMemo(() => window.takePlaygroundStash?.() || { code: '', stdin: '' }, []);
+  const [code, setCode] = React.useState(stash.code || DEFAULT_PLAYGROUND_CODE);
+  const [stdin, setStdin] = React.useState(stash.stdin || '');
+  const [stdout, setStdout] = React.useState('');
+  const [status, setStatus] = React.useState('');
+  const [running, setRunning] = React.useState(false);
+  const [readyHint, setReadyHint] = React.useState('Первый запуск подгрузит Python (~10–20 МБ).');
+
+  React.useEffect(() => {
+    // warm load in background
+    ensurePyodide(setReadyHint).catch(() => setReadyHint('Не удалось подготовить интерпретатор'));
+  }, []);
+
+  const run = async () => {
+    if (running) return;
+    setRunning(true);
+    setStdout('');
+    setStatus('Выполнение…');
+    try {
+      const result = await runPythonInBrowser(code, stdin);
+      setStdout(result.output || (result.ok ? '(нет вывода)' : ''));
+      setStatus(result.ok ? 'Готово' : 'Ошибка выполнения');
+    } catch (e) {
+      setStdout(e.message || String(e));
+      setStatus('Ошибка');
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const runRef = React.useRef(run);
+  runRef.current = run;
+
+  React.useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        runRef.current();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  return (
+    <div className="min-h-[calc(100vh-4rem)] bg-[#070b14]">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-400/80 mb-2">Песочница</div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+              Python<span className="text-cyan-400">‑интерпретатор</span>
+            </h1>
+            <p className="mt-2 text-sm text-white/50 max-w-xl">
+              Код выполняется в браузере (Pyodide). Без тестов и очереди — просто вход, код и вывод.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate(window.Routes.MESSAGES)}
+              className="h-11 px-4 rounded-xl text-sm font-semibold text-white/70 ring-1 ring-white/10 hover:bg-white/5 transition-colors"
+            >
+              К сообщениям
+            </button>
+            <button
+              type="button"
+              onClick={run}
+              disabled={running}
+              className="h-11 px-6 rounded-xl text-sm font-bold text-[#041018] bg-gradient-to-r from-cyan-400 to-sky-400 hover:brightness-110 disabled:opacity-50 inline-flex items-center gap-2 shadow-[0_0_24px_rgba(34,211,238,0.25)]"
+            >
+              {running
+                ? <span className="w-4 h-4 border-2 border-[#041018]/35 border-t-[#041018] rounded-full animate-spin" />
+                : <window.I.Play className="w-4 h-4" />}
+              {running ? 'Бежит…' : 'Запустить'}
+              <kbd className="hidden sm:inline ml-1 text-[10px] font-mono opacity-70">Ctrl+Enter</kbd>
+            </button>
+          </div>
+        </div>
+
+        <p className="mb-4 text-xs text-white/40">{readyHint}{status ? ` · ${status}` : ''}</p>
+
+        <div className="grid lg:grid-cols-[1.4fr_1fr] gap-4">
+          <window.PythonCodeEditor
+            value={code}
+            onChange={setCode}
+            height={420}
+            filename="main.py"
+            readOnly={running}
+          />
+
+          <div className="flex flex-col gap-4 min-h-0">
+            <div className="rounded-2xl overflow-hidden ring-1 ring-white/10 bg-[#0d1117] flex flex-col min-h-[160px]">
+              <div className="px-4 py-2.5 border-b border-white/10 flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-amber-300/90">Входные данные</span>
+                <span className="text-[10px] text-white/35 font-mono">stdin · для input()</span>
+              </div>
+              <textarea
+                value={stdin}
+                onChange={(e) => setStdin(e.target.value)}
+                spellCheck="false"
+                placeholder={'строка 1\nстрока 2'}
+                className="flex-1 min-h-[120px] w-full bg-transparent text-slate-100 font-mono text-xs leading-[1.55] p-4 resize-y focus:outline-none placeholder:text-white/25"
+                style={{ caretColor: '#FBBF24' }}
+              />
+            </div>
+
+            <div className="rounded-2xl overflow-hidden ring-1 ring-white/10 bg-[#0d1117] flex flex-col flex-1 min-h-[220px]">
+              <div className="px-4 py-2.5 border-b border-white/10 flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-300/90">Вывод</span>
+                <button
+                  type="button"
+                  onClick={() => setStdout('')}
+                  className="text-[10px] font-semibold text-white/40 hover:text-white/70"
+                >
+                  Очистить
+                </button>
+              </div>
+              <pre className="flex-1 overflow-auto p-4 text-xs font-mono text-emerald-100/90 whitespace-pre-wrap leading-[1.55] min-h-[180px]">
+                {stdout || <span className="text-white/25">Здесь появится print() и ошибки…</span>}
+              </pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+window.PlaygroundPage = PlaygroundPage;

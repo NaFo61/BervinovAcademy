@@ -84,6 +84,18 @@
   }
   ::selection { background: rgba(37, 99, 235, 0.18); color: var(--ink); }
 
+  /* Dark code surfaces: selection must stay light-on-dark */
+  .code-bg ::selection,
+  .chat-code-block ::selection,
+  .chat-code-block code ::selection,
+  .theory-content pre ::selection,
+  .theory-content pre code ::selection,
+  textarea.code-bg ::selection,
+  .monaco-editor .view-lines ::selection {
+    background: rgba(56, 189, 248, 0.45);
+    color: #f8fafc;
+  }
+
   /* ---- Primary surfaces & gradients ---- */
   .grad-text {
     background: linear-gradient(95deg, var(--c-1) 0%, var(--c-2) 40%, var(--c-3) 70%, var(--c-5) 100%);
@@ -200,8 +212,8 @@
     color: #E2E8F0;
   }
   .code-bg ::selection {
-    background: rgba(56, 189, 248, 0.35);
-    color: #f1f5f9;
+    background: rgba(56, 189, 248, 0.45);
+    color: #f8fafc;
   }
 
   .check-dot {
@@ -315,6 +327,11 @@
     font-size: 11px;
     line-height: 1.55;
   }
+  .chat-code-block ::selection,
+  .chat-code-block *::selection {
+    background: rgba(56, 189, 248, 0.45) !important;
+    color: #f8fafc !important;
+  }
 </style>
 </head>
 <body class="antialiased">
@@ -340,6 +357,7 @@
 <!-- WHITEBOARD_ASSETS_END -->
 
 <script type="text/babel" src="src/shared.jsx"></script>
+<script type="text/babel" src="src/code-editor.jsx"></script>
 <script type="text/babel" src="src/landing.jsx"></script>
 <script type="text/babel" src="src/catalog.jsx"></script>
 <script type="text/babel" src="src/problem.jsx"></script>
@@ -355,6 +373,7 @@
 <script type="text/babel" src="src/conferences.jsx"></script>
 <script type="text/babel" src="src/chat.jsx"></script>
 <script type="text/babel" src="src/pro.jsx"></script>
+<script type="text/babel" src="src/playground.jsx"></script>
 <script type="text/babel" src="src/app.jsx"></script>
 </body>
 </html>

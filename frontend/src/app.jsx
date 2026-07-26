@@ -18,8 +18,11 @@ const CallPage = window.CallPage;
 const ConferencesPage = window.ConferencesPage;
 const MessagesPage = window.MessagesPage;
 const ProPage = window.ProPage;
+const PlaygroundPage = window.PlaygroundPage;
 
-const NO_FOOTER_ROUTES = new Set([Routes.PROBLEM, Routes.AUTH, Routes.LEARN, Routes.EXAM, Routes.CALL]);
+const NO_FOOTER_ROUTES = new Set([
+  Routes.PROBLEM, Routes.AUTH, Routes.LEARN, Routes.EXAM, Routes.CALL, Routes.PLAYGROUND,
+]);
 
 function App() {
   const [route, navigate, hashParams] = useHashRoute();
@@ -40,6 +43,7 @@ function App() {
     [Routes.CONFERENCES]: ConferencesPage,
     [Routes.MESSAGES]: MessagesPage,
     [Routes.PRO]: ProPage,
+    [Routes.PLAYGROUND]: PlaygroundPage,
   }[route] || LandingPage;
 
   const pageProps = { navigate, hashParams, route };

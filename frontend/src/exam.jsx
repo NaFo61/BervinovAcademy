@@ -514,10 +514,14 @@ function ExamCodingPanel({ lesson, step, attemptId, onUpdated }) {
         <p>{lesson.description}</p>
         {lesson.instructions && <p className="whitespace-pre-wrap">{lesson.instructions}</p>}
       </div>
-      <div className="mt-6 rounded-2xl overflow-hidden ring-1 ring-black/[0.06] bg-[#0f172a]">
-        <div className="px-4 py-2 border-b border-white/10 text-xs text-slate-400 font-mono">solution.py</div>
-        <textarea value={code} onChange={(e) => setCode(e.target.value)} disabled={answered && passed}
-          className="w-full min-h-[260px] bg-transparent text-slate-100 font-mono text-xs p-4 resize-y focus:outline-none"/>
+      <div className="mt-6">
+        <window.PythonCodeEditor
+          value={code}
+          onChange={setCode}
+          readOnly={answered && passed}
+          height={280}
+          filename="solution.py"
+        />
       </div>
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       {(!answered || !passed) && (

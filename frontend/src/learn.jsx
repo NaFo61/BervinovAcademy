@@ -1423,18 +1423,13 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin, onRefreshLesson }) 
         </div>
       )}
 
-      <div className="mt-8 rounded-2xl overflow-hidden ring-1 ring-black/[0.06] bg-[#0f172a]">
-        <div className="px-4 py-2.5 border-b border-white/10 flex items-center gap-2 text-xs text-slate-400">
-          <span className="px-2 py-0.5 rounded bg-white/10">Python</span>
-          <span className="ml-auto font-mono">solution.py</span>
-        </div>
-        <textarea
+      <div className="mt-8">
+        <window.PythonCodeEditor
           value={code}
-          onChange={(e) => setCode(e.target.value)}
-          spellCheck="false"
-          disabled={submitLoading}
-          className="w-full min-h-[280px] bg-transparent text-slate-100 font-mono text-xs leading-[1.55] p-4 resize-y focus:outline-none disabled:opacity-60"
-          style={{ caretColor: '#06B6D4' }}
+          onChange={setCode}
+          readOnly={submitLoading}
+          height={320}
+          filename="solution.py"
         />
       </div>
 
