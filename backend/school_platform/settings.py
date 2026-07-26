@@ -413,6 +413,8 @@ FRONTEND_URL = config("FRONTEND_URL", default="").strip()
 TELEGRAM_BOT_TOKEN = config("TELEGRAM_BOT_TOKEN", default="").strip()
 TELEGRAM_BOT_USERNAME = config("TELEGRAM_BOT_USERNAME", default="").strip()
 TELEGRAM_WEBHOOK_SECRET = config("TELEGRAM_WEBHOOK_SECRET", default="").strip()
+TELEGRAM_PROXY = config("TELEGRAM_PROXY", default="").strip()
+TELEGRAM_API_BASE = config("TELEGRAM_API_BASE", default="").strip()
 VAPID_PUBLIC_KEY = config("VAPID_PUBLIC_KEY", default="").strip()
 VAPID_PRIVATE_KEY = config("VAPID_PRIVATE_KEY", default="").strip()
 VAPID_ADMIN_EMAIL = config(

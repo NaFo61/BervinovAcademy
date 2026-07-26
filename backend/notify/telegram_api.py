@@ -23,8 +23,30 @@ def bot_username() -> str:
     )
 
 
+def api_base() -> str:
+    base = (getattr(settings, "TELEGRAM_API_BASE", "") or "").strip()
+    return (base or "https://api.telegram.org").rstrip("/")
+
+
+def proxy_dict() -> dict[str, str] | None:
+    """Опциональный прокси: TELEGRAM_PROXY=socks5://user:pass@host:port."""
+    raw = (getattr(settings, "TELEGRAM_PROXY", "") or "").strip()
+    if not raw:
+        return None
+    return {"http": raw, "https": raw}
+
+
 def is_configured() -> bool:
     return bool(bot_token())
+
+
+def _request(method: str, api_method: str, **kwargs) -> requests.Response:
+    url = f"{api_base()}/bot{bot_token()}/{api_method}"
+    timeout = kwargs.pop("timeout", 20)
+    proxies = proxy_dict()
+    if proxies:
+        kwargs.setdefault("proxies", proxies)
+    return requests.request(method, url, timeout=timeout, **kwargs)
 
 
 def send_message(
@@ -44,11 +66,7 @@ def send_message(
     if reply_markup:
         payload["reply_markup"] = reply_markup
     try:
-        resp = requests.post(
-            f"https://api.telegram.org/bot{token}/sendMessage",
-            json=payload,
-            timeout=15,
-        )
+        resp = _request("POST", "sendMessage", json=payload, timeout=20)
         if resp.status_code >= 400:
             logger.warning(
                 "Telegram sendMessage %s: %s",
