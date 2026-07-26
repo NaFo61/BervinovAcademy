@@ -226,6 +226,11 @@ function ProfileHeader({ user, navigate, isOwnProfile }) {
               <span className="inline-flex items-center gap-1.5 grad-bg text-white text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-widest">
                 <I.Trophy className="w-3 h-3"/> {roleLabel(user.role)}
               </span>
+              {isOwnProfile && user.subscription?.is_pro && (
+                <span className="inline-flex items-center gap-1.5 bg-amber-500 text-white text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-widest">
+                  Про
+                </span>
+              )}
             </div>
             <div className="mt-2 flex items-center gap-4 text-sm text-ink/60 flex-wrap">
               {user.email && (
@@ -234,12 +239,28 @@ function ProfileHeader({ user, navigate, isOwnProfile }) {
               {joined && (
                 <span className="inline-flex items-center gap-1.5"><I.Calendar className="w-3.5 h-3.5"/> С нами с {joined}</span>
               )}
+              {isOwnProfile && user.subscription?.is_pro && user.subscription?.ends_at && (
+                <span className="inline-flex items-center gap-1.5 text-amber-800/80 font-medium">
+                  Про до {formatJoined(user.subscription.ends_at)}
+                </span>
+              )}
+              {isOwnProfile && user.subscription?.is_pro && !user.subscription?.ends_at && user.subscription?.staff_bypass && (
+                <span className="inline-flex items-center gap-1.5 text-amber-800/80 font-medium">
+                  Про · без срока
+                </span>
+              )}
               {user.public_id && (
                 <span className="inline-flex items-center gap-1.5 font-mono text-xs text-ink/45">id: {user.public_id}</span>
               )}
             </div>
             {user.bio && (
               <p className="mt-3 text-sm text-ink/70 max-w-2xl leading-relaxed">{user.bio}</p>
+            )}
+            {isOwnProfile && !user.subscription?.is_pro && user.role === 'student' && (
+              <button type="button" onClick={() => navigate(window.Routes.PRO)}
+                className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-violet-700 hover:underline">
+                Узнать про тариф Про <I.ChevronRight className="w-4 h-4"/>
+              </button>
             )}
           </div>
 
@@ -250,10 +271,17 @@ function ProfileHeader({ user, navigate, isOwnProfile }) {
                   className="h-10 px-4 rounded-xl bg-white border border-black/[0.06] text-sm font-medium hover:border-violet-300 transition-colors">
                   Настройки
                 </button>
-                <button type="button" onClick={() => navigate(window.Routes.CATALOG)}
-                  className="h-10 px-4 rounded-xl btn-grad btn-shimmer text-white text-sm font-semibold inline-flex items-center gap-1.5">
-                  <I.Plus className="w-3.5 h-3.5"/> Каталог
-                </button>
+                {!user.subscription?.is_pro && user.role === 'student' ? (
+                  <button type="button" onClick={() => navigate(window.Routes.PRO)}
+                    className="h-10 px-4 rounded-xl btn-grad btn-shimmer text-white text-sm font-semibold inline-flex items-center gap-1.5">
+                    Тариф Про
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => navigate(window.Routes.CATALOG)}
+                    className="h-10 px-4 rounded-xl btn-grad btn-shimmer text-white text-sm font-semibold inline-flex items-center gap-1.5">
+                    <I.Plus className="w-3.5 h-3.5"/> Каталог
+                  </button>
+                )}
               </>
             ) : isMentorViewer ? (
               <>

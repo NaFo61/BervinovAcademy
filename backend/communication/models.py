@@ -128,6 +128,10 @@ class UserNotification(UUIDPublicIdMixin, models.Model):
 
     class Kind(models.TextChoices):
         CONFERENCE_INVITE = "conference_invite", _("Приглашение на созвон")
+        SUBSCRIPTION_EXPIRING = (
+            "subscription_expiring",
+            _("Скоро закончится тариф"),
+        )
 
     user = models.ForeignKey(
         User,

@@ -374,6 +374,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "communication.close_conferences_without_mentor",
         "schedule": crontab(),
     },
+    "send-pro-expiry-reminders": {
+        "task": "subscriptions.send_pro_expiry_reminders",
+        "schedule": crontab(hour=9, minute=0),
+    },
 }
 
 # LiveKit (видеоконференции ментор ↔ участник)

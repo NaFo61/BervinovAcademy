@@ -18,6 +18,7 @@ const Routes = {
   CALL: 'call',
   CONFERENCES: 'conferences',
   MESSAGES: 'messages',
+  PRO: 'pro',
 };
 
 function parseHashRoute() {
@@ -1345,6 +1346,22 @@ function NotificationBell({ navigate }) {
                       </button>
                     </div>
                   )}
+                  {note.kind === 'subscription_expiring' && (
+                    <div className="mt-2 flex gap-2">
+                      <button type="button" onClick={() => {
+                        dismiss(note);
+                        setOpen(false);
+                        navigate(Routes.PRO);
+                      }}
+                        className="h-8 px-3 rounded-lg btn-grad text-white text-xs font-semibold">
+                        О тарифе Про
+                      </button>
+                      <button type="button" onClick={() => dismiss(note)}
+                        className="h-8 px-3 rounded-lg text-xs font-semibold text-ink/55 hover:bg-black/[0.04]">
+                        Скрыть
+                      </button>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -1442,6 +1459,7 @@ function TopNav({ route, navigate }) {
   const links = [
     { id: Routes.LANDING, label: 'Главная' },
     { id: Routes.CATALOG, label: 'Каталог' },
+    { id: Routes.PRO, label: 'Про' },
     { id: Routes.PROFILE, label: 'Профиль' },
     ...(isMentor ? [{ id: Routes.MENTOR, label: 'Ментор' }] : []),
   ];
@@ -1542,6 +1560,7 @@ function Footer({ navigate }) {
         </div>
         <FooterCol title="Учёба" items={[
         { label: 'Каталог курсов', onClick: () => navigate(Routes.CATALOG) },
+        { label: 'Тариф Про', onClick: () => navigate(Routes.PRO) },
         { label: 'Мой профиль', onClick: () => navigate(Routes.PROFILE) },
         { label: 'Сертификаты', onClick: () => {} }]
         } />

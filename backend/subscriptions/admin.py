@@ -21,6 +21,7 @@ class EntitlementAdmin(ModelAdmin):
         "source",
         "starts_at",
         "ends_at",
+        "expiry_reminder_sent_at",
         "revoked_at",
         "granted_by",
     )

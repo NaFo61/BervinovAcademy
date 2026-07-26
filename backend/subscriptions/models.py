@@ -110,6 +110,11 @@ class Entitlement(UUIDPublicIdMixin, models.Model):
     note = models.CharField(
         max_length=255, blank=True, verbose_name=_("Заметка")
     )
+    expiry_reminder_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Напоминание об окончании отправлено"),
+    )
 
     class Meta:
         verbose_name = _("Выдача тарифа")

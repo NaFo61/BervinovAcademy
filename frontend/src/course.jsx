@@ -549,8 +549,11 @@ function ProMentorButton({ course, navigate }) {
         <p className="text-[13px] font-semibold text-ink">Чат с ментором — тариф Про</p>
         <p className="text-[12px] text-ink/55 mt-1 leading-relaxed">
           Курсы бесплатные. Про даёт чат с ментором, видео-разборы и созвоны.
-          Напишите администратору, чтобы получить доступ.
         </p>
+        <button type="button" onClick={() => navigate(window.Routes.PRO)}
+          className="mt-3 h-9 px-3 rounded-lg btn-grad text-white text-xs font-semibold">
+          Что входит в Про
+        </button>
       </div>
     );
   }
