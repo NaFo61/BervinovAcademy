@@ -1342,7 +1342,12 @@ async function enableWebPushNotifications() {
     window.alert('Push включены — будем слать важные уведомления.');
     return true;
   } catch (e) {
-    window.alert(e.message || 'Не удалось включить Push');
+    const msg = e?.message || String(e);
+    if (msg.includes('MIME type') || msg.includes('ServiceWorker')) {
+      window.alert('Push пока недоступен: обнови страницу после деплоя (файл sw.js).');
+    } else {
+      window.alert(msg || 'Не удалось включить Push');
+    }
     return false;
   }
 }

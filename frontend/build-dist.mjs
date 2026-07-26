@@ -26,6 +26,7 @@ const copy = (from, to) => {
 copy("index.html", "index.html");
 copy("src", "src");
 copy("public", "public");
+copy("sw.js", "sw.js");
 
 if (enableWhiteboard) {
   const whiteboardDir = path.join(root, "whiteboard");
