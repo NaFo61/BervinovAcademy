@@ -21,36 +21,7 @@ const Routes = {
   PRO: 'pro',
 };
 
-function parseHashRoute() {
-  const raw = location.hash.replace('#/', '') || Routes.LANDING;
-  const qi = raw.indexOf('?');
-  const path = (qi >= 0 ? raw.slice(0, qi) : raw) || Routes.LANDING;
-  const qs = qi >= 0 ? raw.slice(qi + 1) : '';
-  return { path, params: new URLSearchParams(qs) };
-}
-
-function useHashRoute() {
-  const [state, setState] = React.useState(() => parseHashRoute());
-  React.useEffect(() => {
-    const onHash = () => setState(parseHashRoute());
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
-  }, []);
-  const navigate = (r, query) => {
-    let hash = '#/' + r;
-    if (query) {
-      const qs = query instanceof URLSearchParams
-        ? query.toString()
-        : typeof query === 'string'
-          ? query.replace(/^\?/, '')
-          : new URLSearchParams(query).toString();
-      if (qs) hash += '?' + qs;
-    }
-    location.hash = hash;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-  return [state.path, navigate, state.params];
-}
+const KNOWN_ROUTES = new Set(Object.values(Routes));
 
 function getAppBase() {
   if (typeof document === 'undefined') return '';
@@ -58,6 +29,78 @@ function getAppBase() {
   const content = meta?.getAttribute('content') || '';
   return content.replace(/\/$/, '');
 }
+
+function pathForRoute(routeId) {
+  const base = getAppBase();
+  if (!routeId || routeId === Routes.LANDING) {
+    return `${base}/` || '/';
+  }
+  return `${base}/${routeId}`;
+}
+
+function stripAppBase(pathname) {
+  const base = getAppBase();
+  let path = pathname || '/';
+  if (base && (path === base || path.startsWith(`${base}/`))) {
+    path = path.slice(base.length) || '/';
+  }
+  return path;
+}
+
+/** Старые закладки /#/catalog → /catalog */
+function migrateLegacyHashRoute() {
+  if (typeof location === 'undefined') return;
+  if (!location.hash.startsWith('#/')) return;
+  const raw = location.hash.slice(2);
+  const qi = raw.indexOf('?');
+  const routePart = ((qi >= 0 ? raw.slice(0, qi) : raw) || '').replace(/^\/+|\/+$/g, '');
+  const qs = qi >= 0 ? raw.slice(qi) : '';
+  const routeId = !routePart || routePart === Routes.LANDING
+    ? Routes.LANDING
+    : routePart.split('/')[0];
+  const next = pathForRoute(KNOWN_ROUTES.has(routeId) ? routeId : Routes.LANDING) + qs;
+  history.replaceState(null, '', next);
+}
+
+function parsePathRoute() {
+  migrateLegacyHashRoute();
+  const trimmed = stripAppBase(location.pathname).replace(/^\/+|\/+$/g, '');
+  const routeId = trimmed ? trimmed.split('/')[0] : Routes.LANDING;
+  return {
+    path: KNOWN_ROUTES.has(routeId) ? routeId : Routes.LANDING,
+    params: new URLSearchParams(location.search.replace(/^\?/, '')),
+  };
+}
+
+function useAppRoute() {
+  const [state, setState] = React.useState(() => parsePathRoute());
+  React.useEffect(() => {
+    const onPop = () => setState(parsePathRoute());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  const navigate = (r, query) => {
+    let qs = '';
+    if (query) {
+      qs = query instanceof URLSearchParams
+        ? query.toString()
+        : typeof query === 'string'
+          ? query.replace(/^\?/, '')
+          : new URLSearchParams(query).toString();
+    }
+    const url = pathForRoute(r) + (qs ? `?${qs}` : '');
+    const current = `${location.pathname}${location.search}`;
+    if (current !== url) {
+      history.pushState(null, '', url);
+    }
+    setState(parsePathRoute());
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  return [state.path, navigate, state.params];
+}
+
+/** @deprecated имя оставлено для совместимости; роутинг без hash. */
+const useHashRoute = useAppRoute;
 
 function initApiBase() {
   if (typeof window === 'undefined') return;
@@ -1722,6 +1765,7 @@ function FloatingShapes() {
 Object.assign(window, {
   Routes,
   useHashRoute,
+  useAppRoute,
   getApiBase,
   getWsBase,
   openChatThreadWs,
