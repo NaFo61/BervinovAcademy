@@ -97,6 +97,20 @@ function MentorPage({ navigate }) {
   const [selectedStudent, setSelectedStudent] = React.useState(null);
   const [testsModal, setTestsModal] = React.useState(null);
   const [testsLoading, setTestsLoading] = React.useState(false);
+  const [examAttempts, setExamAttempts] = React.useState([]);
+  const [examOutline, setExamOutline] = React.useState([]);
+  const [grantBusy, setGrantBusy] = React.useState(null);
+  const [isAdmin, setIsAdmin] = React.useState(false);
+
+  const reloadCourses = React.useCallback(async (selectId) => {
+    const data = await window.fetchApiJson('/api/mentoring/courses/', { auth: true });
+    setCourses(data || []);
+    if (selectId) {
+      setSelectedCourse(selectId);
+    } else if ((data || []).length && !selectedCourse) {
+      setSelectedCourse(data[0].course_public_id);
+    }
+  }, [selectedCourse]);
 
   const openLearn = (courseId, moduleId, lessonType, lessonId) => {
     const q = window.buildLearnQuery(courseId, moduleId, lessonType, lessonId);
@@ -146,6 +160,7 @@ function MentorPage({ navigate }) {
       setLoading(false);
       return;
     }
+    setIsAdmin(payload.role === 'admin');
     setAccessState('ok');
   }, []);
 
@@ -156,13 +171,7 @@ function MentorPage({ navigate }) {
       setLoading(true);
       setError('');
       try {
-        const data = await window.fetchApiJson('/api/mentoring/courses/', { auth: true });
-        if (!cancelled) {
-          setCourses(data || []);
-          if ((data || []).length && !selectedCourse) {
-            setSelectedCourse(data[0].course_public_id);
-          }
-        }
+        await reloadCourses();
       } catch (e) {
         if (!cancelled) setError(e.message || 'Ошибка загрузки');
       } finally {
@@ -193,6 +202,57 @@ function MentorPage({ navigate }) {
     })();
     return () => { cancelled = true; };
   }, [accessState, selectedCourse]);
+
+  React.useEffect(() => {
+    if (accessState !== 'ok' || !selectedCourse || tab !== 'exams') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [attempts, outline] = await Promise.all([
+          window.fetchApiJson(
+            `/api/mentoring/exams/attempts/?course_public_id=${encodeURIComponent(selectedCourse)}`,
+            { auth: true },
+          ),
+          window.fetchApiJson(
+            `/api/mentoring/editor/courses/${encodeURIComponent(selectedCourse)}/`,
+            { auth: true },
+          ),
+        ]);
+        if (!cancelled) {
+          setExamAttempts(attempts || []);
+          setExamOutline(outline?.exams || []);
+        }
+      } catch (e) {
+        if (!cancelled) setError(e.message || 'Ошибка загрузки КР');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [accessState, selectedCourse, tab]);
+
+  const grantExam = async (examPublicId, userPublicId, grantType) => {
+    const key = `${examPublicId}-${userPublicId}-${grantType}`;
+    setGrantBusy(key);
+    setError('');
+    try {
+      await window.fetchApiJson(
+        `/api/mentoring/exams/${encodeURIComponent(examPublicId)}/grant/`,
+        {
+          method: 'POST',
+          body: { user_public_id: userPublicId, grant_type: grantType },
+          auth: true,
+        },
+      );
+      const attempts = await window.fetchApiJson(
+        `/api/mentoring/exams/attempts/?course_public_id=${encodeURIComponent(selectedCourse)}`,
+        { auth: true },
+      );
+      setExamAttempts(attempts || []);
+    } catch (e) {
+      setError(e.message || 'Не удалось выдать доступ');
+    } finally {
+      setGrantBusy(null);
+    }
+  };
 
   const filteredCode = selectedStudent
     ? codeRows.filter((r) => r.student?.public_id === selectedStudent)
@@ -241,10 +301,15 @@ function MentorPage({ navigate }) {
 
       <section className="mesh-bg border-b border-black/[0.04] py-10">
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <h1 className="text-3xl font-extrabold tracking-tight">Панель ментора</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">Рабочее место ментора</h1>
           <p className="text-sm text-ink/60 mt-2 max-w-2xl">
-            Статистика курсов, прогресс учеников, отправленный код и ответы на тесты.
+            Курсы, уроки, ученики, проверка и доступы к КР. Django Admin — только для владельца школы.
           </p>
+          {isAdmin && (
+            <a href="/admin/" className="inline-block mt-3 text-xs font-semibold text-violet-600 hover:underline">
+              Открыть управление школой (/admin) ↗
+            </a>
+          )}
         </div>
       </section>
 
@@ -254,7 +319,7 @@ function MentorPage({ navigate }) {
         )}
 
         <div className="flex flex-wrap gap-2">
-          {['courses', 'editor', 'students', 'code', 'quiz', 'calls'].map((id) => (
+          {['courses', 'editor', 'students', 'code', 'quiz', 'exams', 'calls'].map((id) => (
             <button key={id} type="button" onClick={() => setTab(id)}
               className={`h-10 px-4 rounded-xl text-sm font-semibold transition-colors ${
                 tab === id ? 'grad-bg text-white shadow-soft' : 'bg-white ring-1 ring-black/[0.06] text-ink/70'
@@ -264,6 +329,7 @@ function MentorPage({ navigate }) {
               {id === 'students' && 'Ученики'}
               {id === 'code' && 'Код'}
               {id === 'quiz' && 'Тесты'}
+              {id === 'exams' && 'КР'}
               {id === 'calls' && 'Созвоны'}
             </button>
           ))}
@@ -302,10 +368,126 @@ function MentorPage({ navigate }) {
               courseId={selectedCourse}
               courses={courses}
               onCourseChange={(id) => { setSelectedCourse(id); setSelectedStudent(null); }}
+              onCoursesRefresh={reloadCourses}
             />
           ) : (
-            <div className="py-16 text-center text-ink/50 text-sm">Выберите курс выше</div>
+            <div className="py-16 text-center text-ink/50 text-sm">Создайте курс во вкладке «Редактор» или попросите владельца назначить вам курс.</div>
           )
+        ) : tab === 'exams' ? (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl ring-1 ring-black/[0.04] shadow-soft p-5">
+              <h3 className="font-bold text-lg mb-2">Контрольные курса</h3>
+              {(examOutline || []).length === 0 ? (
+                <p className="text-sm text-ink/50">Пока нет КР — создайте во вкладке «Редактор».</p>
+              ) : (
+                <ul className="space-y-2 text-sm">
+                  {examOutline.map((ex) => (
+                    <li key={ex.public_id} className="flex items-center gap-2">
+                      <span>📝</span>
+                      <span className="font-medium">{ex.title}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-xs text-ink/45 mt-3">
+                Выдайте unlock (первый доступ) или retake (пересдача) ученику ниже.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl ring-1 ring-black/[0.04] shadow-soft overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-ink/45 border-b border-black/[0.06]">
+                    <th className="p-4 font-semibold">Ученик</th>
+                    <th className="p-4 font-semibold">КР</th>
+                    <th className="p-4 font-semibold">Статус</th>
+                    <th className="p-4 font-semibold">Балл</th>
+                    <th className="p-4 font-semibold">Доступ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {examAttempts.length === 0 ? (
+                    <tr><td colSpan={5} className="p-8 text-center text-ink/45">Попыток пока нет</td></tr>
+                  ) : examAttempts.map((row) => (
+                    <tr key={row.public_id} className="border-b border-black/[0.04]">
+                      <td className="p-4">
+                        <MentorLink onClick={() => openProfile(row.student?.public_id)}>
+                          {[row.student?.first_name, row.student?.last_name].filter(Boolean).join(' ') || 'Ученик'}
+                        </MentorLink>
+                      </td>
+                      <td className="p-4">{row.exam_title}</td>
+                      <td className="p-4">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${
+                          row.passed ? 'bg-emerald-500/12 text-emerald-700' : 'bg-amber-500/12 text-amber-800'
+                        }`}>
+                          {row.status}{row.passed ? ' · зачёт' : ''}
+                        </span>
+                      </td>
+                      <td className="p-4">{row.score}/{row.max_score}</td>
+                      <td className="p-4">
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button"
+                            disabled={grantBusy === `${row.exam_public_id}-${row.student?.public_id}-unlock`}
+                            onClick={() => grantExam(row.exam_public_id, row.student?.public_id, 'unlock')}
+                            className="text-xs font-semibold px-2 py-1 rounded-md bg-violet-50 text-violet-700 disabled:opacity-40">
+                            Unlock
+                          </button>
+                          <button type="button"
+                            disabled={grantBusy === `${row.exam_public_id}-${row.student?.public_id}-retake`}
+                            onClick={() => grantExam(row.exam_public_id, row.student?.public_id, 'retake')}
+                            className="text-xs font-semibold px-2 py-1 rounded-md bg-amber-50 text-amber-800 disabled:opacity-40">
+                            Retake
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {(students || []).length > 0 && (examOutline || []).length > 0 && (
+              <div className="bg-white rounded-2xl ring-1 ring-black/[0.04] shadow-soft p-5 space-y-3">
+                <h3 className="font-bold">Выдать доступ ученику без попытки</h3>
+                <div className="flex flex-wrap gap-3 items-end">
+                  <div>
+                    <div className="text-[11px] text-ink/45 mb-1">Ученик</div>
+                    <select id="grant-student" className="h-10 px-3 rounded-xl bg-paper ring-1 ring-black/[0.08] text-sm min-w-[180px]">
+                      {students.map((s) => (
+                        <option key={s.user_public_id} value={s.user_public_id}>{studentName(s)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-ink/45 mb-1">КР</div>
+                    <select id="grant-exam" className="h-10 px-3 rounded-xl bg-paper ring-1 ring-black/[0.08] text-sm min-w-[180px]">
+                      {examOutline.map((ex) => (
+                        <option key={ex.public_id} value={ex.public_id}>{ex.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button type="button"
+                    onClick={() => {
+                      const sid = document.getElementById('grant-student')?.value;
+                      const eid = document.getElementById('grant-exam')?.value;
+                      if (sid && eid) grantExam(eid, sid, 'unlock');
+                    }}
+                    className="h-10 px-4 rounded-xl btn-grad text-white text-sm font-semibold">
+                    Unlock
+                  </button>
+                  <button type="button"
+                    onClick={() => {
+                      const sid = document.getElementById('grant-student')?.value;
+                      const eid = document.getElementById('grant-exam')?.value;
+                      if (sid && eid) grantExam(eid, sid, 'retake');
+                    }}
+                    className="h-10 px-4 rounded-xl bg-white ring-1 ring-black/[0.08] text-sm font-semibold">
+                    Retake
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         ) : tab === 'courses' ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {courses.map((c) => (

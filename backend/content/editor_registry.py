@@ -50,16 +50,17 @@ def course_for_lesson(instance) -> Course | None:
 
 
 def user_can_edit_course(user, course: Course) -> bool:
+    """Admin — все курсы; ментор — только курсы, где он назначен ментором."""
     if not user or not user.is_authenticated:
         return False
-    if getattr(user, "role", None) == "admin" or user.is_staff:
+    if (
+        getattr(user, "is_admin", False)
+        or getattr(user, "role", None) == "admin"
+    ):
         return True
     if getattr(user, "role", None) != "mentor":
         return False
-    if course.mentor_id and course.mentor_id == user.id:
-        return True
-    # Менторы платформы могут редактировать все активные курсы (как в панели ментора).
-    return True
+    return course.mentor_id == user.id
 
 
 def build_course_editor_outline(course: Course) -> dict:

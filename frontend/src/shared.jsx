@@ -1555,6 +1555,7 @@ function TopNav({ route, navigate }) {
   const payload = access ? parseJwtPayload(access) : {};
   const displayName = [payload.first_name, payload.last_name].filter(Boolean).join(' ').trim();
   const isMentor = payload.role === 'mentor' || payload.role === 'admin';
+  const isAdmin = payload.role === 'admin';
 
   const submitSearch = (e) => {
     e?.preventDefault();
@@ -1606,6 +1607,12 @@ function TopNav({ route, navigate }) {
                 {l.label}
               </button>
             ))}
+            {isAdmin && (
+              <a href="/admin/"
+                className="relative px-3.5 py-2 rounded-xl text-sm font-medium text-violet-600 hover:bg-violet-500/10">
+                Школа
+              </a>
+            )}
           </nav>
           <div className="flex-1" />
           <form onSubmit={submitSearch} className="hidden sm:flex items-center gap-2 px-3 h-10 rounded-xl border border-black/[0.06] bg-white text-sm w-56 hover:border-violet-300 focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-500/15 transition-colors">

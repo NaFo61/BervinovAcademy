@@ -59,8 +59,8 @@ INSTALLED_APPS = [
 ]
 UNFOLD = {
     "SHOW_LANGUAGES": True,
-    "SITE_TITLE": _("Академия Бервинова"),
-    "SITE_HEADER": _("Академия Бервинова"),
+    "SITE_TITLE": _("Управление школой"),
+    "SITE_HEADER": _("Управление школой"),
     "SITE_ICON": {
         "light": lambda request: static("img/logo.ico"),
         "dark": lambda request: static("img/logo.ico"),
@@ -87,14 +87,14 @@ UNFOLD = {
                 "collapsible": False,
                 "items": [
                     {
-                        "title": _("Главная панель"),
+                        "title": _("Дашборд"),
                         "icon": "dashboard",
                         "link": reverse_lazy("admin:index"),
                     },
                 ],
             },
             {
-                "title": _("Пользователи"),
+                "title": _("Люди и доступы"),
                 "separator": True,
                 "collapsible": True,
                 "items": [
@@ -104,19 +104,24 @@ UNFOLD = {
                         "link": "/admin/users/user/",
                     },
                     {
-                        "title": _("Наставники"),
-                        "icon": "person",
+                        "title": _("Менторы"),
+                        "icon": "school",
                         "link": "/admin/users/mentor/",
                     },
                     {
                         "title": _("Студенты"),
-                        "icon": "elderly_woman",
+                        "icon": "group",
                         "link": "/admin/users/student/",
                     },
                     {
-                        "title": _("Специализации"),
-                        "icon": "people",
-                        "link": "/admin/users/specialization/",
+                        "title": _("Тарифы"),
+                        "icon": "sell",
+                        "link": "/admin/subscriptions/plan/",
+                    },
+                    {
+                        "title": _("Выдачи Pro"),
+                        "icon": "workspace_premium",
+                        "link": "/admin/subscriptions/entitlement/",
                     },
                 ],
             },
@@ -127,41 +132,16 @@ UNFOLD = {
                 "items": [
                     {
                         "title": _("Курсы"),
-                        "icon": "school",
+                        "icon": "menu_book",
                         "link": "/admin/content/course/",
                     },
                     {
-                        "title": _("Модули"),
-                        "icon": "list_alt",
-                        "link": "/admin/content/module/",
+                        "title": _("Записи на курсы"),
+                        "icon": "how_to_reg",
+                        "link": "/admin/education/enrollment/",
                     },
                     {
-                        "title": _("Теоретические уроки"),
-                        "icon": "article",
-                        "link": "/admin/content/lessontheory/",
-                    },
-                    {
-                        "title": _("Вопросы с выбором одного ответа"),
-                        "icon": "radio_button_checked",
-                        "link": "/admin/content/lessonradioquestion/",
-                    },
-                    {
-                        "title": _("Вопросы с выбором нескольких ответов"),
-                        "icon": "check_box",
-                        "link": "/admin/content/lessoncheckboxquestion/",
-                    },
-                    {
-                        "title": _("Задачи с кодом"),
-                        "icon": "code",
-                        "link": "/admin/content/codingchallenge/",
-                    },
-                    {
-                        "title": _("Технологии"),
-                        "icon": "science",
-                        "link": "/admin/content/technology/",
-                    },
-                    {
-                        "title": _("Контрольные работы"),
+                        "title": _("Контрольные"),
                         "icon": "assignment",
                         "link": "/admin/content/exam/",
                     },
@@ -178,36 +158,29 @@ UNFOLD = {
                 ],
             },
             {
-                "title": _("Прогресс"),
+                "title": _("Система"),
                 "separator": True,
                 "collapsible": True,
                 "items": [
                     {
-                        "title": _("Ответы на radio-вопросы"),
-                        "icon": "radio_button_checked",
-                        "link": "/admin/progress/useranswerradio/",
+                        "title": _("Специализации"),
+                        "icon": "category",
+                        "link": "/admin/users/specialization/",
                     },
                     {
-                        "title": _("Ответы на checkbox-вопросы"),
-                        "icon": "check_box",
-                        "link": "/admin/progress/useranswercheckbox/",
+                        "title": _("Технологии"),
+                        "icon": "science",
+                        "link": "/admin/content/technology/",
                     },
                     {
-                        "title": _("Отправки решений"),
+                        "title": _("Модули"),
+                        "icon": "list_alt",
+                        "link": "/admin/content/module/",
+                    },
+                    {
+                        "title": _("Отправки кода"),
                         "icon": "terminal",
                         "link": "/admin/progress/codesubmission/",
-                    },
-                ],
-            },
-            {
-                "title": _("Локализация"),
-                "separator": True,
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": _("Память переводов"),
-                        "icon": "language",
-                        "link": "/admin/translations/translationmemory/",
                     },
                 ],
             },

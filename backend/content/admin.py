@@ -78,6 +78,7 @@ def _clone_course(original):
         is_active=False,
     )
     new_course.technology.set(original.technology.all())
+    module_map = {}
 
     for module in original.modules.order_by("order_index"):
         new_module = Module.objects.create(
@@ -164,6 +165,106 @@ def _clone_course(original):
                     is_hidden=test_case.is_hidden,
                 )
 
+        module_map[module.pk] = new_module
+
+    for exam in original.exams.order_by("order_index"):
+        new_exam = Exam.objects.create(
+            course=new_course,
+            title=exam.title,
+            description=exam.description,
+            is_active=exam.is_active,
+            duration_minutes=exam.duration_minutes,
+            navigation_mode=exam.navigation_mode,
+            tab_policy=exam.tab_policy,
+            tab_warn_limit=exam.tab_warn_limit,
+            mentor_unlock_required=exam.mentor_unlock_required,
+            pass_score_percent=exam.pass_score_percent,
+        )
+        prereq = [
+            module_map[m.pk]
+            for m in exam.prerequisite_modules.all()
+            if m.pk in module_map
+        ]
+        if prereq:
+            new_exam.prerequisite_modules.set(prereq)
+
+        for lesson in exam.lessons_theories.order_by("order_index"):
+            LessonTheory.objects.create(
+                exam=new_exam,
+                title=lesson.title,
+                content=lesson.content,
+                comment=lesson.comment,
+                solution_text=lesson.solution_text,
+                video_url=lesson.video_url,
+                is_active=lesson.is_active,
+            )
+
+        for question in exam.lessons_radio_questions.order_by("order_index"):
+            new_question = LessonRadioQuestion.objects.create(
+                exam=new_exam,
+                title=question.title,
+                question_text=question.question_text,
+                comment=question.comment,
+                explanation=question.explanation,
+                solution_text=question.solution_text,
+                video_url=question.video_url,
+                points=question.points,
+                is_active=question.is_active,
+            )
+            for answer in question.answers.order_by("order_index"):
+                RadioAnswerOption.objects.create(
+                    question=new_question,
+                    text=answer.text,
+                    is_correct=answer.is_correct,
+                )
+
+        for question in exam.lessons_checkbox_questions.order_by(
+            "order_index"
+        ):
+            new_question = LessonCheckBoxQuestion.objects.create(
+                exam=new_exam,
+                title=question.title,
+                question_text=question.question_text,
+                comment=question.comment,
+                explanation=question.explanation,
+                solution_text=question.solution_text,
+                video_url=question.video_url,
+                points=question.points,
+                is_active=question.is_active,
+            )
+            for answer in question.answers.order_by("order_index"):
+                CheckBoxAnswerOption.objects.create(
+                    question=new_question,
+                    text=answer.text,
+                    is_correct=answer.is_correct,
+                )
+
+        for challenge in exam.challenges.order_by("order_index"):
+            new_challenge = CodingChallenge.objects.create(
+                course=new_course,
+                exam=new_exam,
+                title=challenge.title,
+                description=challenge.description,
+                instructions=challenge.instructions,
+                comment=challenge.comment,
+                solution_text=challenge.solution_text,
+                video_url=challenge.video_url,
+                difficulty=challenge.difficulty,
+                points=challenge.points,
+                initial_code=challenge.initial_code,
+                solution_template=challenge.solution_template,
+                time_limit_ms=challenge.time_limit_ms,
+                memory_limit_mb=challenge.memory_limit_mb,
+                is_active=challenge.is_active,
+            )
+            for test_case in challenge.test_cases.order_by("order_index"):
+                TestCase.objects.create(
+                    challenge=new_challenge,
+                    input_data=test_case.input_data,
+                    expected_output=test_case.expected_output,
+                    is_hidden=test_case.is_hidden,
+                )
+
     return new_course
 
 
@@ -197,6 +298,7 @@ class CourseAdmin(ModelAdmin):
 
     list_display = (
         "title",
+        "mentor",
         "technologies_list",
         "modules_count",
         "exams_count",
@@ -207,14 +309,23 @@ class CourseAdmin(ModelAdmin):
     list_filter = (
         "is_active",
         "technology",
+        "mentor",
         "created_at",
     )
-    search_fields = ("title", "description", "technology__name")
+    search_fields = (
+        "title",
+        "description",
+        "technology__name",
+        "mentor__email",
+        "mentor__first_name",
+        "mentor__last_name",
+    )
     list_per_page = 20
     ordering = ("-created_at",)
     filter_horizontal = ("technology",)
     readonly_fields = ("created_at", "courses_stats")
     prepopulated_fields = {"slug": ("title",)}
+    autocomplete_fields = ("mentor",)
     icon = "school"
 
     fieldsets = (

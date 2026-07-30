@@ -1,9 +1,14 @@
 from django.urls import path
 
 from content.editor_views import (
+    CourseEditorCreateView,
     CourseEditorOutlineView,
+    ExamEditorCreateView,
     LessonEditorCreateView,
     LessonEditorView,
+    ModuleEditorCreateView,
+    ModuleEditorDetailView,
+    TechnologyListEditorView,
 )
 
 from .views import (
@@ -43,9 +48,34 @@ urlpatterns = [
         name="quiz-answers",
     ),
     path(
+        "mentoring/editor/technologies/",
+        TechnologyListEditorView.as_view(),
+        name="editor-technologies",
+    ),
+    path(
+        "mentoring/editor/courses/",
+        CourseEditorCreateView.as_view(),
+        name="editor-course-create",
+    ),
+    path(
         "mentoring/editor/courses/<uuid:course_public_id>/",
         CourseEditorOutlineView.as_view(),
         name="editor-course-outline",
+    ),
+    path(
+        "mentoring/editor/courses/<uuid:course_public_id>/modules/",
+        ModuleEditorCreateView.as_view(),
+        name="editor-module-create",
+    ),
+    path(
+        "mentoring/editor/courses/<uuid:course_public_id>/exams/",
+        ExamEditorCreateView.as_view(),
+        name="editor-exam-create",
+    ),
+    path(
+        "mentoring/editor/modules/<uuid:module_public_id>/",
+        ModuleEditorDetailView.as_view(),
+        name="editor-module-detail",
     ),
     path(
         "mentoring/editor/modules/<uuid:module_public_id>/lessons/",

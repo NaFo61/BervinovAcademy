@@ -12,17 +12,26 @@ User = get_user_model()
 def dashboard_callback(request, context):
     now = timezone.now()
     month_ago = now - timedelta(days=30)
+    week_ago = now - timedelta(days=7)
 
     total_users = User.objects.count()
+    mentors_count = User.objects.filter(role="mentor").count()
     total_courses = 0
     active_students = 0
     completed_courses = 0
+    pro_active = 0
+    exam_attempts_7d = 0
+    submissions_7d = 0
     course_names = []
     course_counts = []
 
     try:
+        from exams.models import ExamAttempt
+
         from content.models import Course
         from education.models import Enrollment
+        from progress.models import CodeSubmission
+        from subscriptions.models import Entitlement
 
         total_courses = Course.objects.count()
         active_students = (
@@ -42,6 +51,25 @@ def dashboard_callback(request, context):
         )
         course_names = [row["course__title"] or "—" for row in top]
         course_counts = [row["c"] for row in top]
+
+        exam_attempts_7d = ExamAttempt.objects.filter(
+            started_at__gte=week_ago
+        ).count()
+        submissions_7d = CodeSubmission.objects.filter(
+            submitted_at__gte=week_ago
+        ).count()
+
+        pro_active = (
+            Entitlement.objects.filter(
+                revoked_at__isnull=True,
+                starts_at__lte=now,
+                ends_at__gt=now,
+                plan__is_active=True,
+            )
+            .values("user_id")
+            .distinct()
+            .count()
+        )
     except Exception:
         pass
 
@@ -66,9 +94,13 @@ def dashboard_callback(request, context):
     context.update(
         {
             "total_users": total_users,
+            "mentors_count": mentors_count,
             "total_courses": total_courses,
             "active_students": active_students,
             "completed_courses": completed_courses,
+            "pro_active": pro_active,
+            "exam_attempts_7d": exam_attempts_7d,
+            "submissions_7d": submissions_7d,
             "months_json": json.dumps(months, ensure_ascii=False),
             "activity_data_json": json.dumps(activity_data),
             "course_names_json": json.dumps(course_names, ensure_ascii=False),

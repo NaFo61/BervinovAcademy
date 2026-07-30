@@ -20,11 +20,11 @@ def test_student_role_clears_staff_and_superuser():
 @pytest.mark.integration
 @pytest.mark.models
 @pytest.mark.django_db
-def test_mentor_role_sets_staff_only():
+def test_mentor_role_has_no_django_admin():
     user = make_user(
         email="ivan@academy.com", phone="+79123456789", role="mentor"
     )
-    assert user.is_staff
+    assert not user.is_staff
     assert not user.is_superuser
 
 
@@ -42,11 +42,11 @@ def test_admin_role_sets_staff_and_superuser(admin_user):
 @pytest.mark.integration
 @pytest.mark.models
 @pytest.mark.django_db
-def test_changing_role_from_mentor_to_student_resets_flags():
+def test_changing_role_from_mentor_to_student_keeps_no_staff():
     user = make_user(
         email="ivan@academy.com", phone="+79123456789", role="mentor"
     )
-    assert user.is_staff
+    assert not user.is_staff
 
     user.role = "student"
     user.save()

@@ -12,9 +12,13 @@ from progress.models import (
 from progress.stats import get_course_progress_detail
 
 
-def build_courses_overview() -> list[dict]:
+def build_courses_overview(user=None) -> list[dict]:
+    qs = Course.objects.filter(is_active=True).order_by("title")
+    if user is not None and getattr(user, "role", None) == "mentor":
+        qs = qs.filter(mentor=user)
+
     results = []
-    for course in Course.objects.filter(is_active=True).order_by("title"):
+    for course in qs:
         enrollments = Enrollment.objects.filter(course=course)
         percents = []
         for enrollment in enrollments.select_related("user"):

@@ -413,7 +413,7 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
   );
 }
 
-function ContentEditorPanel({ courseId, courses, onCourseChange }) {
+function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefresh }) {
   const [, navigate] = window.useHashRoute();
   const [outline, setOutline] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
@@ -421,6 +421,8 @@ function ContentEditorPanel({ courseId, courses, onCourseChange }) {
   const [selected, setSelected] = React.useState(null);
   const [expandedModules, setExpandedModules] = React.useState({});
   const [creating, setCreating] = React.useState(null);
+  const [newCourseTitle, setNewCourseTitle] = React.useState('');
+  const [creatingCourse, setCreatingCourse] = React.useState(false);
 
   const loadOutline = React.useCallback(() => {
     if (!courseId) return;
@@ -440,6 +442,67 @@ function ContentEditorPanel({ courseId, courses, onCourseChange }) {
   }, [courseId]);
 
   React.useEffect(() => { loadOutline(); }, [loadOutline]);
+
+  const refreshCourses = async (selectId) => {
+    if (typeof onCoursesRefresh === 'function') {
+      await onCoursesRefresh(selectId);
+    } else if (selectId) {
+      onCourseChange(selectId);
+    }
+  };
+
+  const createCourse = async () => {
+    const title = newCourseTitle.trim();
+    if (!title) return;
+    setCreatingCourse(true);
+    setError('');
+    try {
+      const created = await window.fetchApiJson('/api/mentoring/editor/courses/', {
+        method: 'POST',
+        body: { title, description: title },
+        auth: true,
+      });
+      setNewCourseTitle('');
+      await refreshCourses(created.public_id);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCreatingCourse(false);
+    }
+  };
+
+  const createModule = async () => {
+    if (!courseId) return;
+    setCreating('module');
+    try {
+      const mod = await window.fetchApiJson(
+        `/api/mentoring/editor/courses/${encodeURIComponent(courseId)}/modules/`,
+        { method: 'POST', body: { title: 'Новый модуль' }, auth: true },
+      );
+      loadOutline();
+      setExpandedModules((p) => ({ ...p, [mod.public_id]: true }));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCreating(null);
+    }
+  };
+
+  const createExam = async () => {
+    if (!courseId) return;
+    setCreating('exam');
+    try {
+      await window.fetchApiJson(
+        `/api/mentoring/editor/courses/${encodeURIComponent(courseId)}/exams/`,
+        { method: 'POST', body: { title: 'Контрольная работа', duration_minutes: 45 }, auth: true },
+      );
+      loadOutline();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCreating(null);
+    }
+  };
 
   const createLesson = async (moduleId, kind) => {
     setCreating(`${moduleId}-${kind}`);
@@ -469,54 +532,88 @@ function ContentEditorPanel({ courseId, courses, onCourseChange }) {
               <option key={c.course_public_id} value={c.course_public_id}>{c.course_title}</option>
             ))}
           </select>
-          <p className="text-[11px] text-ink/40 leading-relaxed">
-            Выберите урок слева или создайте новый. Видео и текст решения — вкладка «Эталонное решение».
-          </p>
+          <div className="flex gap-2">
+            <input type="text" value={newCourseTitle} onChange={(e) => setNewCourseTitle(e.target.value)}
+              placeholder="Новый курс…"
+              className="flex-1 h-9 px-3 rounded-lg bg-paper ring-1 ring-black/[0.08] text-xs"/>
+            <button type="button" disabled={creatingCourse || !newCourseTitle.trim()} onClick={createCourse}
+              className="h-9 px-3 rounded-lg text-xs font-semibold bg-violet-600 text-white disabled:opacity-40">
+              +
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={!courseId || creating === 'module'} onClick={createModule}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-black/[0.04] hover:bg-violet-100 hover:text-violet-700 disabled:opacity-40">
+              + Модуль
+            </button>
+            <button type="button" disabled={!courseId || creating === 'exam'} onClick={createExam}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-black/[0.04] hover:bg-amber-100 hover:text-amber-800 disabled:opacity-40">
+              + КР
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto scrollbar-thin p-3">
           {loading && !outline ? (
             <p className="text-sm text-ink/45 p-4">Загрузка структуры…</p>
-          ) : (outline?.modules || []).length === 0 ? (
-            <p className="text-sm text-ink/45 p-4">В курсе пока нет модулей. Добавьте их в Django Admin.</p>
           ) : (
-            outline.modules.map((mod) => (
-              <div key={mod.public_id} className="mb-3">
-                <button type="button" onClick={() => setExpandedModules((p) => ({ ...p, [mod.public_id]: !p[mod.public_id] }))}
-                  className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-black/[0.03] text-left">
-                  <span className="text-ink/35 text-xs">{expandedModules[mod.public_id] ? '▼' : '▶'}</span>
-                  <span className="font-semibold text-sm text-ink truncate">{mod.title}</span>
-                  <span className="text-[10px] text-ink/35 ml-auto">{mod.lessons?.length || 0}</span>
-                </button>
-                {expandedModules[mod.public_id] && (
-                  <div className="ml-2 pl-2 border-l border-black/[0.06] space-y-1">
-                    {(mod.lessons || []).map((ls) => {
-                      const m = KIND_META[ls.kind] || KIND_META.theory;
-                      const active = selected?.public_id === ls.public_id;
-                      return (
-                        <button key={`${ls.kind}-${ls.public_id}`} type="button"
-                          onClick={() => setSelected({ ...ls, module_public_id: mod.public_id })}
-                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-sm transition-colors
-                            ${active ? 'bg-violet-50 ring-1 ring-violet-200 text-violet-900' : 'hover:bg-black/[0.025] text-ink/75'}
-                            ${!ls.is_active ? 'opacity-45' : ''}`}>
-                          <span>{m.emoji}</span>
-                          <span className="truncate flex-1">{ls.title}</span>
-                        </button>
-                      );
-                    })}
-                    <div className="pt-2 flex flex-wrap gap-1">
-                      {Object.entries(KIND_META).map(([k, m]) => (
-                        <button key={k} type="button" disabled={creating === `${mod.public_id}-${k}`}
-                          onClick={() => createLesson(mod.public_id, k)}
-                          className="text-[10px] font-semibold px-2 py-1 rounded-md bg-black/[0.04] hover:bg-violet-100 hover:text-violet-700 disabled:opacity-40">
-                          + {m.emoji}
-                        </button>
-                      ))}
-                    </div>
+            <>
+              {(outline?.modules || []).length === 0 ? (
+                <p className="text-sm text-ink/45 p-4">Нет модулей — нажмите «+ Модуль».</p>
+              ) : (
+                outline.modules.map((mod) => (
+                  <div key={mod.public_id} className="mb-3">
+                    <button type="button" onClick={() => setExpandedModules((p) => ({ ...p, [mod.public_id]: !p[mod.public_id] }))}
+                      className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-black/[0.03] text-left">
+                      <span className="text-ink/35 text-xs">{expandedModules[mod.public_id] ? '▼' : '▶'}</span>
+                      <span className="font-semibold text-sm text-ink truncate">{mod.title}</span>
+                      <span className="text-[10px] text-ink/35 ml-auto">{mod.lessons?.length || 0}</span>
+                    </button>
+                    {expandedModules[mod.public_id] && (
+                      <div className="ml-2 pl-2 border-l border-black/[0.06] space-y-1">
+                        {(mod.lessons || []).map((ls) => {
+                          const m = KIND_META[ls.kind] || KIND_META.theory;
+                          const active = selected?.public_id === ls.public_id;
+                          return (
+                            <button key={`${ls.kind}-${ls.public_id}`} type="button"
+                              onClick={() => setSelected({ ...ls, module_public_id: mod.public_id })}
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-sm transition-colors
+                                ${active ? 'bg-violet-50 ring-1 ring-violet-200 text-violet-900' : 'hover:bg-black/[0.025] text-ink/75'}
+                                ${!ls.is_active ? 'opacity-45' : ''}`}>
+                              <span>{m.emoji}</span>
+                              <span className="truncate flex-1">{ls.title}</span>
+                            </button>
+                          );
+                        })}
+                        <div className="pt-2 flex flex-wrap gap-1">
+                          {Object.entries(KIND_META).map(([k, m]) => (
+                            <button key={k} type="button" disabled={creating === `${mod.public_id}-${k}`}
+                              onClick={() => createLesson(mod.public_id, k)}
+                              className="text-[10px] font-semibold px-2 py-1 rounded-md bg-black/[0.04] hover:bg-violet-100 hover:text-violet-700 disabled:opacity-40">
+                              + {m.emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))
+                ))
+              )}
+              {(outline?.exams || []).length > 0 && (
+                <div className="mt-4 pt-3 border-t border-black/[0.06]">
+                  <div className="text-[11px] font-semibold uppercase tracking-widest text-ink/40 px-2 mb-2">Контрольные</div>
+                  {outline.exams.map((ex) => (
+                    <div key={ex.public_id}
+                      className="px-3 py-2 rounded-xl text-sm text-ink/70 bg-amber-50/60 ring-1 ring-amber-100 mb-1">
+                      📝 {ex.title}
+                    </div>
+                  ))}
+                  <p className="text-[10px] text-ink/40 px-2 mt-2">
+                    Задания КР пока добавляются через структуру курса в панели владельца при необходимости. Unlock/retake — вкладка «КР».
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -530,12 +627,8 @@ function ContentEditorPanel({ courseId, courses, onCourseChange }) {
             <div className="text-5xl mb-4 opacity-30">✏️</div>
             <h3 className="text-lg font-bold text-ink/70">Редактор контента</h3>
             <p className="text-sm text-ink/45 mt-2 max-w-sm">
-              Выберите урок в дереве слева или создайте новый: теорию, тест или задачу с кодом.
+              Создайте модуль, добавьте уроки слева. Всё для менторов — здесь, без Django Admin.
             </p>
-            <a href="/admin/content/" target="_blank" rel="noreferrer"
-              className="mt-6 text-xs text-violet-600 font-semibold hover:underline">
-              Django Admin (модули курса) ↗
-            </a>
           </div>
         ) : (
           <LessonEditorForm

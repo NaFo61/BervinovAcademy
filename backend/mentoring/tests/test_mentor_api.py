@@ -2,33 +2,49 @@ import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from content.models import (
+    CodingChallenge,
+    LessonRadioQuestion,
+    RadioAnswerOption,
+)
 from education.models import Enrollment
 from progress.models import CodeSubmission, UserAnswerRadio
-from users.models import User
 
 
 @pytest.fixture
-def mentor_user(db):
-    return User.objects.create_user(
-        email="mentor-panel@academy.com",
-        phone="+79001112233",
-        password="password",
-        first_name="Ментор",
-        last_name="Тестов",
-        role="mentor",
+def coding_challenge(db, module):
+    return CodingChallenge.objects.create(
+        module=module,
+        course=module.course,
+        title="Two Sum",
+        description="Find pair",
+        instructions="Return indices",
+        initial_code="def solve(): pass",
+        solution_template="pass",
+        is_active=True,
     )
 
 
 @pytest.fixture
-def student_user(db):
-    return User.objects.create_user(
-        email="student-panel@academy.com",
-        phone="+79004445566",
-        password="password",
-        first_name="Студент",
-        last_name="Тестов",
-        role="student",
+def radio_question(db, module):
+    return LessonRadioQuestion.objects.create(
+        module=module,
+        title="Q1",
+        question_text="2+2?",
+        points=1,
+        is_active=True,
     )
+
+
+@pytest.fixture
+def radio_answers(db, radio_question):
+    a = RadioAnswerOption.objects.create(
+        question=radio_question, text="3", is_correct=False, order_index=1
+    )
+    b = RadioAnswerOption.objects.create(
+        question=radio_question, text="4", is_correct=True, order_index=2
+    )
+    return [a, b]
 
 
 @pytest.mark.django_db

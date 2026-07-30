@@ -197,7 +197,10 @@ class User(UUIDPublicIdMixin, AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(
         verbose_name=_("Персонал"),
         default=False,
-        help_text=_("Является ли пользователь сотрудником"),
+        help_text=_(
+            "Доступ к Django /admin. Только для role=admin; "
+            "менторы работают в /mentor."
+        ),
     )
 
     objects = CustomUserManager()
@@ -239,13 +242,11 @@ class User(UUIDPublicIdMixin, AbstractBaseUser, PermissionsMixin):
         return self.role == "admin" or self.is_superuser
 
     def save(self, *args, **kwargs):
+        # Django /admin — только admin. Менторы работают в SPA /mentor.
         if self.role == "admin":
             self.is_staff = True
             self.is_superuser = True
-        elif self.role == "mentor":
-            self.is_staff = True
-            self.is_superuser = False
-        else:  # student
+        else:
             self.is_staff = False
             self.is_superuser = False
 

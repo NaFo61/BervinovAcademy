@@ -15,12 +15,12 @@ from .services import (
 
 
 class MentorCoursesOverviewView(APIView):
-    """``GET /api/mentoring/courses/`` — статистика по всем курсам."""
+    """``GET /api/mentoring/courses/`` — статистика по курсам ментора (admin — все)."""
 
     permission_classes = [IsAuthenticated, IsMentorOrAdmin]
 
     def get(self, request):
-        return Response(build_courses_overview())
+        return Response(build_courses_overview(request.user))
 
 
 class MentorCourseStudentsView(APIView):
@@ -29,12 +29,16 @@ class MentorCourseStudentsView(APIView):
     permission_classes = [IsAuthenticated, IsMentorOrAdmin]
 
     def get(self, request, course_public_id):
+        from content.editor_registry import user_can_edit_course
+
         try:
             course = Course.objects.get(
                 public_id=course_public_id, is_active=True
             )
         except Course.DoesNotExist:
             return Response({"detail": "Курс не найден."}, status=404)
+        if not user_can_edit_course(request.user, course):
+            return Response({"detail": "Нет доступа к курсу."}, status=403)
         return Response(
             {
                 "course_public_id": str(course.public_id),

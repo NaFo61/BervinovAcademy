@@ -1,9 +1,11 @@
 from django.shortcuts import get_object_or_404
+from django.utils.text import slugify
 from rest_framework import status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from unidecode import unidecode
 
 from content.editor_registry import (
     LESSON_KINDS,
@@ -14,7 +16,7 @@ from content.editor_registry import (
     user_can_edit_course,
 )
 from content.editor_serializers import EDITOR_SERIALIZERS
-from content.models import Course, Module
+from content.models import Course, Exam, Module, Technology
 from mentoring.permissions import IsMentorOrAdmin
 
 
@@ -37,6 +39,43 @@ def _check_lesson_access(request, instance):
     return _check_course_access(request, course)
 
 
+def _unique_slug(title: str) -> str:
+    base = slugify(unidecode(title)) or "course"
+    slug = base
+    n = 1
+    while Course.objects.filter(slug=slug).exists():
+        n += 1
+        slug = f"{base}-{n}"
+    return slug
+
+
+class CourseEditorCreateView(APIView):
+    """``POST /api/mentoring/editor/courses/`` — создать курс (ментор = автор)."""
+
+    permission_classes = [IsAuthenticated, IsMentorOrAdmin]
+
+    def post(self, request):
+        title = (request.data.get("title") or "").strip()
+        if not title:
+            return Response({"title": "Укажите название."}, status=400)
+        description = (request.data.get("description") or "").strip()
+        course = Course.objects.create(
+            title=title,
+            description=description or title,
+            slug=_unique_slug(title),
+            is_active=True,
+            mentor=request.user,
+        )
+        tech_ids = request.data.get("technology_public_ids") or []
+        if isinstance(tech_ids, list) and tech_ids:
+            techs = Technology.objects.filter(public_id__in=tech_ids)
+            course.technology.set(techs)
+        return Response(
+            build_course_editor_outline(course),
+            status=status.HTTP_201_CREATED,
+        )
+
+
 class CourseEditorOutlineView(APIView):
     """``GET /api/mentoring/editor/courses/{course_public_id}/`` — структура курса."""
 
@@ -48,6 +87,132 @@ class CourseEditorOutlineView(APIView):
         if denied:
             return denied
         return Response(build_course_editor_outline(course))
+
+
+class ModuleEditorCreateView(APIView):
+    """``POST /api/mentoring/editor/courses/{course_public_id}/modules/``"""
+
+    permission_classes = [IsAuthenticated, IsMentorOrAdmin]
+
+    def post(self, request, course_public_id):
+        course = get_object_or_404(Course, public_id=course_public_id)
+        denied = _check_course_access(request, course)
+        if denied:
+            return denied
+        title = (request.data.get("title") or "").strip() or "Новый модуль"
+        description = (request.data.get("description") or "").strip()
+        module = Module.objects.create(
+            course=course,
+            title=title,
+            description=description,
+            is_active=True,
+        )
+        return Response(
+            {
+                "public_id": str(module.public_id),
+                "title": module.title,
+                "description": module.description,
+                "order_index": module.order_index,
+                "is_active": module.is_active,
+                "lessons": [],
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ModuleEditorDetailView(APIView):
+    """``PATCH/DELETE /api/mentoring/editor/modules/{module_public_id}/``"""
+
+    permission_classes = [IsAuthenticated, IsMentorOrAdmin]
+
+    def patch(self, request, module_public_id):
+        module = get_object_or_404(
+            Module.objects.select_related("course"),
+            public_id=module_public_id,
+        )
+        denied = _check_course_access(request, module.course)
+        if denied:
+            return denied
+        if "title" in request.data:
+            title = (request.data.get("title") or "").strip()
+            if title:
+                module.title = title
+        if "description" in request.data:
+            module.description = request.data.get("description") or ""
+        if "is_active" in request.data:
+            module.is_active = bool(request.data.get("is_active"))
+        module.save()
+        return Response(
+            {
+                "public_id": str(module.public_id),
+                "title": module.title,
+                "description": module.description,
+                "order_index": module.order_index,
+                "is_active": module.is_active,
+            }
+        )
+
+    def delete(self, request, module_public_id):
+        module = get_object_or_404(
+            Module.objects.select_related("course"),
+            public_id=module_public_id,
+        )
+        denied = _check_course_access(request, module.course)
+        if denied:
+            return denied
+        module.is_active = False
+        module.save(update_fields=["is_active"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ExamEditorCreateView(APIView):
+    """``POST /api/mentoring/editor/courses/{course_public_id}/exams/``"""
+
+    permission_classes = [IsAuthenticated, IsMentorOrAdmin]
+
+    def post(self, request, course_public_id):
+        course = get_object_or_404(Course, public_id=course_public_id)
+        denied = _check_course_access(request, course)
+        if denied:
+            return denied
+        title = (request.data.get("title") or "").strip() or "Контрольная"
+        duration = request.data.get("duration_minutes", 45)
+        try:
+            duration = max(1, int(duration))
+        except (TypeError, ValueError):
+            duration = 45
+        exam = Exam.objects.create(
+            course=course,
+            title=title,
+            description=(request.data.get("description") or "").strip(),
+            duration_minutes=duration,
+            is_active=True,
+            mentor_unlock_required=bool(
+                request.data.get("mentor_unlock_required", False)
+            ),
+        )
+        return Response(
+            {
+                "public_id": str(exam.public_id),
+                "title": exam.title,
+                "order_index": exam.order_index,
+                "duration_minutes": exam.duration_minutes,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class TechnologyListEditorView(APIView):
+    """``GET /api/mentoring/editor/technologies/`` — справочник для создания курса."""
+
+    permission_classes = [IsAuthenticated, IsMentorOrAdmin]
+
+    def get(self, request):
+        rows = [
+            {"public_id": str(t.public_id), "name": t.name}
+            for t in Technology.objects.order_by("name")
+        ]
+        return Response(rows)
 
 
 class LessonEditorView(APIView):
