@@ -182,7 +182,7 @@ jobs:
           tags: bervinov-academy-nginx:ci
           build-args: |
             SUB_PATH=
-            ENABLE_WHITEBOARD=false
+            ENABLE_WHITEBOARD=true
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -227,7 +227,7 @@ jobs:
           push: true
           build-args: |
             SUB_PATH=
-            ENABLE_WHITEBOARD=false
+            ENABLE_WHITEBOARD=true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/bervinov-academy-nginx:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/bervinov-academy-nginx:${{ github.sha }}
@@ -253,6 +253,17 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/bervinov-academy-code-sandbox:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/bervinov-academy-code-sandbox:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Push tldraw-sync
+        uses: docker/build-push-action@v6
+        with:
+          context: services/tldraw-sync
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/bervinov-academy-tldraw-sync:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/bervinov-academy-tldraw-sync:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

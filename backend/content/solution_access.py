@@ -99,6 +99,30 @@ def coding_solution_unlocked(user, challenge) -> bool:
     return coding_wrong_attempts(user, challenge) >= SOLUTION_FAIL_THRESHOLD
 
 
+def short_answer_wrong_attempts(user, question) -> int:
+    if not user:
+        return 0
+    from progress.models import UserAnswerShort
+
+    return UserAnswerShort.objects.filter(
+        user=user, question=question, is_correct=False
+    ).count()
+
+
+def short_answer_solution_unlocked(user, question) -> bool:
+    if not user:
+        return False
+    from progress.models import UserAnswerShort
+
+    if UserAnswerShort.objects.filter(
+        user=user, question=question, is_correct=True
+    ).exists():
+        return True
+    return (
+        short_answer_wrong_attempts(user, question) >= SOLUTION_FAIL_THRESHOLD
+    )
+
+
 def build_reference_solution(obj, request, *, unlocked: bool) -> dict | None:
     if not unlocked:
         return None

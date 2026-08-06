@@ -333,7 +333,9 @@ class LessonEditorCreateView(APIView):
         title = (request.data.get("title") or "").strip() or "Новый урок"
         if kind not in LESSON_KINDS:
             return Response(
-                {"kind": "Укажите theory, radio, checkbox или coding."},
+                {
+                    "kind": "Укажите theory, radio, checkbox, short_answer или coding."
+                },
                 status=400,
             )
 

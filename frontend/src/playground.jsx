@@ -1,33 +1,57 @@
 // Browser Python interpreter (Pyodide) — code / stdin / stdout, no tests
 
 const PYODIDE_VERSION = '0.27.5';
-const PYODIDE_INDEX = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
+const PYODIDE_INDEXES = [
+  `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`,
+  `https://cdn.jsdelivr.net/npm/pyodide@${PYODIDE_VERSION}/`,
+];
+const PYODIDE_LOAD_TIMEOUT_MS = 45000;
 const DEFAULT_PLAYGROUND_CODE = `# Пиши код и жми «Запустить»
 name = input("Как тебя зовут? ")
 print(f"Привет, {name}!")
 `;
+
+function loadScriptWithTimeout(src, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.async = true;
+    const timer = setTimeout(() => reject(new Error(`Таймаут загрузки ${src}`)), timeoutMs);
+    s.onload = () => { clearTimeout(timer); resolve(); };
+    s.onerror = () => { clearTimeout(timer); reject(new Error(`Не удалось загрузить ${src}`)); };
+    document.head.appendChild(s);
+  });
+}
 
 function ensurePyodide(onStatus) {
   if (window.__pyodideInstance) return Promise.resolve(window.__pyodideInstance);
   if (window.__pyodideLoading) return window.__pyodideLoading;
 
   window.__pyodideLoading = (async () => {
-    onStatus?.('Загрузка Python в браузере…');
-    if (!window.loadPyodide) {
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = `${PYODIDE_INDEX}pyodide.js`;
-        s.async = true;
-        s.onload = resolve;
-        s.onerror = () => reject(new Error('Не удалось загрузить Pyodide'));
-        document.head.appendChild(s);
-      });
+    let lastErr = null;
+    for (let i = 0; i < PYODIDE_INDEXES.length; i += 1) {
+      const indexURL = PYODIDE_INDEXES[i];
+      try {
+        onStatus?.(`Загрузка Python в браузере (${i + 1}/${PYODIDE_INDEXES.length})…`);
+        if (!window.loadPyodide) {
+          await loadScriptWithTimeout(`${indexURL}pyodide.js`, PYODIDE_LOAD_TIMEOUT_MS);
+        }
+        onStatus?.('Инициализация интерпретатора…');
+        const pyodide = await Promise.race([
+          window.loadPyodide({ indexURL }),
+          new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Таймаут инициализации Pyodide')), PYODIDE_LOAD_TIMEOUT_MS);
+          }),
+        ]);
+        window.__pyodideInstance = pyodide;
+        onStatus?.('Готово');
+        return pyodide;
+      } catch (err) {
+        lastErr = err;
+        window.loadPyodide = undefined;
+      }
     }
-    onStatus?.('Инициализация интерпретатора…');
-    const pyodide = await window.loadPyodide({ indexURL: PYODIDE_INDEX });
-    window.__pyodideInstance = pyodide;
-    onStatus?.('Готово');
-    return pyodide;
+    throw lastErr || new Error('Не удалось загрузить Pyodide');
   })().catch((err) => {
     window.__pyodideLoading = null;
     throw err;

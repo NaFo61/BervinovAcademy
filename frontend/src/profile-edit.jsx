@@ -249,6 +249,8 @@ function VkConnectPanel({ user, onUser }) {
       sessionStorage.setItem('oauth_provider', provider);
       sessionStorage.setItem('oauth_redirect_uri', data.redirect_uri || redirectUri);
       sessionStorage.setItem('oauth_mode', 'link');
+      if (data.code_verifier) sessionStorage.setItem('oauth_code_verifier', data.code_verifier);
+      else sessionStorage.removeItem('oauth_code_verifier');
       if (data.authorize_url) {
         window.location.href = data.authorize_url;
         return;

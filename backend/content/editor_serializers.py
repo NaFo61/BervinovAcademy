@@ -5,6 +5,7 @@ from content.models import (
     CodingChallenge,
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
+    LessonShortAnswer,
     LessonTheory,
     RadioAnswerOption,
     TestCase,
@@ -221,6 +222,40 @@ class EditorCheckboxSerializer(EditorVideoMixin, serializers.ModelSerializer):
         question.answers.exclude(pk__in=keep).delete()
 
 
+class EditorShortAnswerSerializer(
+    EditorVideoMixin, serializers.ModelSerializer
+):
+    module_public_id = serializers.UUIDField(
+        source="module.public_id", read_only=True
+    )
+
+    class Meta:
+        model = LessonShortAnswer
+        fields = (
+            "public_id",
+            "module_public_id",
+            "title",
+            "question_text",
+            "correct_answer",
+            "answer_normalize",
+            "comment",
+            "explanation",
+            "solution_text",
+            "video_url",
+            "video_file",
+            "video",
+            "points",
+            "order_index",
+            "is_active",
+        )
+        read_only_fields = ("public_id", "module_public_id", "video")
+
+    def validate_solution_text(self, value):
+        from common.html_sanitize import sanitize_html
+
+        return sanitize_html(value)
+
+
 class EditorCodingSerializer(EditorVideoMixin, serializers.ModelSerializer):
     module_public_id = serializers.UUIDField(
         source="module.public_id", read_only=True, allow_null=True
@@ -313,5 +348,6 @@ EDITOR_SERIALIZERS = {
     "theory": EditorTheorySerializer,
     "radio": EditorRadioSerializer,
     "checkbox": EditorCheckboxSerializer,
+    "short_answer": EditorShortAnswerSerializer,
     "coding": EditorCodingSerializer,
 }

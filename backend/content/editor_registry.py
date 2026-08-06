@@ -11,18 +11,20 @@ from content.models import (
     Course,
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
+    LessonShortAnswer,
     LessonTheory,
     Module,
     RadioAnswerOption,
     TestCase,
 )
 
-LESSON_KINDS = ("theory", "radio", "checkbox", "coding")
+LESSON_KINDS = ("theory", "radio", "checkbox", "short_answer", "coding")
 
 _MODELS = {
     "theory": LessonTheory,
     "radio": LessonRadioQuestion,
     "checkbox": LessonCheckBoxQuestion,
+    "short_answer": LessonShortAnswer,
     "coding": CodingChallenge,
 }
 
@@ -145,6 +147,14 @@ def create_lesson_in_module(
                 question=q, text=text, is_correct=ok, order_index=i
             )
         return q
+    if kind == "short_answer":
+        return LessonShortAnswer.objects.create(
+            **common,
+            question_text="Введите ответ",
+            correct_answer="",
+            answer_normalize=LessonShortAnswer.AnswerNormalize.STRIP_CASEFOLD,
+            points=1,
+        )
     if kind == "coding":
         ch = CodingChallenge.objects.create(
             module=module,

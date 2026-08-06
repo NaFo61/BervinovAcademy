@@ -7,6 +7,7 @@ from .viewsets import (
     LiveKitWebhookView,
     MentorUserSearchView,
     UserNotificationViewSet,
+    WhiteboardStudioTokenView,
 )
 
 router = DefaultRouter()
@@ -22,5 +23,9 @@ app_name = "communication"
 urlpatterns = [
     path("communication/users/search/", MentorUserSearchView.as_view()),
     path("communication/livekit/webhook/", LiveKitWebhookView.as_view()),
+    path(
+        "communication/whiteboard/studio/token/",
+        WhiteboardStudioTokenView.as_view(),
+    ),
     path("communication/", include(router.urls)),
 ]

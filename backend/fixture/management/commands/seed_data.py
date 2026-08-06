@@ -12,6 +12,7 @@ from content.models import (
     Exam,
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
+    LessonShortAnswer,
     LessonTheory,
     Module,
     RadioAnswerOption,
@@ -66,6 +67,7 @@ class Command(BaseCommand):
         RadioAnswerOption.objects.all().delete()
         LessonCheckBoxQuestion.objects.all().delete()
         CheckBoxAnswerOption.objects.all().delete()
+        LessonShortAnswer.objects.all().delete()
         CodingChallenge.objects.all().delete()
         TestCase.objects.all().delete()
 
@@ -389,12 +391,16 @@ class Command(BaseCommand):
         mentor_user = User.objects.filter(role="mentor").first()
 
         for fixture in COURSE_FIXTURES:
-            course = Course.objects.create(
-                title=fixture["title"],
-                description=fixture["description"],
-                is_active=True,
-                mentor=mentor_user,
-            )
+            slug = fixture.get("slug") or None
+            create_kwargs = {
+                "title": fixture["title"],
+                "description": fixture["description"],
+                "is_active": True,
+                "mentor": mentor_user,
+            }
+            if slug:
+                create_kwargs["slug"] = slug
+            course = Course.objects.create(**create_kwargs)
             tags = [
                 tech_by_name[name]
                 for name in fixture.get("technologies", [])
@@ -440,10 +446,30 @@ class Command(BaseCommand):
                 self.style.SUCCESS(f"Создан курс: {course.title}")
             )
 
-    def _lesson_common(self, lesson: dict) -> dict:
-        return {
-            k: lesson[k] for k in ("comment", "solution_text") if lesson.get(k)
+        # Deactivate any other courses (e.g. leftover Python demos)
+        target_slugs = {
+            f.get("slug") for f in COURSE_FIXTURES if f.get("slug")
         }
+        if target_slugs:
+            deactivated = (
+                Course.objects.exclude(slug__in=target_slugs)
+                .filter(is_active=True)
+                .update(is_active=False)
+            )
+            if deactivated:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"Деактивировано прочих курсов: {deactivated}"
+                    )
+                )
+
+    def _lesson_common(self, lesson: dict) -> dict:
+        data = {
+            k: lesson[k]
+            for k in ("comment", "solution_text", "video_url")
+            if lesson.get(k)
+        }
+        return data
 
     def _create_lesson(
         self,
@@ -521,6 +547,25 @@ class Command(BaseCommand):
                 )
             return
 
+        if kind == "short_answer":
+            LessonShortAnswer.objects.create(
+                module=module,
+                exam=exam,
+                title=lesson["title"],
+                question_text=lesson["question_text"],
+                correct_answer=lesson["correct_answer"],
+                answer_normalize=lesson.get(
+                    "answer_normalize",
+                    LessonShortAnswer.AnswerNormalize.STRIP_CASEFOLD,
+                ),
+                explanation=lesson.get("explanation", ""),
+                points=lesson.get("points", 3),
+                order_index=order_index,
+                is_active=True,
+                **common,
+            )
+            return
+
         if kind == "coding":
             challenge = CodingChallenge.objects.create(
                 course=course,
@@ -539,6 +584,7 @@ class Command(BaseCommand):
                 is_active=True,
                 solution_text=lesson.get("solution_text", ""),
                 comment=lesson.get("comment", ""),
+                video_url=lesson.get("video_url", ""),
             )
             for i, tc in enumerate(lesson.get("test_cases", []), start=1):
                 TestCase.objects.create(

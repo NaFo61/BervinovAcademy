@@ -6,7 +6,9 @@ import uuid
 
 from django.utils.translation import gettext_lazy as _
 
-LESSON_KINDS = frozenset({"theory", "radio", "checkbox", "coding"})
+LESSON_KINDS = frozenset(
+    {"theory", "radio", "checkbox", "coding", "short_answer"}
+)
 
 
 def lesson_exists(kind: str, lesson_public_id) -> bool:
@@ -14,6 +16,7 @@ def lesson_exists(kind: str, lesson_public_id) -> bool:
         CodingChallenge,
         LessonCheckBoxQuestion,
         LessonRadioQuestion,
+        LessonShortAnswer,
         LessonTheory,
     )
 
@@ -39,6 +42,9 @@ def lesson_exists(kind: str, lesson_public_id) -> bool:
         "coding": lambda: CodingChallenge.objects.filter(
             public_id=pid, is_active=True
         ).exists(),
+        "short_answer": lambda: LessonShortAnswer.objects.filter(
+            public_id=pid, is_active=True
+        ).exists(),
     }
     checker = checks.get(kind)
     return bool(checker and checker())
@@ -50,5 +56,6 @@ def lesson_kind_label(kind: str) -> str:
         "radio": _("вопрос"),
         "checkbox": _("вопрос"),
         "coding": _("задача"),
+        "short_answer": _("краткий ответ"),
     }
     return str(labels.get(kind, kind))

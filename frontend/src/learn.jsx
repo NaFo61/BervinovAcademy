@@ -23,6 +23,7 @@ function buildFlatLessons(modules) {
     for (const t of (mod.lessons_theories || [])) push('theory', t);
     for (const r of (mod.lessons_radio || [])) push('radio', r);
     for (const c of (mod.lessons_checkbox || [])) push('checkbox', c);
+    for (const s of (mod.lessons_short_answer || [])) push('short_answer', s);
     for (const ch of (mod.lessons_coding || [])) push('coding', ch);
     items.sort((a, b) => (a.order - b.order) || String(a.type).localeCompare(b.type));
     list.push(...items);
@@ -42,6 +43,7 @@ function buildModuleLessonItems(mod) {
   for (const t of (mod.lessons_theories || [])) push('theory', t);
   for (const r of (mod.lessons_radio || [])) push('radio', r);
   for (const c of (mod.lessons_checkbox || [])) push('checkbox', c);
+  for (const s of (mod.lessons_short_answer || [])) push('short_answer', s);
   for (const ch of (mod.lessons_coding || [])) push('coding', ch);
   items.sort((a, b) => (a.order - b.order) || String(a.type).localeCompare(b.type));
   return items;
@@ -59,6 +61,7 @@ function buildExamLessonItems(exam) {
   for (const t of (exam.lessons_theories || [])) push('theory', t);
   for (const r of (exam.lessons_radio || [])) push('radio', r);
   for (const c of (exam.lessons_checkbox || [])) push('checkbox', c);
+  for (const s of (exam.lessons_short_answer || [])) push('short_answer', s);
   for (const ch of (exam.lessons_coding || [])) push('coding', ch);
   items.sort((a, b) => (a.order - b.order) || String(a.type).localeCompare(b.type));
   return items;
@@ -104,6 +107,7 @@ function LearnPage({ navigate, hashParams }) {
   // ── quiz state ──
   const [selectedRadio, setSelectedRadio]         = React.useState(null);
   const [selectedBoxes, setSelectedBoxes]         = React.useState(new Set());
+  const [shortAnswerText, setShortAnswerText]     = React.useState('');
   const [submitted, setSubmitted]                 = React.useState(false);
   const [submitResult, setSubmitResult]           = React.useState(null); // API response or null
   const [submitLoading, setSubmitLoading]         = React.useState(false);
@@ -258,11 +262,13 @@ function LearnPage({ navigate, hashParams }) {
     setSubmitResult(null);
     setSelectedRadio(null);
     setSelectedBoxes(new Set());
+    setShortAnswerText('');
 
     const paths = {
       theory:   `/api/content/lessons-theory/${encodeURIComponent(lessonId)}/`,
       radio:    `/api/content/lessons-radio/${encodeURIComponent(lessonId)}/`,
       checkbox: `/api/content/lessons-checkbox/${encodeURIComponent(lessonId)}/`,
+      short_answer: `/api/content/short-answers/${encodeURIComponent(lessonId)}/`,
       coding:   `/api/content/challenges/${encodeURIComponent(lessonId)}/`,
     };
     const path = paths[lessonType];
@@ -279,6 +285,7 @@ function LearnPage({ navigate, hashParams }) {
       theory:   `/api/content/lessons-theory/${encodeURIComponent(lessonId)}/`,
       radio:    `/api/content/lessons-radio/${encodeURIComponent(lessonId)}/`,
       checkbox: `/api/content/lessons-checkbox/${encodeURIComponent(lessonId)}/`,
+      short_answer: `/api/content/short-answers/${encodeURIComponent(lessonId)}/`,
       coding:   `/api/content/challenges/${encodeURIComponent(lessonId)}/`,
     };
     const path = paths[lessonType];
@@ -356,6 +363,12 @@ function LearnPage({ navigate, hashParams }) {
     setSelectedBoxes(new Set());
   };
 
+  const handleShortRetry = () => {
+    setSubmitted(false);
+    setSubmitResult(null);
+    setShortAnswerText('');
+  };
+
   // ── submit checkbox ──
   const handleBoxSubmit = async () => {
     if (submitted) return;
@@ -376,6 +389,30 @@ function LearnPage({ navigate, hashParams }) {
     setSubmitLoading(false);
     if (res?.is_correct) {
       markDone('checkbox', lessonId);
+      refreshCourseProgress();
+    }
+  };
+
+  // ── submit short answer ──
+  const handleShortSubmit = async () => {
+    if (submitted || !String(shortAnswerText || '').trim()) return;
+    setSubmitLoading(true);
+    let res = null;
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      try {
+        res = await window.fetchApiJson('/api/progress/short-answer/', {
+          method: 'POST',
+          body: { question: lessonId, answer: shortAnswerText },
+          auth: true,
+        });
+        setSubmitResult(res);
+      } catch (_) {}
+    }
+    setSubmitted(true);
+    setSubmitLoading(false);
+    if (res?.is_correct || res?.solved_ever) {
+      markDone('short_answer', lessonId);
       refreshCourseProgress();
     }
   };
@@ -630,6 +667,7 @@ function LearnPage({ navigate, hashParams }) {
                         l.type === 'theory' ? '📖'
                         : l.type === 'radio' ? '?'
                         : l.type === 'checkbox' ? '☑'
+                        : l.type === 'short_answer' ? '✎'
                         : l.type === 'coding' ? '>_'
                         : '•'
                       );
@@ -713,6 +751,20 @@ function LearnPage({ navigate, hashParams }) {
                 onRefreshLesson={refreshLesson}
               />
 
+            ) : lessonType === 'short_answer' && lessonData ? (
+              <ShortAnswerLesson
+                lesson={lessonData}
+                answer={shortAnswerText}
+                setAnswer={setShortAnswerText}
+                submitted={submitted}
+                result={submitResult}
+                loading={submitLoading}
+                onSubmit={handleShortSubmit}
+                onRetry={handleShortRetry}
+                onLogin={() => navigate(Routes.AUTH)}
+                onRefreshLesson={refreshLesson}
+              />
+
             ) : lessonType === 'coding' && lessonData ? (
               <CodingLesson
                 lesson={lessonData}
@@ -765,6 +817,7 @@ const TYPE_META = {
   theory:   { emoji: '📖', label: 'Теория' },
   radio:    { emoji: '🔘', label: 'Один ответ' },
   checkbox: { emoji: '☑️', label: 'Несколько ответов' },
+  short_answer: { emoji: '✎', label: 'Краткий ответ' },
   coding:   { emoji: '💻', label: 'Задача с кодом' },
 };
 
@@ -801,7 +854,28 @@ function TheoryLesson({ lesson, isDone, onComplete, onLogin }) {
     <div>
       <LessonHeader type="theory" title={lesson.title} label="Теоретический урок"/>
 
-      <window.VideoExplanation video={lesson.video} title="Видео-объяснение"/>
+      {lesson.video ? (
+        <window.VideoExplanation video={lesson.video} title="Видео-объяснение"/>
+      ) : lesson.video_requires_pro || lesson.has_video ? (
+        <div className="mt-6 rounded-xl ring-1 ring-amber-200/80 bg-amber-50/80 p-4">
+          <div className="flex items-start gap-3">
+            <I.Play className="w-5 h-5 text-amber-700 shrink-0 mt-0.5"/>
+            <div>
+              <p className="text-[14px] font-semibold text-ink">Видео теории — в тарифе Pro</p>
+              <p className="text-[12px] text-ink/55 mt-1 leading-relaxed">
+                Текст урока доступен всем. Видео-объяснение открывается по тарифу Pro.
+              </p>
+              <button
+                type="button"
+                onClick={() => window.location.hash = '#/pro'}
+                className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-violet-700 hover:text-violet-800"
+              >
+                Подключить Pro <I.ChevronRight className="w-3.5 h-3.5"/>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div
         className="theory-content mt-6"
@@ -1087,11 +1161,125 @@ function CheckboxLesson({ lesson, selected, setSelected, submitted, result, load
   );
 }
 
+// ─── Short answer ────────────────────────────────────────────────────────────
+
+function ShortAnswerLesson({
+  lesson, answer, setAnswer, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson,
+}) {
+  const loggedIn  = !!localStorage.getItem('access_token');
+  const isCorrect = result?.is_correct;
+  const [sessionFails, setSessionFails] = React.useState(0);
+  const prevResultId = React.useRef(null);
+
+  React.useEffect(() => {
+    setSessionFails(0);
+    prevResultId.current = null;
+  }, [lesson.public_id]);
+
+  const effectiveFails = loggedIn ? 0 : sessionFails;
+  const solutionUnlocked = window.computeSolutionUnlocked(lesson, effectiveFails, isCorrect);
+
+  React.useEffect(() => {
+    if (!submitted) return;
+    const resultKey = result?.public_id || 'anon';
+    if (prevResultId.current === resultKey) return;
+    prevResultId.current = resultKey;
+    if (loggedIn && result) {
+      onRefreshLesson?.();
+    } else if (!loggedIn) {
+      setSessionFails((n) => n + 1);
+    }
+  }, [submitted, result, loggedIn, onRefreshLesson]);
+
+  React.useEffect(() => {
+    if (!solutionUnlocked || !loggedIn || lesson.reference_solution) return;
+    onRefreshLesson?.();
+  }, [solutionUnlocked, loggedIn, lesson.public_id, lesson.reference_solution, onRefreshLesson]);
+
+  return (
+    <div>
+      <LessonHeader type="short_answer" title={lesson.title} label="Краткий ответ"/>
+
+      <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
+        <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
+      </div>
+
+      <window.LessonInstructorNote text={lesson.comment} />
+
+      <div className="mt-5">
+        <label className="text-[11px] font-semibold uppercase tracking-widest text-ink/45 mb-2 block">
+          Ваш ответ
+        </label>
+        <input
+          type="text"
+          value={answer || ''}
+          disabled={submitted}
+          onChange={(e) => setAnswer(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !submitted) {
+              e.preventDefault();
+              onSubmit?.();
+            }
+          }}
+          placeholder="Введите ответ…"
+          className="w-full h-12 px-4 rounded-xl bg-white ring-1 ring-black/[0.08] text-[15px] focus:ring-violet-300 disabled:opacity-70"
+        />
+        <p className="mt-2 text-[11px] text-ink/40">
+          Сравнение без учёта регистра и лишних пробелов.
+        </p>
+      </div>
+
+      <QuizMeta points={lesson.points}/>
+
+      {!submitted && (
+        <QuizActions
+          disabled={!String(answer || '').trim()}
+          loading={loading}
+          loggedIn={loggedIn}
+          onSubmit={onSubmit}
+          onLogin={onLogin}
+        />
+      )}
+
+      {submitted && (
+        <QuizResult
+          isCorrect={isCorrect}
+          hasResult={!!result}
+          explanation={lesson.explanation}
+          pointsEarned={result?.points_earned}
+          loggedIn={loggedIn}
+          onLogin={onLogin}
+          onRetry={!isCorrect ? onRetry : undefined}
+          solutionUnlocked={solutionUnlocked}
+          hasReferenceSolution={window.hasReferenceSolutionMaterial(lesson)}
+        />
+      )}
+
+      <window.LessonDiscussionSection
+        lessonKind="short_answer"
+        lessonId={lesson.public_id}
+        onLogin={onLogin}
+        showReferenceSolution={window.hasReferenceSolutionMaterial(lesson)}
+        referenceSolution={lesson.reference_solution}
+        solutionUnlocked={solutionUnlocked}
+        wrongAttempts={lesson.wrong_attempts}
+        sessionFails={effectiveFails}
+      />
+    </div>
+  );
+}
+
 // ─── Shared quiz sub-components ──────────────────────────────────────────────
 
 function LessonHeader({ type, title, label, badge, points }) {
-  const icons = { theory: '📖', radio: '🔘', checkbox: '☑️', coding: '💻' };
-  const tints = { theory: 'bg-blue-50', radio: 'bg-violet-50', checkbox: 'bg-cyan-50', coding: 'bg-purple-50' };
+  const icons = { theory: '📖', radio: '🔘', checkbox: '☑️', short_answer: '✎', coding: '💻' };
+  const tints = {
+    theory: 'bg-blue-50',
+    radio: 'bg-violet-50',
+    checkbox: 'bg-cyan-50',
+    short_answer: 'bg-amber-50',
+    coding: 'bg-purple-50',
+  };
   return (
     <div className="flex items-start gap-4">
       <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0 ${tints[type] || 'bg-paper'}`}>

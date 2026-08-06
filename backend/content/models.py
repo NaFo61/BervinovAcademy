@@ -613,6 +613,132 @@ class CheckBoxAnswerOption(UUIDPublicIdMixin, models.Model):
         super().save(*args, **kwargs)
 
 
+class LessonShortAnswer(UUIDPublicIdMixin, models.Model):
+    """Урок с кратким ответом (строка / число в стиле ЕГЭ)."""
+
+    class AnswerNormalize(models.TextChoices):
+        STRIP_CASEFOLD = "strip_casefold", _("Trim + пробелы + без регистра")
+        EXACT = "exact", _("Точное совпадение")
+        NUMERIC = "numeric", _("Числовое (зарезервировано)")
+
+    module = models.ForeignKey(
+        Module,
+        on_delete=models.CASCADE,
+        related_name="lessons_short_answers",
+        verbose_name=_("Модуль"),
+        null=True,
+        blank=True,
+    )
+    exam = models.ForeignKey(
+        Exam,
+        on_delete=models.CASCADE,
+        related_name="lessons_short_answers",
+        verbose_name=_("Контрольная"),
+        null=True,
+        blank=True,
+    )
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name="course_lessons_short_answers",
+        verbose_name=_("Курс"),
+        null=True,
+        blank=True,
+    )
+    title = models.CharField(
+        max_length=200, verbose_name=_("Название вопроса")
+    )
+    question_text = models.TextField(verbose_name=_("Текст вопроса"))
+    correct_answer = models.CharField(
+        max_length=500,
+        verbose_name=_("Эталонный ответ"),
+        help_text=_("Не отдаётся ученику в API"),
+    )
+    answer_normalize = models.CharField(
+        max_length=32,
+        choices=AnswerNormalize.choices,
+        default=AnswerNormalize.STRIP_CASEFOLD,
+        verbose_name=_("Нормализация ответа"),
+    )
+    comment = models.TextField(
+        verbose_name=_("Заметка преподавателя"),
+        blank=True,
+        help_text=_("Пояснение к заданию на вкладке «Задание»"),
+    )
+    explanation = models.TextField(
+        verbose_name=_("Пояснение"),
+        blank=True,
+        help_text=_(
+            "Краткий комментарий после ответа (правильного или неверного)"
+        ),
+    )
+    solution_text = models.TextField(
+        verbose_name=_("Текст эталонного решения"),
+        blank=True,
+        help_text=_(
+            "HTML или текст: показывается в обсуждении после разблокировки"
+        ),
+    )
+    video_url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name=_("Ссылка на видео"),
+        help_text=_("Видео-разбор в блоке обсуждения"),
+    )
+    video_file = models.FileField(
+        upload_to=_lesson_video_upload_to,
+        blank=True,
+        null=True,
+        verbose_name=_("Видеофайл"),
+        help_text=_("Видео-разбор в блоке обсуждения"),
+    )
+    order_index = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        verbose_name=_("Порядковый номер"),
+        help_text=MODULE_ORDER_HELP,
+    )
+    is_active = models.BooleanField(default=True, verbose_name=_("Активен"))
+    points = models.PositiveIntegerField(
+        default=1,
+        verbose_name=_("Баллы"),
+        help_text=_("Количество баллов за правильный ответ"),
+    )
+
+    class Meta:
+        verbose_name = _("Урок с кратким ответом")
+        verbose_name_plural = _("Уроки с кратким ответом")
+        ordering = ("order_index",)
+        indexes = [
+            models.Index(fields=["module", "order_index"]),
+        ]
+
+    def __str__(self):
+        parent = self.module or self.exam or self.course
+        return f"{parent} - {self.title}"
+
+    def save(self, *args, **kwargs):
+        _save_module_lesson_order(self)
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        _delete_module_lesson(self)
+
+    def clean(self):
+        super().clean()
+        _clean_lesson_parent(self)
+        _validate_module_order_index(self)
+
+    def check_answer(self, user_answer: str) -> bool:
+        from content.short_answer import answers_match
+
+        return answers_match(
+            self.correct_answer,
+            user_answer,
+            mode=self.answer_normalize,
+        )
+
+
 class CodingChallenge(UUIDPublicIdMixin, models.Model):
     """Задача по программированию"""
 

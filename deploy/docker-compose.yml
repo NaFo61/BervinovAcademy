@@ -218,6 +218,31 @@ services:
     networks:
       - internal
 
+  tldraw-sync:
+    image: ${DOCKERHUB_USER}/bervinov-academy-tldraw-sync:${IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      DATA_DIR: /app/data
+      PORT: 5858
+      WHITEBOARD_SYNC_SECRET: ${SECRET_KEY}
+    volumes:
+      - tldraw_sync_data:/app/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5858/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
+    networks:
+      - internal
+
   nginx:
     image: ${DOCKERHUB_USER}/bervinov-academy-nginx:${IMAGE_TAG:-latest}
     pull_policy: always
@@ -228,6 +253,8 @@ services:
       - media_data:/var/www/django-media:ro
     depends_on:
       backend:
+        condition: service_healthy
+      tldraw-sync:
         condition: service_healthy
     networks:
       - internal
@@ -242,6 +269,8 @@ volumes:
     name: bervinov_academy_media_data
   static_data:
     name: bervinov_academy_static_data
+  tldraw_sync_data:
+    name: bervinov_academy_tldraw_sync_data
 
 networks:
   internal:

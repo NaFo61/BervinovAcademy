@@ -6,6 +6,7 @@ from .viewsets import (
     CourseViewSet,
     LessonCheckBoxQuestionViewSet,
     LessonRadioQuestionViewSet,
+    LessonShortAnswerViewSet,
     LessonTheoryViewSet,
     ModuleViewSet,
 )
@@ -27,6 +28,11 @@ router.register(
     r"lessons-checkbox",
     LessonCheckBoxQuestionViewSet,
     basename="lessons-checkbox",
+)
+router.register(
+    r"short-answers",
+    LessonShortAnswerViewSet,
+    basename="short-answers",
 )
 router.register(r"challenges", CodingChallengeViewSet, basename="challenges")
 

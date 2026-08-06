@@ -13,6 +13,7 @@ from content.models import (
     Course,
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
+    LessonShortAnswer,
     LessonTheory,
     Module,
 )
@@ -25,6 +26,8 @@ from content.serializers import (
     LessonCheckBoxListSerializer,
     LessonRadioDetailSerializer,
     LessonRadioListSerializer,
+    LessonShortAnswerDetailSerializer,
+    LessonShortAnswerListSerializer,
     LessonTheorySerializer,
     ModuleDetailSerializer,
     ModuleListSerializer,
@@ -87,10 +90,12 @@ class CourseViewSet(
                 "modules__lessons_radio_questions__answers",
                 "modules__lessons_checkbox_questions",
                 "modules__lessons_checkbox_questions__answers",
+                "modules__lessons_short_answers",
                 "modules__challenges",
                 "exams__lessons_theories",
                 "exams__lessons_radio_questions",
                 "exams__lessons_checkbox_questions",
+                "exams__lessons_short_answers",
                 "exams__challenges",
             )
             .order_by("-created_at")
@@ -275,6 +280,40 @@ class LessonCheckBoxQuestionViewSet(
         if self.action == "retrieve":
             return LessonCheckBoxDetailSerializer
         return LessonCheckBoxListSerializer
+
+
+class LessonShortAnswerViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Краткий ответ: JWT + enrollment / attempt."""
+
+    permission_classes = [IsAuthenticated]
+    lookup_field = "public_id"
+    lookup_value_regex = UUID_LOOKUP_REGEX
+
+    def get_queryset(self):
+        queryset = (
+            LessonShortAnswer.objects.filter(is_active=True)
+            .filter(public_lesson_parent_q())
+            .select_related(
+                "module", "module__course", "exam", "exam__course", "course"
+            )
+        )
+        queryset = filter_lessons_for_user(queryset, self.request.user)
+        module_pub = self.request.query_params.get("module_public_id")
+        if module_pub:
+            queryset = queryset.filter(module__public_id=module_pub)
+        exam_pub = self.request.query_params.get("exam_public_id")
+        if exam_pub:
+            queryset = queryset.filter(exam__public_id=exam_pub)
+        return queryset.order_by("order_index")
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return LessonShortAnswerDetailSerializer
+        return LessonShortAnswerListSerializer
 
 
 class CodingChallengeViewSet(

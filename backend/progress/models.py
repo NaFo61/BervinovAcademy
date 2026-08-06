@@ -9,6 +9,7 @@ from content.models import (
     CodingChallenge,
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
+    LessonShortAnswer,
     LessonTheory,
     RadioAnswerOption,
 )
@@ -163,6 +164,67 @@ class UserAnswerCheckBox(UUIDPublicIdMixin, models.Model):
                 self.calculate_points() if self.is_correct else 0
             )
             super().save(*args, **kwargs)
+
+
+class UserAnswerShort(UUIDPublicIdMixin, models.Model):
+    """Ответ пользователя на вопрос с кратким ответом (несколько попыток)."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="short_answers",
+        verbose_name=_("Пользователь"),
+    )
+    question = models.ForeignKey(
+        LessonShortAnswer,
+        on_delete=models.CASCADE,
+        related_name="user_answers",
+        verbose_name=_("Вопрос"),
+    )
+    answer = models.CharField(
+        max_length=500,
+        verbose_name=_("Ответ пользователя"),
+    )
+    is_correct = models.BooleanField(
+        verbose_name=_("Правильно"),
+        help_text=_("Был ли ответ правильным"),
+    )
+    points_earned = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Получено баллов"),
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Дата ответа"),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Дата обновления"),
+    )
+
+    class Meta:
+        verbose_name = _("Ответ на краткий вопрос")
+        verbose_name_plural = _("Ответы на краткие вопросы")
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "question"]),
+            models.Index(fields=["is_correct"]),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.user} - {self.question.title} - "
+            f"{'✅' if self.is_correct else '❌'}"
+        )
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.is_correct = self.question.check_answer(self.answer)
+            if self.is_correct:
+                self.points_earned = self.question.points
+            else:
+                self.points_earned = 0
+        super().save(*args, **kwargs)
 
 
 class CodeSubmission(UUIDPublicIdMixin, models.Model):
@@ -402,6 +464,7 @@ class LessonUserComment(UUIDPublicIdMixin, models.Model):
         RADIO = "radio", _("Radio")
         CHECKBOX = "checkbox", _("Checkbox")
         CODING = "coding", _("Код")
+        SHORT_ANSWER = "short_answer", _("Краткий ответ")
 
     user = models.ForeignKey(
         User,

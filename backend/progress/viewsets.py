@@ -35,6 +35,7 @@ from .models import (
     LessonUserComment,
     UserAnswerCheckBox,
     UserAnswerRadio,
+    UserAnswerShort,
     UserLessonTheoryRead,
 )
 from .serializers import (
@@ -43,6 +44,7 @@ from .serializers import (
     LessonUserCommentSerializer,
     UserAnswerCheckBoxSerializer,
     UserAnswerRadioSerializer,
+    UserAnswerShortSerializer,
     UserLessonTheoryReadSerializer,
 )
 
@@ -126,6 +128,40 @@ class UserAnswerCheckBoxViewSet(
         if instance is None:
             return Response(payload, status=status.HTTP_200_OK)
         return Response(payload, status=status.HTTP_201_CREATED)
+
+
+class UserAnswerShortViewSet(
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    Ответы на вопросы с кратким ответом.
+
+    - ``GET /progress/short-answer/`` — попытки текущего пользователя
+    - ``POST /progress/short-answer/`` — новая попытка
+
+    Тело POST: ``question`` (UUID), ``answer`` (строка).
+    """
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserAnswerShortSerializer
+    lookup_field = "public_id"
+    lookup_value_regex = UUID_LOOKUP_REGEX
+
+    def get_queryset(self):
+        solved_ever_sq = UserAnswerShort.objects.filter(
+            user=OuterRef("user"),
+            question=OuterRef("question"),
+            is_correct=True,
+        )
+        return (
+            UserAnswerShort.objects.filter(user=self.request.user)
+            .select_related("question")
+            .annotate(solved_ever=Exists(solved_ever_sq))
+            .order_by("-created_at")
+        )
 
 
 class UserCodeSubmissionViewSet(

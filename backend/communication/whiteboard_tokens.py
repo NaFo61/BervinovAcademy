@@ -6,10 +6,26 @@ import base64
 import hashlib
 import hmac
 import json
+import re
 import time
 from typing import Any
 
 from django.conf import settings
+
+STUDIO_ROOM_DEFAULT = "academy-studio"
+_STUDIO_ROOM_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$")
+
+
+def normalize_studio_room_id(room: str | None) -> str:
+    """Нормализовать id комнаты для доски вне созвона."""
+    value = (room or STUDIO_ROOM_DEFAULT).strip()
+    if not value:
+        value = STUDIO_ROOM_DEFAULT
+    if not _STUDIO_ROOM_RE.fullmatch(value):
+        raise ValueError(
+            "room: только латиница, цифры, _ и -, до 64 символов."
+        )
+    return value
 
 
 def _secret_bytes() -> bytes:

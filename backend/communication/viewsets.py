@@ -24,7 +24,11 @@ from .serializers import (
     UserNotificationSerializer,
     WhiteboardTokenSerializer,
 )
-from .whiteboard_tokens import issue_whiteboard_sync_token
+from .whiteboard_tokens import (
+    STUDIO_ROOM_DEFAULT,
+    issue_whiteboard_sync_token,
+    normalize_studio_room_id,
+)
 
 User = get_user_model()
 
@@ -32,6 +36,48 @@ User = get_user_model()
 def _display_name(user) -> str:
     full = f"{user.first_name or ''} {user.last_name or ''}".strip()
     return full or user.email or str(user.public_id)
+
+
+class WhiteboardStudioTokenView(APIView):
+    """Токен sync для доски вне созвона (общая studio-комната)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not settings.WHITEBOARD_ENABLED:
+            return Response(
+                {"detail": "Доска отключена."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        raw_room = (
+            request.data.get("room")
+            if isinstance(request.data, dict)
+            else None
+        )
+        if raw_room in (None, ""):
+            raw_room = request.query_params.get("room") or STUDIO_ROOM_DEFAULT
+        try:
+            room_id = normalize_studio_room_id(raw_room)
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ttl = settings.WHITEBOARD_TOKEN_TTL_SECONDS
+        token = issue_whiteboard_sync_token(
+            room_id,
+            request.user.public_id,
+            ttl_seconds=ttl,
+        )
+        payload = {
+            "token": token,
+            "room_id": room_id,
+            "expires_in": ttl,
+        }
+        license_key = settings.TLDRAW_LICENSE_KEY
+        if license_key:
+            payload["license_key"] = license_key
+        return Response(WhiteboardTokenSerializer(payload).data)
 
 
 class MentorUserSearchView(APIView):

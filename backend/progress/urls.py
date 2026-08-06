@@ -6,6 +6,7 @@ from progress.viewsets import (
     LessonUserCommentViewSet,
     UserAnswerCheckBoxViewSet,
     UserAnswerRadioViewSet,
+    UserAnswerShortViewSet,
     UserCodeSubmissionViewSet,
     UserLessonTheoryReadViewSet,
 )
@@ -18,6 +19,11 @@ answers_router.register(
     r"checkbox",
     UserAnswerCheckBoxViewSet,
     basename="answers-checkbox",
+)
+answers_router.register(
+    r"short-answer",
+    UserAnswerShortViewSet,
+    basename="answers-short-answer",
 )
 answers_router.register(
     r"code", UserCodeSubmissionViewSet, basename="answers-code"

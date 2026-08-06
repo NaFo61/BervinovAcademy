@@ -379,6 +379,8 @@ function AuthForm({ mode, setMode, navigate }) {
       sessionStorage.setItem('oauth_provider', provider);
       sessionStorage.setItem('oauth_redirect_uri', data.redirect_uri || redirectUri);
       sessionStorage.setItem('oauth_mode', 'login');
+      if (data.code_verifier) sessionStorage.setItem('oauth_code_verifier', data.code_verifier);
+      else sessionStorage.removeItem('oauth_code_verifier');
       if (data.authorize_url) {
         window.location.href = data.authorize_url;
         return;
@@ -535,12 +537,12 @@ function AuthForm({ mode, setMode, navigate }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <button type="button" disabled={loading} onClick={() => startOAuth('yandex')}
-              className="h-10 rounded-xl bg-white ring-1 ring-black/[0.08] hover:ring-violet-300 transition-colors text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50">
-              <I.Yandex className="w-4 h-4 text-[#FC3F1D]"/> Яндекс
+              className="h-10 leading-none overflow-visible rounded-xl bg-white ring-1 ring-black/[0.08] hover:ring-violet-300 transition-colors text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50">
+              <I.Yandex className="w-5 h-5 text-[#FC3F1D]"/> <span className="leading-none">Яндекс</span>
             </button>
             <button type="button" disabled={loading} onClick={() => startOAuth('vk')}
-              className="h-10 rounded-xl bg-white ring-1 ring-black/[0.08] hover:ring-violet-300 transition-colors text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50">
-              <I.VK className="w-4 h-4 text-[#0077FF]"/> VK
+              className="h-10 leading-none overflow-visible rounded-xl bg-white ring-1 ring-black/[0.08] hover:ring-violet-300 transition-colors text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50">
+              <I.VK className="w-5 h-5 text-[#0077FF]"/> <span className="leading-none">VK</span>
             </button>
           </div>
           <div className="text-center text-sm text-ink/60 pt-2 pb-1">
@@ -663,7 +665,7 @@ function AuthIllustration({ mode }) {
             <AuthFadePanel show={!isLogin} className="absolute inset-0 flex flex-col items-center justify-center">
               <div className="grad-text text-5xl sm:text-6xl font-extrabold leading-none tracking-tight">42</div>
               <div className="mt-2 text-xs sm:text-sm font-bold leading-snug text-balance">уроков в стартовом треке</div>
-              <div className="text-[10px] sm:text-[11px] text-ink/55 mt-1 leading-snug">Python с нуля до Junior</div>
+              <div className="text-[10px] sm:text-[11px] text-ink/55 mt-1 leading-snug">ЕГЭ по информатике</div>
             </AuthFadePanel>
           </div>
         </div>
@@ -754,8 +756,18 @@ function AuthCallbackPage({ navigate }) {
     let cancelled = false;
     (async () => {
       const params = new URLSearchParams(window.location.search.replace(/^\?/, ''));
-      const code = params.get('code') || '';
-      const state = params.get('state') || '';
+      let code = params.get('code') || '';
+      let state = params.get('state') || '';
+      let deviceId = params.get('device_id') || '';
+      const payloadRaw = params.get('payload') || '';
+      if (payloadRaw) {
+        try {
+          const payload = JSON.parse(payloadRaw);
+          code = code || payload.code || '';
+          state = state || payload.state || '';
+          deviceId = deviceId || payload.device_id || '';
+        } catch (_) { /* ignore malformed payload */ }
+      }
       const provider = sessionStorage.getItem('oauth_provider') || '';
       const expected = sessionStorage.getItem('oauth_state') || '';
       const redirectUri = sessionStorage.getItem('oauth_redirect_uri')
@@ -771,17 +783,23 @@ function AuthCallbackPage({ navigate }) {
         return;
       }
 
+      const body = { code, redirect_uri: redirectUri, state };
+      if (deviceId) body.device_id = deviceId;
+      const codeVerifier = sessionStorage.getItem('oauth_code_verifier') || '';
+      if (codeVerifier) body.code_verifier = codeVerifier;
+
       try {
         if (mode === 'link' && localStorage.getItem('access_token')) {
           await window.apiJson(`/api/auth/oauth/${provider}/link/`, {
             method: 'POST',
             auth: true,
-            body: { code, redirect_uri: redirectUri, state },
+            body,
           });
           sessionStorage.removeItem('oauth_state');
           sessionStorage.removeItem('oauth_provider');
           sessionStorage.removeItem('oauth_redirect_uri');
           sessionStorage.removeItem('oauth_mode');
+          sessionStorage.removeItem('oauth_code_verifier');
           if (!cancelled) {
             setDone(true);
             navigate(window.Routes.PROFILE_EDIT);
@@ -791,7 +809,7 @@ function AuthCallbackPage({ navigate }) {
 
         const data = await window.apiJson(`/api/auth/oauth/${provider}/`, {
           method: 'POST',
-          body: { code, redirect_uri: redirectUri, state },
+          body,
         });
         if (data.access) localStorage.setItem('access_token', data.access);
         if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
@@ -799,6 +817,7 @@ function AuthCallbackPage({ navigate }) {
         sessionStorage.removeItem('oauth_provider');
         sessionStorage.removeItem('oauth_redirect_uri');
         sessionStorage.removeItem('oauth_mode');
+        sessionStorage.removeItem('oauth_code_verifier');
         window.notifyAuthChanged();
         if (!cancelled) {
           setDone(true);

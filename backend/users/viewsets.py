@@ -183,11 +183,19 @@ class OAuthViewSet(viewsets.ViewSet):
         provider = self._provider(provider)
         code = request.data.get("code")
         redirect_uri = (request.data.get("redirect_uri") or "").strip() or None
+        device_id = (request.data.get("device_id") or "").strip() or None
+        state = (request.data.get("state") or "").strip() or None
+        code_verifier = (
+            request.data.get("code_verifier") or ""
+        ).strip() or None
         try:
             profile = exchange_code(
                 provider=provider,
                 code=code,
                 redirect_uri=redirect_uri,
+                device_id=device_id,
+                state=state,
+                code_verifier=code_verifier,
             )
             user, _created = resolve_or_create_user(profile)
         except OAuthConflict as exc:
@@ -214,11 +222,19 @@ class OAuthViewSet(viewsets.ViewSet):
         provider = self._provider(provider)
         code = request.data.get("code")
         redirect_uri = (request.data.get("redirect_uri") or "").strip() or None
+        device_id = (request.data.get("device_id") or "").strip() or None
+        state = (request.data.get("state") or "").strip() or None
+        code_verifier = (
+            request.data.get("code_verifier") or ""
+        ).strip() or None
         try:
             profile = exchange_code(
                 provider=provider,
                 code=code,
                 redirect_uri=redirect_uri,
+                device_id=device_id,
+                state=state,
+                code_verifier=code_verifier,
             )
             link_provider_to_user(request.user, profile)
         except OAuthConflict as exc:

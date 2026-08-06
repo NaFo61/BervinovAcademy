@@ -8,6 +8,7 @@ from content.models import (
     CodingChallenge,
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
+    LessonShortAnswer,
     LessonTheory,
     RadioAnswerOption,
 )
@@ -16,6 +17,7 @@ from .models import (
     CodeSubmission,
     UserAnswerCheckBox,
     UserAnswerRadio,
+    UserAnswerShort,
     UserLessonTheoryRead,
 )
 
@@ -209,6 +211,52 @@ class UserAnswerCheckBoxSerializer(serializers.ModelSerializer):
         out = UserAnswerCheckBoxSerializer(instance, context=self.context).data
         out["saved"] = True
         return instance, out
+
+
+class UserAnswerShortSerializer(serializers.ModelSerializer):
+    """Ответы на вопросы с кратким ответом (несколько попыток)."""
+
+    question_title = serializers.CharField(
+        source="question.title", read_only=True
+    )
+    solved_ever = serializers.SerializerMethodField()
+    question = serializers.SlugRelatedField(
+        slug_field="public_id",
+        queryset=LessonShortAnswer.objects.filter(is_active=True),
+    )
+
+    class Meta:
+        model = UserAnswerShort
+        fields = (
+            "public_id",
+            "question",
+            "question_title",
+            "answer",
+            "is_correct",
+            "points_earned",
+            "solved_ever",
+            "created_at",
+        )
+        read_only_fields = (
+            "is_correct",
+            "points_earned",
+            "solved_ever",
+            "created_at",
+        )
+
+    def get_solved_ever(self, obj: UserAnswerShort) -> bool:
+        ann = getattr(obj, "solved_ever", None)
+        if ann is not None:
+            return bool(ann)
+        return UserAnswerShort.objects.filter(
+            user_id=obj.user_id,
+            question_id=obj.question_id,
+            is_correct=True,
+        ).exists()
+
+    def create(self, validated_data):
+        validated_data["user"] = self.context["request"].user
+        return super().create(validated_data)
 
 
 class UserLessonTheoryReadSerializer(serializers.ModelSerializer):

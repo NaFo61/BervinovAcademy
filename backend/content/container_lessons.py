@@ -14,6 +14,7 @@ def _lesson_models():
         CodingChallenge,
         LessonCheckBoxQuestion,
         LessonRadioQuestion,
+        LessonShortAnswer,
         LessonTheory,
     )
 
@@ -21,6 +22,7 @@ def _lesson_models():
         LessonTheory,
         LessonRadioQuestion,
         LessonCheckBoxQuestion,
+        LessonShortAnswer,
         CodingChallenge,
     )
 
@@ -111,11 +113,13 @@ def iter_container_lessons(container, active_only: bool = False):
         theories = container.lessons_theories.all()
         radios = container.lessons_radio_questions.all()
         checkboxes = container.lessons_checkbox_questions.all()
+        short_answers = container.lessons_short_answers.all()
         challenges = container.challenges.all()
     elif kind == CONTAINER_EXAM:
         theories = container.lessons_theories.all()
         radios = container.lessons_radio_questions.all()
         checkboxes = container.lessons_checkbox_questions.all()
+        short_answers = container.lessons_short_answers.all()
         challenges = container.challenges.all()
     else:
         from content.models import CodingChallenge
@@ -123,6 +127,7 @@ def iter_container_lessons(container, active_only: bool = False):
         theories = container.course_lessons_theories.all()
         radios = container.course_lessons_radio_questions.all()
         checkboxes = container.course_lessons_checkbox_questions.all()
+        short_answers = container.course_lessons_short_answers.all()
         challenges = CodingChallenge.objects.filter(
             course_id=container.id,
             module__isnull=True,
@@ -133,6 +138,7 @@ def iter_container_lessons(container, active_only: bool = False):
         theories = theories.filter(is_active=True)
         radios = radios.filter(is_active=True)
         checkboxes = checkboxes.filter(is_active=True)
+        short_answers = short_answers.filter(is_active=True)
         challenges = challenges.filter(is_active=True)
 
     for obj in theories:
@@ -141,6 +147,8 @@ def iter_container_lessons(container, active_only: bool = False):
         items.append(("radio", obj))
     for obj in checkboxes:
         items.append(("checkbox", obj))
+    for obj in short_answers:
+        items.append(("short_answer", obj))
     for obj in challenges:
         items.append(("coding", obj))
     items.sort(key=lambda pair: (pair[1].order_index, pair[0]))

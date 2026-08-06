@@ -32,8 +32,8 @@ function Hero({ navigate }) {
           </M.div>
           <M.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.05 }}
             className="text-[40px] sm:text-[56px] lg:text-[64px] font-extrabold leading-[1.02] tracking-tight">
-            Учись <span className="grad-text">кодить</span>.<br/>
-            Эффективно. Удобно.<br/>
+            Готовься к <span className="grad-text">ЕГЭ</span>.<br/>
+            Информатика.<br/>
             <span className="relative inline-block">
               По‑настоящему.
               <svg className="absolute -bottom-2 left-0 w-full" height="14" viewBox="0 0 320 14" fill="none" preserveAspectRatio="none">
@@ -44,7 +44,7 @@ function Hero({ navigate }) {
           </M.h1>
           <M.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
             className="text-lg text-ink/65 mt-6 max-w-xl leading-relaxed">
-            Курсы программирования с живой проверкой кода и личным ментором. Без воды, без скучных лекций — только то, что реально пригодится в работе.
+            Школа подготовки к ЕГЭ по информатике: теория, тесты, задачи с кодом и кратким ответом — с видео-разборами в Pro.
           </M.p>
           <M.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.32 }}
             className="mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -54,7 +54,7 @@ function Hero({ navigate }) {
             </button>
             <button onClick={() => navigate(Routes.CATALOG)}
               className="h-14 px-6 rounded-2xl bg-white/70 backdrop-blur border border-black/[0.06] hover:border-violet-300 font-semibold inline-flex items-center gap-2 transition-colors">
-              <I.Play className="w-4 h-4 text-violet-600"/> Посмотреть каталог
+              <I.Play className="w-4 h-4 text-violet-600"/> Начать подготовку
             </button>
           </M.div>
           {/* social proof */}
@@ -136,7 +136,7 @@ function HeroLessonCard() {
           <div className="absolute -top-12 -right-8 w-44 h-44 rounded-full bg-white/15 blur-2xl"/>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest opacity-80">
-              <I.Book className="w-3.5 h-3.5"/> Python · Урок 8 из 42
+              <I.Book className="w-3.5 h-3.5"/> ЕГЭ · Урок 1 · Графы
             </div>
             <div className="flex items-center gap-1 text-[11px] bg-white/20 backdrop-blur px-2 py-1 rounded-full">
               <I.Clock className="w-3 h-3"/> 18 мин
@@ -325,9 +325,9 @@ function TopCourses({ navigate }) {
       <div className="max-w-7xl mx-auto px-5 sm:px-8 py-24">
         <div className="flex items-end justify-between flex-wrap gap-6 mb-12">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-widest text-violet-600 mb-3">Топ-3 курса</div>
+            <div className="text-xs font-semibold uppercase tracking-widest text-violet-600 mb-3">Курс подготовки</div>
             <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight max-w-2xl">
-              С чего обычно <span className="grad-text">начинают</span>
+              Начни с <span className="grad-text">ЕГЭ-информатики</span>
             </h2>
           </div>
           <button onClick={() => navigate(Routes.CATALOG)}

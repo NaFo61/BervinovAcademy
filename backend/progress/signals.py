@@ -12,6 +12,7 @@ from progress.models import (
     CodeSubmission,
     UserAnswerCheckBox,
     UserAnswerRadio,
+    UserAnswerShort,
     UserLessonTheoryRead,
 )
 
@@ -60,12 +61,15 @@ def _sync_user_achievements(sender, instance, **kwargs):
         return
     if sender is UserAnswerCheckBox and not instance.is_correct:
         return
+    if sender is UserAnswerShort and not instance.is_correct:
+        return
     transaction.on_commit(lambda u=user: sync_achievements_for_user(u))
 
 
 for _sender in (
     UserAnswerRadio,
     UserAnswerCheckBox,
+    UserAnswerShort,
     UserLessonTheoryRead,
     CodeSubmission,
 ):

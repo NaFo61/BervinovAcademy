@@ -111,7 +111,7 @@ class JoinConferenceSerializer(serializers.Serializer):
 
 class WhiteboardTokenSerializer(serializers.Serializer):
     token = serializers.CharField(read_only=True)
-    room_id = serializers.UUIDField(read_only=True)
+    room_id = serializers.CharField(read_only=True)
     expires_in = serializers.IntegerField(read_only=True)
     license_key = serializers.CharField(
         read_only=True, required=False, allow_blank=True

@@ -20,14 +20,16 @@ const ConferencesPage = window.ConferencesPage;
 const MessagesPage = window.MessagesPage;
 const ProPage = window.ProPage;
 const PlaygroundPage = window.PlaygroundPage;
+const WhiteboardPage = window.WhiteboardPage;
 
 const NO_FOOTER_ROUTES = new Set([
-  Routes.PROBLEM, Routes.AUTH, Routes.AUTH_CALLBACK, Routes.LEARN, Routes.EXAM, Routes.CALL, Routes.PLAYGROUND,
+  Routes.PROBLEM, Routes.AUTH, Routes.AUTH_CALLBACK, Routes.LEARN, Routes.EXAM, Routes.CALL, Routes.PLAYGROUND, Routes.WHITEBOARD,
 ]);
 
 function App() {
   const [route, navigate, hashParams] = useHashRoute();
   const isCallRoute = route === Routes.CALL;
+  const isWhiteboardRoute = route === Routes.WHITEBOARD;
 
   const Page = {
     [Routes.LANDING]: LandingPage,
@@ -46,14 +48,16 @@ function App() {
     [Routes.MESSAGES]: MessagesPage,
     [Routes.PRO]: ProPage,
     [Routes.PLAYGROUND]: PlaygroundPage,
+    [Routes.WHITEBOARD]: WhiteboardPage,
   }[route] || LandingPage;
 
   const pageProps = { navigate, hashParams, route };
+  const hideChrome = isCallRoute || isWhiteboardRoute;
 
   return (
-    <div className={`${isCallRoute ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col`}>
+    <div className={`${hideChrome ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col`}>
       <TopNav route={route} navigate={navigate}/>
-      <main className={`flex-1 min-h-0 ${isCallRoute ? 'overflow-hidden' : ''}`}>
+      <main className={`flex-1 min-h-0 ${hideChrome ? 'overflow-hidden' : ''}`}>
         <Page {...pageProps}/>
       </main>
       {!NO_FOOTER_ROUTES.has(route) && <Footer navigate={navigate}/>}

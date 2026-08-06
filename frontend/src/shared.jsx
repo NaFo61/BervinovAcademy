@@ -21,6 +21,7 @@ const Routes = {
   MESSAGES: 'messages',
   PRO: 'pro',
   PLAYGROUND: 'playground',
+  WHITEBOARD: 'whiteboard',
 };
 
 const KNOWN_ROUTES = new Set(Object.values(Routes));
@@ -291,13 +292,14 @@ function mapApiModules(modules) {
     const theories = mod.lessons_theories || [];
     const radio = mod.lessons_radio || [];
     const checkbox = mod.lessons_checkbox || [];
+    const shortAnswer = mod.lessons_short_answer || [];
     const coding = mod.lessons_coding || [];
     return {
       id: mod.public_id,
       title: mod.title,
       icon: MODULE_ICONS[i % MODULE_ICONS.length],
       lessons: theories.length,
-      quizzes: radio.length + checkbox.length,
+      quizzes: radio.length + checkbox.length + shortAnswer.length,
       hours: 0,
       tasks: coding.length,
       items: [],
@@ -1254,65 +1256,36 @@ const I = {
       <path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.8 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2 1-.3 2-.4 3-.4s2 .1 3 .4c2.3-1.5 3.3-1.2 3.3-1.2.7 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.5-2.7 5.5-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.5-1.5 7.8-5.8 7.8-10.9C23.5 5.7 18.3.5 12 .5z" />
     </svg>,
 
+  // Brand marks: circle r=9 leaves ~3u padding so UA svg{overflow:hidden} never clips AA.
+  // display:block kills baseline gap that flat-crops bottoms inside h-10 buttons.
   Yandex: ({ className }) =>
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.4 15.2h-1.7V8.9H9.8V7.3h3.6v9.9z" />
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" overflow="visible"
+      className={`block shrink-0 overflow-visible ${className || ''}`} aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9" fill="currentColor" />
+      <path fill="#fff" d="M13.15 7.15c.2 0 .36.12.42.3l2.2 6.55c.09.26-.1.52-.38.52h-1.32a.43.43 0 0 1-.41-.3l-.36-1.15h-2.55l-.43 1.2a.43.43 0 0 1-.41.25H8.25a.41.41 0 0 1-.39-.54l3.05-7.58c.07-.18.24-.3.42-.3h1.82zm-.88 1.9L10.9 12.05h1.82l-1.45-3z" />
     </svg>,
 
   VK: ({ className }) =>
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M12.5 2C6.7 2 2 6.5 2 12.1 2 17.6 6.6 22 12.5 22S23 17.6 23 12.1C23 6.5 18.3 2 12.5 2zm5.1 14.6h-1.5c-.6 0-.8-.5-1.9-1.6-1-.9-1.4-1-1.6-1-.4 0-.5.1-.5.6v1.4c0 .4-.1.6-1.1.6-1.6 0-3.4-.9-4.6-2.7C5 11.4 4.3 9 4.3 8.6c0-.2.1-.4.5-.4h1.5c.4 0 .5.2.7.6.8 2.2 2.1 4.1 2.6 4.1.2 0 .3-.1.3-.6V9.8c-.1-.9-.5-1-.5-1.3 0-.2.2-.4.4-.4h2.3c.3 0 .5.2.5.6v3.2c0 .4.2.5.3.5.2 0 .4-.1.7-.4 1-1.1 1.7-2.8 1.7-2.8.1-.2.3-.4.7-.4h1.5c.5 0 .6.3.5.6-.3 1.2-2.7 4.1-2.7 4.1-.2.3-.2.4 0 .7.2.2.7.7 1.1 1.2.7.8 1.2 1.5 1.3 1.9.2.4 0 .7-.4.7z" />
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" overflow="visible"
+      className={`block shrink-0 overflow-visible ${className || ''}`} aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9" fill="currentColor" />
+      <path fill="#fff" d="M17.55 16.35h-1.48c-.55 0-.72-.44-1.8-1.5-.95-.9-1.36-1.02-1.58-1.02-.33 0-.42.12-.42.55v1.35c0 .38-.12.55-1.08.55-1.55 0-3.28-.9-4.5-2.6-1.49-2.05-2.19-4.35-2.19-4.75 0-.2.1-.4.45-.4h1.48c.35 0 .48.18.62.55.85 2.2 2.25 4.1 2.82 4.1.22 0 .32-.1.32-.55V10.3c-.05-.9-.52-.98-.52-1.3 0-.18.15-.37.4-.37h2.25c.32 0 .45.18.45.55v3.1c0 .35.15.45.28.45.18 0 .35-.1.68-.42.95-1.05 1.62-2.7 1.62-2.7.1-.22.3-.4.65-.4h1.45c.45 0 .55.25.45.55-.25 1.15-2.55 3.95-2.55 3.95-.18.28-.18.4 0 .65.15.2.65.65 1.05 1.1.7.8 1.2 1.45 1.32 1.85.15.4-.05.65-.42.65z" />
     </svg>,
 
 };
 
 // ------- Course catalog -------
-const CATEGORIES = ['Все', 'Python', 'Web', 'Алгоритмы', 'ML', 'Базы данных'];
+const CATEGORIES = ['Все', 'ЕГЭ', 'Информатика'];
 
 const COURSES = [
 {
-  id: 'python-junior', title: 'Python с нуля до Junior',
-  desc: 'Базовый синтаксис, ООП, асинхронность, тестирование, чистый код. Проект — бот для сообщества VK в проде.',
-  rating: 4.9, students: 1240, lessons: 42, hours: 86, price: 14900, level: 'Новичок', lang: 'RU',
-  cat: 'Python', tags: ['Python', 'ООП', 'Async'],
-  gradFrom: '#1D4ED8', gradTo: '#22D3EE', accentEmoji: 'Py', popularity: 92
+  id: 'ege-informatika', title: 'ЕГЭ-информатика',
+  desc: 'Подготовка к ЕГЭ по информатике: графы, кодирование и поиск, электронные таблицы и контрольная.',
+  rating: 4.9, students: 1240, lessons: 41, hours: 60, price: 14900, level: 'ЕГЭ', lang: 'RU',
+  cat: 'ЕГЭ', tags: ['ЕГЭ', 'Информатика'],
+  gradFrom: '#1D4ED8', gradTo: '#22D3EE', accentEmoji: 'ЕГЭ', popularity: 98
 },
-{
-  id: 'algo', title: 'Алгоритмы и структуры данных',
-  desc: 'Big-O, графы, ДП, сегментные деревья — то, что реально спрашивают на собеседованиях.',
-  rating: 4.8, students: 980, lessons: 35, hours: 64, price: 16900, level: 'Средний', lang: 'RU',
-  cat: 'Алгоритмы', tags: ['DP', 'Графы', 'Хэши'],
-  gradFrom: '#1E3A8A', gradTo: '#3B82F6', accentEmoji: '∑', popularity: 86
-},
-{
-  id: 'web-react-fastapi', title: 'Веб-разработка: React + FastAPI',
-  desc: 'Full-stack: React 18, TanStack Query, FastAPI, Postgres, Docker, деплой. Один проект — от макета до прода.',
-  rating: 4.9, students: 1560, lessons: 58, hours: 124, price: 19900, level: 'Средний', lang: 'RU',
-  cat: 'Web', tags: ['React', 'FastAPI', 'Docker'],
-  gradFrom: '#0891B2', gradTo: '#2563EB', accentEmoji: '⌘', popularity: 98
-},
-{
-  id: 'ml-essentials', title: 'ML без магии',
-  desc: 'Numpy, pandas, sklearn, основы DL. Без воды и хайпа — только то, что работает в проде.',
-  rating: 4.7, students: 620, lessons: 31, hours: 52, price: 17900, level: 'Средний', lang: 'RU',
-  cat: 'ML', tags: ['sklearn', 'pandas'],
-  gradFrom: '#2563EB', gradTo: '#06B6D4', accentEmoji: 'ML', popularity: 74
-},
-{
-  id: 'postgres-pro', title: 'PostgreSQL для разработчика',
-  desc: 'Индексы, EXPLAIN, оконные функции, репликация. Почему ваш JOIN медленный — и как это лечить.',
-  rating: 4.8, students: 480, lessons: 24, hours: 38, price: 12900, level: 'Продвинутый', lang: 'RU',
-  cat: 'Базы данных', tags: ['SQL', 'Index'],
-  gradFrom: '#0E7490', gradTo: '#22D3EE', accentEmoji: 'SQL', popularity: 68
-},
-{
-  id: 'system-design', title: 'System Design на пальцах',
-  desc: 'Очереди, кэш, шардирование, eventual consistency. От лайков до распределённых счётчиков.',
-  rating: 4.9, students: 740, lessons: 28, hours: 42, price: 18900, level: 'Продвинутый', lang: 'RU',
-  cat: 'Web', tags: ['Архитектура', 'Очереди'],
-  gradFrom: '#4F46E5', gradTo: '#0EA5E9', accentEmoji: 'SD', popularity: 81
-}];
-
+];
 
 // ------- Layout chrome -------
 function urlBase64ToUint8Array(base64String) {
@@ -1605,6 +1578,7 @@ function TopNav({ route, navigate }) {
     { id: Routes.LANDING, label: 'Главная' },
     { id: Routes.CATALOG, label: 'Каталог' },
     { id: Routes.PLAYGROUND, label: 'Python' },
+    { id: Routes.WHITEBOARD, label: 'Доска' },
     { id: Routes.PRO, label: 'Про' },
     { id: Routes.PROFILE, label: 'Профиль' },
     ...(isMentor ? [{ id: Routes.MENTOR, label: 'Ментор' }] : []),
@@ -1712,6 +1686,7 @@ function Footer({ navigate }) {
         <FooterCol title="Учёба" items={[
         { label: 'Каталог курсов', onClick: () => navigate(Routes.CATALOG) },
         { label: 'Python-интерпретатор', onClick: () => navigate(Routes.PLAYGROUND) },
+        { label: 'Доска', onClick: () => navigate(Routes.WHITEBOARD) },
         { label: 'Тариф Про', onClick: () => navigate(Routes.PRO) },
         { label: 'Мой профиль', onClick: () => navigate(Routes.PROFILE) },
         { label: 'Сертификаты', onClick: () => {} }]

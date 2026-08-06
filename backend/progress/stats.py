@@ -12,6 +12,7 @@ from content.models import (
     Course,
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
+    LessonShortAnswer,
     LessonTheory,
 )
 
@@ -19,6 +20,7 @@ from .models import (
     CodeSubmission,
     UserAnswerCheckBox,
     UserAnswerRadio,
+    UserAnswerShort,
     UserLessonTheoryRead,
 )
 
@@ -53,6 +55,15 @@ def _distinct_checkbox_solved(user) -> int:
     )
 
 
+def _distinct_short_answer_solved(user) -> int:
+    return (
+        UserAnswerShort.objects.filter(user=user, is_correct=True)
+        .values("question_id")
+        .distinct()
+        .count()
+    )
+
+
 def _theories_read(user) -> int:
     return UserLessonTheoryRead.objects.filter(user=user).count()
 
@@ -64,6 +75,10 @@ def _activity_dates(user) -> set:
     ).dates("created_at", "day"):
         dates.add(row)
     for row in UserAnswerCheckBox.objects.filter(
+        user=user, is_correct=True
+    ).dates("created_at", "day"):
+        dates.add(row)
+    for row in UserAnswerShort.objects.filter(
         user=user, is_correct=True
     ).dates("created_at", "day"):
         dates.add(row)
@@ -135,6 +150,15 @@ def _course_lesson_counts(course: Course) -> dict[str, int]:
         )
         .count()
     )
+    short_answer = (
+        LessonShortAnswer.objects.filter(is_active=True)
+        .filter(
+            Q(module_id__in=module_ids)
+            | Q(exam_id__in=exam_ids)
+            | Q(course_id=course.id, module__isnull=True, exam__isnull=True)
+        )
+        .count()
+    )
     coding = (
         CodingChallenge.objects.filter(is_active=True)
         .filter(
@@ -148,8 +172,9 @@ def _course_lesson_counts(course: Course) -> dict[str, int]:
         "theory": theory,
         "radio": radio,
         "checkbox": checkbox,
+        "short_answer": short_answer,
         "coding": coding,
-        "total": theory + radio + checkbox + coding,
+        "total": theory + radio + checkbox + short_answer + coding,
     }
 
 
@@ -210,6 +235,22 @@ def _course_done_counts(user, course: Course) -> int:
         .distinct()
         .count()
     )
+    short_filter = Q(is_correct=True, question__is_active=True) & (
+        Q(question__module_id__in=module_ids)
+        | Q(question__exam_id__in=exam_ids)
+        | Q(
+            question__course_id=course.id,
+            question__module__isnull=True,
+            question__exam__isnull=True,
+        )
+    )
+    short_done = (
+        UserAnswerShort.objects.filter(user=user)
+        .filter(short_filter)
+        .values("question_id")
+        .distinct()
+        .count()
+    )
     coding_filter = Q(
         status=CodeSubmission.STATUS_COMPLETED, challenge__is_active=True
     ) & (
@@ -228,7 +269,7 @@ def _course_done_counts(user, course: Course) -> int:
         .distinct()
         .count()
     )
-    return theory_done + radio_done + checkbox_done + coding_done
+    return theory_done + radio_done + checkbox_done + short_done + coding_done
 
 
 def count_courses_completed(user) -> int:
@@ -246,15 +287,17 @@ def get_user_progress_stats(user) -> dict[str, int]:
     coding = _distinct_coding_solved(user)
     radio = _distinct_radio_solved(user)
     checkbox = _distinct_checkbox_solved(user)
+    short_answer = _distinct_short_answer_solved(user)
     theories = _theories_read(user)
-    quizzes = radio + checkbox
+    quizzes = radio + checkbox + short_answer
 
     return {
-        "tasks_solved": coding + radio + checkbox,
+        "tasks_solved": coding + radio + checkbox + short_answer,
         "coding_solved": coding,
         "quizzes_solved": quizzes,
         "radio_solved": radio,
         "checkbox_solved": checkbox,
+        "short_answer_solved": short_answer,
         "theories_read": theories,
         "courses_completed": count_courses_completed(user),
         "streak_days": compute_streak_days(user),
@@ -327,6 +370,23 @@ def build_completed_lesson_keys(user, course: Course) -> set[str]:
     ):
         keys.add(_lesson_key("checkbox", row))
 
+    short_q = Q(is_correct=True, question__is_active=True) & (
+        Q(question__module_id__in=module_ids)
+        | Q(question__exam_id__in=exam_ids)
+        | Q(
+            question__course_id=course.id,
+            question__module__isnull=True,
+            question__exam__isnull=True,
+        )
+    )
+    for row in (
+        UserAnswerShort.objects.filter(user=user)
+        .filter(short_q)
+        .values_list("question__public_id", flat=True)
+        .distinct()
+    ):
+        keys.add(_lesson_key("short_answer", row))
+
     coding_q = Q(
         status=CodeSubmission.STATUS_COMPLETED, challenge__is_active=True
     ) & (
@@ -369,6 +429,7 @@ def get_course_progress_detail(user, course: Course) -> dict:
             "theory": counts["theory"],
             "radio": counts["radio"],
             "checkbox": counts["checkbox"],
+            "short_answer": counts["short_answer"],
             "coding": counts["coding"],
         },
         "exams": get_course_exam_summary(user, course),
@@ -387,6 +448,11 @@ def get_daily_activity_counts(user, days: int = 30) -> list[dict]:
         counts[timezone.localtime(dt).date()] += 1
 
     for dt in UserAnswerCheckBox.objects.filter(
+        user=user, is_correct=True
+    ).values_list("created_at", flat=True):
+        counts[timezone.localtime(dt).date()] += 1
+
+    for dt in UserAnswerShort.objects.filter(
         user=user, is_correct=True
     ).values_list("created_at", flat=True):
         counts[timezone.localtime(dt).date()] += 1

@@ -7,6 +7,7 @@ const KIND_META = {
   theory: { emoji: '📖', label: 'Теория', color: 'text-blue-600 bg-blue-50' },
   radio: { emoji: '🔘', label: 'Radio', color: 'text-violet-600 bg-violet-50' },
   checkbox: { emoji: '☑️', label: 'Checkbox', color: 'text-cyan-600 bg-cyan-50' },
+  short_answer: { emoji: '✎', label: 'Краткий ответ', color: 'text-amber-700 bg-amber-50' },
   coding: { emoji: '💻', label: 'Код', color: 'text-purple-600 bg-purple-50' },
 };
 
@@ -309,11 +310,32 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
               </>
             )}
 
-            {(kind === 'radio' || kind === 'checkbox') && (
+            {(kind === 'radio' || kind === 'checkbox' || kind === 'short_answer') && (
               <div>
                 <FieldLabel>Текст вопроса</FieldLabel>
                 <TextArea value={form.question_text} onChange={(v) => setForm({ ...form, question_text: v })} rows={4}/>
               </div>
+            )}
+
+            {kind === 'short_answer' && (
+              <>
+                <div>
+                  <FieldLabel hint="Не показывается ученику до разбора">Эталонный ответ</FieldLabel>
+                  <TextInput value={form.correct_answer} onChange={(v) => setForm({ ...form, correct_answer: v })}/>
+                </div>
+                <div>
+                  <FieldLabel>Нормализация</FieldLabel>
+                  <select
+                    value={form.answer_normalize || 'strip_casefold'}
+                    onChange={(e) => setForm({ ...form, answer_normalize: e.target.value })}
+                    className="w-full h-11 px-3 rounded-xl bg-white ring-1 ring-black/[0.08] text-sm"
+                  >
+                    <option value="strip_casefold">Trim + пробелы + без регистра</option>
+                    <option value="exact">Точное совпадение</option>
+                    <option value="numeric">Числовое (зарезервировано)</option>
+                  </select>
+                </div>
+              </>
             )}
 
             {kind === 'coding' && (
@@ -334,7 +356,7 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
               <TextArea value={form.comment} onChange={(v) => setForm({ ...form, comment: v })} rows={3}/>
             </div>
 
-            {(kind === 'radio' || kind === 'checkbox') && (
+            {(kind === 'radio' || kind === 'checkbox' || kind === 'short_answer') && (
               <div>
                 <FieldLabel hint="Короткий текст после ответа">Пояснение после ответа</FieldLabel>
                 <TextArea value={form.explanation} onChange={(v) => setForm({ ...form, explanation: v })} rows={3}/>
@@ -342,7 +364,7 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
             )}
 
             <div className="grid sm:grid-cols-3 gap-4">
-              {(kind === 'radio' || kind === 'checkbox' || kind === 'coding') && (
+              {(kind === 'radio' || kind === 'checkbox' || kind === 'short_answer' || kind === 'coding') && (
                 <div>
                   <FieldLabel>Баллы</FieldLabel>
                   <TextInput value={String(form.points ?? '')} onChange={(v) => setForm({ ...form, points: Number(v) || 0 })}/>

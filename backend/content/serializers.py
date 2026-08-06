@@ -7,6 +7,7 @@ from .models import (
     Course,
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
+    LessonShortAnswer,
     LessonTheory,
     Module,
     RadioAnswerOption,
@@ -22,6 +23,8 @@ from .solution_access import (
     has_reference_solution_content,
     radio_solution_unlocked,
     radio_wrong_attempts,
+    short_answer_solution_unlocked,
+    short_answer_wrong_attempts,
 )
 from .video_utils import build_video_payload
 
@@ -39,6 +42,34 @@ class CourseMentorBriefSerializer(serializers.ModelSerializer):
 
 def _serialize_video(serializer, obj):
     return build_video_payload(obj, serializer.context.get("request"))
+
+
+def _theory_video_fields(serializer, obj) -> dict:
+    """Pro-гейт для видео теории (зеркало reference_solution.video)."""
+    from subscriptions.services import (
+        FEATURE_SOLUTION_VIDEO,
+        user_has_feature,
+    )
+
+    full_video = build_video_payload(obj, serializer.context.get("request"))
+    has_video = bool(full_video)
+    if not has_video:
+        return {
+            "video": None,
+            "has_video": False,
+            "video_requires_pro": False,
+        }
+    request = serializer.context.get("request")
+    user = None
+    if request and getattr(request, "user", None):
+        if not request.user.is_anonymous:
+            user = request.user
+    can_see = user_has_feature(user, FEATURE_SOLUTION_VIDEO)
+    return {
+        "video": full_video if can_see else None,
+        "has_video": True,
+        "video_requires_pro": not can_see,
+    }
 
 
 class TechnologySerializer(serializers.ModelSerializer):
@@ -67,9 +98,20 @@ class LessonTheorySerializer(serializers.ModelSerializer):
         source="module.public_id", read_only=True
     )
     video = serializers.SerializerMethodField()
+    has_video = serializers.SerializerMethodField()
+    video_requires_pro = serializers.SerializerMethodField()
+
+    def _video_bundle(self, obj):
+        return _theory_video_fields(self, obj)
 
     def get_video(self, obj):
-        return _serialize_video(self, obj)
+        return self._video_bundle(obj)["video"]
+
+    def get_has_video(self, obj):
+        return self._video_bundle(obj)["has_video"]
+
+    def get_video_requires_pro(self, obj):
+        return self._video_bundle(obj)["video_requires_pro"]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -87,6 +129,8 @@ class LessonTheorySerializer(serializers.ModelSerializer):
             "content",
             "comment",
             "video",
+            "has_video",
+            "video_requires_pro",
             "order_index",
             "is_active",
         )
@@ -107,6 +151,13 @@ class LessonCheckBoxShortSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class LessonShortAnswerShortSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LessonShortAnswer
+        fields = ("public_id", "title", "order_index")
+        read_only_fields = fields
+
+
 class CodingChallengeShortSerializer(serializers.ModelSerializer):
     class Meta:
         model = CodingChallenge
@@ -118,6 +169,7 @@ class ModuleShortSerializer(serializers.ModelSerializer):
     lessons_theories = serializers.SerializerMethodField()
     lessons_radio = serializers.SerializerMethodField()
     lessons_checkbox = serializers.SerializerMethodField()
+    lessons_short_answer = serializers.SerializerMethodField()
     lessons_coding = serializers.SerializerMethodField()
 
     def get_lessons_theories(self, obj):
@@ -138,6 +190,12 @@ class ModuleShortSerializer(serializers.ModelSerializer):
         ).order_by("order_index")
         return LessonCheckBoxShortSerializer(queryset, many=True).data
 
+    def get_lessons_short_answer(self, obj):
+        queryset = obj.lessons_short_answers.filter(is_active=True).order_by(
+            "order_index"
+        )
+        return LessonShortAnswerShortSerializer(queryset, many=True).data
+
     def get_lessons_coding(self, obj):
         queryset = obj.challenges.filter(is_active=True).order_by(
             "order_index"
@@ -154,6 +212,7 @@ class ModuleShortSerializer(serializers.ModelSerializer):
             "lessons_theories",
             "lessons_radio",
             "lessons_checkbox",
+            "lessons_short_answer",
             "lessons_coding",
         )
         read_only_fields = fields
@@ -184,6 +243,7 @@ class ModuleDetailSerializer(serializers.ModelSerializer):
     lessons_theories = serializers.SerializerMethodField()
     lessons_radio = serializers.SerializerMethodField()
     lessons_checkbox = serializers.SerializerMethodField()
+    lessons_short_answer = serializers.SerializerMethodField()
     lessons_coding = serializers.SerializerMethodField()
 
     def get_lessons_theories(self, obj):
@@ -204,6 +264,12 @@ class ModuleDetailSerializer(serializers.ModelSerializer):
         ).order_by("order_index")
         return LessonCheckBoxShortSerializer(queryset, many=True).data
 
+    def get_lessons_short_answer(self, obj):
+        queryset = obj.lessons_short_answers.filter(is_active=True).order_by(
+            "order_index"
+        )
+        return LessonShortAnswerShortSerializer(queryset, many=True).data
+
     def get_lessons_coding(self, obj):
         queryset = obj.challenges.filter(is_active=True).order_by(
             "order_index"
@@ -222,6 +288,7 @@ class ModuleDetailSerializer(serializers.ModelSerializer):
             "lessons_theories",
             "lessons_radio",
             "lessons_checkbox",
+            "lessons_short_answer",
             "lessons_coding",
         )
         read_only_fields = fields
@@ -461,6 +528,76 @@ class LessonCheckBoxDetailSerializer(serializers.ModelSerializer):
     def get_answer_options(self, obj):
         opts = obj.answers.all().order_by("order_index")
         return CheckBoxAnswerOptionPublicSerializer(opts, many=True).data
+
+
+class LessonShortAnswerListSerializer(serializers.ModelSerializer):
+    module_public_id = serializers.UUIDField(
+        source="module.public_id", read_only=True
+    )
+
+    class Meta:
+        model = LessonShortAnswer
+        fields = (
+            "public_id",
+            "module_public_id",
+            "title",
+            "order_index",
+            "points",
+            "is_active",
+        )
+        read_only_fields = fields
+
+
+class LessonShortAnswerDetailSerializer(serializers.ModelSerializer):
+    module_public_id = serializers.UUIDField(
+        source="module.public_id", read_only=True
+    )
+    solution_unlocked = serializers.SerializerMethodField()
+    wrong_attempts = serializers.SerializerMethodField()
+    has_reference_solution = serializers.SerializerMethodField()
+    reference_solution = serializers.SerializerMethodField()
+
+    def _user(self):
+        request = self.context.get("request")
+        if not request or not request.user or request.user.is_anonymous:
+            return None
+        return request.user
+
+    def get_has_reference_solution(self, obj):
+        return has_reference_solution_content(obj)
+
+    def get_solution_unlocked(self, obj):
+        return short_answer_solution_unlocked(self._user(), obj)
+
+    def get_wrong_attempts(self, obj):
+        return short_answer_wrong_attempts(self._user(), obj)
+
+    def get_reference_solution(self, obj):
+        return build_reference_solution(
+            obj,
+            self.context.get("request"),
+            unlocked=short_answer_solution_unlocked(self._user(), obj),
+        )
+
+    class Meta:
+        model = LessonShortAnswer
+        fields = (
+            "public_id",
+            "module_public_id",
+            "title",
+            "question_text",
+            "comment",
+            "explanation",
+            "answer_normalize",
+            "solution_unlocked",
+            "wrong_attempts",
+            "has_reference_solution",
+            "reference_solution",
+            "order_index",
+            "points",
+            "is_active",
+        )
+        read_only_fields = fields
 
 
 class TestCaseSerializer(serializers.ModelSerializer):
