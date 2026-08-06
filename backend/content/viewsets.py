@@ -1,8 +1,9 @@
 from common.drf import UUID_LOOKUP_REGEX
+from common.lesson_access import filter_lessons_for_user
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from content.challenge_stats import get_course_challenge_stats
@@ -43,9 +44,11 @@ class CourseViewSet(
     - retrieve — детальная информация о курсе по public_id (UUID)
 
     Особенности:
-    - Доступен без авторизации (AllowAny)
+    - Каталог курсов доступен без авторизации (AllowAny)
+    - Полный текст уроков — только авторизованным + enrollment
+      (см. Lesson* / CodingChallenge ViewSets)
     - В списке возвращаются только базовые поля курса
-    - При детальном просмотре добавляются модули и уроки
+    - При детальном просмотре — структура (заголовки), без HTML уроков
     - Автоматическая генерация slug из названия
     - Сортировка по дате создания (новые сверху)
     - Используется prefetch_related для оптимизации запросов
@@ -179,38 +182,13 @@ class LessonTheoryViewSet(
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
-    """
-    ViewSet для управления теоретическими уроками.
+    """Теория: JWT + enrollment / attempt (анти-скрапинг)."""
 
-    Доступные действия:
-    - list — получение списка всех активных уроков
-    - retrieve — получение полного содержания урока
-
-    Особенности:
-    - Доступен без авторизации (AllowAny)
-    - Фильтруются уроки активных модулей активных курсов
-    - Содержит полный HTML-контент урока
-    - Сортировка по модулю и порядковому номеру
-    - Используется select_related для оптимизации
-
-    Поля урока:
-    - title — название урока
-    - content — HTML-содержание урока
-    - order_index — порядковый номер в модуле
-    - is_active — статус активности
-    - module_public_id — UUID родительского модуля
-    - Фильтр списка: query-параметр module_public_id=
-    """
-
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     lookup_field = "public_id"
     lookup_value_regex = UUID_LOOKUP_REGEX
 
     def get_queryset(self):
-        """
-        Возвращает queryset активных уроков из активных модулей и курсов.
-        Оптимизирует загрузку связанных модулей и курсов.
-        """
         queryset = (
             LessonTheory.objects.filter(is_active=True)
             .filter(public_lesson_parent_q())
@@ -218,6 +196,7 @@ class LessonTheoryViewSet(
                 "module", "module__course", "exam", "exam__course", "course"
             )
         )
+        queryset = filter_lessons_for_user(queryset, self.request.user)
         module_pub = self.request.query_params.get("module_public_id")
         if module_pub:
             queryset = queryset.filter(module__public_id=module_pub)
@@ -227,7 +206,6 @@ class LessonTheoryViewSet(
         return queryset.order_by("order_index")
 
     def get_serializer_class(self):
-        """Возвращает единый сериализатор для всех действий."""
         return LessonTheorySerializer
 
 
@@ -236,9 +214,9 @@ class LessonRadioQuestionViewSet(
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
-    """Публичный каталог вопросов с одним вариантом ответа (radio)."""
+    """Radio-вопросы: JWT + enrollment / attempt."""
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     lookup_field = "public_id"
     lookup_value_regex = UUID_LOOKUP_REGEX
 
@@ -250,6 +228,7 @@ class LessonRadioQuestionViewSet(
                 "module", "module__course", "exam", "exam__course", "course"
             )
         )
+        queryset = filter_lessons_for_user(queryset, self.request.user)
         module_pub = self.request.query_params.get("module_public_id")
         if module_pub:
             queryset = queryset.filter(module__public_id=module_pub)
@@ -269,9 +248,9 @@ class LessonCheckBoxQuestionViewSet(
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
-    """Публичный каталог вопросов с несколькими вариантами (checkbox)."""
+    """Checkbox-вопросы: JWT + enrollment / attempt."""
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     lookup_field = "public_id"
     lookup_value_regex = UUID_LOOKUP_REGEX
 
@@ -283,6 +262,7 @@ class LessonCheckBoxQuestionViewSet(
                 "module", "module__course", "exam", "exam__course", "course"
             )
         )
+        queryset = filter_lessons_for_user(queryset, self.request.user)
         module_pub = self.request.query_params.get("module_public_id")
         if module_pub:
             queryset = queryset.filter(module__public_id=module_pub)
@@ -303,52 +283,25 @@ class CodingChallengeViewSet(
     viewsets.GenericViewSet,
 ):
     """
-    ViewSet для управления задачами по программированию.
+    Задачи с кодом: JWT + enrollment / attempt.
 
-    Доступные действия:
-    - list — получение списка задач с возможностью фильтрации
-    - retrieve — получение детальной информации о задаче
-
-    Особенности:
-    - Просмотр задач доступен без авторизации
-    - Отправка кода и история решений — в API прогресса:
-      ``POST /api/progress/code/`` (тело: ``challenge`` = этот
-      ``public_id``, поле ``code``). Список своих попыток по задаче:
-      ``GET /api/progress/code/?challenge_public_id=…``
-    - Поддерживается фильтрация по курсу, модулю и сложности
-    - Сортировка по порядковому номеру и сложности
-    - В детальном просмотре показываются только не скрытые тесты
-
-    Поля задачи:
-    - public_id — публичный UUID
-    - title — название задачи
-    - description — описание задачи
-    - instructions — инструкция по выполнению
-    - initial_code — стартовый код для пользователя
-    - difficulty — уровень сложности
-    - points — количество баллов за решение
-    - time_limit_ms — ограничение по времени (мс)
-    - memory_limit_mb — ограничение по памяти (МБ)
-    - test_cases — тестовые случаи (только не скрытые)
-    - user_solved — флаг, решил ли пользователь задачу
-
-    Методы фильтрации (через query-параметры):
-    - course_public_id — UUID курса
-    - module_public_id — UUID модуля
-    - difficulty — уровень сложности (beginner, easy, medium, hard, expert)
+    Отправка кода — ``POST /api/progress/code/``.
+    ``course-stats`` остаётся публичным (агрегаты без текста заданий).
     """
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     lookup_field = "public_id"
     lookup_value_regex = UUID_LOOKUP_REGEX
 
     def get_queryset(self):
-        """
-        Возвращает queryset активных задач с поддержкой фильтрации.
-        Фильтры: course_public_id, module_public_id, difficulty.
-        Сортировка: сначала по order_index, затем по difficulty.
-        """
-        queryset = CodingChallenge.objects.filter(is_active=True)
+        queryset = (
+            CodingChallenge.objects.filter(is_active=True)
+            .filter(public_lesson_parent_q())
+            .select_related(
+                "module", "module__course", "exam", "exam__course", "course"
+            )
+        )
+        queryset = filter_lessons_for_user(queryset, self.request.user)
 
         course_pub = self.request.query_params.get("course_public_id")
         if course_pub:
@@ -358,7 +311,10 @@ class CodingChallengeViewSet(
         if module_pub:
             queryset = queryset.filter(module__public_id=module_pub)
 
-        # Фильтрация по сложности
+        exam_pub = self.request.query_params.get("exam_public_id")
+        if exam_pub:
+            queryset = queryset.filter(exam__public_id=exam_pub)
+
         difficulty = self.request.query_params.get("difficulty")
         if difficulty:
             queryset = queryset.filter(difficulty=difficulty)
@@ -366,27 +322,23 @@ class CodingChallengeViewSet(
         return queryset.order_by("order_index", "difficulty")
 
     def get_serializer_class(self):
-        """
-        Выбирает сериализатор:
-        - retrieve — детальный с тестами и информацией о решении
-        - list — компактный для списка задач
-        """
         if self.action == "retrieve":
             return CodingChallengeDetailSerializer
         return CodingChallengeListSerializer
 
     def retrieve(self, request, *args, **kwargs):
-        """
-        Детальный просмотр задачи.
-        Передает в сериализатор объект request для определения прав доступа.
-        """
         instance = self.get_object()
         serializer = self.get_serializer(
             instance, context={"request": request}
         )
         return Response(serializer.data)
 
-    @action(detail=False, methods=["get"], url_path="course-stats")
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="course-stats",
+        permission_classes=[AllowAny],
+    )
     def course_stats(self, request):
         """
         Статистика задач с кодом по курсу.

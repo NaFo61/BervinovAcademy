@@ -1,4 +1,4 @@
-"""Доставка уведомлений: in-app + Telegram + Web Push."""
+"""Доставка уведомлений: in-app + VK + Web Push."""
 
 from __future__ import annotations
 
@@ -28,6 +28,7 @@ def create_and_deliver(
     conference=None,
     url: str = "",
     persist: bool = True,
+    skip_vk: bool = False,
 ) -> Any:
     """Создать in-app уведомление (опционально) и поставить доставку в очередь."""
     note = None
@@ -51,6 +52,7 @@ def create_and_deliver(
             body=body or "",
             url=url or "",
             kind=kind,
+            skip_vk=skip_vk,
         )
     except Exception:
         logger.exception(

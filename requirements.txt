@@ -1,3 +1,4 @@
+bleach>=6.1.0
 django==4.2
 python-decouple==3.8
 psycopg2-binary==2.9.10
@@ -31,4 +32,3 @@ daphne==4.1.2
 whitenoise==6.9.0
 requests>=2.31.0
 pywebpush>=2.0.0
-PySocks>=1.7.1

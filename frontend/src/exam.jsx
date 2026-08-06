@@ -283,7 +283,7 @@ function ExamTheoryPanel({ lesson, marked, onMark }) {
       <window.VideoExplanation video={lesson.video} title="Видео"/>
       <div
         className="theory-content mt-6"
-        dangerouslySetInnerHTML={{ __html: lesson.content || '<p>Текст теории.</p>' }}
+        dangerouslySetInnerHTML={{ __html: window.sanitizeHtml(lesson.content || '<p>Текст теории.</p>') }}
       />
       <window.LessonInstructorNote text={lesson.comment} />
       <div className="mt-8 flex items-center gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200">

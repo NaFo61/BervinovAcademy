@@ -303,9 +303,12 @@ function AuthForm({ mode, setMode, navigate }) {
     email: touched.email && (
       isLogin
         ? !email.trim()
-        : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+        : !(
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+            || /^\+?\d[\d\s\-()]{8,}$/.test(email.trim())
+          )
     )
-      ? (isLogin ? 'Укажи email или телефон' : 'Похоже на неверный email')
+      ? (isLogin ? 'Укажи email или телефон' : 'Укажи email или телефон')
       : null,
     pass: touched.pass && pass.length < 8 ? 'Минимум 8 символов' : null,
     pass2: !isLogin && touched.pass2 && pass !== pass2 ? 'Пароли не совпадают' : null,
@@ -359,6 +362,30 @@ function AuthForm({ mode, setMode, navigate }) {
       navigate(window.Routes.PROFILE);
     } catch (err) {
       setServerError(err.message || 'Ошибка. Попробуй ещё раз.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startOAuth = async (provider) => {
+    setServerError('');
+    setLoading(true);
+    try {
+      const redirectUri = `${window.location.origin}/auth-callback`;
+      const data = await window.apiJson(
+        `/api/auth/oauth/${provider}/start/?redirect_uri=${encodeURIComponent(redirectUri)}`,
+      );
+      if (data.state) sessionStorage.setItem('oauth_state', data.state);
+      sessionStorage.setItem('oauth_provider', provider);
+      sessionStorage.setItem('oauth_redirect_uri', data.redirect_uri || redirectUri);
+      sessionStorage.setItem('oauth_mode', 'login');
+      if (data.authorize_url) {
+        window.location.href = data.authorize_url;
+        return;
+      }
+      setServerError('OAuth не настроен на сервере.');
+    } catch (err) {
+      setServerError(err.message || 'Не удалось начать вход.');
     } finally {
       setLoading(false);
     }
@@ -457,9 +484,9 @@ function AuthForm({ mode, setMode, navigate }) {
                   onBlur={() => setTouched((t) => ({ ...t, lastName: true }))}
                   placeholder="Петров" error={errors.lastName}/>
               </div>
-              <Field label="Email" type="email" value={email} onChange={setEmail}
+              <Field label="Email или телефон" value={email} onChange={setEmail}
                 onBlur={() => setTouched((t) => ({ ...t, email: true }))}
-                placeholder="you@bervinov.dev" error={errors.email}
+                placeholder="you@bervinov.dev или +7…" error={errors.email}
                 Icon={I.Mail}/>
               <div>
                 <Field label="Пароль" type={showPass ? 'text' : 'password'} value={pass} onChange={setPass}
@@ -507,11 +534,13 @@ function AuthForm({ mode, setMode, navigate }) {
             <div className="flex-1 h-px bg-black/[0.08]"/>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <button type="button" className="h-10 rounded-xl bg-white ring-1 ring-black/[0.08] hover:ring-violet-300 transition-colors text-sm font-medium inline-flex items-center justify-center gap-2">
-              <I.GitHub className="w-4 h-4"/> GitHub
+            <button type="button" disabled={loading} onClick={() => startOAuth('yandex')}
+              className="h-10 rounded-xl bg-white ring-1 ring-black/[0.08] hover:ring-violet-300 transition-colors text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50">
+              <I.Yandex className="w-4 h-4 text-[#FC3F1D]"/> Яндекс
             </button>
-            <button type="button" className="h-10 rounded-xl bg-white ring-1 ring-black/[0.08] hover:ring-violet-300 transition-colors text-sm font-medium inline-flex items-center justify-center gap-2">
-              <I.Telegram className="w-4 h-4 text-[#229ED9]"/> Telegram
+            <button type="button" disabled={loading} onClick={() => startOAuth('vk')}
+              className="h-10 rounded-xl bg-white ring-1 ring-black/[0.08] hover:ring-violet-300 transition-colors text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50">
+              <I.VK className="w-4 h-4 text-[#0077FF]"/> VK
             </button>
           </div>
           <div className="text-center text-sm text-ink/60 pt-2 pb-1">
@@ -716,3 +745,91 @@ function FloatChip({ emoji, label, tint }) {
 }
 
 window.AuthPage = AuthPage;
+
+function AuthCallbackPage({ navigate }) {
+  const [error, setError] = React.useState('');
+  const [done, setDone] = React.useState(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const params = new URLSearchParams(window.location.search.replace(/^\?/, ''));
+      const code = params.get('code') || '';
+      const state = params.get('state') || '';
+      const provider = sessionStorage.getItem('oauth_provider') || '';
+      const expected = sessionStorage.getItem('oauth_state') || '';
+      const redirectUri = sessionStorage.getItem('oauth_redirect_uri')
+        || `${window.location.origin}/auth-callback`;
+      const mode = sessionStorage.getItem('oauth_mode') || 'login';
+
+      if (!code || !provider) {
+        setError('Нет кода авторизации. Попробуй войти снова.');
+        return;
+      }
+      if (expected && state && expected !== state) {
+        setError('Неверный state. Попробуй войти снова.');
+        return;
+      }
+
+      try {
+        if (mode === 'link' && localStorage.getItem('access_token')) {
+          await window.apiJson(`/api/auth/oauth/${provider}/link/`, {
+            method: 'POST',
+            auth: true,
+            body: { code, redirect_uri: redirectUri, state },
+          });
+          sessionStorage.removeItem('oauth_state');
+          sessionStorage.removeItem('oauth_provider');
+          sessionStorage.removeItem('oauth_redirect_uri');
+          sessionStorage.removeItem('oauth_mode');
+          if (!cancelled) {
+            setDone(true);
+            navigate(window.Routes.PROFILE_EDIT);
+          }
+          return;
+        }
+
+        const data = await window.apiJson(`/api/auth/oauth/${provider}/`, {
+          method: 'POST',
+          body: { code, redirect_uri: redirectUri, state },
+        });
+        if (data.access) localStorage.setItem('access_token', data.access);
+        if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
+        sessionStorage.removeItem('oauth_state');
+        sessionStorage.removeItem('oauth_provider');
+        sessionStorage.removeItem('oauth_redirect_uri');
+        sessionStorage.removeItem('oauth_mode');
+        window.notifyAuthChanged();
+        if (!cancelled) {
+          setDone(true);
+          navigate(window.Routes.PROFILE);
+        }
+      } catch (e) {
+        if (!cancelled) setError(e.message || 'Ошибка OAuth.');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [navigate]);
+
+  return (
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-5">
+      <div className="max-w-md w-full rounded-2xl bg-white ring-1 ring-black/[0.06] p-8 text-center shadow-glow">
+        {error ? (
+          <>
+            <p className="text-rose-600 text-sm mb-4">{error}</p>
+            <button type="button" onClick={() => navigate(window.Routes.AUTH)}
+              className="h-11 px-5 rounded-xl btn-grad text-white text-sm font-semibold">
+              К входу
+            </button>
+          </>
+        ) : (
+          <p className="text-ink/70 text-sm">
+            {done ? 'Готово…' : 'Завершаем вход…'}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+window.AuthCallbackPage = AuthCallbackPage;

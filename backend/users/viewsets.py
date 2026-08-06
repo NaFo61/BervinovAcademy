@@ -1,12 +1,27 @@
 from common.drf import UUID_LOOKUP_REGEX
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import (
+    AuthenticationFailed,
+    NotFound,
+    ValidationError,
+)
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import User
+from .oauth import (
+    PROVIDERS,
+    OAuthConflict,
+    build_authorize_url,
+    exchange_code,
+    link_provider_to_user,
+    provider_configured,
+    resolve_or_create_user,
+    unlink_provider,
+)
 from .password_reset import confirm_reset_code, issue_reset_code
 from .serializers import (
     CustomTokenObtainPairSerializer,
@@ -128,6 +143,110 @@ class TokenRefreshViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+
+class OAuthViewSet(viewsets.ViewSet):
+    """Яндекс / VK OAuth: start, login, link, unlink."""
+
+    throttle_scope = "login"
+
+    def get_permissions(self):
+        if getattr(self, "action", None) in ("link", "unlink"):
+            return [IsAuthenticated()]
+        return [AllowAny()]
+
+    def _provider(self, provider: str) -> str:
+        provider = (provider or "").strip().lower()
+        if provider not in PROVIDERS:
+            raise ValidationError({"provider": "Неизвестный провайдер."})
+        return provider
+
+    def start(self, request, provider=None):
+        provider = self._provider(provider)
+        if not provider_configured(provider):
+            return Response(
+                {"detail": f"OAuth {provider} не настроен."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        redirect_uri = (request.query_params.get("redirect_uri") or "").strip()
+        try:
+            data = build_authorize_url(
+                provider=provider,
+                redirect_uri=redirect_uri or None,
+            )
+        except ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data)
+
+    def exchange(self, request, provider=None):
+        """POST /api/auth/oauth/{provider}/ — обмен code → JWT."""
+        provider = self._provider(provider)
+        code = request.data.get("code")
+        redirect_uri = (request.data.get("redirect_uri") or "").strip() or None
+        try:
+            profile = exchange_code(
+                provider=provider,
+                code=code,
+                redirect_uri=redirect_uri,
+            )
+            user, _created = resolve_or_create_user(profile)
+        except OAuthConflict as exc:
+            return Response(
+                {"detail": exc.message},
+                status=status.HTTP_409_CONFLICT,
+            )
+        except AuthenticationFailed as exc:
+            return Response(
+                {"detail": str(exc.detail if hasattr(exc, "detail") else exc)},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        except ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+
+        if not user.is_active:
+            return Response(
+                {"detail": "Учетная запись неактивна."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return Response(_issue_token_pair(user), status=status.HTTP_200_OK)
+
+    def link(self, request, provider=None):
+        provider = self._provider(provider)
+        code = request.data.get("code")
+        redirect_uri = (request.data.get("redirect_uri") or "").strip() or None
+        try:
+            profile = exchange_code(
+                provider=provider,
+                code=code,
+                redirect_uri=redirect_uri,
+            )
+            link_provider_to_user(request.user, profile)
+        except OAuthConflict as exc:
+            return Response(
+                {"detail": exc.message},
+                status=status.HTTP_409_CONFLICT,
+            )
+        except AuthenticationFailed as exc:
+            return Response(
+                {"detail": str(exc.detail if hasattr(exc, "detail") else exc)},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        except ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"ok": True, "provider": provider})
+
+    def unlink(self, request, provider=None):
+        provider = self._provider(provider)
+        try:
+            unlink_provider(request.user, provider)
+        except NotFound as exc:
+            return Response(
+                {"detail": str(exc.detail)},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"ok": True, "provider": provider})
 
 
 class UserProfileViewSet(viewsets.GenericViewSet):

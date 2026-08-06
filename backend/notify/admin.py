@@ -1,13 +1,6 @@
 from django.contrib import admin
-from notify.models import PushSubscription, TelegramLinkToken
+from notify.models import PushSubscription
 from unfold.admin import ModelAdmin
-
-
-@admin.register(TelegramLinkToken)
-class TelegramLinkTokenAdmin(ModelAdmin):
-    list_display = ("user", "token", "expires_at", "used_at", "created_at")
-    search_fields = ("token", "user__email", "user__phone")
-    readonly_fields = ("public_id", "created_at")
 
 
 @admin.register(PushSubscription)

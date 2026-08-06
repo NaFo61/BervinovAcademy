@@ -470,6 +470,7 @@ def create_message(
     reply_to_public_id: str | None = None,
     upload=None,
     uploads=None,
+    source: str = ChatMessage.Source.SITE,
 ) -> ChatMessage:
     if not user_in_thread(sender, thread):
         raise PermissionDenied("Нет доступа к этому диалогу.")
@@ -529,6 +530,7 @@ def create_message(
             CODE_LANGUAGE_PYTHON if kind == ChatMessage.Kind.CODE else ""
         ),
         reply_to=reply_to,
+        source=source or ChatMessage.Source.SITE,
     )
     message.save()
     if files:
@@ -583,7 +585,7 @@ def create_message(
             from communication.models import UserNotification
 
             # In-app только для студента (ментор и так в кабинете);
-            # Telegram/Push — обоим.
+            # VK/Push — обоим. Сообщения из VK не эхоим обратно в VK.
             persist = recipient.pk == thread.student_id
             other_id = (
                 thread.mentor.public_id
@@ -597,6 +599,7 @@ def create_message(
                 body=preview,
                 url=site_url(f"/messages?user={other_id}"),
                 persist=persist,
+                skip_vk=(source == ChatMessage.Source.VK),
             )
 
     return message

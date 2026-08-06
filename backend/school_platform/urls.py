@@ -8,6 +8,7 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from rest_framework.permissions import IsAdminUser
 
 
 def health_check(request):
@@ -21,6 +22,8 @@ def home_view(request):
 
     return render(request, "home.html")
 
+
+_schema_permission = [IsAdminUser] if not settings.DEBUG else []
 
 urlpatterns = [
     path("", home_view, name="home"),
@@ -36,15 +39,23 @@ urlpatterns = [
     path("api/", include("communication.urls")),
     path("api/", include("subscriptions.urls")),
     path("api/", include("notify.urls")),
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/schema/",
+        SpectacularAPIView.as_view(permission_classes=_schema_permission),
+        name="schema",
+    ),
     path(
         "api/swagger/",
-        SpectacularSwaggerView.as_view(url_name="schema"),
+        SpectacularSwaggerView.as_view(
+            url_name="schema", permission_classes=_schema_permission
+        ),
         name="swagger-ui",
     ),
     path(
         "api/redoc/",
-        SpectacularRedocView.as_view(url_name="schema"),
+        SpectacularRedocView.as_view(
+            url_name="schema", permission_classes=_schema_permission
+        ),
         name="redoc",
     ),
 ]

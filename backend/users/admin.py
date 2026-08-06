@@ -75,9 +75,9 @@ class CustomUserAdmin(ModelAdmin):
                     "last_name",
                     "avatar",
                     "bio",
-                    "telegram_id",
-                    "telegram_username",
-                    "telegram_linked_at",
+                    "yandex_id",
+                    "vk_id",
+                    "vk_messages_allowed",
                 )
             },
         ),

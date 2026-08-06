@@ -117,8 +117,10 @@ def build_reference_solution(obj, request, *, unlocked: bool) -> dict | None:
 
     user = _authenticated_user(request)
     can_see_video = user_has_feature(user, FEATURE_SOLUTION_VIDEO)
+    from common.html_sanitize import sanitize_html
+
     return {
-        "text": text,
+        "text": sanitize_html(text),
         "video": full_video if can_see_video else None,
         "has_video": has_video,
         "video_requires_pro": has_video and not can_see_video,

@@ -69,6 +69,20 @@ def test_clean_raises_if_no_email_and_no_phone():
 @pytest.mark.integration
 @pytest.mark.models
 @pytest.mark.django_db
+def test_clean_passes_with_yandex_only():
+    user = User(
+        first_name="Иван",
+        last_name="Иванов",
+        yandex_id="ya-1",
+        role="student",
+    )
+    user.clean()
+
+
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.models
+@pytest.mark.django_db
 def test_clean_passes_with_email_only():
     user = User(
         first_name="Иван",

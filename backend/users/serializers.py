@@ -309,18 +309,30 @@ class UserPrivateProfileSerializer(UserPublicProfileSerializer):
     email = serializers.EmailField(allow_null=True, read_only=True)
     phone = serializers.CharField(allow_null=True, read_only=True)
     subscription = serializers.SerializerMethodField()
-    telegram = serializers.SerializerMethodField()
+    oauth = serializers.SerializerMethodField()
+    vk = serializers.SerializerMethodField()
 
     def get_subscription(self, obj):
         from subscriptions.services import subscription_payload
 
         return subscription_payload(obj)
 
-    def get_telegram(self, obj):
+    def get_oauth(self, obj):
         return {
-            "linked": bool(obj.telegram_id),
-            "username": obj.telegram_username or "",
-            "linked_at": obj.telegram_linked_at,
+            "yandex": bool(obj.yandex_id),
+            "vk": bool(obj.vk_id),
+        }
+
+    def get_vk(self, obj):
+        from django.conf import settings
+        from notify.vk_api import community_write_url, is_configured
+
+        return {
+            "linked": bool(obj.vk_id),
+            "messages_allowed": bool(obj.vk_messages_allowed),
+            "bot_configured": is_configured(),
+            "group_id": (getattr(settings, "VK_GROUP_ID", "") or "").strip(),
+            "write_url": community_write_url(),
         }
 
     class Meta(UserPublicProfileSerializer.Meta):
@@ -328,7 +340,8 @@ class UserPrivateProfileSerializer(UserPublicProfileSerializer):
             "email",
             "phone",
             "subscription",
-            "telegram",
+            "oauth",
+            "vk",
         )
         read_only_fields: tuple[str, ...] = (
             "public_id",
@@ -341,7 +354,8 @@ class UserPrivateProfileSerializer(UserPublicProfileSerializer):
             "email",
             "phone",
             "subscription",
-            "telegram",
+            "oauth",
+            "vk",
         )
 
 

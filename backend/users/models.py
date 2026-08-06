@@ -22,15 +22,25 @@ class CustomUserManager(BaseUserManager):
     def create_user(
         self, email=None, phone=None, password=None, **extra_fields
     ):
-        # Для обычных пользователей: email ИЛИ phone
-        if not email and not phone:
-            raise ValueError(_("Необходимо указать email или телефон"))
+        # email / phone / OAuth id — хотя бы один идентификатор
+        if (
+            not email
+            and not phone
+            and not extra_fields.get("yandex_id")
+            and not extra_fields.get("vk_id")
+        ):
+            raise ValueError(
+                _("Необходимо указать email, телефон или соц. аккаунт")
+            )
 
         if email:
             email = self.normalize_email(email)
 
         user = self.model(email=email, phone=phone, **extra_fields)
-        user.set_password(password)
+        if password:
+            user.set_password(password)
+        else:
+            user.set_unusable_password()
         user.save(using=self._db)
         return user
 
@@ -78,9 +88,15 @@ class User(UUIDPublicIdMixin, AbstractBaseUser, PermissionsMixin):
         return f"avatars/{user_identifier}/{filename}"
 
     def clean(self):
-        # Базовая проверка: email ИЛИ телефон для всех пользователей
-        if not self.email and not self.phone:
-            raise ValidationError(_("Необходимо указать email или телефон"))
+        if (
+            not self.email
+            and not self.phone
+            and not self.yandex_id
+            and not self.vk_id
+        ):
+            raise ValidationError(
+                _("Необходимо указать email, телефон или соц. аккаунт")
+            )
 
         if self.role == "admin" or self.is_superuser:
             if not self.email:
@@ -161,23 +177,25 @@ class User(UUIDPublicIdMixin, AbstractBaseUser, PermissionsMixin):
         help_text=_("Биография пользователя"),
         blank=True,
     )
-    telegram_id = models.BigIntegerField(
-        verbose_name=_("Telegram ID"),
+    yandex_id = models.CharField(
+        verbose_name=_("Yandex ID"),
+        max_length=64,
         null=True,
         blank=True,
         unique=True,
-        help_text=_("ID чата Telegram для уведомлений"),
+        help_text=_("Идентификатор Яндекс ID"),
     )
-    telegram_username = models.CharField(
-        verbose_name=_("Telegram username"),
-        max_length=64,
-        blank=True,
-        default="",
-    )
-    telegram_linked_at = models.DateTimeField(
-        verbose_name=_("Telegram привязан"),
+    vk_id = models.BigIntegerField(
+        verbose_name=_("VK ID"),
         null=True,
         blank=True,
+        unique=True,
+        help_text=_("Идентификатор VK (OAuth и сообщения сообщества)"),
+    )
+    vk_messages_allowed = models.BooleanField(
+        verbose_name=_("VK: сообщения разрешены"),
+        default=False,
+        help_text=_("Пользователь разрешил сообщения от сообщества"),
     )
     date_joined = models.DateTimeField(
         verbose_name=_("Дата регистрации"),

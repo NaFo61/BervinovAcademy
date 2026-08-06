@@ -27,7 +27,7 @@ import logging
 from common.drf import UUID_LOOKUP_REGEX
 from django.db.models import Exists, OuterRef
 from rest_framework import mixins, status, viewsets
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import (
@@ -162,6 +162,7 @@ class UserCodeSubmissionViewSet(
     """
 
     permission_classes = [IsAuthenticated]
+    throttle_scope = "code_submit"
     serializer_class = CodeSubmissionSerializer
     lookup_field = "public_id"
     lookup_value_regex = UUID_LOOKUP_REGEX
@@ -268,13 +269,14 @@ class LessonUserCommentViewSet(
     serializer_class = LessonUserCommentSerializer
     lookup_field = "public_id"
     lookup_value_regex = UUID_LOOKUP_REGEX
+    throttle_scope = "comments"
 
     def get_permissions(self):
         if self.action == "create":
             return [IsAuthenticated()]
         if self.action == "destroy":
             return [IsAuthenticated()]
-        return [AllowAny()]
+        return [IsAuthenticated()]
 
     def get_queryset(self):
         qs = (

@@ -79,6 +79,7 @@ testpaths = [
     "backend/communication/tests",
     "backend/exams/tests",
     "backend/subscriptions/tests",
+    "backend/notify/tests",
     "deploy/tests",
 ]
 

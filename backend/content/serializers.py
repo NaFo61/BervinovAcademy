@@ -71,6 +71,13 @@ class LessonTheorySerializer(serializers.ModelSerializer):
     def get_video(self, obj):
         return _serialize_video(self, obj)
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        from common.html_sanitize import sanitize_html
+
+        data["content"] = sanitize_html(data.get("content"))
+        return data
+
     class Meta:
         model = LessonTheory
         fields = (

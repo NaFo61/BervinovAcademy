@@ -4,4 +4,4 @@ from django.apps import AppConfig
 class NotifyConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "notify"
-    verbose_name = "Уведомления (Telegram / Web Push)"
+    verbose_name = "Уведомления (VK / Web Push)"

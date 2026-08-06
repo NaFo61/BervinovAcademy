@@ -383,11 +383,18 @@ WHITEBOARD_MAX_EXPORT_BYTES = config(
 TLDRAW_LICENSE_KEY = config("TLDRAW_LICENSE_KEY", default="").strip()
 
 FRONTEND_URL = config("FRONTEND_URL", default="").strip()
-TELEGRAM_BOT_TOKEN = config("TELEGRAM_BOT_TOKEN", default="").strip()
-TELEGRAM_BOT_USERNAME = config("TELEGRAM_BOT_USERNAME", default="").strip()
-TELEGRAM_WEBHOOK_SECRET = config("TELEGRAM_WEBHOOK_SECRET", default="").strip()
-TELEGRAM_PROXY = config("TELEGRAM_PROXY", default="").strip()
-TELEGRAM_API_BASE = config("TELEGRAM_API_BASE", default="").strip()
+YANDEX_OAUTH_CLIENT_ID = config("YANDEX_OAUTH_CLIENT_ID", default="").strip()
+YANDEX_OAUTH_CLIENT_SECRET = config(
+    "YANDEX_OAUTH_CLIENT_SECRET", default=""
+).strip()
+VK_OAUTH_CLIENT_ID = config("VK_OAUTH_CLIENT_ID", default="").strip()
+VK_OAUTH_CLIENT_SECRET = config("VK_OAUTH_CLIENT_SECRET", default="").strip()
+VK_GROUP_TOKEN = config("VK_GROUP_TOKEN", default="").strip()
+VK_GROUP_ID = config("VK_GROUP_ID", default="").strip()
+VK_CALLBACK_CONFIRMATION = config(
+    "VK_CALLBACK_CONFIRMATION", default=""
+).strip()
+VK_CALLBACK_SECRET = config("VK_CALLBACK_SECRET", default="").strip()
 VAPID_PUBLIC_KEY = config("VAPID_PUBLIC_KEY", default="").strip()
 VAPID_PRIVATE_KEY = config("VAPID_PRIVATE_KEY", default="").strip()
 VAPID_ADMIN_EMAIL = config(
@@ -485,13 +492,19 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
         "rest_framework.throttling.ScopedRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
+        "anon": "120/min",
+        "user": "600/min",
         "login": "25/min",
         "register": "25/min",
         "token_refresh": "20/min",
         "password_reset": "10/min",
+        "code_submit": "30/min",
+        "comments": "40/min",
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }

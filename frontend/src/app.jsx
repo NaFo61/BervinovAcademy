@@ -10,6 +10,7 @@ const ProblemPage = window.ProblemPage;
 const ProfilePage = window.ProfilePage;
 const ProfileEditPage = window.ProfileEditPage;
 const AuthPage = window.AuthPage;
+const AuthCallbackPage = window.AuthCallbackPage;
 const CoursePage = window.CoursePage;
 const LearnPage = window.LearnPage;
 const MentorPage = window.MentorPage;
@@ -21,7 +22,7 @@ const ProPage = window.ProPage;
 const PlaygroundPage = window.PlaygroundPage;
 
 const NO_FOOTER_ROUTES = new Set([
-  Routes.PROBLEM, Routes.AUTH, Routes.LEARN, Routes.EXAM, Routes.CALL, Routes.PLAYGROUND,
+  Routes.PROBLEM, Routes.AUTH, Routes.AUTH_CALLBACK, Routes.LEARN, Routes.EXAM, Routes.CALL, Routes.PLAYGROUND,
 ]);
 
 function App() {
@@ -39,6 +40,7 @@ function App() {
     [Routes.PROFILE_EDIT]: ProfileEditPage,
     [Routes.MENTOR]: MentorPage,
     [Routes.AUTH]: AuthPage,
+    [Routes.AUTH_CALLBACK]: AuthCallbackPage,
     [Routes.CALL]: CallPage,
     [Routes.CONFERENCES]: ConferencesPage,
     [Routes.MESSAGES]: MessagesPage,

@@ -185,7 +185,7 @@ function ProfileEditPage({ navigate }) {
             <p className="text-xs text-ink/45 pt-1">Контакты пока нельзя изменить здесь.</p>
           </div>
 
-          <TelegramConnectPanel user={user} onUser={setUser} />
+          <VkConnectPanel user={user} onUser={setUser} />
 
           {saveError && (
             <p className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-3">{saveError}</p>
@@ -227,36 +227,50 @@ function Field({ label, value, onChange, required }) {
   );
 }
 
-function TelegramConnectPanel({ user, onUser }) {
+function VkConnectPanel({ user, onUser }) {
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState('');
-  const [link, setLink] = React.useState(null);
-  const tg = user?.telegram || {};
+  const vk = user?.vk || {};
+  const oauth = user?.oauth || {};
 
   const refreshMe = async () => {
     const data = await window.apiJson('/api/users/me/', { auth: true });
     onUser(data);
   };
 
-  const connect = async () => {
-    setBusy(true); setErr(''); setLink(null);
+  const startLink = async (provider) => {
+    setBusy(true); setErr('');
     try {
-      const data = await window.apiJson('/api/telegram/link/', { method: 'POST', auth: true });
-      setLink(data);
+      const redirectUri = `${window.location.origin}/auth-callback`;
+      const data = await window.apiJson(
+        `/api/auth/oauth/${provider}/start/?redirect_uri=${encodeURIComponent(redirectUri)}`,
+      );
+      if (data.state) sessionStorage.setItem('oauth_state', data.state);
+      sessionStorage.setItem('oauth_provider', provider);
+      sessionStorage.setItem('oauth_redirect_uri', data.redirect_uri || redirectUri);
+      sessionStorage.setItem('oauth_mode', 'link');
+      if (data.authorize_url) {
+        window.location.href = data.authorize_url;
+        return;
+      }
+      setErr('OAuth не настроен на сервере.');
     } catch (e) {
-      setErr(e.message || 'Не удалось создать ссылку');
+      setErr(e.message || 'Не удалось начать привязку');
     } finally {
       setBusy(false);
     }
   };
 
-  const unlink = async () => {
-    if (!window.confirm('Отвязать Telegram?')) return;
+  const unlink = async (provider) => {
+    const label = provider === 'yandex' ? 'Яндекс' : 'VK';
+    if (!window.confirm(`Отвязать ${label}?`)) return;
     setBusy(true); setErr('');
     try {
-      await window.apiJson('/api/telegram/unlink/', { method: 'POST', auth: true });
+      await window.apiJson(`/api/auth/oauth/${provider}/unlink/`, {
+        method: 'POST',
+        auth: true,
+      });
       await refreshMe();
-      setLink(null);
     } catch (e) {
       setErr(e.message || 'Не удалось отвязать');
     } finally {
@@ -265,52 +279,71 @@ function TelegramConnectPanel({ user, onUser }) {
   };
 
   return (
-    <div className="rounded-2xl ring-1 ring-violet-200/80 bg-violet-50/50 p-4 sm:p-5 space-y-3">
-      <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-500/15 text-violet-700">
-          <I.Telegram className="w-5 h-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="font-bold text-ink">Telegram</div>
-          <p className="text-sm text-ink/60 mt-0.5">
-            Уведомления о сообщениях ментора, созвонах и учёбе.
-          </p>
-          {tg.linked ? (
-            <p className="text-sm text-emerald-700 mt-2 font-medium">
-              Привязан{tg.username ? `: @${tg.username}` : ''}
+    <div className="space-y-3">
+      <div className="rounded-2xl ring-1 ring-violet-200/80 bg-violet-50/50 p-4 sm:p-5 space-y-3">
+        <div className="flex items-start gap-3">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-500/15 text-violet-700">
+            <I.VK className="w-5 h-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="font-bold text-ink">Чат и уведомления VK</div>
+            <p className="text-sm text-ink/60 mt-0.5">
+              Пиши сообществу VK — сообщения уходят ментору на сайт. Ответы ментора приходят в VK.
             </p>
-          ) : (
-            <p className="text-sm text-ink/45 mt-2">Пока не привязан</p>
-          )}
+            {vk.linked ? (
+              <p className="text-sm text-emerald-700 mt-2 font-medium">
+                VK привязан{vk.messages_allowed ? ' · сообщения разрешены' : ' · напиши сообществу, чтобы разрешить сообщения'}
+              </p>
+            ) : (
+              <p className="text-sm text-ink/45 mt-2">Сначала привяжи VK через OAuth ниже</p>
+            )}
+          </div>
+        </div>
+        {err && <p className="text-sm text-red-600">{err}</p>}
+        <div className="flex flex-wrap gap-2">
+          {vk.linked && vk.write_url ? (
+            <a href={vk.write_url} target="_blank" rel="noreferrer"
+              className="h-10 px-4 rounded-xl btn-grad text-white text-sm font-semibold inline-flex items-center">
+              Написать сообществу
+            </a>
+          ) : null}
+          <button type="button" onClick={refreshMe}
+            className="h-10 px-4 rounded-xl text-sm font-semibold ring-1 ring-black/[0.08] bg-white hover:bg-black/[0.02]">
+            Обновить статус
+          </button>
+          <button type="button" onClick={() => window.enableWebPushNotifications?.()}
+            className="h-10 px-4 rounded-xl text-sm font-semibold ring-1 ring-black/[0.08] bg-white hover:bg-black/[0.02]">
+            Push в браузере
+          </button>
         </div>
       </div>
-      {err && <p className="text-sm text-red-600">{err}</p>}
-      {link?.deep_link && (
-        <div className="rounded-xl bg-white ring-1 ring-black/[0.06] p-3 text-sm space-y-2">
-          <p className="text-ink/70">Открой ссылку в Telegram и нажми Start:</p>
-          <a href={link.deep_link} target="_blank" rel="noreferrer"
-            className="block break-all text-violet-700 font-semibold hover:underline">{link.deep_link}</a>
-          <button type="button" onClick={refreshMe} className="text-xs font-semibold text-ink/50 hover:text-violet-600">
-            Я привязал — обновить статус
-          </button>
+
+      <div className="rounded-2xl ring-1 ring-black/[0.06] bg-white p-4 sm:p-5 space-y-3">
+        <div className="font-bold text-ink">Вход через соцсети</div>
+        <div className="flex flex-wrap gap-2">
+          {oauth.yandex ? (
+            <button type="button" disabled={busy} onClick={() => unlink('yandex')}
+              className="h-10 px-4 rounded-xl text-sm font-semibold text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50 disabled:opacity-50">
+              Отвязать Яндекс
+            </button>
+          ) : (
+            <button type="button" disabled={busy} onClick={() => startLink('yandex')}
+              className="h-10 px-4 rounded-xl text-sm font-semibold ring-1 ring-black/[0.08] inline-flex items-center gap-2 disabled:opacity-50">
+              <I.Yandex className="w-4 h-4 text-[#FC3F1D]" /> Привязать Яндекс
+            </button>
+          )}
+          {oauth.vk ? (
+            <button type="button" disabled={busy} onClick={() => unlink('vk')}
+              className="h-10 px-4 rounded-xl text-sm font-semibold text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50 disabled:opacity-50">
+              Отвязать VK
+            </button>
+          ) : (
+            <button type="button" disabled={busy} onClick={() => startLink('vk')}
+              className="h-10 px-4 rounded-xl text-sm font-semibold ring-1 ring-black/[0.08] inline-flex items-center gap-2 disabled:opacity-50">
+              <I.VK className="w-4 h-4 text-[#0077FF]" /> Привязать VK
+            </button>
+          )}
         </div>
-      )}
-      <div className="flex flex-wrap gap-2">
-        {tg.linked ? (
-          <button type="button" disabled={busy} onClick={unlink}
-            className="h-10 px-4 rounded-xl text-sm font-semibold text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50 disabled:opacity-50">
-            Отвязать
-          </button>
-        ) : (
-          <button type="button" disabled={busy} onClick={connect}
-            className="h-10 px-4 rounded-xl btn-grad text-white text-sm font-semibold disabled:opacity-50">
-            {busy ? '…' : 'Подключить Telegram'}
-          </button>
-        )}
-        <button type="button" onClick={() => window.enableWebPushNotifications?.()}
-          className="h-10 px-4 rounded-xl text-sm font-semibold ring-1 ring-black/[0.08] bg-white hover:bg-black/[0.02]">
-          Push в браузере
-        </button>
       </div>
     </div>
   );

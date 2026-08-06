@@ -805,7 +805,7 @@ function TheoryLesson({ lesson, isDone, onComplete, onLogin }) {
 
       <div
         className="theory-content mt-6"
-        dangerouslySetInnerHTML={{ __html: lesson.content || '<p>Содержимое урока ещё добавляется.</p>' }}
+        dangerouslySetInnerHTML={{ __html: window.sanitizeHtml(lesson.content || '<p>Содержимое урока ещё добавляется.</p>') }}
       />
       <window.LessonInstructorNote text={lesson.comment} />
 

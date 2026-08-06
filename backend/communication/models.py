@@ -279,6 +279,10 @@ class ChatMessage(UUIDPublicIdMixin, models.Model):
         CONFERENCE_DECLINED = "conference_declined", _("Созвон отклонён")
         CONFERENCE_CANCELLED = "conference_cancelled", _("Созвон отменён")
 
+    class Source(models.TextChoices):
+        SITE = "site", _("Сайт")
+        VK = "vk", _("VK")
+
     thread = models.ForeignKey(
         DirectThread,
         on_delete=models.CASCADE,
@@ -362,6 +366,13 @@ class ChatMessage(UUIDPublicIdMixin, models.Model):
         null=True,
         blank=True,
         verbose_name=_("Данные события"),
+    )
+    source = models.CharField(
+        max_length=16,
+        choices=Source.choices,
+        default=Source.SITE,
+        db_index=True,
+        verbose_name=_("Источник"),
     )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 

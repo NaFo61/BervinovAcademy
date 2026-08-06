@@ -345,6 +345,12 @@ class CodeSubmissionCreateSerializer(serializers.ModelSerializer):
         text = (value or "").strip()
         if not text:
             raise serializers.ValidationError(_("Код не может быть пустым"))
+        max_chars = 128_000
+        if len(text) > max_chars:
+            raise serializers.ValidationError(
+                _("Код слишком длинный (макс. %(n)s символов).")
+                % {"n": max_chars}
+            )
         return text
 
     def create(self, validated_data):

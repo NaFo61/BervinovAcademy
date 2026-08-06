@@ -73,6 +73,11 @@ class EditorTheorySerializer(EditorVideoMixin, serializers.ModelSerializer):
         )
         read_only_fields = ("public_id", "module_public_id", "video")
 
+    def validate_content(self, value):
+        from common.html_sanitize import sanitize_html
+
+        return sanitize_html(value)
+
 
 class EditorRadioSerializer(EditorVideoMixin, serializers.ModelSerializer):
     module_public_id = serializers.UUIDField(
@@ -99,6 +104,11 @@ class EditorRadioSerializer(EditorVideoMixin, serializers.ModelSerializer):
             "answer_options",
         )
         read_only_fields = ("public_id", "module_public_id", "video")
+
+    def validate_solution_text(self, value):
+        from common.html_sanitize import sanitize_html
+
+        return sanitize_html(value)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -166,6 +176,11 @@ class EditorCheckboxSerializer(EditorVideoMixin, serializers.ModelSerializer):
             "answer_options",
         )
         read_only_fields = ("public_id", "module_public_id", "video")
+
+    def validate_solution_text(self, value):
+        from common.html_sanitize import sanitize_html
+
+        return sanitize_html(value)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -245,6 +260,11 @@ class EditorCodingSerializer(EditorVideoMixin, serializers.ModelSerializer):
             "course_public_id",
             "video",
         )
+
+    def validate_solution_text(self, value):
+        from common.html_sanitize import sanitize_html
+
+        return sanitize_html(value)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

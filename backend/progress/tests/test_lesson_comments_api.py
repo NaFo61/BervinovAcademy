@@ -11,7 +11,9 @@ class TestLessonUserCommentsApi:
     def client(self):
         return APIClient()
 
-    def test_list_comments_public(self, client, student_user, radio_question):
+    def test_list_comments_requires_auth(
+        self, client, student_user, radio_question
+    ):
         LessonUserComment.objects.create(
             user=student_user,
             lesson_kind="radio",
@@ -22,6 +24,10 @@ class TestLessonUserCommentsApi:
             f"/api/progress/lesson-comments/"
             f"?lesson_kind=radio&lesson={radio_question.public_id}"
         )
+        response = client.get(url)
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+        client.force_authenticate(user=student_user)
         response = client.get(url)
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1

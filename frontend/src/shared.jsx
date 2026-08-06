@@ -15,6 +15,7 @@ const Routes = {
   PROFILE_EDIT: 'profile-edit',
   MENTOR: 'mentor',
   AUTH: 'auth',
+  AUTH_CALLBACK: 'auth-callback',
   CALL: 'call',
   CONFERENCES: 'conferences',
   MESSAGES: 'messages',
@@ -23,6 +24,21 @@ const Routes = {
 };
 
 const KNOWN_ROUTES = new Set(Object.values(Routes));
+
+/** Sanitize HTML before dangerouslySetInnerHTML (DOMPurify CDN). */
+function sanitizeHtml(dirty) {
+  if (!dirty) return '';
+  const purify = window.DOMPurify;
+  if (!purify || typeof purify.sanitize !== 'function') {
+    return String(dirty)
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+  return purify.sanitize(String(dirty), {
+    USE_PROFILES: { html: true },
+    ADD_ATTR: ['target', 'rel'],
+  });
+}
 
 function getAppBase() {
   if (typeof document === 'undefined') return '';
@@ -777,7 +793,7 @@ function ReferenceSolutionContent({ referenceSolution }) {
       {hasText && (
         <div
           className={`theory-content text-[15px] text-ink/85 leading-relaxed ${referenceSolution.video || referenceSolution.video_requires_pro ? 'mt-6' : ''}`}
-          dangerouslySetInnerHTML={{ __html: referenceSolution.text }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(referenceSolution.text) }}
         />
       )}
     </>
@@ -1238,10 +1254,15 @@ const I = {
       <path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.8 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2 1-.3 2-.4 3-.4s2 .1 3 .4c2.3-1.5 3.3-1.2 3.3-1.2.7 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.5-2.7 5.5-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.5-1.5 7.8-5.8 7.8-10.9C23.5 5.7 18.3.5 12 .5z" />
     </svg>,
 
-  Telegram: ({ className }) =>
+  Yandex: ({ className }) =>
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M21.5 4.2 18.3 20c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.2-8.3c.4-.4-.1-.6-.6-.3L6 12.4l-5-1.6c-1.1-.3-1.1-1.1.2-1.6L20.1 3c.9-.3 1.7.2 1.4 1.2z" />
-    </svg>
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.4 15.2h-1.7V8.9H9.8V7.3h3.6v9.9z" />
+    </svg>,
+
+  VK: ({ className }) =>
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M12.5 2C6.7 2 2 6.5 2 12.1 2 17.6 6.6 22 12.5 22S23 17.6 23 12.1C23 6.5 18.3 2 12.5 2zm5.1 14.6h-1.5c-.6 0-.8-.5-1.9-1.6-1-.9-1.4-1-1.6-1-.4 0-.5.1-.5.6v1.4c0 .4-.1.6-1.1.6-1.6 0-3.4-.9-4.6-2.7C5 11.4 4.3 9 4.3 8.6c0-.2.1-.4.5-.4h1.5c.4 0 .5.2.7.6.8 2.2 2.1 4.1 2.6 4.1.2 0 .3-.1.3-.6V9.8c-.1-.9-.5-1-.5-1.3 0-.2.2-.4.4-.4h2.3c.3 0 .5.2.5.6v3.2c0 .4.2.5.3.5.2 0 .4-.1.7-.4 1-1.1 1.7-2.8 1.7-2.8.1-.2.3-.4.7-.4h1.5c.5 0 .6.3.5.6-.3 1.2-2.7 4.1-2.7 4.1-.2.3-.2.4 0 .7.2.2.7.7 1.1 1.2.7.8 1.2 1.5 1.3 1.9.2.4 0 .7-.4.7z" />
+    </svg>,
 
 };
 
@@ -1251,7 +1272,7 @@ const CATEGORIES = ['Все', 'Python', 'Web', 'Алгоритмы', 'ML', 'Ба
 const COURSES = [
 {
   id: 'python-junior', title: 'Python с нуля до Junior',
-  desc: 'Базовый синтаксис, ООП, асинхронность, тестирование, чистый код. Проект — Telegram-бот в проде.',
+  desc: 'Базовый синтаксис, ООП, асинхронность, тестирование, чистый код. Проект — бот для сообщества VK в проде.',
   rating: 4.9, students: 1240, lessons: 42, hours: 86, price: 14900, level: 'Новичок', lang: 'RU',
   cat: 'Python', tags: ['Python', 'ООП', 'Async'],
   gradFrom: '#1D4ED8', gradTo: '#22D3EE', accentEmoji: 'Py', popularity: 92
@@ -1684,8 +1705,7 @@ function Footer({ navigate }) {
             Учим программированию вживую: ментор смотрит твой код, отвечает на вопросы и помогает не сдаваться.
           </p>
           <div className="mt-5 flex items-center gap-3">
-            <a className="w-10 h-10 rounded-xl bg-black/[0.04] hover:bg-violet-500/10 hover:text-violet-600 flex items-center justify-center transition-colors text-ink/60" href="#"><I.Telegram className="w-4 h-4" /></a>
-            <a className="w-10 h-10 rounded-xl bg-black/[0.04] hover:bg-violet-500/10 hover:text-violet-600 flex items-center justify-center transition-colors text-ink/60" href="#"><I.GitHub className="w-4 h-4" /></a>
+            <a className="w-10 h-10 rounded-xl bg-black/[0.04] hover:bg-violet-500/10 hover:text-violet-600 flex items-center justify-center transition-colors text-ink/60" href="#"><I.VK className="w-4 h-4" /></a>
             <a className="w-10 h-10 rounded-xl bg-black/[0.04] hover:bg-violet-500/10 hover:text-violet-600 flex items-center justify-center transition-colors text-ink/60" href="#"><I.Mail className="w-4 h-4" /></a>
           </div>
         </div>
@@ -1853,6 +1873,7 @@ function FloatingShapes() {
 
 Object.assign(window, {
   Routes,
+  sanitizeHtml,
   useHashRoute,
   useAppRoute,
   getApiBase,
