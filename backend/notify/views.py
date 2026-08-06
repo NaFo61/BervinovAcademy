@@ -106,8 +106,14 @@ class VkWebhookView(View):
         except (UnicodeDecodeError, json.JSONDecodeError):
             return JsonResponse({"ok": False}, status=400)
 
+        etype = (event.get("type") or "").strip()
         body_secret = (event.get("secret") or "").strip()
-        if body_secret != expected:
+        # confirmation от VK часто без secret в теле (только group_id);
+        # остальные события — требуем совпадение secret.
+        if etype != "confirmation":
+            if body_secret != expected:
+                return HttpResponseForbidden("forbidden")
+        elif body_secret and body_secret != expected:
             return HttpResponseForbidden("forbidden")
 
         try:

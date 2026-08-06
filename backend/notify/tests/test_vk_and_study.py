@@ -79,9 +79,28 @@ def test_vk_webhook_confirmation(settings):
     settings.VK_CALLBACK_SECRET = "super-secret-token"
     settings.VK_CALLBACK_CONFIRMATION = "confirm_string_abc"
     client = APIClient()
+    # Как в UI VK: confirmation часто без secret в теле
     resp = client.post(
         "/api/vk/webhook/super-secret-token/",
-        data={"type": "confirmation", "secret": "super-secret-token"},
+        data={"type": "confirmation", "group_id": 238124028},
+        format="json",
+    )
+    assert resp.status_code == 200
+    assert resp.content.decode() == "confirm_string_abc"
+
+
+@pytest.mark.django_db
+def test_vk_webhook_confirmation_with_secret(settings):
+    settings.VK_CALLBACK_SECRET = "super-secret-token"
+    settings.VK_CALLBACK_CONFIRMATION = "confirm_string_abc"
+    client = APIClient()
+    resp = client.post(
+        "/api/vk/webhook/super-secret-token/",
+        data={
+            "type": "confirmation",
+            "group_id": 1,
+            "secret": "super-secret-token",
+        },
         format="json",
     )
     assert resp.status_code == 200

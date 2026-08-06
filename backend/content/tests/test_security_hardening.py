@@ -146,7 +146,7 @@ class TestVkWebhookAuth:
         client = APIClient()
         resp = client.post(
             "/api/vk/webhook/super-secret-token/",
-            data={"type": "confirmation", "secret": "super-secret-token"},
+            data={"type": "confirmation", "group_id": 1},
             format="json",
         )
         assert resp.status_code == 200
