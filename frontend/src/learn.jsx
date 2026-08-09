@@ -114,6 +114,7 @@ function LearnPage({ navigate, hashParams }) {
 
   // ── progress (backend only) ──
   const [completed, setCompleted] = React.useState(new Set());
+  const [helpOpen, setHelpOpen] = React.useState(false);
 
   const markDone = React.useCallback((type, id) => {
     setCompleted(prev => {
@@ -807,6 +808,20 @@ function LearnPage({ navigate, hashParams }) {
           )}
         </div>
       </div>
+
+      {window.LearnHelpFab && (
+        <window.LearnHelpFab onOpen={() => setHelpOpen(true)} />
+      )}
+      {window.LearnHelpDrawer && (
+        <window.LearnHelpDrawer
+          open={helpOpen}
+          onClose={() => setHelpOpen(false)}
+          navigate={navigate}
+          courseTitle={courseData.title}
+          lessonType={lessonType}
+          lessonData={lessonData}
+        />
+      )}
     </div>
   );
 }

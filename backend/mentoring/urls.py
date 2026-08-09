@@ -12,11 +12,15 @@ from content.editor_views import (
 )
 
 from .views import (
+    AssignableMentorsView,
+    AssignStudentMentorView,
+    AssistantChatView,
     MentorChallengeDetailView,
     MentorCodeSubmissionsView,
     MentorCoursesOverviewView,
     MentorCourseStudentsView,
     MentorQuizAnswersView,
+    MyMentorView,
 )
 
 app_name = "mentoring"
@@ -46,6 +50,26 @@ urlpatterns = [
         "mentoring/quiz-answers/",
         MentorQuizAnswersView.as_view(),
         name="quiz-answers",
+    ),
+    path(
+        "mentoring/my-mentor/",
+        MyMentorView.as_view(),
+        name="my-mentor",
+    ),
+    path(
+        "mentoring/assignable-mentors/",
+        AssignableMentorsView.as_view(),
+        name="assignable-mentors",
+    ),
+    path(
+        "mentoring/students/<uuid:user_public_id>/assign-mentor/",
+        AssignStudentMentorView.as_view(),
+        name="assign-student-mentor",
+    ),
+    path(
+        "mentoring/assistant/chat/",
+        AssistantChatView.as_view(),
+        name="assistant-chat",
     ),
     path(
         "mentoring/editor/technologies/",

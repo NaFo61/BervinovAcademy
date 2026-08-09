@@ -551,6 +551,16 @@ MODELTRANSLATION_AUTO_POPULATE = False
 MODELTRANSLATION_GOOGLE_TRANSLATE_API_KEY = None
 MODELTRANSLATION_TRANSLATION_FILES = ()
 
+# Optional LLM assistant (OpenAI-compatible). Without a key → mock replies.
+ASSISTANT_LLM_ENABLED = config(
+    "ASSISTANT_LLM_ENABLED", default=False, cast=bool
+)
+OPENAI_API_KEY = config("OPENAI_API_KEY", default="")
+OPENAI_BASE_URL = config(
+    "OPENAI_BASE_URL", default="https://api.openai.com/v1"
+)
+OPENAI_MODEL = config("OPENAI_MODEL", default="gpt-4o-mini")
+
 try:
     from school_platform.local_settings import *  # noqa: F403, F401
 except ImportError:

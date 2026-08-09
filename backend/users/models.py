@@ -285,6 +285,16 @@ class Student(UUIDPublicIdMixin, models.Model):
         related_name="student_profile",
         verbose_name=_("Пользователь"),
     )
+    assigned_mentor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_students",
+        verbose_name=_("Назначенный ментор"),
+        help_text=_("Ментор ученика. Если пусто — admin или ментор курса."),
+        limit_choices_to={"role__in": ("mentor", "admin"), "is_active": True},
+    )
 
     class Meta:
         db_table = "students"

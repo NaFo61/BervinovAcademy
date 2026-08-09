@@ -46,15 +46,27 @@ def build_courses_overview(user=None) -> list[dict]:
 
 
 def build_course_students(course: Course) -> list[dict]:
+    from mentoring.assignment import mentor_brief, resolve_student_mentor
+    from users.models import Student
+
     rows = []
     enrollments = (
         Enrollment.objects.filter(course=course)
-        .select_related("user")
+        .select_related(
+            "user",
+            "user__student_profile",
+            "user__student_profile__assigned_mentor",
+        )
         .order_by("-last_activity_at")
     )
     for enrollment in enrollments:
         user = enrollment.user
         detail = get_course_progress_detail(user, course)
+        assigned = None
+        profile = getattr(user, "student_profile", None)
+        if isinstance(profile, Student) and profile.assigned_mentor_id:
+            assigned = mentor_brief(profile.assigned_mentor)
+        resolved, source = resolve_student_mentor(user)
         rows.append(
             {
                 "user_public_id": str(user.public_id),
@@ -68,6 +80,9 @@ def build_course_students(course: Course) -> list[dict]:
                 "total_steps": detail["total_steps"],
                 "started_at": enrollment.started_at.isoformat(),
                 "last_activity_at": enrollment.last_activity_at.isoformat(),
+                "assigned_mentor": assigned,
+                "resolved_mentor": mentor_brief(resolved),
+                "mentor_source": source,
             }
         )
     return rows

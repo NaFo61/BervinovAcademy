@@ -1663,6 +1663,98 @@ function TopNav({ route, navigate }) {
   );
 }
 
+/** Мягкий баннер: пароль / контакты после входа через VK или Яндекс. */
+function RecoveryBanner({ navigate }) {
+  const [recovery, setRecovery] = React.useState(null);
+  const [dismissed, setDismissed] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    if (!localStorage.getItem('access_token')) {
+      setRecovery(null);
+      return;
+    }
+    try {
+      const data = await fetchApiJson('/api/users/me/', { auth: true });
+      setRecovery(data.recovery || null);
+      // Старый ключ 7-дневного snooze больше не используем.
+      if (data.public_id) {
+        try {
+          localStorage.removeItem(`ba_recovery_snooze:${data.public_id}`);
+        } catch (_) { /* ignore */ }
+      }
+    } catch (_) {
+      setRecovery(null);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    load();
+    const onAuth = () => {
+      setDismissed(false);
+      load();
+    };
+    window.addEventListener('auth-changed', onAuth);
+    return () => window.removeEventListener('auth-changed', onAuth);
+  }, [load]);
+
+  // Пока !ready — напоминаем. «Позже» только на эту загрузку страницы; после F5 снова видно.
+  if (dismissed || !recovery?.needs_setup) {
+    return null;
+  }
+
+  const hint = (!recovery.has_email && !recovery.has_phone)
+    ? 'Лучше указать и почту, и телефон — так надёжнее. Достаточно и одного.'
+    : (!recovery.has_email || !recovery.has_phone)
+      ? 'Можно добавить ещё один контакт — так безопаснее.'
+      : '';
+
+  const onLater = () => {
+    setDismissed(true);
+  };
+
+  return (
+    <div
+      role="region"
+      aria-label="Восстановление доступа"
+      className="border-b border-amber-200/80 bg-amber-50/95 text-ink"
+    >
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold">Добавь пароль на всякий случай</div>
+          <p className="text-xs sm:text-sm text-ink/65 mt-0.5">
+            Тогда сможешь войти и без VK или Яндекса. Можно сделать позже.
+            {hint ? <> {hint}</> : null}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => navigate(Routes.PROFILE_EDIT)}
+            className="h-9 px-4 rounded-xl text-sm font-semibold btn-grad text-white"
+          >
+            Задать пароль
+          </button>
+          <button
+            type="button"
+            onClick={onLater}
+            className="h-9 px-3 rounded-xl text-sm font-semibold text-ink/60 hover:bg-black/[0.04]"
+          >
+            Позже
+          </button>
+          <button
+            type="button"
+            onClick={onLater}
+            aria-label="Закрыть"
+            className="w-9 h-9 rounded-xl text-ink/45 hover:bg-black/[0.04] text-lg leading-none"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Footer({ navigate }) {
   return (
     <footer className="mt-20 border-t border-black/5 bg-white">
@@ -1677,6 +1769,7 @@ function Footer({ navigate }) {
           </div>
           <p className="text-sm text-ink/60 max-w-sm">
             Учим программированию вживую: ментор смотрит твой код, отвечает на вопросы и помогает не сдаваться.
+
           </p>
           <div className="mt-5 flex items-center gap-3">
             <a className="w-10 h-10 rounded-xl bg-black/[0.04] hover:bg-violet-500/10 hover:text-violet-600 flex items-center justify-center transition-colors text-ink/60" href="#"><I.VK className="w-4 h-4" /></a>
@@ -1896,6 +1989,7 @@ Object.assign(window, {
   I,
   NotificationBell,
   TopNav,
+  RecoveryBanner,
   Footer,
   CourseCover,
   CourseCard,

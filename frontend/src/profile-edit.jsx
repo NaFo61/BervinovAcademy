@@ -179,14 +179,6 @@ function ProfileEditPage({ navigate }) {
             <p className="text-xs text-ink/45 mt-1 text-right">{bio.length}/500</p>
           </div>
 
-          <div className="rounded-xl bg-black/[0.03] px-4 py-3 text-sm text-ink/60 space-y-1">
-            {user.email && <div><span className="text-ink/45">Email: </span>{user.email}</div>}
-            {user.phone && <div><span className="text-ink/45">Телефон: </span>{user.phone}</div>}
-            <p className="text-xs text-ink/45 pt-1">Контакты пока нельзя изменить здесь.</p>
-          </div>
-
-          <VkConnectPanel user={user} onUser={setUser} />
-
           {saveError && (
             <p className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-3">{saveError}</p>
           )}
@@ -205,25 +197,205 @@ function ProfileEditPage({ navigate }) {
             </button>
           </div>
         </form>
+
+        <RecoveryAccessSection user={user} onUser={setUser} />
+
+        <div className="mt-6">
+          <VkConnectPanel user={user} onUser={setUser} />
+        </div>
       </div>
     </div>
   );
 }
 
-function Field({ label, value, onChange, required }) {
+function Field({ label, value, onChange, required, type = 'text', autoComplete, placeholder, disabled, hint }) {
   return (
     <div>
       <label className="block text-xs font-semibold uppercase tracking-widest text-ink/55 mb-2">
         {label}{required ? ' *' : ''}
       </label>
       <input
-        type="text"
+        type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
-        className="w-full h-11 rounded-xl border border-black/[0.08] px-4 text-sm ring-grad"
+        disabled={disabled}
+        autoComplete={autoComplete}
+        placeholder={placeholder}
+        className="w-full h-11 rounded-xl border border-black/[0.08] px-4 text-sm ring-grad disabled:bg-black/[0.03] disabled:text-ink/55"
       />
+      {hint ? <p className="text-xs text-ink/45 mt-1">{hint}</p> : null}
     </div>
+  );
+}
+
+function RecoveryAccessSection({ user, onUser }) {
+  const recovery = user?.recovery || {};
+  const hasPassword = !!recovery.has_usable_password;
+  const hasEmail = !!recovery.has_email;
+  const hasPhone = !!recovery.has_phone;
+  const ready = !!recovery.ready;
+
+  const [password, setPassword] = React.useState('');
+  const [passwordConfirm, setPasswordConfirm] = React.useState('');
+  const [currentPassword, setCurrentPassword] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [phone, setPhone] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState('');
+  const [okMsg, setOkMsg] = React.useState('');
+
+  const statusLine = ready
+    ? (hasEmail && hasPhone
+      ? 'Можно войти и без VK/Яндекса.'
+      : 'Можно войти и без VK/Яндекса. Можно добавить ещё email/телефон.')
+    : 'Пока нет полного запасного входа: нужен пароль и хотя бы один контакт.';
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErr('');
+    setOkMsg('');
+    const body = {};
+    if (password || passwordConfirm) {
+      body.password = password;
+      body.password_confirm = passwordConfirm;
+      if (hasPassword) body.current_password = currentPassword;
+    }
+    if (!hasEmail && email.trim()) body.email = email.trim();
+    if (!hasPhone && phone.trim()) body.phone = phone.trim();
+    if (!body.password && !body.email && !body.phone) {
+      setErr('Укажи пароль и/или контакт для сохранения.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const data = await window.apiJson('/api/auth/recovery/setup/', {
+        method: 'POST',
+        auth: true,
+        body,
+      });
+      onUser(data);
+      setPassword('');
+      setPasswordConfirm('');
+      setCurrentPassword('');
+      setEmail('');
+      setPhone('');
+      setOkMsg('Сохранено.');
+      window.notifyAuthChanged();
+    } catch (ex) {
+      setErr(ex.message || 'Не удалось сохранить');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="mt-8 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft p-6 sm:p-8 space-y-5">
+      <div>
+        <h2 className="text-xl font-extrabold tracking-tight">Восстановление доступа</h2>
+        <p className="text-sm text-ink/60 mt-1">
+          Пароль и контакты на случай, если вход через VK или Яндекс станет недоступен.
+        </p>
+      </div>
+
+      <div className="rounded-xl bg-black/[0.03] px-4 py-3 text-sm space-y-1.5">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-ink/70">
+          <span>Пароль: {hasPassword ? 'есть' : 'нет'}</span>
+          <span>Email: {hasEmail ? (user.email || 'есть') : 'нет'}</span>
+          <span>Телефон: {hasPhone ? (user.phone || 'есть') : 'нет'}</span>
+        </div>
+        <p className={`text-sm ${ready ? 'text-emerald-700' : 'text-ink/60'}`}>{statusLine}</p>
+        <p className="text-xs text-ink/45">
+          Можно указать оба контакта — так надёжнее. Для восстановления хватит и одного.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {!hasPassword ? (
+          <>
+            <Field
+              label="Новый пароль"
+              type="password"
+              value={password}
+              onChange={setPassword}
+              autoComplete="new-password"
+            />
+            <Field
+              label="Повтор пароля"
+              type="password"
+              value={passwordConfirm}
+              onChange={setPasswordConfirm}
+              autoComplete="new-password"
+            />
+          </>
+        ) : (
+          <details className="rounded-xl border border-black/[0.06] px-4 py-3">
+            <summary className="cursor-pointer text-sm font-semibold text-ink/70">Сменить пароль</summary>
+            <div className="mt-3 space-y-3">
+              <Field
+                label="Текущий пароль"
+                type="password"
+                value={currentPassword}
+                onChange={setCurrentPassword}
+                autoComplete="current-password"
+              />
+              <Field
+                label="Новый пароль"
+                type="password"
+                value={password}
+                onChange={setPassword}
+                autoComplete="new-password"
+              />
+              <Field
+                label="Повтор пароля"
+                type="password"
+                value={passwordConfirm}
+                onChange={setPasswordConfirm}
+                autoComplete="new-password"
+              />
+            </div>
+          </details>
+        )}
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          {hasEmail ? (
+            <Field label="Email" value={user.email || ''} onChange={() => {}} disabled hint="Уже задан" />
+          ) : (
+            <Field
+              label="Email"
+              type="email"
+              value={email}
+              onChange={setEmail}
+              placeholder="you@example.com"
+              autoComplete="email"
+            />
+          )}
+          {hasPhone ? (
+            <Field label="Телефон" value={user.phone || ''} onChange={() => {}} disabled hint="Уже задан" />
+          ) : (
+            <Field
+              label="Телефон"
+              type="tel"
+              value={phone}
+              onChange={setPhone}
+              placeholder="+79001234567"
+              autoComplete="tel"
+            />
+          )}
+        </div>
+
+        {err && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-3">{err}</p>}
+        {okMsg && <p className="text-sm text-emerald-700 bg-emerald-50 rounded-xl px-4 py-3">{okMsg}</p>}
+
+        <button
+          type="submit"
+          disabled={busy}
+          className="h-11 px-6 rounded-xl btn-grad btn-shimmer text-white text-sm font-semibold disabled:opacity-60"
+        >
+          {busy ? 'Сохраняем…' : 'Сохранить восстановление'}
+        </button>
+      </form>
+    </section>
   );
 }
 

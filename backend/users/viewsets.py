@@ -24,10 +24,12 @@ from .oauth import (
 )
 from .password_reset import confirm_reset_code, issue_reset_code
 from .serializers import (
+    ContactConflict,
     CustomTokenObtainPairSerializer,
     CustomTokenRefreshSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
+    RecoverySetupSerializer,
     UserListSerializer,
     UserPrivateProfileSerializer,
     UserPublicProfileSerializer,
@@ -68,6 +70,29 @@ class UserLoginViewSet(viewsets.GenericViewSet):
         serializer.is_valid(raise_exception=True)
         return Response(
             {**serializer.validated_data}, status=status.HTTP_200_OK
+        )
+
+
+class RecoverySetupViewSet(viewsets.GenericViewSet):
+    """Задать пароль / контакты для восстановления после OAuth."""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = RecoverySetupSerializer
+    throttle_scope = "password_reset"
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.save()
+        except ContactConflict as exc:
+            return Response(exc.detail, status=status.HTTP_409_CONFLICT)
+        request.user.refresh_from_db()
+        return Response(
+            UserPrivateProfileSerializer(
+                request.user, context={"request": request}
+            ).data,
+            status=status.HTTP_200_OK,
         )
 
 

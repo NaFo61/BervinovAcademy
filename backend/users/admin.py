@@ -243,6 +243,7 @@ class StudentAdmin(ModelAdmin):
         "user_full_name",
         "user_email",
         "user_phone",
+        "assigned_mentor",
         "date_joined",
     )
     search_fields = (
@@ -252,6 +253,8 @@ class StudentAdmin(ModelAdmin):
         "user__phone",
     )
     list_filter = ("user__is_active",)
+    list_select_related = ("user", "assigned_mentor")
+    raw_id_fields = ("user", "assigned_mentor")
     ordering = ("-user__date_joined",)
     icon = "graduation-cap"
 

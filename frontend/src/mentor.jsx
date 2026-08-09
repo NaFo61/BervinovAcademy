@@ -101,6 +101,8 @@ function MentorPage({ navigate }) {
   const [examOutline, setExamOutline] = React.useState([]);
   const [grantBusy, setGrantBusy] = React.useState(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [assignableMentors, setAssignableMentors] = React.useState([]);
+  const [assignBusy, setAssignBusy] = React.useState(null);
 
   const reloadCourses = React.useCallback(async (selectId) => {
     const data = await window.fetchApiJson('/api/mentoring/courses/', { auth: true });
@@ -128,6 +130,32 @@ function MentorPage({ navigate }) {
       window.openConferenceCall(navigate, conf.public_id);
     } catch (e) {
       setError(e.message || 'Не удалось создать созвон');
+    }
+  };
+
+  const assignMentor = async (studentPublicId, mentorPublicId) => {
+    setAssignBusy(studentPublicId);
+    setError('');
+    try {
+      await window.fetchApiJson(
+        `/api/mentoring/students/${encodeURIComponent(studentPublicId)}/assign-mentor/`,
+        {
+          method: 'POST',
+          auth: true,
+          body: { mentor_public_id: mentorPublicId || null },
+        },
+      );
+      if (selectedCourse) {
+        const studentsResp = await window.fetchApiJson(
+          `/api/mentoring/courses/${encodeURIComponent(selectedCourse)}/students/`,
+          { auth: true },
+        );
+        setStudents(studentsResp?.students || []);
+      }
+    } catch (e) {
+      setError(e.message || 'Не удалось назначить ментора');
+    } finally {
+      setAssignBusy(null);
     }
   };
 
@@ -172,6 +200,15 @@ function MentorPage({ navigate }) {
       setError('');
       try {
         await reloadCourses();
+        try {
+          const mentorsResp = await window.fetchApiJson(
+            '/api/mentoring/assignable-mentors/',
+            { auth: true },
+          );
+          if (!cancelled) setAssignableMentors(mentorsResp?.results || []);
+        } catch (_) {
+          if (!cancelled) setAssignableMentors([]);
+        }
       } catch (e) {
         if (!cancelled) setError(e.message || 'Ошибка загрузки');
       } finally {
@@ -531,6 +568,7 @@ function MentorPage({ navigate }) {
                 <tr className="text-left text-ink/45 border-b border-black/[0.06]">
                   <th className="p-4 font-semibold">Ученик</th>
                   <th className="p-4 font-semibold">Email</th>
+                  <th className="p-4 font-semibold">Ментор</th>
                   <th className="p-4 font-semibold">Прогресс</th>
                   <th className="p-4 font-semibold">Статус</th>
                   <th className="p-4 font-semibold">Действия</th>
@@ -538,7 +576,7 @@ function MentorPage({ navigate }) {
               </thead>
               <tbody>
                 {students.length === 0 ? (
-                  <tr><td colSpan={5} className="p-8 text-center text-ink/45">Пока никто не записался</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-ink/45">Пока никто не записался</td></tr>
                 ) : students.map((s) => (
                   <tr key={s.user_public_id} className="border-b border-black/[0.04] hover:bg-black/[0.015]">
                     <td className="p-4">
@@ -547,6 +585,28 @@ function MentorPage({ navigate }) {
                       </MentorLink>
                     </td>
                     <td className="p-4 text-ink/60">{s.email || s.phone || '—'}</td>
+                    <td className="p-4 min-w-[180px]">
+                      <select
+                        className="w-full max-w-[220px] h-9 rounded-lg border border-black/[0.08] bg-white px-2 text-xs"
+                        disabled={assignBusy === s.user_public_id}
+                        value={s.assigned_mentor?.public_id || ''}
+                        onChange={(e) => assignMentor(s.user_public_id, e.target.value || null)}
+                      >
+                        <option value="">Авто (курс / админ)</option>
+                        {assignableMentors.map((m) => (
+                          <option key={m.public_id} value={m.public_id}>
+                            {[m.first_name, m.last_name].filter(Boolean).join(' ') || m.email}
+                            {m.role === 'admin' ? ' · админ' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      {!s.assigned_mentor && s.resolved_mentor && (
+                        <div className="mt-1 text-[10px] text-ink/40">
+                          Сейчас: {[s.resolved_mentor.first_name, s.resolved_mentor.last_name].filter(Boolean).join(' ') || '—'}
+                          {s.mentor_source === 'default_admin' ? ' (админ)' : s.mentor_source === 'course' ? ' (курс)' : ''}
+                        </div>
+                      )}
+                    </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
                         <div className="w-20 h-1.5 bg-black/[0.06] rounded-full overflow-hidden">

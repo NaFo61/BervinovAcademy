@@ -3,7 +3,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from content.models import CodingChallenge, Course
+from users.models import User
 
+from .assignment import (
+    assign_mentor_to_student,
+    list_assignable_mentors,
+    mentor_brief,
+    resolve_student_mentor,
+)
+from .assistant import generate_assistant_reply
 from .permissions import IsMentorOrAdmin
 from .services import (
     build_challenge_detail_for_mentor,
@@ -100,3 +108,92 @@ class MentorChallengeDetailView(APIView):
         except CodingChallenge.DoesNotExist:
             return Response({"detail": "Задача не найдена."}, status=404)
         return Response(build_challenge_detail_for_mentor(challenge))
+
+
+class MyMentorView(APIView):
+    """``GET /api/mentoring/my-mentor/`` — ментор текущего студента."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if getattr(request.user, "role", None) != "student":
+            return Response({"detail": "Эндпоинт для студентов."}, status=403)
+        mentor, source = resolve_student_mentor(request.user)
+        return Response(
+            {
+                "mentor": mentor_brief(mentor),
+                "source": source,
+            }
+        )
+
+
+class AssignableMentorsView(APIView):
+    """``GET /api/mentoring/assignable-mentors/``"""
+
+    permission_classes = [IsAuthenticated, IsMentorOrAdmin]
+
+    def get(self, request):
+        rows = [mentor_brief(u) for u in list_assignable_mentors()]
+        return Response({"results": rows})
+
+
+class AssignStudentMentorView(APIView):
+    """``POST /api/mentoring/students/{user_public_id}/assign-mentor/``"""
+
+    permission_classes = [IsAuthenticated, IsMentorOrAdmin]
+
+    def post(self, request, user_public_id):
+        try:
+            student = User.objects.get(public_id=user_public_id)
+        except User.DoesNotExist:
+            return Response({"detail": "Студент не найден."}, status=404)
+
+        if "mentor_public_id" not in request.data:
+            return Response(
+                {"mentor_public_id": "Обязательное поле (или null)."},
+                status=400,
+            )
+        raw = request.data.get("mentor_public_id")
+        mentor = None
+        if raw not in (None, ""):
+            try:
+                mentor = User.objects.get(public_id=raw)
+            except User.DoesNotExist:
+                return Response(
+                    {"mentor_public_id": "Ментор не найден."}, status=400
+                )
+
+        profile = assign_mentor_to_student(
+            student=student, mentor=mentor, actor=request.user
+        )
+        resolved, source = resolve_student_mentor(student)
+        return Response(
+            {
+                "user_public_id": str(student.public_id),
+                "assigned_mentor": mentor_brief(profile.assigned_mentor),
+                "resolved_mentor": mentor_brief(resolved),
+                "source": source,
+            }
+        )
+
+
+class AssistantChatView(APIView):
+    """``POST /api/mentoring/assistant/chat/`` — вопрос по текущему уроку."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_scope = "comments"
+
+    def post(self, request):
+        message = request.data.get("message") or ""
+        history = request.data.get("history") or []
+        context = request.data.get("context") or {}
+        if not isinstance(history, list):
+            return Response({"history": "Ожидается список."}, status=400)
+        if not isinstance(context, dict):
+            return Response({"context": "Ожидается объект."}, status=400)
+        result = generate_assistant_reply(
+            message=str(message),
+            history=history,
+            context=context,
+        )
+        return Response(result)

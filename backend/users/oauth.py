@@ -283,6 +283,7 @@ def _exchange_vk(
         access = token_data.get("access_token")
         user_id = token_data.get("user_id")
         email = (token_data.get("email") or "").strip().lower() or None
+        phone = _normalize_oauth_phone(token_data.get("phone"))
         if not access or not user_id:
             raise AuthenticationFailed("VK не вернул токен.")
 
@@ -302,6 +303,8 @@ def _exchange_vk(
             profile = info_payload.get("user") or {}
             if not email:
                 email = (profile.get("email") or "").strip().lower() or None
+            if not phone:
+                phone = _normalize_oauth_phone(profile.get("phone"))
     except AuthenticationFailed:
         raise
     except Exception as exc:
@@ -314,9 +317,53 @@ def _exchange_vk(
         "provider": "vk",
         "provider_user_id": str(int(user_id)),
         "email": email,
+        "phone": phone,
         "first_name": first[:255],
         "last_name": last[:255],
     }
+
+
+def _normalize_oauth_phone(raw: Any) -> str | None:
+    phone = str(raw or "").strip()
+    return phone or None
+
+
+def _maybe_fill_oauth_contacts(user, profile: dict[str, Any]) -> None:
+    """Заполнить пустые email/phone из OAuth, без конфликтов и без падения."""
+    update_fields: list[str] = []
+    email = (profile.get("email") or "").strip().lower() or None
+    phone = _normalize_oauth_phone(profile.get("phone"))
+
+    if email and not user.email:
+        taken = (
+            User.objects.filter(email__iexact=email)
+            .exclude(pk=user.pk)
+            .exists()
+        )
+        if taken:
+            logger.info(
+                "OAuth email skip: already taken user_id=%s email=%s",
+                user.pk,
+                email,
+            )
+        else:
+            user.email = email
+            update_fields.append("email")
+
+    if phone and not user.phone:
+        taken = User.objects.filter(phone=phone).exclude(pk=user.pk).exists()
+        if taken:
+            logger.info(
+                "OAuth phone skip: already taken user_id=%s phone=%s",
+                user.pk,
+                phone,
+            )
+        else:
+            user.phone = phone
+            update_fields.append("phone")
+
+    if update_fields:
+        user.save(update_fields=update_fields)
 
 
 def resolve_or_create_user(profile: dict[str, Any]):
@@ -324,18 +371,21 @@ def resolve_or_create_user(profile: dict[str, Any]):
     provider = profile["provider"]
     pid = profile["provider_user_id"]
     email = profile.get("email")
+    phone = _normalize_oauth_phone(profile.get("phone"))
 
     if provider == "yandex":
         user = User.objects.filter(yandex_id=pid).first()
     else:
         user = User.objects.filter(vk_id=int(pid)).first()
     if user:
+        _maybe_fill_oauth_contacts(user, profile)
         return user, False
 
     if email:
         user = User.objects.filter(email__iexact=email).first()
         if user:
             _attach_provider(user, provider, pid)
+            _maybe_fill_oauth_contacts(user, profile)
             return user, False
 
     kwargs: dict[str, Any] = {
@@ -343,11 +393,20 @@ def resolve_or_create_user(profile: dict[str, Any]):
         "last_name": profile.get("last_name") or provider.upper(),
         "role": "student",
         "email": email,
+        "phone": phone,
     }
     if provider == "yandex":
         kwargs["yandex_id"] = pid
     else:
         kwargs["vk_id"] = int(pid)
+
+    # Контакт занят — создаём без него, логин не падает
+    if email and User.objects.filter(email__iexact=email).exists():
+        logger.info("OAuth create: email taken, skip email=%s", email)
+        kwargs["email"] = None
+    if phone and User.objects.filter(phone=phone).exists():
+        logger.info("OAuth create: phone taken, skip phone=%s", phone)
+        kwargs["phone"] = None
 
     user = User.objects.create_user(**kwargs)
     return user, True
@@ -369,6 +428,7 @@ def link_provider_to_user(user, profile: dict[str, Any]) -> None:
             raise OAuthConflict("Этот VK уже привязан к другому аккаунту.")
         user.vk_id = vk_id
         user.save(update_fields=["vk_id"])
+    _maybe_fill_oauth_contacts(user, profile)
 
 
 def unlink_provider(user, provider: str) -> None:

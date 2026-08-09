@@ -109,6 +109,13 @@ def mark_thread_read(*, thread: DirectThread, user, at=None) -> DirectThread:
 def student_may_message_mentor(*, student, mentor) -> bool:
     if not is_mentor_user(mentor) or not is_student_user(student):
         return False
+
+    from mentoring.assignment import resolve_student_mentor
+
+    resolved, _source = resolve_student_mentor(student)
+    if resolved is not None and resolved.pk == mentor.pk:
+        return True
+
     from subscriptions.services import FEATURE_MENTOR_CHAT, user_has_feature
 
     if not user_has_feature(student, FEATURE_MENTOR_CHAT):
@@ -137,12 +144,15 @@ def can_open_thread(*, actor, other) -> bool:
 
 def normalize_thread_participants(*, actor, other) -> tuple[User, User]:
     if is_student_user(actor) and is_mentor_user(other):
+        from mentoring.assignment import resolve_student_mentor
         from subscriptions.services import (
             FEATURE_MENTOR_CHAT,
             user_has_feature,
         )
 
-        if not user_has_feature(actor, FEATURE_MENTOR_CHAT):
+        resolved, _source = resolve_student_mentor(actor)
+        is_own = resolved is not None and resolved.pk == other.pk
+        if not is_own and not user_has_feature(actor, FEATURE_MENTOR_CHAT):
             raise PermissionDenied("Чат с ментором доступен по тарифу Про.")
     if not can_open_thread(actor=actor, other=other):
         raise PermissionDenied("Нет доступа к диалогу с этим пользователем.")
@@ -151,7 +161,33 @@ def normalize_thread_participants(*, actor, other) -> tuple[User, User]:
     return other, actor
 
 
-def resolve_open_target(*, actor, user_public_id=None, course_public_id=None):
+def resolve_open_target(
+    *,
+    actor,
+    user_public_id=None,
+    course_public_id=None,
+    assigned=False,
+):
+    if assigned:
+        if user_public_id or course_public_id:
+            raise ValidationError(
+                {"detail": "Параметр assigned нельзя сочетать с user/course."}
+            )
+        if not is_student_user(actor):
+            raise PermissionDenied(
+                "Открыть чат с назначенным ментором может только студент."
+            )
+        from mentoring.assignment import resolve_student_mentor
+
+        mentor, source = resolve_student_mentor(actor)
+        if mentor is None:
+            raise ValidationError(
+                {"detail": "Ментор не найден. Обратитесь к администратору."}
+            )
+        if source == "none":
+            raise ValidationError({"detail": "Ментор не найден."})
+        return mentor
+
     if user_public_id and course_public_id:
         raise ValidationError(
             {"detail": "Укажите user или course, но не оба параметра."}
@@ -183,7 +219,9 @@ def resolve_open_target(*, actor, user_public_id=None, course_public_id=None):
         return course.mentor
 
     if not user_public_id:
-        raise ValidationError({"detail": "Нужен параметр user или course."})
+        raise ValidationError(
+            {"detail": "Нужен параметр user, course или assigned."}
+        )
 
     try:
         other = User.objects.get(public_id=user_public_id)
@@ -199,12 +237,21 @@ def open_thread(
     user_public_id=None,
     course_public_id=None,
     conference_public_id=None,
+    assigned=False,
 ) -> DirectThread:
-    params = [user_public_id, course_public_id, conference_public_id]
+    params = [
+        user_public_id,
+        course_public_id,
+        conference_public_id,
+        assigned or None,
+    ]
     if sum(bool(x) for x in params) != 1:
         raise ValidationError(
             {
-                "detail": "Нужен ровно один параметр: user, course или conference."
+                "detail": (
+                    "Нужен ровно один параметр: user, course, "
+                    "conference или assigned."
+                )
             }
         )
 
@@ -227,6 +274,7 @@ def open_thread(
         actor=actor,
         user_public_id=user_public_id,
         course_public_id=course_public_id,
+        assigned=assigned,
     )
     return get_or_create_thread(actor=actor, other=other)
 

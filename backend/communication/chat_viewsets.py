@@ -38,11 +38,14 @@ class ChatThreadViewSet(
         conference_public_id = (
             request.query_params.get("conference") or ""
         ).strip()
+        assigned_raw = (request.query_params.get("assigned") or "").strip()
+        assigned = assigned_raw in ("1", "true", "yes")
         thread = chat_services.open_thread(
             actor=request.user,
             user_public_id=user_public_id or None,
             course_public_id=course_public_id or None,
             conference_public_id=conference_public_id or None,
+            assigned=assigned,
         )
         serializer = DirectThreadSerializer(
             thread, context={"request": request}
