@@ -31,6 +31,10 @@ def create_and_deliver(
     skip_vk: bool = False,
 ) -> Any:
     """Создать in-app уведомление (опционально) и поставить доставку в очередь."""
+    # UserNotification.title is varchar(255); baker/long names can exceed it.
+    # SQLite ignores the limit; PostgreSQL (CI) rejects → truncate defensively.
+    title = (title or "")[:255]
+    body = body or ""
     note = None
     if persist:
         from communication.models import UserNotification
@@ -39,7 +43,7 @@ def create_and_deliver(
             user=user,
             kind=kind,
             title=title,
-            body=body or "",
+            body=body,
             conference=conference,
         )
 
@@ -49,7 +53,7 @@ def create_and_deliver(
         deliver_outbound.delay(
             user_id=user.pk,
             title=title,
-            body=body or "",
+            body=body,
             url=url or "",
             kind=kind,
             skip_vk=skip_vk,

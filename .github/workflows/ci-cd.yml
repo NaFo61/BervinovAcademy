@@ -137,7 +137,19 @@ jobs:
           DEBUG: "False"
           CELERY_BROKER_URL: redis://localhost:6379/0
           CELERY_RESULT_BACKEND: redis://localhost:6379/0
-        run: pytest -n auto
+        # Override --reuse-db from pyproject: fresh DB on every CI run.
+        # JUnit helps debug Postgres-only failures (SQLite often hides them).
+        run: >
+          pytest -n auto --create-db
+          --junitxml=pytest-report.xml -ra
+
+      - name: Upload pytest report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report
+          path: pytest-report.xml
+          if-no-files-found: ignore
 
       - name: Upload coverage
         if: always()

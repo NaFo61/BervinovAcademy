@@ -434,7 +434,13 @@ def test_create_message_from_site_notifies_vk(settings):
         vk_id=8010,
         vk_messages_allowed=True,
     )
-    mentor = baker.make("users.User", role="mentor", email="ment2@ex.com")
+    mentor = baker.make(
+        "users.User",
+        role="mentor",
+        email="ment2@ex.com",
+        first_name="Мент",
+        last_name="Ор",
+    )
     thread = DirectThread.objects.create(mentor=mentor, student=student)
 
     with patch("notify.vk_api.send_message", return_value=True) as send:
