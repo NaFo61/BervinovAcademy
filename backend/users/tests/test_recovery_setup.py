@@ -278,7 +278,7 @@ def test_resolve_yandex_saves_email():
             "provider": "yandex",
             "provider_user_id": "ya-55",
             "email": "ya55@yandex.ru",
-            "phone": None,
+            "phone": "+79005551122",
             "first_name": "Ян",
             "last_name": "Декс",
         }
@@ -286,6 +286,7 @@ def test_resolve_yandex_saves_email():
     assert created
     assert user.yandex_id == "ya-55"
     assert user.email == "ya55@yandex.ru"
+    assert user.phone == "+79005551122"
 
 
 @pytest.mark.django_db

@@ -111,6 +111,9 @@ def build_authorize_url(
             "redirect_uri": redirect,
             "state": state,
             "force_confirm": "yes",
+            # email — для входа/восстановления; phone — если включён
+            # в oauth.yandex.ru у приложения (login:default_phone).
+            "scope": "login:info,login:email,login:default_phone",
         }
         url = "https://oauth.yandex.ru/authorize?" + urlencode(params)
         return {
@@ -213,10 +216,13 @@ def _exchange_yandex(*, code: str, redirect_uri: str) -> dict[str, Any]:
     uid = str(info.get("id") or "").strip()
     if not uid:
         raise AuthenticationFailed("Yandex не вернул id.")
-    email = info.get("default_email") or info.get("emails") or [None]
-    if isinstance(email, list):
-        email = email[0] if email else None
+    email = info.get("default_email") or info.get("email")
+    if not email:
+        emails = info.get("emails") or []
+        if isinstance(emails, list) and emails:
+            email = emails[0]
     email = (email or "").strip().lower() or None
+    phone = _yandex_phone_from_info(info)
     first = (
         info.get("first_name") or info.get("real_name") or "Ученик"
     ).strip()
@@ -225,10 +231,16 @@ def _exchange_yandex(*, code: str, redirect_uri: str) -> dict[str, Any]:
         parts = str(info["real_name"]).split(None, 1)
         first = parts[0]
         last = parts[1] if len(parts) > 1 else last
+    if not email and not phone:
+        logger.info(
+            "Yandex OAuth: no email/phone in info keys=%s",
+            sorted(info.keys()),
+        )
     return {
         "provider": "yandex",
         "provider_user_id": uid,
         "email": email,
+        "phone": phone,
         "first_name": first[:255],
         "last_name": last[:255],
     }
@@ -305,6 +317,14 @@ def _exchange_vk(
                 email = (profile.get("email") or "").strip().lower() or None
             if not phone:
                 phone = _normalize_oauth_phone(profile.get("phone"))
+        if not email and not phone:
+            logger.info(
+                "VK OAuth: no email/phone user_id=%s token_keys=%s "
+                "profile_keys=%s",
+                user_id,
+                sorted(token_data.keys()),
+                sorted(profile.keys()) if profile else [],
+            )
     except AuthenticationFailed:
         raise
     except Exception as exc:
@@ -321,6 +341,14 @@ def _exchange_vk(
         "first_name": first[:255],
         "last_name": last[:255],
     }
+
+
+def _yandex_phone_from_info(info: dict[str, Any]) -> str | None:
+    """Яндекс отдаёт default_phone как {id, number} или строку."""
+    raw = info.get("default_phone")
+    if isinstance(raw, dict):
+        return _normalize_oauth_phone(raw.get("number"))
+    return _normalize_oauth_phone(raw)
 
 
 def _normalize_oauth_phone(raw: Any) -> str | None:
