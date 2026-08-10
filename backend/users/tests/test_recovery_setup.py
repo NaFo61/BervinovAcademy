@@ -290,6 +290,36 @@ def test_resolve_yandex_saves_email():
 
 
 @pytest.mark.django_db
+@patch("users.oauth.requests.get")
+def test_resolve_yandex_saves_avatar(mock_get):
+    mock_get.return_value = MagicMock(
+        content=(
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+            b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00"
+            b"\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05"
+            b"\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+        ),
+        headers={"Content-Type": "image/png"},
+        raise_for_status=lambda: None,
+    )
+    user, created = resolve_or_create_user(
+        {
+            "provider": "yandex",
+            "provider_user_id": "ya-avatar",
+            "email": "avatar@yandex.ru",
+            "phone": None,
+            "avatar_url": (
+                "https://avatars.yandex.net/get-yapic/1/islands-200"
+            ),
+            "first_name": "Ян",
+            "last_name": "Декс",
+        }
+    )
+    assert created
+    assert user.avatar
+
+
+@pytest.mark.django_db
 def test_resolve_fills_phone_on_existing_vk_user():
     user = _oauth_user(email=None, phone=None, vk_id=6666)
     updated, created = resolve_or_create_user(

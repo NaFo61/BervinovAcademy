@@ -50,6 +50,10 @@ def test_oauth_start_yandex(api, oauth_settings):
         "login%3Adefault_phone" in data["authorize_url"]
         or "login:default_phone" in data["authorize_url"]
     )
+    assert (
+        "login%3Aavatar" in data["authorize_url"]
+        or "login:avatar" in data["authorize_url"]
+    )
     assert data["redirect_uri"].endswith("/auth-callback")
 
 
@@ -91,6 +95,13 @@ def test_build_authorize_url_custom_redirect(oauth_settings):
     )
 
 
+TINY_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f"
+    b"\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
+
 @pytest.mark.django_db
 @patch("users.oauth.requests.post")
 @patch("users.oauth.requests.get")
@@ -102,17 +113,30 @@ def test_oauth_exchange_yandex_creates_user(
         json=lambda: {"access_token": "ya-tok"},
         raise_for_status=lambda: None,
     )
-    mock_get.return_value = MagicMock(
-        status_code=200,
-        json=lambda: {
-            "id": "777",
-            "default_email": "new@yandex.ru",
-            "default_phone": {"id": 1, "number": "+79001112233"},
-            "first_name": "Ян",
-            "last_name": "Декс",
-        },
-        raise_for_status=lambda: None,
-    )
+
+    def _get_side_effect(url, *args, **kwargs):
+        if "login.yandex.ru" in str(url):
+            return MagicMock(
+                status_code=200,
+                json=lambda: {
+                    "id": "777",
+                    "default_email": "new@yandex.ru",
+                    "default_phone": {"id": 1, "number": "+79001112233"},
+                    "is_avatar_empty": False,
+                    "default_avatar_id": "131652443",
+                    "first_name": "Ян",
+                    "last_name": "Декс",
+                },
+                raise_for_status=lambda: None,
+            )
+        return MagicMock(
+            status_code=200,
+            content=TINY_PNG,
+            headers={"Content-Type": "image/png"},
+            raise_for_status=lambda: None,
+        )
+
+    mock_get.side_effect = _get_side_effect
     resp = api.post(
         "/api/auth/oauth/yandex/",
         {
@@ -127,6 +151,7 @@ def test_oauth_exchange_yandex_creates_user(
     u = User.objects.get(yandex_id="777")
     assert u.email == "new@yandex.ru"
     assert u.phone == "+79001112233"
+    assert u.avatar
     assert not u.has_usable_password()
 
 
@@ -318,9 +343,13 @@ def test_exchange_yandex_unit(mock_get, mock_post, oauth_settings):
             "id": "1",
             "default_email": "u@yandex.ru",
             "default_phone": {"id": 9, "number": "+79990001122"},
+            "is_avatar_empty": False,
+            "default_avatar_id": "abc123",
             "first_name": "A",
             "last_name": "B",
         },
+        content=b"",
+        headers={},
     )
     profile = exchange_code(
         provider="yandex",
@@ -330,3 +359,6 @@ def test_exchange_yandex_unit(mock_get, mock_post, oauth_settings):
     assert profile["provider_user_id"] == "1"
     assert profile["email"] == "u@yandex.ru"
     assert profile["phone"] == "+79990001122"
+    assert profile["avatar_url"] == (
+        "https://avatars.yandex.net/get-yapic/abc123/islands-200"
+    )

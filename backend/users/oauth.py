@@ -111,9 +111,10 @@ def build_authorize_url(
             "redirect_uri": redirect,
             "state": state,
             "force_confirm": "yes",
-            # email — для входа/восстановления; phone — если включён
-            # в oauth.yandex.ru у приложения (login:default_phone).
-            "scope": "login:info,login:email,login:default_phone",
+            # email / phone / avatar — если включены в oauth.yandex.ru.
+            "scope": (
+                "login:info,login:email," "login:default_phone,login:avatar"
+            ),
         }
         url = "https://oauth.yandex.ru/authorize?" + urlencode(params)
         return {
@@ -223,6 +224,7 @@ def _exchange_yandex(*, code: str, redirect_uri: str) -> dict[str, Any]:
             email = emails[0]
     email = (email or "").strip().lower() or None
     phone = _yandex_phone_from_info(info)
+    avatar_url = _yandex_avatar_url(info)
     first = (
         info.get("first_name") or info.get("real_name") or "Ученик"
     ).strip()
@@ -241,6 +243,7 @@ def _exchange_yandex(*, code: str, redirect_uri: str) -> dict[str, Any]:
         "provider_user_id": uid,
         "email": email,
         "phone": phone,
+        "avatar_url": avatar_url,
         "first_name": first[:255],
         "last_name": last[:255],
     }
@@ -333,11 +336,13 @@ def _exchange_vk(
 
     first = (profile.get("first_name") or "Ученик").strip()
     last = (profile.get("last_name") or "VK").strip()
+    avatar_url = (profile.get("avatar") or "").strip() or None
     return {
         "provider": "vk",
         "provider_user_id": str(int(user_id)),
         "email": email,
         "phone": phone,
+        "avatar_url": avatar_url,
         "first_name": first[:255],
         "last_name": last[:255],
     }
@@ -351,13 +356,55 @@ def _yandex_phone_from_info(info: dict[str, Any]) -> str | None:
     return _normalize_oauth_phone(raw)
 
 
+def _yandex_avatar_url(info: dict[str, Any]) -> str | None:
+    """Собрать URL аватарки Яндекса, если это не заглушка."""
+    if info.get("is_avatar_empty"):
+        return None
+    avatar_id = str(info.get("default_avatar_id") or "").strip()
+    if not avatar_id:
+        return None
+    return f"https://avatars.yandex.net/get-yapic/{avatar_id}/islands-200"
+
+
 def _normalize_oauth_phone(raw: Any) -> str | None:
     phone = str(raw or "").strip()
     return phone or None
 
 
+def _maybe_fill_oauth_avatar(user, profile: dict[str, Any]) -> None:
+    """Скачать аватар из OAuth, если у пользователя ещё нет своего."""
+    if user.avatar:
+        return
+    url = (profile.get("avatar_url") or "").strip()
+    if not url:
+        return
+    try:
+        resp = requests.get(url, timeout=15)
+        resp.raise_for_status()
+        content_type = (resp.headers.get("Content-Type") or "").lower()
+        if "png" in content_type:
+            ext = ".png"
+        elif "webp" in content_type:
+            ext = ".webp"
+        else:
+            ext = ".jpg"
+        from django.core.files.base import ContentFile
+
+        user.avatar.save(
+            f"oauth{ext}",
+            ContentFile(resp.content),
+            save=True,
+        )
+    except Exception:
+        logger.exception(
+            "OAuth avatar download failed user_id=%s url=%s",
+            user.pk,
+            url,
+        )
+
+
 def _maybe_fill_oauth_contacts(user, profile: dict[str, Any]) -> None:
-    """Заполнить пустые email/phone из OAuth, без конфликтов и без падения."""
+    """Заполнить пустые email/phone/avatar из OAuth, без падения входа."""
     update_fields: list[str] = []
     email = (profile.get("email") or "").strip().lower() or None
     phone = _normalize_oauth_phone(profile.get("phone"))
@@ -392,6 +439,7 @@ def _maybe_fill_oauth_contacts(user, profile: dict[str, Any]) -> None:
 
     if update_fields:
         user.save(update_fields=update_fields)
+    _maybe_fill_oauth_avatar(user, profile)
 
 
 def resolve_or_create_user(profile: dict[str, Any]):
@@ -437,6 +485,7 @@ def resolve_or_create_user(profile: dict[str, Any]):
         kwargs["phone"] = None
 
     user = User.objects.create_user(**kwargs)
+    _maybe_fill_oauth_avatar(user, profile)
     return user, True
 
 
