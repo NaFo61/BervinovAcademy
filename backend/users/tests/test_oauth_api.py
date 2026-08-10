@@ -42,18 +42,8 @@ def test_oauth_start_yandex(api, oauth_settings):
     assert "oauth.yandex.ru" in data["authorize_url"]
     assert data["provider"] == "yandex"
     assert data["state"].startswith("ba_yandex_")
-    assert (
-        "login%3Aemail" in data["authorize_url"]
-        or "login:email" in data["authorize_url"]
-    )
-    assert (
-        "login%3Adefault_phone" in data["authorize_url"]
-        or "login:default_phone" in data["authorize_url"]
-    )
-    assert (
-        "login%3Aavatar" in data["authorize_url"]
-        or "login:avatar" in data["authorize_url"]
-    )
+    # scope не передаём — права берутся из настроек приложения Яндекса
+    assert "scope=" not in data["authorize_url"]
     assert data["redirect_uri"].endswith("/auth-callback")
 
 

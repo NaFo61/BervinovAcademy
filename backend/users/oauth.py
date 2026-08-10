@@ -105,16 +105,15 @@ def build_authorize_url(
 
     if provider == "yandex":
         client_id = settings.YANDEX_OAUTH_CLIENT_ID.strip()
+        # Без scope: права берутся из настроек приложения в oauth.yandex.ru.
+        # Явный scope часто даёт invalid_scope, если строка не совпала
+        # с зарегистрированными доступами.
         params = {
             "response_type": "code",
             "client_id": client_id,
             "redirect_uri": redirect,
             "state": state,
             "force_confirm": "yes",
-            # email / phone / avatar — если включены в oauth.yandex.ru.
-            "scope": (
-                "login:info,login:email," "login:default_phone,login:avatar"
-            ),
         }
         url = "https://oauth.yandex.ru/authorize?" + urlencode(params)
         return {
