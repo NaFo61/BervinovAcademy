@@ -40,10 +40,17 @@ function LearnAssistantPane({ context }) {
     setMessages((old) => [...old, { role: 'user', content: text }]);
     setBusy(true);
     try {
+      const liveContext = {
+        ...(context || {}),
+        user_code:
+          (typeof window !== 'undefined' && window.__learnAssistantCode) ||
+          context?.user_code ||
+          '',
+      };
       const data = await window.fetchApiJson('/api/mentoring/assistant/chat/', {
         method: 'POST',
         auth: true,
-        body: { message: text, history, context: context || {} },
+        body: { message: text, history, context: liveContext },
       });
       setMode(data.mode || '');
       setMessages((old) => [...old, { role: 'assistant', content: data.reply || 'Пустой ответ' }]);
@@ -135,7 +142,9 @@ function LearnHelpDrawer({ open, onClose, navigate, courseTitle, lessonType, les
     lesson_kind: lessonType || '',
     lesson_title: lessonData?.title || '',
     lesson_statement: lessonStatementFromData(lessonType, lessonData),
-  }), [courseTitle, lessonType, lessonData]);
+    lesson_public_id: lessonData?.public_id || '',
+    user_code: typeof window !== 'undefined' ? (window.__learnAssistantCode || '') : '',
+  }), [courseTitle, lessonType, lessonData, open]);
 
   React.useEffect(() => {
     if (!open || !token) return undefined;

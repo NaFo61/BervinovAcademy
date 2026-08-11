@@ -1581,6 +1581,7 @@ class CodingChallengeAdmin(ModelAdmin):
                     "instructions",
                     "comment",
                     "solution_text",
+                    "assistant_prompt",
                     "video_url",
                     "video_file",
                     "difficulty",

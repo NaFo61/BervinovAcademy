@@ -281,6 +281,7 @@ class EditorCodingSerializer(EditorVideoMixin, serializers.ModelSerializer):
             "video",
             "initial_code",
             "solution_template",
+            "assistant_prompt",
             "difficulty",
             "points",
             "time_limit_ms",

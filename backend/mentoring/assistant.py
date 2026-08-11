@@ -3,24 +3,137 @@
 from __future__ import annotations
 
 import json
+import re
 import urllib.error
 import urllib.request
 
 from django.conf import settings
 
+from mentoring.models import (
+    DEFAULT_ASSISTANT_BASE_PROMPT,
+    AssistantSettings,
+)
+
+_PLACEHOLDER_RE = re.compile(r"\{\{(\w+)\}\}")
+
+
+def render_prompt_template(template: str, values: dict) -> str:
+    """Replace ``{{name}}``; unknown names → empty string."""
+
+    def repl(match: re.Match[str]) -> str:
+        key = match.group(1)
+        raw = values.get(key, "")
+        if raw is None:
+            return ""
+        return str(raw)
+
+    return _PLACEHOLDER_RE.sub(repl, template or "")
+
+
+def _format_public_tests(challenge) -> str:
+    lines = []
+    for tc in challenge.test_cases.filter(is_hidden=False).order_by(
+        "order_index"
+    ):
+        lines.append(
+            f"#{tc.order_index}\n"
+            f"Ввод:\n{tc.input_data}\n"
+            f"Ожидаемый вывод:\n{tc.expected_output}"
+        )
+    return "\n\n".join(lines) if lines else "(публичных тестов нет)"
+
+
+def _condition_from_challenge(challenge) -> str:
+    parts = []
+    if (challenge.description or "").strip():
+        parts.append(challenge.description.strip())
+    if (challenge.instructions or "").strip():
+        parts.append(challenge.instructions.strip())
+    return "\n\n".join(parts)
+
+
+def _load_coding_challenge(context: dict):
+    pid = (context.get("lesson_public_id") or "").strip()
+    kind = (context.get("lesson_kind") or "").strip().lower()
+    if not pid:
+        return None
+    if kind and kind not in ("coding", "code", "challenge"):
+        return None
+    from content.models import CodingChallenge
+
+    try:
+        return (
+            CodingChallenge.objects.select_related("course")
+            .prefetch_related("test_cases")
+            .get(public_id=pid)
+        )
+    except (CodingChallenge.DoesNotExist, ValueError, TypeError):
+        return None
+
+
+def build_prompt_values(context: dict | None) -> dict[str, str]:
+    ctx = dict(context or {})
+    challenge = _load_coding_challenge(ctx)
+
+    title = (ctx.get("lesson_title") or "").strip()
+    course = (ctx.get("course_title") or "").strip()
+    condition = (ctx.get("lesson_statement") or "").strip()
+    tests = (ctx.get("tests_blurb") or "").strip()
+    code = (ctx.get("user_code") or "").strip()
+
+    if challenge:
+        if not title:
+            title = challenge.title or ""
+        if not course and challenge.course_id:
+            course = challenge.course.title or ""
+        ch_condition = _condition_from_challenge(challenge)
+        if ch_condition:
+            condition = ch_condition
+        tests = _format_public_tests(challenge)
+
+    return {
+        "condition": condition[:4000],
+        "tests": tests[:4000],
+        "title": title[:500],
+        "course": course[:500],
+        "code": code[:8000],
+    }
+
+
+def resolve_prompt_template(context: dict | None) -> str:
+    """Override на задаче > base settings > встроенный дефолт."""
+    ctx = context or {}
+    challenge = _load_coding_challenge(ctx)
+    if challenge and (challenge.assistant_prompt or "").strip():
+        return challenge.assistant_prompt.strip()
+    try:
+        solo = AssistantSettings.objects.filter(pk=1).first()
+        if solo and (solo.base_prompt or "").strip():
+            return solo.base_prompt.strip()
+    except Exception:  # noqa: BLE001 — таблица ещё не мигрирована
+        pass
+    return DEFAULT_ASSISTANT_BASE_PROMPT
+
+
+def build_system_prompt(context: dict | None) -> str:
+    template = resolve_prompt_template(context)
+    values = build_prompt_values(context)
+    return render_prompt_template(template, values)
+
 
 def _context_blurb(context: dict | None) -> str:
-    ctx = context or {}
+    """Короткое описание для mock-режима."""
+    values = build_prompt_values(context)
     parts = []
-    if ctx.get("course_title"):
-        parts.append(f"Курс: {ctx['course_title']}")
-    if ctx.get("lesson_title"):
-        kind = ctx.get("lesson_kind") or "урок"
-        parts.append(f"{kind}: {ctx['lesson_title']}")
-    statement = (ctx.get("lesson_statement") or "").strip()
-    if statement:
-        clipped = statement[:1200]
-        parts.append(f"Условие:\n{clipped}")
+    if values["course"]:
+        parts.append(f"Курс: {values['course']}")
+    if values["title"]:
+        kind = (context or {}).get("lesson_kind") or "урок"
+        parts.append(f"{kind}: {values['title']}")
+    if values["condition"]:
+        parts.append(f"Условие:\n{values['condition'][:1200]}")
+    if values["tests"]:
+        parts.append(f"Тесты:\n{values['tests'][:800]}")
     return "\n".join(parts) if parts else "Контекст урока не передан."
 
 
@@ -31,7 +144,8 @@ def _mock_reply(*, message: str, context: dict | None) -> dict:
         f"Вопрос: {message.strip() or '—'}\n\n"
         f"Контекст задания:\n{blurb}\n\n"
         "Подсказка: сформулируйте, что уже пробовали и где застряли. "
-        "Когда появится OPENAI_API_KEY, ответы станут от настоящей модели."
+        "Когда в .env появится ключ Gemini (OPENAI_API_KEY) и "
+        "ASSISTANT_LLM_ENABLED=true, ответы станут от настоящей модели."
     )
     return {"reply": reply, "mode": "mock", "model": None}
 
@@ -48,12 +162,7 @@ def _call_openai_compatible(
     model = getattr(settings, "OPENAI_MODEL", "gpt-4o-mini")
     base = (getattr(settings, "OPENAI_BASE_URL", "") or "").rstrip("/")
     key = settings.OPENAI_API_KEY
-    system = (
-        "Ты помощник ученика онлайн-школы. Отвечай по-русски, кратко и по делу. "
-        "Помогай разобраться с текущим заданием, не выдавай готовое полное "
-        "решение сразу — сначала наводящие подсказки. Контекст задания:\n"
-        f"{_context_blurb(context)}"
-    )
+    system = build_system_prompt(context)
     messages = [{"role": "system", "content": system}]
     for item in history[-12:]:
         role = item.get("role")

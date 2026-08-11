@@ -1548,6 +1548,15 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin, onRefreshLesson }) 
     loadHistory();
   }, [lesson.public_id, lesson.initial_code, loadHistory]);
 
+  React.useEffect(() => {
+    window.__learnAssistantCode = code || '';
+    return () => {
+      if (window.__learnAssistantCode === code) {
+        window.__learnAssistantCode = '';
+      }
+    };
+  }, [code]);
+
   const tests = (lesson.test_cases || []).slice().sort(
     (a, b) => (a.order_index || 0) - (b.order_index || 0),
   );

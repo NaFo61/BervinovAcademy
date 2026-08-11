@@ -54,6 +54,20 @@ class TestContentEditorApi:
             == "Разбор решения"
         )
 
+        patch_prompt = mentor_client.patch(
+            f"/api/mentoring/editor/lessons/coding/{pid}/",
+            {"assistant_prompt": "Свой промпт {{condition}}"},
+            format="json",
+        )
+        assert patch_prompt.status_code == status.HTTP_200_OK
+        assert patch_prompt.data["assistant_prompt"] == (
+            "Свой промпт {{condition}}"
+        )
+        assert (
+            CodingChallenge.objects.get(public_id=pid).assistant_prompt
+            == "Свой промпт {{condition}}"
+        )
+
     def test_create_course_assigns_mentor(self, mentor_client, mentor_user):
         resp = mentor_client.post(
             "/api/mentoring/editor/courses/",

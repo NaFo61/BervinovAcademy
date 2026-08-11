@@ -55,7 +55,7 @@ Status: **APPROVED** (владелец: «делаем», срочная пос�
   body: `{ message, history[], context: { lesson_kind, lesson_title, lesson_statement, course_title } }`  
   response: `{ reply, mode: "mock"|"llm", model? }`
 
-Env (опционально): `ASSISTANT_LLM_ENABLED`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL`.
+Env (опционально, Gemini через OpenAI-compatible): `ASSISTANT_LLM_ENABLED`, `OPENAI_API_KEY` (ключ Google AI Studio), `OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai`, `OPENAI_MODEL=gemini-2.0-flash`.
 
 ---
 
@@ -83,3 +83,4 @@ Env (опционально): `ASSISTANT_LLM_ENABLED`, `OPENAI_API_KEY`, `OPENAI
 - resolve mentor: assigned → course → admin
 - open `?assigned=1` без Про
 - assistant mock без ключа
+- assistant llm-путь с mock urlopen (без реального Google)

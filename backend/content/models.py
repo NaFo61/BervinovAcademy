@@ -790,6 +790,14 @@ class CodingChallenge(UUIDPublicIdMixin, models.Model):
         verbose_name=_("Шаблон решения"),
         help_text=_("Шаблон с местами для заполнения {{placeholder}}"),
     )
+    assistant_prompt = models.TextField(
+        verbose_name=_("Промпт ИИ (свой)"),
+        blank=True,
+        help_text=_(
+            "Пусто = базовый шаблон школы. Плейсхолдеры: "
+            "{{condition}}, {{tests}}, {{title}}, {{course}}, {{code}}."
+        ),
+    )
     difficulty = models.CharField(
         max_length=20,
         choices=DIFFICULTY_CHOICES,

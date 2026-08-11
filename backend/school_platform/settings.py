@@ -551,7 +551,8 @@ MODELTRANSLATION_AUTO_POPULATE = False
 MODELTRANSLATION_GOOGLE_TRANSLATE_API_KEY = None
 MODELTRANSLATION_TRANSLATION_FILES = ()
 
-# Optional LLM assistant (OpenAI-compatible). Without a key → mock replies.
+# Optional LLM assistant (OpenAI-compatible; Gemini Flash via Google endpoint).
+# Without a key → mock replies. See .env.example for Gemini defaults.
 ASSISTANT_LLM_ENABLED = config(
     "ASSISTANT_LLM_ENABLED", default=False, cast=bool
 )

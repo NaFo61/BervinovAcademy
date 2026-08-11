@@ -348,6 +348,18 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
                   <FieldLabel>Инструкции</FieldLabel>
                   <TextArea mono value={form.instructions} onChange={(v) => setForm({ ...form, instructions: v })} rows={4}/>
                 </div>
+                <div>
+                  <FieldLabel hint="Пусто = базовый шаблон школы. Плейсхолдеры: {{condition}}, {{tests}}, {{title}}, {{course}}, {{code}}">
+                    Промпт ИИ (свой)
+                  </FieldLabel>
+                  <TextArea
+                    mono
+                    value={form.assistant_prompt || ''}
+                    onChange={(v) => setForm({ ...form, assistant_prompt: v })}
+                    rows={6}
+                    placeholder="Оставьте пустым, чтобы использовать общий шаблон"
+                  />
+                </div>
               </>
             )}
 
