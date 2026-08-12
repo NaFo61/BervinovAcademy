@@ -314,17 +314,65 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
-    },
-}
-
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Upload limits for lesson videos (S3 or local). Large files go to temp disk.
+DATA_UPLOAD_MAX_MEMORY_SIZE = config(
+    "DATA_UPLOAD_MAX_MEMORY_SIZE",
+    default=512 * 1024 * 1024,
+    cast=int,
+)
+FILE_UPLOAD_MAX_MEMORY_SIZE = config(
+    "FILE_UPLOAD_MAX_MEMORY_SIZE",
+    default=10 * 1024 * 1024,
+    cast=int,
+)
+
+USE_S3 = config("USE_S3", default=False, cast=bool)
+AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
+AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
+AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="")
+_raw_endpoint = config("AWS_S3_ENDPOINT_URL", default="").rstrip("/")
+if _raw_endpoint and not _raw_endpoint.startswith("http"):
+    _raw_endpoint = f"https://{_raw_endpoint}"
+AWS_S3_ENDPOINT_URL = _raw_endpoint
+AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="ru-6")
+AWS_S3_ADDRESSING_STYLE = config(
+    "AWS_S3_ADDRESSING_STYLE", default="virtual"
+)
+AWS_S3_SIGNATURE_VERSION = config(
+    "AWS_S3_SIGNATURE_VERSION", default="s3v4"
+)
+AWS_DEFAULT_ACL = None
+AWS_QUERYSTRING_AUTH = config("AWS_QUERYSTRING_AUTH", default=True, cast=bool)
+AWS_QUERYSTRING_EXPIRE = config(
+    "AWS_QUERYSTRING_EXPIRE", default=3600, cast=int
+)
+AWS_S3_FILE_OVERWRITE = False
+AWS_LOCATION = "media"
+AWS_S3_OBJECT_PARAMETERS = {
+    "CacheControl": "max-age=86400",
+}
+
+_staticfiles_storage = {
+    "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+}
+if USE_S3 and AWS_STORAGE_BUCKET_NAME and AWS_S3_ENDPOINT_URL:
+    # django-storages читает AWS_* из settings.
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        "staticfiles": _staticfiles_storage,
+    }
+else:
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": _staticfiles_storage,
+    }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
