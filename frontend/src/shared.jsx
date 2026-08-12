@@ -1496,6 +1496,8 @@ function TopNav({ route, navigate }) {
   const [session, setSession] = React.useState(() => !!localStorage.getItem('access_token'));
   const [searchDraft, setSearchDraft] = React.useState('');
   const [chatUnread, setChatUnread] = React.useState(0);
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [scrolled, setScrolled] = React.useState(false);
   const searchRef = React.useRef(null);
 
   const syncChatUnread = React.useCallback(async () => {
@@ -1537,14 +1539,29 @@ function TopNav({ route, navigate }) {
         e.preventDefault();
         searchRef.current?.focus();
       }
+      if (e.key === 'Escape') setMobileOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  React.useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  React.useEffect(() => {
+    setMobileOpen(false);
+  }, [route]);
+
   const access = session ? localStorage.getItem('access_token') : null;
   const payload = access ? parseJwtPayload(access) : {};
   const displayName = [payload.first_name, payload.last_name].filter(Boolean).join(' ').trim();
+  const initials = displayName
+    ? displayName.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() || '').join('')
+    : (payload.email?.[0] || 'U').toUpperCase();
   const isMentor = payload.role === 'mentor' || payload.role === 'admin';
   const isAdmin = payload.role === 'admin';
 
@@ -1554,6 +1571,7 @@ function TopNav({ route, navigate }) {
     const params = q ? new URLSearchParams({ q }) : null;
     navigate(Routes.CATALOG, params);
     setSearchDraft('');
+    setMobileOpen(false);
   };
 
   const handleLogout = async (e) => {
@@ -1581,80 +1599,182 @@ function TopNav({ route, navigate }) {
     ...(isMentor ? [{ id: Routes.MENTOR, label: 'Ментор' }] : []),
   ];
 
+  const go = (id) => {
+    navigate(id);
+    setMobileOpen(false);
+  };
+
   return (
-    <header className="sticky top-0 z-40">
-      <div className="glass border-b border-black/5">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 h-16 flex items-center gap-6">
-          <button onClick={() => navigate(Routes.LANDING)} className="flex items-center gap-2.5 group">
-            <I.Logo className="w-9 h-9 drop-shadow-[0_4px_12px_rgba(37,99,235,0.4)] group-hover:scale-105 transition-transform" />
-            <div className="leading-tight">
-              <div className="font-bold tracking-tight text-[15px]">Bervinov<span className="grad-text">Academy</span></div>
-              <div className="text-[10px] text-ink/50 uppercase tracking-widest">онлайн‑школа</div>
-            </div>
+    <header className={`site-header sticky top-0 z-40 pt-3 px-3 sm:px-5 transition-[padding] duration-300 ${scrolled ? 'site-header--scrolled pt-2' : ''}`}>
+      <div className="site-header__shell max-w-7xl mx-auto">
+        <div className="site-header__glow" aria-hidden="true" />
+        <div className="relative flex items-center gap-3 sm:gap-4 h-[3.75rem] px-3 sm:px-4">
+          <button
+            type="button"
+            onClick={() => go(Routes.LANDING)}
+            className="flex items-center gap-2.5 group shrink-0"
+            aria-label="Bervinov Academy — на главную"
+          >
+            <span className="site-header__mark group-hover:scale-105 transition-transform duration-300">
+              <I.Logo className="w-7 h-7" />
+            </span>
+            <span className="leading-none hidden xs:block sm:block">
+              <span className="block font-extrabold tracking-tight text-[15px] text-ink">
+                Bervinov<span className="grad-text">Academy</span>
+              </span>
+              <span className="mt-0.5 block text-[9px] uppercase tracking-[0.22em] text-ink/40">
+                учись вживую
+              </span>
+            </span>
           </button>
-          <nav className="hidden md:flex items-center gap-1 ml-4">
-            {links.map((l) => (
-              <button key={l.id} onClick={() => navigate(l.id)}
-                className={`relative px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${route === l.id ? 'bg-violet-500/10 text-violet-600' : 'text-ink/70 hover:bg-black/[0.03] hover:text-ink'}`}>
-                {l.label}
-              </button>
-            ))}
+
+          <nav className="hidden lg:flex items-center gap-0.5 ml-1 p-1 rounded-2xl bg-ink/[0.03] ring-1 ring-ink/[0.04]">
+            {links.map((l) => {
+              const active = route === l.id;
+              return (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => go(l.id)}
+                  className={`site-header__nav-item ${active ? 'is-active' : ''}`}
+                >
+                  {l.label}
+                </button>
+              );
+            })}
             {isAdmin && (
-              <a href="/admin/"
-                className="relative px-3.5 py-2 rounded-xl text-sm font-medium text-violet-600 hover:bg-violet-500/10">
+              <a href="/admin/" className="site-header__nav-item">
                 Школа
               </a>
             )}
           </nav>
+
           <div className="flex-1" />
-          <form onSubmit={submitSearch} className="hidden sm:flex items-center gap-2 px-3 h-10 rounded-xl border border-black/[0.06] bg-white text-sm w-56 hover:border-violet-300 focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-500/15 transition-colors">
-            <I.Search className="w-4 h-4 text-ink/50 shrink-0" />
+
+          <form
+            onSubmit={submitSearch}
+            className="site-header__search hidden md:flex items-center gap-2 h-10 px-3 w-52 xl:w-64"
+          >
+            <I.Search className="w-4 h-4 text-sky-600/70 shrink-0" />
             <input
               ref={searchRef}
               type="search"
               value={searchDraft}
               onChange={(e) => setSearchDraft(e.target.value)}
-              placeholder="Поиск курсов…"
-              className="flex-1 min-w-0 bg-transparent text-ink/80 placeholder:text-ink/40 outline-none"
+              placeholder="Найти курс…"
+              className="flex-1 min-w-0 bg-transparent text-sm text-ink/80 placeholder:text-ink/35 outline-none"
               aria-label="Поиск курсов"
             />
-            <kbd className="shrink-0 text-[10px] px-1.5 py-0.5 rounded border border-black/10 text-ink/40 font-mono">⌘K</kbd>
+            <kbd className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-md bg-ink/[0.04] text-ink/35 font-mono">⌘K</kbd>
           </form>
+
           {session ? (
-            <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1 sm:gap-1.5">
               <button
                 type="button"
-                onClick={() => navigate(Routes.MESSAGES)}
+                onClick={() => go(Routes.MESSAGES)}
                 aria-label={chatUnread > 0 ? `Сообщения, непрочитанных: ${chatUnread}` : 'Сообщения'}
-                className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                  route === Routes.MESSAGES
-                    ? 'bg-violet-500/10 text-violet-600'
-                    : 'text-ink/70 hover:bg-black/[0.04]'
-                }`}
+                className={`site-header__icon-btn relative ${route === Routes.MESSAGES ? 'is-active' : ''}`}
               >
                 <I.Chat className="w-5 h-5" />
                 {chatUnread > 0 && (
-                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full grad-bg text-white text-[10px] font-bold flex items-center justify-center shadow-sm">
                     {chatUnread > 99 ? '99+' : chatUnread}
                   </span>
                 )}
               </button>
               <NotificationBell navigate={navigate} />
-              {displayName ? (
-                <span className="hidden sm:inline max-w-[140px] truncate text-sm text-ink/70" title={displayName}>
-                  {displayName}
+              <button
+                type="button"
+                onClick={() => go(Routes.PROFILE)}
+                className="hidden sm:flex items-center gap-2 pl-1 pr-2.5 h-10 rounded-2xl hover:bg-ink/[0.03] transition-colors"
+                title={displayName || 'Профиль'}
+              >
+                <span className="avatar-ring shrink-0">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[11px] font-bold text-sky-700">
+                    {initials}
+                  </span>
                 </span>
-              ) : null}
-              <button type="button" onClick={handleLogout} className="h-10 px-4 rounded-xl text-sm font-semibold text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50 transition-colors">
+                {displayName ? (
+                  <span className="max-w-[110px] truncate text-sm font-medium text-ink/75">{displayName}</span>
+                ) : null}
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="hidden sm:inline-flex h-10 px-3.5 rounded-2xl text-sm font-semibold text-rose-600/90 hover:bg-rose-50 transition-colors"
+              >
                 Выйти
               </button>
             </div>
           ) : (
-            <button onClick={() => navigate(Routes.AUTH)} className="btn-grad btn-shimmer h-10 px-5 rounded-xl text-white text-sm font-semibold shadow-soft">
+            <button
+              type="button"
+              onClick={() => go(Routes.AUTH)}
+              className="btn-grad btn-shimmer h-10 px-5 rounded-2xl text-white text-sm font-semibold shadow-[0_10px_28px_-12px_rgba(37,99,235,0.65)]"
+            >
               Войти
             </button>
           )}
+
+          <button
+            type="button"
+            className="lg:hidden site-header__icon-btn"
+            aria-label={mobileOpen ? 'Закрыть меню' : 'Открыть меню'}
+            aria-expanded={mobileOpen}
+            onClick={() => setMobileOpen((v) => !v)}
+          >
+            <span className="site-header__burger" data-open={mobileOpen ? '1' : '0'}>
+              <span /><span /><span />
+            </span>
+          </button>
         </div>
+
+        {mobileOpen && (
+          <div className="lg:hidden border-t border-ink/[0.05] px-3 pb-3 pt-2">
+            <form onSubmit={submitSearch} className="site-header__search flex md:hidden items-center gap-2 h-11 px-3 mb-2">
+              <I.Search className="w-4 h-4 text-sky-600/70 shrink-0" />
+              <input
+                type="search"
+                value={searchDraft}
+                onChange={(e) => setSearchDraft(e.target.value)}
+                placeholder="Найти курс…"
+                className="flex-1 min-w-0 bg-transparent text-sm outline-none"
+                aria-label="Поиск курсов"
+              />
+            </form>
+            <nav className="grid grid-cols-2 gap-1.5">
+              {links.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => go(l.id)}
+                  className={`h-11 rounded-xl text-sm font-semibold transition-colors ${
+                    route === l.id
+                      ? 'grad-bg text-white shadow-soft'
+                      : 'bg-ink/[0.03] text-ink/75 hover:bg-ink/[0.06]'
+                  }`}
+                >
+                  {l.label}
+                </button>
+              ))}
+              {isAdmin && (
+                <a href="/admin/" className="h-11 rounded-xl text-sm font-semibold bg-ink/[0.03] text-ink/75 flex items-center justify-center">
+                  Школа
+                </a>
+              )}
+              {session && (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="h-11 rounded-xl text-sm font-semibold text-rose-600 bg-rose-50/80 col-span-2"
+                >
+                  Выйти
+                </button>
+              )}
+            </nav>
+          </div>
+        )}
       </div>
     </header>
   );

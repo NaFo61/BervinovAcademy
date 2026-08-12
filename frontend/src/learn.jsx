@@ -447,7 +447,7 @@ function LearnPage({ navigate, hashParams }) {
   const progressPct   = totalLessons ? Math.round((doneCount / totalLessons) * 100) : 0;
 
   return (
-    <div className="flex overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
+    <div className="flex overflow-hidden" style={{ height: 'calc(100vh - 5.25rem)' }}>
 
       {/* ── Mobile sidebar backdrop ── */}
       {sidebarOpen && (

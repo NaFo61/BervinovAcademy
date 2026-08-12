@@ -338,7 +338,8 @@ if _raw_endpoint and not _raw_endpoint.startswith("http"):
     _raw_endpoint = f"https://{_raw_endpoint}"
 AWS_S3_ENDPOINT_URL = _raw_endpoint
 AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="ru-6")
-AWS_S3_ADDRESSING_STYLE = config("AWS_S3_ADDRESSING_STYLE", default="virtual")
+# Selectel: path-style works; virtual often returns NoSuchBucket.
+AWS_S3_ADDRESSING_STYLE = config("AWS_S3_ADDRESSING_STYLE", default="path")
 AWS_S3_SIGNATURE_VERSION = config("AWS_S3_SIGNATURE_VERSION", default="s3v4")
 AWS_DEFAULT_ACL = None
 AWS_QUERYSTRING_AUTH = config("AWS_QUERYSTRING_AUTH", default=True, cast=bool)

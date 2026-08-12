@@ -8,12 +8,12 @@ function whiteboardFeatureEnabled() {
   return meta.getAttribute('content') !== 'false';
 }
 
-function WhiteboardPage({ navigate, hashParams }) {
+function WhiteboardPage({ navigate }) {
   const token = localStorage.getItem('access_token');
   const hostRef = React.useRef(null);
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(true);
-  const roomParam = (hashParams?.room || '').trim() || 'academy-studio';
+  const [roomId, setRoomId] = React.useState('');
 
   React.useEffect(() => {
     if (!token) return undefined;
@@ -33,7 +33,7 @@ function WhiteboardPage({ navigate, hashParams }) {
         const data = await window.apiJson('/api/communication/whiteboard/studio/token/', {
           method: 'POST',
           auth: true,
-          body: { room: roomParam },
+          body: {},
         });
         if (cancelled) return;
         const api = window.BervinovWhiteboard;
@@ -42,6 +42,7 @@ function WhiteboardPage({ navigate, hashParams }) {
         }
         const host = hostRef.current;
         if (!host) return;
+        setRoomId(data.room_id || '');
         api.mount(host, {
           roomId: data.room_id,
           syncToken: data.token,
@@ -62,7 +63,7 @@ function WhiteboardPage({ navigate, hashParams }) {
         window.BervinovWhiteboard.unmount(hostRef.current);
       }
     };
-  }, [token, roomParam]);
+  }, [token]);
 
   if (!token) {
     return (
@@ -84,13 +85,15 @@ function WhiteboardPage({ navigate, hashParams }) {
     <div className="h-full min-h-0 bg-[#F6F8FC] flex flex-col">
       <div className="shrink-0 h-12 px-4 sm:px-6 flex items-center justify-between border-b border-black/[0.06] bg-white/90">
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-ink truncate">Доска Academy</div>
-          <div className="text-[11px] text-ink/45 truncate">Комната: {roomParam}</div>
+          <div className="text-sm font-semibold text-ink truncate">Моя доска</div>
+          <div className="text-[11px] text-ink/45 truncate">
+            Личная — только вы. В созвоне доска общая.
+          </div>
         </div>
         <button
           type="button"
           onClick={() => navigate(Routes.CONFERENCES)}
-          className="h-9 px-3 rounded-lg text-sm font-medium text-violet-600 hover:bg-violet-50"
+          className="h-9 px-3 rounded-lg text-sm font-medium text-sky-700 hover:bg-sky-50"
         >
           Созвоны
         </button>
@@ -113,10 +116,10 @@ function WhiteboardPage({ navigate, hashParams }) {
             </button>
           </div>
         )}
-        <div ref={hostRef} className="absolute inset-0 whiteboard-studio" />
+        <div ref={hostRef} className="absolute inset-0 whiteboard-studio" data-room={roomId} />
       </div>
     </div>
   );
 }
 
-window.WhiteboardPage = WhiteboardPage;
+Object.assign(window, { WhiteboardPage });

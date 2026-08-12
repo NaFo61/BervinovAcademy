@@ -92,29 +92,34 @@ class TestWhiteboardApi:
         TLDRAW_LICENSE_KEY="tldraw-test-key",
     )
     def test_studio_whiteboard_token(self, student_client, student_user):
+        expected_room = f"u-{student_user.public_id}"
         resp = student_client.post(
             "/api/communication/whiteboard/studio/token/",
             {"room": "academy-studio"},
             format="json",
         )
         assert resp.status_code == status.HTTP_200_OK
-        assert resp.data["room_id"] == "academy-studio"
+        # Клиентский room игнорируется — у каждого своя доска.
+        assert resp.data["room_id"] == expected_room
         assert resp.data["token"]
         assert resp.data["license_key"] == "tldraw-test-key"
         payload = verify_whiteboard_sync_token(
-            resp.data["token"], "academy-studio"
+            resp.data["token"], expected_room
         )
         assert payload is not None
         assert payload["sub"] == str(student_user.public_id)
 
     @override_settings(WHITEBOARD_SYNC_SECRET="test-whiteboard-secret")
-    def test_studio_whiteboard_rejects_bad_room(self, student_client):
+    def test_studio_whiteboard_ignores_client_room(
+        self, student_client, student_user
+    ):
         resp = student_client.post(
             "/api/communication/whiteboard/studio/token/",
-            {"room": "bad room!!"},
+            {"room": "someone-elses-board"},
             format="json",
         )
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["room_id"] == f"u-{student_user.public_id}"
 
     @override_settings(
         **{

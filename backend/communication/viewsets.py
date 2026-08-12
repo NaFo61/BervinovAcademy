@@ -25,9 +25,8 @@ from .serializers import (
     WhiteboardTokenSerializer,
 )
 from .whiteboard_tokens import (
-    STUDIO_ROOM_DEFAULT,
     issue_whiteboard_sync_token,
-    normalize_studio_room_id,
+    personal_studio_room_id,
 )
 
 User = get_user_model()
@@ -39,7 +38,7 @@ def _display_name(user) -> str:
 
 
 class WhiteboardStudioTokenView(APIView):
-    """Токен sync для доски вне созвона (общая studio-комната)."""
+    """Токен sync для личной доски вне созвона (не общая на всех)."""
 
     permission_classes = [IsAuthenticated]
 
@@ -49,20 +48,8 @@ class WhiteboardStudioTokenView(APIView):
                 {"detail": "Доска отключена."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-        raw_room = (
-            request.data.get("room")
-            if isinstance(request.data, dict)
-            else None
-        )
-        if raw_room in (None, ""):
-            raw_room = request.query_params.get("room") or STUDIO_ROOM_DEFAULT
-        try:
-            room_id = normalize_studio_room_id(raw_room)
-        except ValueError as exc:
-            return Response(
-                {"detail": str(exc)},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Комнату задаёт сервер: клиент не может попасть в чужую доску.
+        room_id = personal_studio_room_id(request.user.public_id)
         ttl = settings.WHITEBOARD_TOKEN_TTL_SECONDS
         token = issue_whiteboard_sync_token(
             room_id,

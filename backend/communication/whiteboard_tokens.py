@@ -16,6 +16,11 @@ STUDIO_ROOM_DEFAULT = "academy-studio"
 _STUDIO_ROOM_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$")
 
 
+def personal_studio_room_id(user_public_id) -> str:
+    """Личная studio-комната: одна доска на пользователя, не общая на всех."""
+    return f"u-{user_public_id}"
+
+
 def normalize_studio_room_id(room: str | None) -> str:
     """Нормализовать id комнаты для доски вне созвона."""
     value = (room or STUDIO_ROOM_DEFAULT).strip()

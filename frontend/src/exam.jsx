@@ -790,7 +790,7 @@ function ExamActiveSession({
   }
 
   return (
-    <div className="flex overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
+    <div className="flex overflow-hidden" style={{ height: 'calc(100vh - 5.25rem)' }}>
       {sidebarOpen && (
         <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)}/>
       )}
