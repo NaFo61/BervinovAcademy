@@ -231,3 +231,7 @@ lerna-debug.log*
 *.tmp
 *.temp
 .claude/
+
+# Local secret notebooks (never commit)
+TOKENS*.txt
+*-TOKENS.txt
