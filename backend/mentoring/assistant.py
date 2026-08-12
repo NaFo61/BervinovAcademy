@@ -144,7 +144,7 @@ def _mock_reply(*, message: str, context: dict | None) -> dict:
         f"Вопрос: {message.strip() or '—'}\n\n"
         f"Контекст задания:\n{blurb}\n\n"
         "Подсказка: сформулируйте, что уже пробовали и где застряли. "
-        "Когда в .env появится ключ Gemini (OPENAI_API_KEY) и "
+        "Когда в .env появятся OPENAI_API_KEY (например ProxyAPI) и "
         "ASSISTANT_LLM_ENABLED=true, ответы станут от настоящей модели."
     )
     return {"reply": reply, "mode": "mock", "model": None}
