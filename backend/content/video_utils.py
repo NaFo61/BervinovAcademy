@@ -67,11 +67,12 @@ def build_video_payload(obj, request=None) -> dict | None:
 
     if video_file and video_file.name:
         try:
+            # S3 private: storage returns a short-lived signed URL.
             file_url = video_file.url
         except ValueError:
             file_url = ""
         if file_url:
-            if request and not file_url.startswith(("http://", "https://")):
+            if request and file_url.startswith("/"):
                 file_url = request.build_absolute_uri(file_url)
             return {
                 "kind": "file",
