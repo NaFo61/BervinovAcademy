@@ -127,6 +127,15 @@ class Module(UUIDPublicIdMixin, models.Model):
     description = models.TextField(
         verbose_name=_("Описание модуля"), blank=True
     )
+    assistant_prompt = models.TextField(
+        verbose_name=_("Промпт ИИ модуля"),
+        blank=True,
+        help_text=_(
+            "Дополнение к общему промпту школы для всех заданий модуля. "
+            "Плейсхолдеры: {{condition}}, {{tests}}, {{title}}, "
+            "{{course}}, {{module}}, {{code}}."
+        ),
+    )
     order_index = models.PositiveIntegerField(
         default=1,
         validators=[MinValueValidator(1)],
@@ -791,11 +800,12 @@ class CodingChallenge(UUIDPublicIdMixin, models.Model):
         help_text=_("Шаблон с местами для заполнения {{placeholder}}"),
     )
     assistant_prompt = models.TextField(
-        verbose_name=_("Промпт ИИ (свой)"),
+        verbose_name=_("Промпт ИИ (задание)"),
         blank=True,
         help_text=_(
-            "Пусто = базовый шаблон школы. Плейсхолдеры: "
-            "{{condition}}, {{tests}}, {{title}}, {{course}}, {{code}}."
+            "Дополнение к общему + модульному промпту. Плейсхолдеры: "
+            "{{condition}}, {{tests}}, {{title}}, {{course}}, "
+            "{{module}}, {{code}}."
         ),
     )
     difficulty = models.CharField(

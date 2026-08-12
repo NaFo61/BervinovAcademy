@@ -15,6 +15,7 @@ from mentoring.models import (
 )
 
 _PLACEHOLDER_RE = re.compile(r"\{\{(\w+)\}\}")
+_PROMPT_SECTION_SEP = "\n\n---\n\n"
 
 
 def render_prompt_template(template: str, values: dict) -> str:
@@ -63,12 +64,22 @@ def _load_coding_challenge(context: dict):
 
     try:
         return (
-            CodingChallenge.objects.select_related("course")
+            CodingChallenge.objects.select_related("course", "module")
             .prefetch_related("test_cases")
             .get(public_id=pid)
         )
     except (CodingChallenge.DoesNotExist, ValueError, TypeError):
         return None
+
+
+def _base_prompt_text() -> str:
+    try:
+        solo = AssistantSettings.objects.filter(pk=1).first()
+        if solo and (solo.base_prompt or "").strip():
+            return solo.base_prompt.strip()
+    except Exception:  # noqa: BLE001 — таблица ещё не мигрирована
+        pass
+    return DEFAULT_ASSISTANT_BASE_PROMPT
 
 
 def build_prompt_values(context: dict | None) -> dict[str, str]:
@@ -77,6 +88,7 @@ def build_prompt_values(context: dict | None) -> dict[str, str]:
 
     title = (ctx.get("lesson_title") or "").strip()
     course = (ctx.get("course_title") or "").strip()
+    module = (ctx.get("module_title") or "").strip()
     condition = (ctx.get("lesson_statement") or "").strip()
     tests = (ctx.get("tests_blurb") or "").strip()
     code = (ctx.get("user_code") or "").strip()
@@ -86,6 +98,8 @@ def build_prompt_values(context: dict | None) -> dict[str, str]:
             title = challenge.title or ""
         if not course and challenge.course_id:
             course = challenge.course.title or ""
+        if not module and challenge.module_id:
+            module = challenge.module.title or ""
         ch_condition = _condition_from_challenge(challenge)
         if ch_condition:
             condition = ch_condition
@@ -96,23 +110,24 @@ def build_prompt_values(context: dict | None) -> dict[str, str]:
         "tests": tests[:4000],
         "title": title[:500],
         "course": course[:500],
+        "module": module[:500],
         "code": code[:8000],
     }
 
 
 def resolve_prompt_template(context: dict | None) -> str:
-    """Override на задаче > base settings > встроенный дефолт."""
-    ctx = context or {}
-    challenge = _load_coding_challenge(ctx)
-    if challenge and (challenge.assistant_prompt or "").strip():
-        return challenge.assistant_prompt.strip()
-    try:
-        solo = AssistantSettings.objects.filter(pk=1).first()
-        if solo and (solo.base_prompt or "").strip():
-            return solo.base_prompt.strip()
-    except Exception:  # noqa: BLE001 — таблица ещё не мигрирована
-        pass
-    return DEFAULT_ASSISTANT_BASE_PROMPT
+    """Сборка: общий + модуль + задание (пустые уровни пропускаются)."""
+    parts = [_base_prompt_text()]
+    challenge = _load_coding_challenge(context or {})
+    if challenge and challenge.module_id:
+        module_prompt = (challenge.module.assistant_prompt or "").strip()
+        if module_prompt:
+            parts.append(module_prompt)
+    if challenge:
+        task_prompt = (challenge.assistant_prompt or "").strip()
+        if task_prompt:
+            parts.append(task_prompt)
+    return _PROMPT_SECTION_SEP.join(parts)
 
 
 def build_system_prompt(context: dict | None) -> str:
@@ -127,6 +142,8 @@ def _context_blurb(context: dict | None) -> str:
     parts = []
     if values["course"]:
         parts.append(f"Курс: {values['course']}")
+    if values["module"]:
+        parts.append(f"Модуль: {values['module']}")
     if values["title"]:
         kind = (context or {}).get("lesson_kind") or "урок"
         parts.append(f"{kind}: {values['title']}")

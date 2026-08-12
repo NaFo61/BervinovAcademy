@@ -12,6 +12,7 @@ from .assignment import (
     resolve_student_mentor,
 )
 from .assistant import generate_assistant_reply
+from .models import AssistantSettings
 from .permissions import IsMentorOrAdmin
 from .services import (
     build_challenge_detail_for_mentor,
@@ -197,3 +198,24 @@ class AssistantChatView(APIView):
             context=context,
         )
         return Response(result)
+
+
+class AssistantSettingsView(APIView):
+    """``GET/PATCH /api/mentoring/assistant/settings/`` — общий промпт школы."""
+
+    permission_classes = [IsAuthenticated, IsMentorOrAdmin]
+
+    def get(self, request):
+        solo = AssistantSettings.get_solo()
+        return Response({"base_prompt": solo.base_prompt or ""})
+
+    def patch(self, request):
+        if "base_prompt" not in request.data:
+            return Response(
+                {"base_prompt": "Обязательное поле."},
+                status=400,
+            )
+        solo = AssistantSettings.get_solo()
+        solo.base_prompt = request.data.get("base_prompt") or ""
+        solo.save(update_fields=["base_prompt"])
+        return Response({"base_prompt": solo.base_prompt or ""})

@@ -112,6 +112,7 @@ class ModuleEditorCreateView(APIView):
                 "public_id": str(module.public_id),
                 "title": module.title,
                 "description": module.description,
+                "assistant_prompt": module.assistant_prompt or "",
                 "order_index": module.order_index,
                 "is_active": module.is_active,
                 "lessons": [],
@@ -139,6 +140,10 @@ class ModuleEditorDetailView(APIView):
                 module.title = title
         if "description" in request.data:
             module.description = request.data.get("description") or ""
+        if "assistant_prompt" in request.data:
+            module.assistant_prompt = (
+                request.data.get("assistant_prompt") or ""
+            )
         if "is_active" in request.data:
             module.is_active = bool(request.data.get("is_active"))
         module.save()
@@ -147,6 +152,7 @@ class ModuleEditorDetailView(APIView):
                 "public_id": str(module.public_id),
                 "title": module.title,
                 "description": module.description,
+                "assistant_prompt": module.assistant_prompt or "",
                 "order_index": module.order_index,
                 "is_active": module.is_active,
             }

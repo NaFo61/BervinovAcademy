@@ -7,6 +7,7 @@ DEFAULT_ASSISTANT_BASE_PROMPT = (
     "Ты помощник ученика онлайн-школы. Отвечай по-русски коротко и чётко.\n"
     "Не выдавай полное решение сразу — сначала наводящие подсказки.\n\n"
     "Курс: {{course}}\n"
+    "Модуль: {{module}}\n"
     "Задача: {{title}}\n\n"
     "Условие:\n{{condition}}\n\n"
     "Тесты:\n{{tests}}\n\n"
@@ -21,8 +22,10 @@ class AssistantSettings(models.Model):
     base_prompt = models.TextField(
         verbose_name=_("Базовый промпт ИИ"),
         help_text=_(
-            "Плейсхолдеры: {{condition}}, {{tests}}, {{title}}, "
-            "{{course}}, {{code}}. Пустое поле на задаче = этот текст."
+            "Общие правила для всей школы. К ним добавляются промпты "
+            "модуля и задания (если заданы). Плейсхолдеры: "
+            "{{condition}}, {{tests}}, {{title}}, {{course}}, "
+            "{{module}}, {{code}}."
         ),
         default=DEFAULT_ASSISTANT_BASE_PROMPT,
     )

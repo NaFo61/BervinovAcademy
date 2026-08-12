@@ -107,7 +107,11 @@ def test_challenge_override_beats_base(db):
     )
     course.technology.add(tech)
     module = Module.objects.create(
-        course=course, title="M1", description="d", is_active=True
+        course=course,
+        title="M1",
+        description="d",
+        is_active=True,
+        assistant_prompt="MODULE {{module}}",
     )
     ch = CodingChallenge.objects.create(
         title="Особая",
@@ -116,7 +120,7 @@ def test_challenge_override_beats_base(db):
         solution_template="",
         module=module,
         course=course,
-        assistant_prompt="OVERRIDE {{tests}} :: {{condition}}",
+        assistant_prompt="TASK {{tests}} :: {{condition}}",
     )
     TestCase.objects.create(
         challenge=ch,
@@ -139,11 +143,61 @@ def test_challenge_override_beats_base(db):
             "user_code": "print(1)",
         }
     )
-    assert prompt.startswith("OVERRIDE ")
+    assert "BASE " in prompt
+    assert "MODULE M1" in prompt
+    assert "TASK " in prompt
     assert "Условие А" in prompt
     assert "1 2" in prompt
     assert "secret" not in prompt
-    assert "BASE " not in prompt
+
+
+@pytest.mark.django_db
+def test_module_prompt_without_task_prompt(db):
+    from content.models import CodingChallenge, Course, Module, Technology
+    from users.models import User
+
+    AssistantSettings.objects.filter(pk=1).delete()
+    AssistantSettings.objects.create(pk=1, base_prompt="BASE")
+    mentor = User.objects.create_user(
+        email="prompt-mentor3@academy.com",
+        phone="+79001110003",
+        password="password",
+        role="mentor",
+    )
+    tech = Technology.objects.create(name="Py Prompt 3")
+    course = Course.objects.create(
+        title="Курс 3",
+        description="d",
+        slug="prompt-course-3",
+        is_active=True,
+        mentor=mentor,
+    )
+    course.technology.add(tech)
+    module = Module.objects.create(
+        course=course,
+        title="Циклы",
+        description="d",
+        is_active=True,
+        assistant_prompt="Для модуля циклов не давай готовый for.",
+    )
+    ch = CodingChallenge.objects.create(
+        title="Сумма",
+        description="Условие",
+        instructions="",
+        solution_template="",
+        module=module,
+        course=course,
+        assistant_prompt="",
+    )
+    prompt = build_system_prompt(
+        {
+            "lesson_kind": "coding",
+            "lesson_public_id": str(ch.public_id),
+        }
+    )
+    assert "BASE" in prompt
+    assert "не давай готовый for" in prompt
+    assert prompt.index("BASE") < prompt.index("не давай готовый for")
 
 
 def test_llm_reply_via_openai_compatible(settings):

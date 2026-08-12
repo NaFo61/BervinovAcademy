@@ -128,7 +128,7 @@ function LearnAssistantPane({ context }) {
   );
 }
 
-function LearnHelpDrawer({ open, onClose, navigate, courseTitle, lessonType, lessonData }) {
+function LearnHelpDrawer({ open, onClose, navigate, courseTitle, moduleTitle, lessonType, lessonData }) {
   const [tab, setTab] = React.useState('mentor');
   const [mentorInfo, setMentorInfo] = React.useState(null);
   const [thread, setThread] = React.useState(null);
@@ -139,12 +139,13 @@ function LearnHelpDrawer({ open, onClose, navigate, courseTitle, lessonType, les
 
   const context = React.useMemo(() => ({
     course_title: courseTitle || '',
+    module_title: moduleTitle || '',
     lesson_kind: lessonType || '',
     lesson_title: lessonData?.title || '',
     lesson_statement: lessonStatementFromData(lessonType, lessonData),
     lesson_public_id: lessonData?.public_id || '',
     user_code: typeof window !== 'undefined' ? (window.__learnAssistantCode || '') : '',
-  }), [courseTitle, lessonType, lessonData, open]);
+  }), [courseTitle, moduleTitle, lessonType, lessonData, open]);
 
   React.useEffect(() => {
     if (!open || !token) return undefined;

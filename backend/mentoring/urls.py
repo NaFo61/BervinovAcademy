@@ -15,6 +15,7 @@ from .views import (
     AssignableMentorsView,
     AssignStudentMentorView,
     AssistantChatView,
+    AssistantSettingsView,
     MentorChallengeDetailView,
     MentorCodeSubmissionsView,
     MentorCoursesOverviewView,
@@ -70,6 +71,11 @@ urlpatterns = [
         "mentoring/assistant/chat/",
         AssistantChatView.as_view(),
         name="assistant-chat",
+    ),
+    path(
+        "mentoring/assistant/settings/",
+        AssistantSettingsView.as_view(),
+        name="assistant-settings",
     ),
     path(
         "mentoring/editor/technologies/",

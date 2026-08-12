@@ -702,6 +702,7 @@ class ModuleAdmin(ModelAdmin):
                     "course",
                     "title",
                     "description",
+                    "assistant_prompt",
                     "is_active",
                 ),
             },

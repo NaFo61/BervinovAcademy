@@ -349,15 +349,15 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
                   <TextArea mono value={form.instructions} onChange={(v) => setForm({ ...form, instructions: v })} rows={4}/>
                 </div>
                 <div>
-                  <FieldLabel hint="Пусто = базовый шаблон школы. Плейсхолдеры: {{condition}}, {{tests}}, {{title}}, {{course}}, {{code}}">
-                    Промпт ИИ (свой)
+                  <FieldLabel hint="Добавляется к общему и модульному. Плейсхолдеры: {{condition}}, {{tests}}, {{title}}, {{course}}, {{module}}, {{code}}">
+                    Промпт ИИ для этого задания
                   </FieldLabel>
                   <TextArea
                     mono
                     value={form.assistant_prompt || ''}
                     onChange={(v) => setForm({ ...form, assistant_prompt: v })}
                     rows={6}
-                    placeholder="Оставьте пустым, чтобы использовать общий шаблон"
+                    placeholder="Пусто = только общий + модульный промпт. Сюда — нюансы именно этой задачи."
                   />
                 </div>
               </>
@@ -443,6 +443,129 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function GlobalAssistantPromptPanel() {
+  const [open, setOpen] = React.useState(false);
+  const [prompt, setPrompt] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [msg, setMsg] = React.useState('');
+  const [err, setErr] = React.useState('');
+
+  const load = React.useCallback(() => {
+    setLoading(true);
+    setErr('');
+    window.fetchApiJson('/api/mentoring/assistant/settings/', { auth: true })
+      .then((d) => setPrompt(d.base_prompt || ''))
+      .catch((e) => setErr(e.message || 'Не удалось загрузить общий промпт'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  React.useEffect(() => {
+    if (open) load();
+  }, [open, load]);
+
+  const save = async () => {
+    setSaving(true);
+    setMsg('');
+    setErr('');
+    try {
+      await window.fetchApiJson('/api/mentoring/assistant/settings/', {
+        method: 'PATCH',
+        auth: true,
+        body: { base_prompt: prompt },
+      });
+      setMsg('Общий промпт сохранён');
+    } catch (e) {
+      setErr(e.message || 'Ошибка сохранения');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mb-4 rounded-2xl ring-1 ring-violet-200/80 bg-violet-50/40 overflow-hidden">
+      <button type="button" onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-violet-50/80">
+        <span className="text-sm font-semibold text-violet-900">Общий промпт ИИ (вся школа)</span>
+        <span className="text-[11px] text-violet-700/70 ml-auto">{open ? 'Скрыть' : 'Настроить'}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-3 border-t border-violet-100">
+          <p className="text-[11px] text-ink/50 pt-3">
+            Базовые правила для всех заданий. Потом к ним добавляются промпт модуля и промпт задания.
+            Плейсхолдеры: {'{{course}}'}, {'{{module}}'}, {'{{title}}'}, {'{{condition}}'}, {'{{tests}}'}, {'{{code}}'}.
+          </p>
+          {loading ? (
+            <p className="text-sm text-ink/45">Загрузка…</p>
+          ) : (
+            <TextArea mono value={prompt} onChange={setPrompt} rows={8}
+              placeholder="Общие правила помощника…"/>
+          )}
+          {err && <p className="text-sm text-red-600">{err}</p>}
+          {msg && <p className="text-sm text-emerald-700">{msg}</p>}
+          <button type="button" disabled={saving || loading} onClick={save}
+            className="h-10 px-4 rounded-xl text-sm font-semibold bg-violet-600 text-white disabled:opacity-40">
+            {saving ? 'Сохраняю…' : 'Сохранить общий промпт'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ModulePromptEditor({ mod, onSaved }) {
+  const [open, setOpen] = React.useState(false);
+  const [prompt, setPrompt] = React.useState(mod.assistant_prompt || '');
+  const [saving, setSaving] = React.useState(false);
+  const [err, setErr] = React.useState('');
+
+  React.useEffect(() => {
+    setPrompt(mod.assistant_prompt || '');
+  }, [mod.public_id, mod.assistant_prompt]);
+
+  const save = async (e) => {
+    e.stopPropagation();
+    setSaving(true);
+    setErr('');
+    try {
+      await window.fetchApiJson(
+        `/api/mentoring/editor/modules/${encodeURIComponent(mod.public_id)}/`,
+        { method: 'PATCH', auth: true, body: { assistant_prompt: prompt } },
+      );
+      onSaved && onSaved();
+      setOpen(false);
+    } catch (ex) {
+      setErr(ex.message || 'Ошибка');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-1 mb-2">
+      <button type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        className="text-[10px] font-semibold px-2 py-1 rounded-md bg-violet-50 text-violet-700 hover:bg-violet-100">
+        {open ? 'Скрыть промпт модуля' : (mod.assistant_prompt ? 'Промпт модуля ✓' : 'Промпт модуля')}
+      </button>
+      {open && (
+        <div className="mt-2 p-3 rounded-xl bg-paper ring-1 ring-black/[0.06] space-y-2" onClick={(e) => e.stopPropagation()}>
+          <p className="text-[10px] text-ink/45">
+            Добавляется ко всем заданиям модуля. Пусто — только общий промпт школы.
+          </p>
+          <TextArea mono value={prompt} onChange={setPrompt} rows={5}
+            placeholder="Например: в этом модуле акцент на циклах, не давай готовый for…"/>
+          {err && <p className="text-xs text-red-600">{err}</p>}
+          <button type="button" disabled={saving} onClick={save}
+            className="h-8 px-3 rounded-lg text-xs font-semibold bg-violet-600 text-white disabled:opacity-40">
+            {saving ? '…' : 'Сохранить'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -556,7 +679,9 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
   };
 
   return (
-    <div className="grid lg:grid-cols-[minmax(260px,320px)_1fr] gap-6 min-h-[560px]">
+    <div className="space-y-4">
+      <GlobalAssistantPromptPanel />
+      <div className="grid lg:grid-cols-[minmax(260px,320px)_1fr] gap-6 min-h-[560px]">
       <div className="bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft flex flex-col min-h-[480px] overflow-hidden">
         <div className="p-4 border-b border-black/[0.06] space-y-3">
           <div className="text-[11px] font-semibold uppercase tracking-widest text-ink/40">Курс</div>
@@ -605,6 +730,7 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
                     </button>
                     {expandedModules[mod.public_id] && (
                       <div className="ml-2 pl-2 border-l border-black/[0.06] space-y-1">
+                        <ModulePromptEditor mod={mod} onSaved={loadOutline} />
                         {(mod.lessons || []).map((ls) => {
                           const m = KIND_META[ls.kind] || KIND_META.theory;
                           const active = selected?.public_id === ls.public_id;
@@ -675,6 +801,7 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
           />
         )}
       </div>
+    </div>
     </div>
   );
 }

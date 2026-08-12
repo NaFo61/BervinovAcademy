@@ -86,6 +86,7 @@ def build_course_editor_outline(course: Course) -> dict:
                 "public_id": str(module.public_id),
                 "title": module.title,
                 "description": module.description,
+                "assistant_prompt": module.assistant_prompt or "",
                 "order_index": module.order_index,
                 "is_active": module.is_active,
                 "lessons": lessons,

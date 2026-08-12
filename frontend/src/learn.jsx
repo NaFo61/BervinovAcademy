@@ -818,6 +818,7 @@ function LearnPage({ navigate, hashParams }) {
           onClose={() => setHelpOpen(false)}
           navigate={navigate}
           courseTitle={courseData.title}
+          moduleTitle={currentModule?.title || ''}
           lessonType={lessonType}
           lessonData={lessonData}
         />
