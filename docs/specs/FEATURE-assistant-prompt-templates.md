@@ -1,69 +1,61 @@
-# ИИ-помощник: общий + модуль + задание
+# ИИ-помощник: общий → курс → модуль → урок
 
-**Статус:** APPROVED (слои промптов)
+**Статус:** APPROVED (4 слоя)
 
 ## Цель
 
-Владелец/ментор настраивает промпт **в 3 уровнях** — ИИ понимает контекст:
+Промпт настраивается в 4 уровнях. Непустые слои **склеиваются**.
 
-1. **Общий** (вся школа) — тон, правила, базовый контекст  
-2. **Модуль** — доп. правила для блока курса  
-3. **Задание** — нюансы конкретной задачи  
+1. **Общий** — вся школа  
+2. **Курс** — все уроки курса  
+3. **Модуль** — уроки модуля  
+4. **Урок** — любой тип: теория, radio, checkbox, краткий ответ, код  
 
-Непустые уровни **склеиваются** через разделитель `---`.
-
-Студент спрашивает в «Помощь → ИИ».
+В любом слое можно вставить `{{condition}}` / `{{instructions}}`, чтобы модель видела текст задания и могла его выполнять.
 
 ---
 
-## Как настроить (для людей)
-
-| Уровень | Где |
-|--------|-----|
-| Общий | Ментор → Редактор контента → «Общий промпт ИИ»; или Django Admin |
-| Модуль | Дерево курса → модуль → «Промпт модуля» |
-| Задание | Coding-урок → «Промпт ИИ для этого задания» |
-
-Плейсхолдеры:
+## Плейсхолдеры
 
 | | |
 |--|--|
+| `{{condition}}` | условие / текст урока (теория, вопрос, описание+инструкции кода) |
+| `{{instructions}}` | инструкции coding-задачи (иначе пусто) |
+| `{{tests}}` | публичные тесты |
+| `{{title}}` | название урока |
 | `{{course}}` | курс |
 | `{{module}}` | модуль |
-| `{{title}}` | задача |
-| `{{condition}}` | условие |
-| `{{tests}}` | публичные тесты |
+| `{{kind}}` | theory / radio / checkbox / short_answer / coding |
 | `{{code}}` | код ученика |
+
+Пример в промпте модуля:
+
+```text
+Условие текущего задания:
+{{condition}}
+
+Инструкции:
+{{instructions}}
+
+Выполни задание сам и кратко объясни решение ученику.
+```
 
 ---
 
-## Для разработки
+## Где править в UI
 
-### Иерархия
+- Общий — блок «Общий промпт ИИ»
+- Курс — блок «Промпт ИИ курса»
+- Модуль — кнопка у модуля в дереве
+- Урок — поле в карточке любого урока
 
-```
-base (AssistantSettings) + module.assistant_prompt? + challenge.assistant_prompt?
-→ render placeholders
-```
+---
 
-### API
+## API / DB
 
-- `GET/PATCH /api/mentoring/assistant/settings/` — `{ base_prompt }` (mentor/admin)
-- `PATCH /api/mentoring/editor/modules/{id}/` — поле `assistant_prompt`
-- coding lesson editor — поле `assistant_prompt` (как раньше)
-- `POST /api/mentoring/assistant/chat/` — без изменений; контекст с `module_title`
+- `GET/PATCH /api/mentoring/assistant/settings/`
+- `PATCH /api/mentoring/editor/courses/{id}/` → `assistant_prompt`
+- `PATCH /api/mentoring/editor/modules/{id}/` → `assistant_prompt`
+- lesson editor serializers — `assistant_prompt` на всех kinds
 
-### DB
-
-- `mentoring.AssistantSettings.base_prompt`
-- `content.Module.assistant_prompt`
-- `content.CodingChallenge.assistant_prompt`
-
-### Тесты
-
-- `backend/mentoring/tests/test_assistant.py` — base / module / task compose
-- editor API — `assistant_prompt` на coding
-
-### Deploy
-
-Обычный CI push → migrate → restart. Секреты LLM уже в `.env` (ProxyAPI).
+Поля: `AssistantSettings.base_prompt`, `Course.assistant_prompt`, `Module.assistant_prompt`, `*.assistant_prompt` на всех lesson-моделях.

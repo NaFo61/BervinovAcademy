@@ -17,6 +17,17 @@ from mentoring.models import (
 _PLACEHOLDER_RE = re.compile(r"\{\{(\w+)\}\}")
 _PROMPT_SECTION_SEP = "\n\n---\n\n"
 
+_KIND_ALIASES = {
+    "coding": "coding",
+    "code": "coding",
+    "challenge": "coding",
+    "theory": "theory",
+    "radio": "radio",
+    "checkbox": "checkbox",
+    "short_answer": "short_answer",
+    "short-answer": "short_answer",
+}
+
 
 def render_prompt_template(template: str, values: dict) -> str:
     """Replace ``{{name}}``; unknown names → empty string."""
@@ -44,32 +55,67 @@ def _format_public_tests(challenge) -> str:
     return "\n\n".join(lines) if lines else "(публичных тестов нет)"
 
 
-def _condition_from_challenge(challenge) -> str:
-    parts = []
-    if (challenge.description or "").strip():
-        parts.append(challenge.description.strip())
-    if (challenge.instructions or "").strip():
-        parts.append(challenge.instructions.strip())
-    return "\n\n".join(parts)
+def _strip_html(text: str) -> str:
+    return re.sub(r"<[^>]+>", " ", text or "")
 
 
-def _load_coding_challenge(context: dict):
+def _normalize_kind(raw: str) -> str:
+    return _KIND_ALIASES.get((raw or "").strip().lower(), "")
+
+
+def _load_lesson(context: dict):
+    """Return ``(kind, instance)`` or ``(None, None)``."""
     pid = (context.get("lesson_public_id") or "").strip()
-    kind = (context.get("lesson_kind") or "").strip().lower()
     if not pid:
-        return None
-    if kind and kind not in ("coding", "code", "challenge"):
-        return None
-    from content.models import CodingChallenge
+        return None, None
+    kind = _normalize_kind(context.get("lesson_kind") or "")
+    from content.editor_registry import LESSON_KINDS, lesson_model
 
-    try:
-        return (
-            CodingChallenge.objects.select_related("course", "module")
-            .prefetch_related("test_cases")
-            .get(public_id=pid)
+    kinds = [kind] if kind in LESSON_KINDS else list(LESSON_KINDS)
+    for k in kinds:
+        model = lesson_model(k)
+        qs = model.objects.select_related(
+            "course",
+            "module",
+            "module__course",
+            "exam",
+            "exam__course",
         )
-    except (CodingChallenge.DoesNotExist, ValueError, TypeError):
-        return None
+        if k == "coding":
+            qs = qs.prefetch_related("test_cases")
+        try:
+            return k, qs.get(public_id=pid)
+        except (model.DoesNotExist, ValueError, TypeError):
+            continue
+    return None, None
+
+
+def _condition_from_lesson(kind: str, lesson) -> tuple[str, str]:
+    """Return ``(condition, instructions)`` for placeholders."""
+    if kind == "coding":
+        parts = []
+        if (lesson.description or "").strip():
+            parts.append(lesson.description.strip())
+        instructions = (lesson.instructions or "").strip()
+        if instructions:
+            parts.append(instructions)
+        return "\n\n".join(parts), instructions
+    if kind == "theory":
+        text = _strip_html(lesson.content or "").strip()
+        text = re.sub(r"\s+", " ", text)
+        return text, ""
+    question = (getattr(lesson, "question_text", None) or "").strip()
+    return question, ""
+
+
+def _course_for_lesson(lesson):
+    if getattr(lesson, "module_id", None) and lesson.module_id:
+        return lesson.module.course
+    if getattr(lesson, "course_id", None) and lesson.course_id:
+        return lesson.course
+    if getattr(lesson, "exam_id", None) and lesson.exam_id:
+        return lesson.exam.course
+    return None
 
 
 def _base_prompt_text() -> str:
@@ -84,47 +130,60 @@ def _base_prompt_text() -> str:
 
 def build_prompt_values(context: dict | None) -> dict[str, str]:
     ctx = dict(context or {})
-    challenge = _load_coding_challenge(ctx)
+    kind, lesson = _load_lesson(ctx)
 
     title = (ctx.get("lesson_title") or "").strip()
     course = (ctx.get("course_title") or "").strip()
     module = (ctx.get("module_title") or "").strip()
     condition = (ctx.get("lesson_statement") or "").strip()
+    instructions = (ctx.get("lesson_instructions") or "").strip()
     tests = (ctx.get("tests_blurb") or "").strip()
     code = (ctx.get("user_code") or "").strip()
+    kind_label = kind or _normalize_kind(ctx.get("lesson_kind") or "") or ""
 
-    if challenge:
+    if lesson:
         if not title:
-            title = challenge.title or ""
-        if not course and challenge.course_id:
-            course = challenge.course.title or ""
-        if not module and challenge.module_id:
-            module = challenge.module.title or ""
-        ch_condition = _condition_from_challenge(challenge)
-        if ch_condition:
-            condition = ch_condition
-        tests = _format_public_tests(challenge)
+            title = lesson.title or ""
+        course_obj = _course_for_lesson(lesson)
+        if not course and course_obj is not None:
+            course = course_obj.title or ""
+        if not module and getattr(lesson, "module_id", None):
+            module = lesson.module.title or ""
+        db_condition, db_instructions = _condition_from_lesson(kind, lesson)
+        if db_condition:
+            condition = db_condition
+        if db_instructions:
+            instructions = db_instructions
+        if kind == "coding":
+            tests = _format_public_tests(lesson)
 
     return {
-        "condition": condition[:4000],
+        "condition": condition[:8000],
+        "instructions": instructions[:8000],
         "tests": tests[:4000],
         "title": title[:500],
         "course": course[:500],
         "module": module[:500],
+        "kind": kind_label[:64],
         "code": code[:8000],
     }
 
 
 def resolve_prompt_template(context: dict | None) -> str:
-    """Сборка: общий + модуль + задание (пустые уровни пропускаются)."""
+    """Сборка: общий + курс + модуль + урок (пустые пропускаются)."""
     parts = [_base_prompt_text()]
-    challenge = _load_coding_challenge(context or {})
-    if challenge and challenge.module_id:
-        module_prompt = (challenge.module.assistant_prompt or "").strip()
+    kind, lesson = _load_lesson(context or {})
+    course_obj = _course_for_lesson(lesson) if lesson else None
+    if course_obj is not None:
+        course_prompt = (course_obj.assistant_prompt or "").strip()
+        if course_prompt:
+            parts.append(course_prompt)
+    if lesson and getattr(lesson, "module_id", None):
+        module_prompt = (lesson.module.assistant_prompt or "").strip()
         if module_prompt:
             parts.append(module_prompt)
-    if challenge:
-        task_prompt = (challenge.assistant_prompt or "").strip()
+    if lesson:
+        task_prompt = (getattr(lesson, "assistant_prompt", None) or "").strip()
         if task_prompt:
             parts.append(task_prompt)
     return _PROMPT_SECTION_SEP.join(parts)
@@ -145,7 +204,7 @@ def _context_blurb(context: dict | None) -> str:
     if values["module"]:
         parts.append(f"Модуль: {values['module']}")
     if values["title"]:
-        kind = (context or {}).get("lesson_kind") or "урок"
+        kind = values["kind"] or (context or {}).get("lesson_kind") or "урок"
         parts.append(f"{kind}: {values['title']}")
     if values["condition"]:
         parts.append(f"Условие:\n{values['condition'][:1200]}")

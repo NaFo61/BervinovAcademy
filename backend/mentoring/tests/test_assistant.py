@@ -79,7 +79,7 @@ def test_base_prompt_used_when_no_override(db):
 
 
 @pytest.mark.django_db
-def test_challenge_override_beats_base(db):
+def test_four_layers_compose(db):
     from content.models import (
         CodingChallenge,
         Course,
@@ -104,6 +104,7 @@ def test_challenge_override_beats_base(db):
         slug="prompt-course-2",
         is_active=True,
         mentor=mentor,
+        assistant_prompt="COURSE {{course}}",
     )
     course.technology.add(tech)
     module = Module.objects.create(
@@ -111,16 +112,16 @@ def test_challenge_override_beats_base(db):
         title="M1",
         description="d",
         is_active=True,
-        assistant_prompt="MODULE {{module}}",
+        assistant_prompt="MODULE {{module}} :: {{instructions}}",
     )
     ch = CodingChallenge.objects.create(
         title="Особая",
         description="Условие А",
-        instructions="",
+        instructions="Инструкция Б",
         solution_template="",
         module=module,
         course=course,
-        assistant_prompt="TASK {{tests}} :: {{condition}}",
+        assistant_prompt="TASK {{tests}}",
     )
     TestCase.objects.create(
         challenge=ch,
@@ -144,16 +145,20 @@ def test_challenge_override_beats_base(db):
         }
     )
     assert "BASE " in prompt
+    assert "COURSE Курс 2" in prompt
     assert "MODULE M1" in prompt
+    assert "Инструкция Б" in prompt
     assert "TASK " in prompt
-    assert "Условие А" in prompt
     assert "1 2" in prompt
     assert "secret" not in prompt
+    assert prompt.index("BASE") < prompt.index("COURSE")
+    assert prompt.index("COURSE") < prompt.index("MODULE")
+    assert prompt.index("MODULE") < prompt.index("TASK")
 
 
 @pytest.mark.django_db
-def test_module_prompt_without_task_prompt(db):
-    from content.models import CodingChallenge, Course, Module, Technology
+def test_theory_lesson_prompt_and_condition(db):
+    from content.models import Course, LessonTheory, Module, Technology
     from users.models import User
 
     AssistantSettings.objects.filter(pk=1).delete()
@@ -175,38 +180,34 @@ def test_module_prompt_without_task_prompt(db):
     course.technology.add(tech)
     module = Module.objects.create(
         course=course,
-        title="Циклы",
+        title="Теория",
         description="d",
         is_active=True,
-        assistant_prompt="Для модуля циклов не давай готовый for.",
+        assistant_prompt="Прочитай материал:\n{{condition}}",
     )
-    ch = CodingChallenge.objects.create(
-        title="Сумма",
-        description="Условие",
-        instructions="",
-        solution_template="",
+    lesson = LessonTheory.objects.create(
+        title="Введение",
+        content="<p>Текст про циклы for</p>",
         module=module,
         course=course,
-        assistant_prompt="",
+        assistant_prompt="Не спойлери следующие главы.",
     )
     prompt = build_system_prompt(
         {
-            "lesson_kind": "coding",
-            "lesson_public_id": str(ch.public_id),
+            "lesson_kind": "theory",
+            "lesson_public_id": str(lesson.public_id),
         }
     )
     assert "BASE" in prompt
-    assert "не давай готовый for" in prompt
-    assert prompt.index("BASE") < prompt.index("не давай готовый for")
+    assert "Текст про циклы for" in prompt
+    assert "Не спойлери следующие главы." in prompt
 
 
 def test_llm_reply_via_openai_compatible(settings):
     settings.ASSISTANT_LLM_ENABLED = True
-    settings.OPENAI_API_KEY = "test-gemini-key"
-    settings.OPENAI_BASE_URL = (
-        "https://generativelanguage.googleapis.com/v1beta/openai"
-    )
-    settings.OPENAI_MODEL = "gemini-2.0-flash"
+    settings.OPENAI_API_KEY = "test-key"
+    settings.OPENAI_BASE_URL = "https://api.proxyapi.ru/openai/v1"
+    settings.OPENAI_MODEL = "gpt-4o-mini"
 
     payload = {
         "choices": [
@@ -239,7 +240,7 @@ def test_llm_reply_via_openai_compatible(settings):
         )
 
     assert result["mode"] == "llm"
-    assert result["model"] == "gemini-2.0-flash"
+    assert result["model"] == "gpt-4o-mini"
     assert "двух чисел" in result["reply"]
     urlopen_mock.assert_called_once()
     req = urlopen_mock.call_args[0][0]

@@ -107,6 +107,7 @@ def build_course_editor_outline(course: Course) -> dict:
         "public_id": str(course.public_id),
         "title": course.title,
         "slug": course.slug,
+        "assistant_prompt": course.assistant_prompt or "",
         "modules": modules,
         "exams": exams,
     }

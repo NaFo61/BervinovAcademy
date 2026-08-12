@@ -77,7 +77,7 @@ class CourseEditorCreateView(APIView):
 
 
 class CourseEditorOutlineView(APIView):
-    """``GET /api/mentoring/editor/courses/{course_public_id}/`` — структура курса."""
+    """``GET/PATCH /api/mentoring/editor/courses/{course_public_id}/``."""
 
     permission_classes = [IsAuthenticated, IsMentorOrAdmin]
 
@@ -86,6 +86,26 @@ class CourseEditorOutlineView(APIView):
         denied = _check_course_access(request, course)
         if denied:
             return denied
+        return Response(build_course_editor_outline(course))
+
+    def patch(self, request, course_public_id):
+        course = get_object_or_404(Course, public_id=course_public_id)
+        denied = _check_course_access(request, course)
+        if denied:
+            return denied
+        if "title" in request.data:
+            title = (request.data.get("title") or "").strip()
+            if title:
+                course.title = title
+        if "description" in request.data:
+            course.description = request.data.get("description") or ""
+        if "assistant_prompt" in request.data:
+            course.assistant_prompt = (
+                request.data.get("assistant_prompt") or ""
+            )
+        if "is_active" in request.data:
+            course.is_active = bool(request.data.get("is_active"))
+        course.save()
         return Response(build_course_editor_outline(course))
 
 

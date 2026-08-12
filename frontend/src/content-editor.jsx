@@ -348,20 +348,21 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
                   <FieldLabel>Инструкции</FieldLabel>
                   <TextArea mono value={form.instructions} onChange={(v) => setForm({ ...form, instructions: v })} rows={4}/>
                 </div>
-                <div>
-                  <FieldLabel hint="Добавляется к общему и модульному. Плейсхолдеры: {{condition}}, {{tests}}, {{title}}, {{course}}, {{module}}, {{code}}">
-                    Промпт ИИ для этого задания
-                  </FieldLabel>
-                  <TextArea
-                    mono
-                    value={form.assistant_prompt || ''}
-                    onChange={(v) => setForm({ ...form, assistant_prompt: v })}
-                    rows={6}
-                    placeholder="Пусто = только общий + модульный промпт. Сюда — нюансы именно этой задачи."
-                  />
-                </div>
               </>
             )}
+
+            <div>
+              <FieldLabel hint="Добавляется к общему + курсу + модулю. Можно опираться на {{condition}} и {{instructions}}. Также: {{tests}}, {{title}}, {{course}}, {{module}}, {{kind}}, {{code}}">
+                Промпт ИИ для этого урока
+              </FieldLabel>
+              <TextArea
+                mono
+                value={form.assistant_prompt || ''}
+                onChange={(v) => setForm({ ...form, assistant_prompt: v })}
+                rows={6}
+                placeholder="Пусто = общий + курс + модуль. Сюда — нюансы именно этого урока (теория, тест или код)."
+              />
+            </div>
 
             <div>
               <FieldLabel hint="Показывается ученику на вкладке задания">Заметка преподавателя</FieldLabel>
@@ -496,8 +497,8 @@ function GlobalAssistantPromptPanel() {
       {open && (
         <div className="px-4 pb-4 space-y-3 border-t border-violet-100">
           <p className="text-[11px] text-ink/50 pt-3">
-            Базовые правила для всех заданий. Потом к ним добавляются промпт модуля и промпт задания.
-            Плейсхолдеры: {'{{course}}'}, {'{{module}}'}, {'{{title}}'}, {'{{condition}}'}, {'{{tests}}'}, {'{{code}}'}.
+            Правила для всей школы. Дальше добавляются: курс → модуль → урок.
+            Плейсхолдеры: {'{{course}}'}, {'{{module}}'}, {'{{title}}'}, {'{{kind}}'}, {'{{condition}}'}, {'{{instructions}}'}, {'{{tests}}'}, {'{{code}}'}.
           </p>
           {loading ? (
             <p className="text-sm text-ink/45">Загрузка…</p>
@@ -510,6 +511,63 @@ function GlobalAssistantPromptPanel() {
           <button type="button" disabled={saving || loading} onClick={save}
             className="h-10 px-4 rounded-xl text-sm font-semibold bg-violet-600 text-white disabled:opacity-40">
             {saving ? 'Сохраняю…' : 'Сохранить общий промпт'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CoursePromptEditor({ courseId, outline, onSaved }) {
+  const [open, setOpen] = React.useState(false);
+  const [prompt, setPrompt] = React.useState(outline?.assistant_prompt || '');
+  const [saving, setSaving] = React.useState(false);
+  const [err, setErr] = React.useState('');
+
+  React.useEffect(() => {
+    setPrompt(outline?.assistant_prompt || '');
+  }, [courseId, outline?.assistant_prompt]);
+
+  if (!courseId) return null;
+
+  const save = async () => {
+    setSaving(true);
+    setErr('');
+    try {
+      await window.fetchApiJson(
+        `/api/mentoring/editor/courses/${encodeURIComponent(courseId)}/`,
+        { method: 'PATCH', auth: true, body: { assistant_prompt: prompt } },
+      );
+      onSaved && onSaved();
+      setOpen(false);
+    } catch (ex) {
+      setErr(ex.message || 'Ошибка');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mb-4 rounded-2xl ring-1 ring-sky-200/80 bg-sky-50/40 overflow-hidden">
+      <button type="button" onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-sky-50/80">
+        <span className="text-sm font-semibold text-sky-900">Промпт ИИ курса</span>
+        <span className="text-[11px] text-sky-700/70 ml-auto">
+          {open ? 'Скрыть' : (outline?.assistant_prompt ? 'Задан ✓' : 'Настроить')}
+        </span>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-3 border-t border-sky-100">
+          <p className="text-[11px] text-ink/50 pt-3">
+            Добавляется ко всем урокам этого курса. Можно вставить {'{{condition}}'} / {'{{instructions}}'},
+            чтобы модель видела текст текущего задания и могла его решать.
+          </p>
+          <TextArea mono value={prompt} onChange={setPrompt} rows={6}
+            placeholder={'Например:\nУсловие задания:\n{{condition}}\n\nРеши задачу и объясни кратко.'}/>
+          {err && <p className="text-sm text-red-600">{err}</p>}
+          <button type="button" disabled={saving} onClick={save}
+            className="h-10 px-4 rounded-xl text-sm font-semibold bg-sky-600 text-white disabled:opacity-40">
+            {saving ? 'Сохраняю…' : 'Сохранить промпт курса'}
           </button>
         </div>
       )}
@@ -555,10 +613,11 @@ function ModulePromptEditor({ mod, onSaved }) {
       {open && (
         <div className="mt-2 p-3 rounded-xl bg-paper ring-1 ring-black/[0.06] space-y-2" onClick={(e) => e.stopPropagation()}>
           <p className="text-[10px] text-ink/45">
-            Добавляется ко всем заданиям модуля. Пусто — только общий промпт школы.
+            Добавляется ко всем урокам модуля (после общего и курса). Вставьте {'{{condition}}'} / {'{{instructions}}'},
+            если модель должна видеть текст задания и уметь его выполнять.
           </p>
           <TextArea mono value={prompt} onChange={setPrompt} rows={5}
-            placeholder="Например: в этом модуле акцент на циклах, не давай готовый for…"/>
+            placeholder={'Условие:\n{{condition}}\n\nИнструкции:\n{{instructions}}\n\nРеши и проверь по {{tests}}.'}/>
           {err && <p className="text-xs text-red-600">{err}</p>}
           <button type="button" disabled={saving} onClick={save}
             className="h-8 px-3 rounded-lg text-xs font-semibold bg-violet-600 text-white disabled:opacity-40">
@@ -681,6 +740,7 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
   return (
     <div className="space-y-4">
       <GlobalAssistantPromptPanel />
+      <CoursePromptEditor courseId={courseId} outline={outline} onSaved={loadOutline} />
       <div className="grid lg:grid-cols-[minmax(260px,320px)_1fr] gap-6 min-h-[560px]">
       <div className="bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft flex flex-col min-h-[480px] overflow-hidden">
         <div className="p-4 border-b border-black/[0.06] space-y-3">

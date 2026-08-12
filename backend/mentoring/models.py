@@ -8,8 +8,10 @@ DEFAULT_ASSISTANT_BASE_PROMPT = (
     "Не выдавай полное решение сразу — сначала наводящие подсказки.\n\n"
     "Курс: {{course}}\n"
     "Модуль: {{module}}\n"
+    "Тип урока: {{kind}}\n"
     "Задача: {{title}}\n\n"
-    "Условие:\n{{condition}}\n\n"
+    "Условие / материал:\n{{condition}}\n\n"
+    "Инструкции:\n{{instructions}}\n\n"
     "Тесты:\n{{tests}}\n\n"
     "Код ученика (если есть):\n{{code}}\n\n"
     "Вопрос ученика придёт отдельным сообщением."
@@ -22,10 +24,10 @@ class AssistantSettings(models.Model):
     base_prompt = models.TextField(
         verbose_name=_("Базовый промпт ИИ"),
         help_text=_(
-            "Общие правила для всей школы. К ним добавляются промпты "
-            "модуля и задания (если заданы). Плейсхолдеры: "
-            "{{condition}}, {{tests}}, {{title}}, {{course}}, "
-            "{{module}}, {{code}}."
+            "Общие правила школы. Дальше добавляются промпты курса, "
+            "модуля и урока. Плейсхолдеры: {{condition}}, "
+            "{{instructions}}, {{tests}}, {{title}}, {{course}}, "
+            "{{module}}, {{kind}}, {{code}}."
         ),
         default=DEFAULT_ASSISTANT_BASE_PROMPT,
     )

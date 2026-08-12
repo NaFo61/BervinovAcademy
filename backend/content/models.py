@@ -101,6 +101,15 @@ class Course(UUIDPublicIdMixin, models.Model):
         verbose_name=_("Ментор курса"),
         limit_choices_to={"role__in": ("mentor", "admin")},
     )
+    assistant_prompt = models.TextField(
+        verbose_name=_("Промпт ИИ курса"),
+        blank=True,
+        help_text=_(
+            "Дополнение к общему промпту для всех уроков курса. "
+            "Плейсхолдеры: {{condition}}, {{instructions}}, {{tests}}, "
+            "{{title}}, {{course}}, {{module}}, {{kind}}, {{code}}."
+        ),
+    )
 
     class Meta:
         verbose_name = _("Курс")
@@ -131,9 +140,11 @@ class Module(UUIDPublicIdMixin, models.Model):
         verbose_name=_("Промпт ИИ модуля"),
         blank=True,
         help_text=_(
-            "Дополнение к общему промпту школы для всех заданий модуля. "
-            "Плейсхолдеры: {{condition}}, {{tests}}, {{title}}, "
-            "{{course}}, {{module}}, {{code}}."
+            "Дополнение к общему и курсовому промпту для уроков модуля. "
+            "Можно вставить {{condition}} / {{instructions}}, чтобы "
+            "модель видела текст задания. Плейсхолдеры: {{condition}}, "
+            "{{instructions}}, {{tests}}, {{title}}, {{course}}, "
+            "{{module}}, {{kind}}, {{code}}."
         ),
     )
     order_index = models.PositiveIntegerField(
@@ -301,6 +312,15 @@ class LessonTheory(UUIDPublicIdMixin, models.Model):
             "Пояснение от преподавателя на вкладке материала (не путать с комментариями учеников)"
         ),
     )
+    assistant_prompt = models.TextField(
+        verbose_name=_("Промпт ИИ (урок)"),
+        blank=True,
+        help_text=_(
+            "Дополнение к общему / курсу / модулю для этого урока. "
+            "Плейсхолдеры: {{condition}}, {{instructions}}, {{tests}}, "
+            "{{title}}, {{course}}, {{module}}, {{kind}}, {{code}}."
+        ),
+    )
     solution_text = models.TextField(
         verbose_name=_("Текст эталонного решения"),
         blank=True,
@@ -385,6 +405,15 @@ class LessonRadioQuestion(UUIDPublicIdMixin, models.Model):
         verbose_name=_("Заметка преподавателя"),
         blank=True,
         help_text=_("Пояснение к заданию на вкладке «Задание»"),
+    )
+    assistant_prompt = models.TextField(
+        verbose_name=_("Промпт ИИ (урок)"),
+        blank=True,
+        help_text=_(
+            "Дополнение к общему / курсу / модулю для этого урока. "
+            "Плейсхолдеры: {{condition}}, {{instructions}}, {{tests}}, "
+            "{{title}}, {{course}}, {{module}}, {{kind}}, {{code}}."
+        ),
     )
     explanation = models.TextField(
         verbose_name=_("Пояснение"),
@@ -518,6 +547,15 @@ class LessonCheckBoxQuestion(UUIDPublicIdMixin, models.Model):
         verbose_name=_("Заметка преподавателя"),
         blank=True,
         help_text=_("Пояснение к заданию на вкладке «Задание»"),
+    )
+    assistant_prompt = models.TextField(
+        verbose_name=_("Промпт ИИ (урок)"),
+        blank=True,
+        help_text=_(
+            "Дополнение к общему / курсу / модулю для этого урока. "
+            "Плейсхолдеры: {{condition}}, {{instructions}}, {{tests}}, "
+            "{{title}}, {{course}}, {{module}}, {{kind}}, {{code}}."
+        ),
     )
     explanation = models.TextField(
         verbose_name=_("Пояснение"),
@@ -674,6 +712,15 @@ class LessonShortAnswer(UUIDPublicIdMixin, models.Model):
         blank=True,
         help_text=_("Пояснение к заданию на вкладке «Задание»"),
     )
+    assistant_prompt = models.TextField(
+        verbose_name=_("Промпт ИИ (урок)"),
+        blank=True,
+        help_text=_(
+            "Дополнение к общему / курсу / модулю для этого урока. "
+            "Плейсхолдеры: {{condition}}, {{instructions}}, {{tests}}, "
+            "{{title}}, {{course}}, {{module}}, {{kind}}, {{code}}."
+        ),
+    )
     explanation = models.TextField(
         verbose_name=_("Пояснение"),
         blank=True,
@@ -800,12 +847,12 @@ class CodingChallenge(UUIDPublicIdMixin, models.Model):
         help_text=_("Шаблон с местами для заполнения {{placeholder}}"),
     )
     assistant_prompt = models.TextField(
-        verbose_name=_("Промпт ИИ (задание)"),
+        verbose_name=_("Промпт ИИ (урок)"),
         blank=True,
         help_text=_(
-            "Дополнение к общему + модульному промпту. Плейсхолдеры: "
-            "{{condition}}, {{tests}}, {{title}}, {{course}}, "
-            "{{module}}, {{code}}."
+            "Дополнение к общему / курсу / модулю для этого урока. "
+            "Плейсхолдеры: {{condition}}, {{instructions}}, {{tests}}, "
+            "{{title}}, {{course}}, {{module}}, {{kind}}, {{code}}."
         ),
     )
     difficulty = models.CharField(
