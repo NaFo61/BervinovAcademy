@@ -21,7 +21,7 @@ html = html.replace(
 
 if (!whiteboardEnabled) {
   html = html.replace(
-    /<!-- WHITEBOARD_ASSETS_START -->[\s\S]*?<!-- WHITEBOARD_ASSETS_END -->\n?/,
+    /<!-- WHITEBOARD_ASSETS_START -->[\s\S]*?<!-- WHITEBOARD_ASSETS_END -->\n?/g,
     "",
   );
 }

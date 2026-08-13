@@ -1464,10 +1464,10 @@ function NotificationBell({ navigate }) {
   return (
     <div className="relative" ref={wrapRef}>
       <button type="button" onClick={() => setOpen((v) => !v)} aria-label="Уведомления"
-        className="relative w-10 h-10 rounded-xl hover:bg-black/[0.04] flex items-center justify-center text-ink/70">
+        className="site-header__icon-btn relative">
         <I.Bell className="w-5 h-5" />
         {items.length > 0 && (
-          <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
             {items.length > 9 ? '9+' : items.length}
           </span>
         )}
@@ -1593,7 +1593,12 @@ function TopNav({ route, navigate }) {
     const onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        searchRef.current?.focus();
+        if (window.matchMedia('(max-width: 1279px)').matches) {
+          setMobileOpen(true);
+          setTimeout(() => searchRef.current?.focus(), 0);
+        } else {
+          searchRef.current?.focus();
+        }
       }
       if (e.key === 'Escape') setMobileOpen(false);
     };
@@ -1644,13 +1649,13 @@ function TopNav({ route, navigate }) {
     navigate(Routes.LANDING);
   };
 
+  /* Профиль — только через аватар, чтобы шапка не разъезжалась */
   const links = [
     { id: Routes.LANDING, label: 'Главная' },
     { id: Routes.CATALOG, label: 'Каталог' },
     { id: Routes.PLAYGROUND, label: 'Python' },
     { id: Routes.WHITEBOARD, label: 'Доска' },
     { id: Routes.PRO, label: 'Про' },
-    { id: Routes.PROFILE, label: 'Профиль' },
     ...(isMentor ? [{ id: Routes.MENTOR, label: 'Ментор' }] : []),
   ];
 
@@ -1660,71 +1665,75 @@ function TopNav({ route, navigate }) {
   };
 
   return (
-    <header className={`site-header sticky top-0 z-40 pt-3 px-3 sm:px-5 transition-[padding] duration-300 ${scrolled ? 'site-header--scrolled pt-2' : ''}`}>
-      <div className="site-header__shell max-w-7xl mx-auto">
-        <div className="site-header__glow" aria-hidden="true" />
-        <div className="relative flex items-center gap-3 sm:gap-4 h-[3.75rem] px-3 sm:px-4">
+    <header className={`site-header sticky top-0 z-40 ${scrolled ? 'site-header--scrolled' : ''}`}>
+      <div className="site-header__inner">
+        <button
+          type="button"
+          onClick={() => go(Routes.LANDING)}
+          className="flex items-center gap-2 group shrink-0"
+          aria-label="Bervinov Academy — на главную"
+        >
+          <span className="site-header__mark">
+            <I.Logo className="w-6 h-6" />
+          </span>
+          <span className="leading-none hidden sm:block">
+            <span className="block font-extrabold tracking-tight text-[14px] text-ink">
+              Bervinov<span className="grad-text">Academy</span>
+            </span>
+            <span className="mt-0.5 block text-[9px] uppercase tracking-[0.18em] text-ink/40">
+              учись вживую
+            </span>
+          </span>
+        </button>
+
+        <nav className="site-header__nav" aria-label="Основное меню">
+          {links.map((l) => (
+            <button
+              key={l.id}
+              type="button"
+              onClick={() => go(l.id)}
+              className={`site-header__nav-item ${route === l.id ? 'is-active' : ''}`}
+            >
+              {l.label}
+            </button>
+          ))}
+          {isAdmin && (
+            <a href="/admin/" className="site-header__nav-item">
+              Школа
+            </a>
+          )}
+        </nav>
+
+        <div className="flex-1 min-w-0" />
+
+        <form onSubmit={submitSearch} className="site-header__search">
+          <I.Search className="w-4 h-4 text-ink/40 shrink-0" />
+          <input
+            ref={searchRef}
+            type="search"
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
+            placeholder="Найти курс…"
+            className="flex-1 min-w-0 bg-transparent text-sm text-ink/80 placeholder:text-ink/35 outline-none"
+            aria-label="Поиск курсов"
+          />
+        </form>
+
+        <div className="flex items-center gap-0.5 shrink-0">
           <button
             type="button"
-            onClick={() => go(Routes.LANDING)}
-            className="flex items-center gap-2.5 group shrink-0"
-            aria-label="Bervinov Academy — на главную"
+            className="site-header__icon-btn xl:hidden"
+            aria-label="Поиск курсов"
+            onClick={() => {
+              setMobileOpen(true);
+              setTimeout(() => searchRef.current?.focus(), 0);
+            }}
           >
-            <span className="site-header__mark group-hover:scale-105 transition-transform duration-300">
-              <I.Logo className="w-7 h-7" />
-            </span>
-            <span className="leading-none hidden xs:block sm:block">
-              <span className="block font-extrabold tracking-tight text-[15px] text-ink">
-                Bervinov<span className="grad-text">Academy</span>
-              </span>
-              <span className="mt-0.5 block text-[9px] uppercase tracking-[0.22em] text-ink/40">
-                учись вживую
-              </span>
-            </span>
+            <I.Search className="w-5 h-5" />
           </button>
 
-          <nav className="hidden lg:flex items-center gap-0.5 ml-1 p-1 rounded-2xl bg-ink/[0.03] ring-1 ring-ink/[0.04]">
-            {links.map((l) => {
-              const active = route === l.id;
-              return (
-                <button
-                  key={l.id}
-                  type="button"
-                  onClick={() => go(l.id)}
-                  className={`site-header__nav-item ${active ? 'is-active' : ''}`}
-                >
-                  {l.label}
-                </button>
-              );
-            })}
-            {isAdmin && (
-              <a href="/admin/" className="site-header__nav-item">
-                Школа
-              </a>
-            )}
-          </nav>
-
-          <div className="flex-1" />
-
-          <form
-            onSubmit={submitSearch}
-            className="site-header__search hidden md:flex items-center gap-2 h-10 px-3 w-52 xl:w-64"
-          >
-            <I.Search className="w-4 h-4 text-sky-600/70 shrink-0" />
-            <input
-              ref={searchRef}
-              type="search"
-              value={searchDraft}
-              onChange={(e) => setSearchDraft(e.target.value)}
-              placeholder="Найти курс…"
-              className="flex-1 min-w-0 bg-transparent text-sm text-ink/80 placeholder:text-ink/35 outline-none"
-              aria-label="Поиск курсов"
-            />
-            <kbd className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-md bg-ink/[0.04] text-ink/35 font-mono">⌘K</kbd>
-          </form>
-
           {session ? (
-            <div className="flex items-center gap-1 sm:gap-1.5">
+            <>
               <button
                 type="button"
                 onClick={() => go(Routes.MESSAGES)}
@@ -1733,7 +1742,7 @@ function TopNav({ route, navigate }) {
               >
                 <I.Chat className="w-5 h-5" />
                 {chatUnread > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full grad-bg text-white text-[10px] font-bold flex items-center justify-center shadow-sm">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-1 rounded-full grad-bg text-white text-[10px] font-bold flex items-center justify-center">
                     {chatUnread > 99 ? '99+' : chatUnread}
                   </span>
                 )}
@@ -1742,31 +1751,20 @@ function TopNav({ route, navigate }) {
               <button
                 type="button"
                 onClick={() => go(Routes.PROFILE)}
-                className="hidden sm:flex items-center gap-2 pl-1 pr-2.5 h-10 rounded-2xl hover:bg-ink/[0.03] transition-colors"
+                className={`site-header__icon-btn ${route === Routes.PROFILE || route === Routes.PROFILE_EDIT ? 'is-active' : ''}`}
                 title={displayName || 'Профиль'}
+                aria-label="Профиль"
               >
-                <span className="avatar-ring shrink-0">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[11px] font-bold text-sky-700">
-                    {initials}
-                  </span>
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-50 text-[11px] font-bold text-sky-700 ring-1 ring-sky-200/80">
+                  {initials}
                 </span>
-                {displayName ? (
-                  <span className="max-w-[110px] truncate text-sm font-medium text-ink/75">{displayName}</span>
-                ) : null}
               </button>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="hidden sm:inline-flex h-10 px-3.5 rounded-2xl text-sm font-semibold text-rose-600/90 hover:bg-rose-50 transition-colors"
-              >
-                Выйти
-              </button>
-            </div>
+            </>
           ) : (
             <button
               type="button"
               onClick={() => go(Routes.AUTH)}
-              className="btn-grad btn-shimmer h-10 px-5 rounded-2xl text-white text-sm font-semibold shadow-[0_10px_28px_-12px_rgba(37,99,235,0.65)]"
+              className="btn-grad h-9 px-4 rounded-xl text-white text-sm font-semibold"
             >
               Войти
             </button>
@@ -1774,7 +1772,7 @@ function TopNav({ route, navigate }) {
 
           <button
             type="button"
-            className="lg:hidden site-header__icon-btn"
+            className="site-header__icon-btn site-header__menu-btn"
             aria-label={mobileOpen ? 'Закрыть меню' : 'Открыть меню'}
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((v) => !v)}
@@ -1784,53 +1782,70 @@ function TopNav({ route, navigate }) {
             </span>
           </button>
         </div>
-
-        {mobileOpen && (
-          <div className="lg:hidden border-t border-ink/[0.05] px-3 pb-3 pt-2">
-            <form onSubmit={submitSearch} className="site-header__search flex md:hidden items-center gap-2 h-11 px-3 mb-2">
-              <I.Search className="w-4 h-4 text-sky-600/70 shrink-0" />
-              <input
-                type="search"
-                value={searchDraft}
-                onChange={(e) => setSearchDraft(e.target.value)}
-                placeholder="Найти курс…"
-                className="flex-1 min-w-0 bg-transparent text-sm outline-none"
-                aria-label="Поиск курсов"
-              />
-            </form>
-            <nav className="grid grid-cols-2 gap-1.5">
-              {links.map((l) => (
-                <button
-                  key={l.id}
-                  type="button"
-                  onClick={() => go(l.id)}
-                  className={`h-11 rounded-xl text-sm font-semibold transition-colors ${
-                    route === l.id
-                      ? 'grad-bg text-white shadow-soft'
-                      : 'bg-ink/[0.03] text-ink/75 hover:bg-ink/[0.06]'
-                  }`}
-                >
-                  {l.label}
-                </button>
-              ))}
-              {isAdmin && (
-                <a href="/admin/" className="h-11 rounded-xl text-sm font-semibold bg-ink/[0.03] text-ink/75 flex items-center justify-center">
-                  Школа
-                </a>
-              )}
-              {session && (
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="h-11 rounded-xl text-sm font-semibold text-rose-600 bg-rose-50/80 col-span-2"
-                >
-                  Выйти
-                </button>
-              )}
-            </nav>
-          </div>
-        )}
       </div>
+
+      {mobileOpen && (
+        <div className="site-header__panel xl:hidden">
+          <form
+            onSubmit={submitSearch}
+            className="flex items-center gap-2 h-11 px-3 mb-3 rounded-xl bg-ink/[0.035] border border-ink/[0.08]"
+          >
+            <I.Search className="w-4 h-4 text-ink/40 shrink-0" />
+            <input
+              ref={searchRef}
+              type="search"
+              value={searchDraft}
+              onChange={(e) => setSearchDraft(e.target.value)}
+              placeholder="Найти курс…"
+              className="flex-1 min-w-0 bg-transparent text-sm outline-none"
+              aria-label="Поиск курсов"
+            />
+          </form>
+          <nav className="grid grid-cols-2 gap-1.5" aria-label="Меню">
+            {links.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                onClick={() => go(l.id)}
+                className={`h-11 rounded-xl text-sm font-semibold transition-colors ${
+                  route === l.id
+                    ? 'bg-sky-50 text-sky-800 ring-1 ring-sky-200'
+                    : 'bg-ink/[0.03] text-ink/75 hover:bg-ink/[0.06]'
+                }`}
+              >
+                {l.label}
+              </button>
+            ))}
+            {session && (
+              <button
+                type="button"
+                onClick={() => go(Routes.PROFILE)}
+                className={`h-11 rounded-xl text-sm font-semibold transition-colors ${
+                  route === Routes.PROFILE || route === Routes.PROFILE_EDIT
+                    ? 'bg-sky-50 text-sky-800 ring-1 ring-sky-200'
+                    : 'bg-ink/[0.03] text-ink/75 hover:bg-ink/[0.06]'
+                }`}
+              >
+                Профиль
+              </button>
+            )}
+            {isAdmin && (
+              <a href="/admin/" className="h-11 rounded-xl text-sm font-semibold bg-ink/[0.03] text-ink/75 flex items-center justify-center">
+                Школа
+              </a>
+            )}
+            {session && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="h-11 rounded-xl text-sm font-semibold text-rose-600 bg-rose-50/80 col-span-2"
+              >
+                Выйти
+              </button>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
@@ -1924,14 +1939,14 @@ function RecoveryBanner({ navigate }) {
               <button
                 type="button"
                 onClick={() => navigate(Routes.PROFILE_EDIT)}
-                className="h-9 px-4 rounded-xl text-sm font-semibold btn-grad text-white"
+                className="h-9 px-4 rounded-xl text-sm font-semibold btn-grad text-white inline-flex items-center justify-center w-auto shrink-0 whitespace-nowrap"
               >
                 Задать пароль
               </button>
               <button
                 type="button"
                 onClick={onLater}
-                className="h-9 px-3 rounded-xl text-sm font-semibold text-ink/60 hover:bg-black/[0.04]"
+                className="h-9 px-3 rounded-xl text-sm font-semibold text-ink/60 hover:bg-black/[0.04] shrink-0"
               >
                 Позже
               </button>
@@ -1939,7 +1954,7 @@ function RecoveryBanner({ navigate }) {
                 type="button"
                 onClick={onLater}
                 aria-label="Закрыть"
-                className="w-9 h-9 rounded-xl text-ink/45 hover:bg-black/[0.04] text-lg leading-none"
+                className="w-9 h-9 rounded-xl text-ink/45 hover:bg-black/[0.04] text-lg leading-none shrink-0"
               >
                 ×
               </button>
@@ -1964,14 +1979,14 @@ function RecoveryBanner({ navigate }) {
               <button
                 type="button"
                 onClick={() => navigate(Routes.PROFILE_EDIT)}
-                className="h-9 px-4 rounded-xl text-sm font-semibold btn-grad text-white"
+                className="h-9 px-4 rounded-xl text-sm font-semibold btn-grad text-white inline-flex items-center justify-center w-auto shrink-0 whitespace-nowrap"
               >
                 Подтвердить
               </button>
               <button
                 type="button"
                 onClick={onEmailLater}
-                className="h-9 px-3 rounded-xl text-sm font-semibold text-ink/60 hover:bg-black/[0.04]"
+                className="h-9 px-3 rounded-xl text-sm font-semibold text-ink/60 hover:bg-black/[0.04] shrink-0"
               >
                 Позже
               </button>
@@ -1979,7 +1994,7 @@ function RecoveryBanner({ navigate }) {
                 type="button"
                 onClick={onEmailLater}
                 aria-label="Закрыть"
-                className="w-9 h-9 rounded-xl text-ink/45 hover:bg-black/[0.04] text-lg leading-none"
+                className="w-9 h-9 rounded-xl text-ink/45 hover:bg-black/[0.04] text-lg leading-none shrink-0"
               >
                 ×
               </button>

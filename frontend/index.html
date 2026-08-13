@@ -8,9 +8,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-<!-- WHITEBOARD_ASSETS_START -->
-<link rel="stylesheet" href="whiteboard.bundle.css" />
-<!-- WHITEBOARD_ASSETS_END -->
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
@@ -202,79 +199,103 @@
     border: 1px solid rgba(255, 255, 255, 0.6);
   }
 
-  /* ---- Site header (TopNav) ---- */
-  .site-header__shell {
-    position: relative;
-    border-radius: 22px;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.78) 100%);
-    backdrop-filter: blur(22px) saturate(190%);
-    -webkit-backdrop-filter: blur(22px) saturate(190%);
-    box-shadow:
-      0 1px 0 rgba(255,255,255,0.85) inset,
-      0 18px 40px -28px rgba(29,78,216,0.45),
-      0 8px 24px -16px rgba(11,18,38,0.18);
-    border: 1px solid rgba(255,255,255,0.7);
-    overflow: hidden;
+  /* ---- Site header (TopNav) — full-bleed, no cramped floating card ---- */
+  .site-header {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border-bottom: 1px solid rgba(11, 18, 38, 0.08);
   }
-  .site-header--scrolled .site-header__shell {
-    box-shadow:
-      0 1px 0 rgba(255,255,255,0.9) inset,
-      0 14px 32px -22px rgba(29,78,216,0.4),
-      0 6px 16px -12px rgba(11,18,38,0.16);
+  .site-header--scrolled {
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 8px 24px -20px rgba(11, 18, 38, 0.35);
   }
-  .site-header__glow {
-    position: absolute; inset: 0 0 auto 0; height: 2px;
-    background: linear-gradient(90deg, var(--c-1), var(--c-3), var(--c-5), var(--c-2));
-    background-size: 200% 100%;
-    animation: headerShine 8s linear infinite;
-    opacity: 0.95;
+  .site-header__inner {
+    max-width: 80rem;
+    margin: 0 auto;
+    height: 3.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0 1rem;
   }
-  @keyframes headerShine {
-    0% { background-position: 0% 50%; }
-    100% { background-position: 200% 50%; }
+  @media (min-width: 640px) {
+    .site-header__inner { padding: 0 1.5rem; gap: 1rem; }
   }
   .site-header__mark {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 2.5rem; height: 2.5rem; border-radius: 14px;
+    width: 2.25rem; height: 2.25rem; border-radius: 12px;
     background: linear-gradient(145deg, rgba(37,99,235,0.14), rgba(34,211,238,0.16));
-    box-shadow: 0 8px 18px -10px rgba(37,99,235,0.55);
+  }
+  .site-header__nav {
+    display: none;
+    align-items: center;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+  @media (min-width: 1280px) {
+    .site-header__nav { display: flex; }
   }
   .site-header__nav-item {
     position: relative;
-    padding: 0.45rem 0.9rem;
-    border-radius: 14px;
-    font-size: 0.875rem;
+    padding: 0.4rem 0.65rem;
+    border-radius: 8px;
+    font-size: 0.8125rem;
     font-weight: 600;
-    color: rgba(11,18,38,0.62);
-    transition: color 180ms ease, background 180ms ease, transform 180ms ease;
+    line-height: 1.2;
+    color: rgba(11,18,38,0.58);
+    white-space: nowrap;
+    transition: color 140ms ease, background 140ms ease;
   }
   .site-header__nav-item:hover {
     color: var(--ink);
-    background: rgba(255,255,255,0.7);
+    background: rgba(11,18,38,0.04);
   }
   .site-header__nav-item.is-active {
-    color: #fff;
-    background: linear-gradient(135deg, var(--c-1) 0%, var(--c-2) 45%, var(--c-3) 100%);
-    box-shadow: 0 10px 22px -12px rgba(37,99,235,0.75);
+    color: #1D4ED8;
+    background: transparent;
+    box-shadow: none;
+  }
+  .site-header__nav-item.is-active::after {
+    content: '';
+    position: absolute;
+    left: 0.65rem;
+    right: 0.65rem;
+    bottom: 0.15rem;
+    height: 2px;
+    border-radius: 99px;
+    background: #2563EB;
   }
   .site-header__search {
-    border-radius: 16px;
-    background: rgba(255,255,255,0.75);
-    border: 1px solid rgba(14,165,233,0.18);
-    transition: border-color 180ms ease, box-shadow 180ms ease;
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.25rem;
+    padding: 0 0.75rem;
+    width: 11rem;
+    border-radius: 10px;
+    background: rgba(11, 18, 38, 0.035);
+    border: 1px solid rgba(11, 18, 38, 0.08);
+    transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  }
+  @media (min-width: 1280px) {
+    .site-header__search { display: flex; width: 13rem; }
+  }
+  @media (min-width: 1536px) {
+    .site-header__search { width: 16rem; }
   }
   .site-header__search:focus-within {
-    border-color: rgba(37,99,235,0.45);
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    background: #fff;
+    border-color: rgba(37,99,235,0.4);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
   }
   .site-header__icon-btn {
-    width: 2.5rem; height: 2.5rem; border-radius: 14px;
+    width: 2.25rem; height: 2.25rem; border-radius: 10px;
     display: inline-flex; align-items: center; justify-content: center;
-    color: rgba(11,18,38,0.65);
-    transition: background 160ms ease, color 160ms ease;
+    color: rgba(11,18,38,0.62);
+    transition: background 140ms ease, color 140ms ease;
   }
-  .site-header__icon-btn:hover { background: rgba(11,18,38,0.04); color: var(--ink); }
+  .site-header__icon-btn:hover { background: rgba(11,18,38,0.05); color: var(--ink); }
   .site-header__icon-btn.is-active {
     background: rgba(37,99,235,0.1);
     color: #1D4ED8;
@@ -292,6 +313,17 @@
   .site-header__burger[data-open="1"] span:nth-child(1) { top: 6px; transform: rotate(45deg); }
   .site-header__burger[data-open="1"] span:nth-child(2) { opacity: 0; }
   .site-header__burger[data-open="1"] span:nth-child(3) { top: 6px; transform: rotate(-45deg); }
+  .site-header__panel {
+    border-top: 1px solid rgba(11, 18, 38, 0.06);
+    background: #fff;
+    padding: 0.75rem 1rem 1rem;
+  }
+  @media (min-width: 640px) {
+    .site-header__panel { padding-left: 1.5rem; padding-right: 1.5rem; }
+  }
+  @media (min-width: 1280px) {
+    .site-header__menu-btn { display: none !important; }
+  }
   .glass-dark {
     background: rgba(11, 18, 38, 0.55);
     backdrop-filter: blur(12px);
@@ -374,12 +406,21 @@
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
   .auth-input-wrap:focus-within {
-    border-color: rgba(139, 92, 246, 0.55);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+    border-color: rgba(37, 99, 235, 0.45);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   }
   .auth-input-wrap.is-error {
     border-color: rgba(244, 63, 94, 0.55);
     box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.08);
+  }
+  /* Chrome/Safari autofill paints a weird strip — neutralize it */
+  .auth-input-wrap input:-webkit-autofill,
+  .auth-input-wrap input:-webkit-autofill:hover,
+  .auth-input-wrap input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--ink);
+    caret-color: var(--ink);
+    box-shadow: 0 0 0 1000px #fff inset;
+    transition: background-color 99999s ease-out;
   }
 
   .whiteboard-root {
@@ -388,8 +429,6 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
-    isolation: isolate;
-    contain: strict;
     pointer-events: auto !important;
     touch-action: none;
   }
@@ -402,7 +441,12 @@
     touch-action: none;
   }
   .whiteboard-studio {
-    contain: strict;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    background: #f8fafc;
   }
   /* Chat Python code — Prism on dark panel */
   .chat-code-block {
@@ -424,6 +468,10 @@
     color: #f8fafc !important;
   }
 </style>
+<!-- After Tailwind: tldraw CSS must win over preflight or toolbar icons go pale -->
+<!-- WHITEBOARD_ASSETS_START -->
+<link rel="stylesheet" href="whiteboard.bundle.css" />
+<!-- WHITEBOARD_ASSETS_END -->
 </head>
 <body class="antialiased">
 <div id="root"></div>

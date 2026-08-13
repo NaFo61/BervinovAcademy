@@ -482,7 +482,7 @@ function AuthForm({ mode, setMode, navigate }) {
                 <button
                   type="button"
                   onClick={() => { setShowForgot(true); setServerError(''); setServerInfo(''); }}
-                  className="inline-flex items-center justify-center h-9 px-3 rounded-xl text-sm font-semibold text-violet-700 bg-violet-500/10 hover:bg-violet-500/15 ring-1 ring-violet-200/80 transition-colors self-start sm:self-auto"
+                  className="text-sm font-semibold text-sky-700 hover:text-sky-800 hover:underline self-start sm:self-auto"
                 >
                   Забыли пароль?
                 </button>

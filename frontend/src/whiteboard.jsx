@@ -83,22 +83,29 @@ function WhiteboardPage({ navigate }) {
 
   return (
     <div className="h-full min-h-0 bg-[#F6F8FC] flex flex-col">
-      <div className="shrink-0 h-12 px-4 sm:px-6 flex items-center justify-between border-b border-black/[0.06] bg-white/90">
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-ink truncate">Моя доска</div>
-          <div className="text-[11px] text-ink/45 truncate">
+      <div className="shrink-0 h-14 px-3 sm:px-5 flex items-center gap-3 border-b border-black/[0.08] bg-white">
+        <button
+          type="button"
+          onClick={() => navigate(Routes.PROFILE)}
+          className="h-9 px-3 rounded-lg text-sm font-medium text-ink/70 hover:bg-black/[0.04] shrink-0"
+        >
+          ← Назад
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="text-base font-semibold text-ink truncate">Моя доска</div>
+          <div className="text-xs text-ink/50 truncate">
             Личная — только вы. В созвоне доска общая.
           </div>
         </div>
         <button
           type="button"
           onClick={() => navigate(Routes.CONFERENCES)}
-          className="h-9 px-3 rounded-lg text-sm font-medium text-sky-700 hover:bg-sky-50"
+          className="h-9 px-3 rounded-lg text-sm font-semibold text-sky-700 hover:bg-sky-50 shrink-0"
         >
           Созвоны
         </button>
       </div>
-      <div className="relative flex-1 min-h-0">
+      <div className="relative flex-1 min-h-0 overflow-hidden">
         {loading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-ink/50 bg-white/60">
             Подключение к доске…
