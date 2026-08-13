@@ -83,6 +83,18 @@ testpaths = [
     "backend/school_platform/tests",
     "deploy/tests",
 ]
+markers = [
+    "fast: быстрые тесты (юниты)",
+    "slow: медленные тесты (интеграционные)",
+    "smoke: критический минимум",
+    "unit: модульные тесты",
+    "integration: тесты с зависимостями",
+    "models: тестирование моделей",
+    "api: тестирование API",
+    "services: тестирование бизнес-логики",
+    "tasks: тестирование задач",
+    "translation: тесты с переводами",
+]
 
 [tool.coverage.run]
 branch = true
@@ -101,21 +113,6 @@ show_missing = true
 exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:",
-]
-
-markers = [
-    "fast: быстрые тесты (юниты)",
-    "slow: медленные тесты (интеграционные)",
-    "smoke: критический минимум",
-    
-    "unit: модульные тесты",
-    "integration: тесты с зависимостями",
-    
-    "models: тестирование моделей",
-    "api: тестирование API",
-    "services: тестирование бизнес-логики",
-    "tasks: тестирование задач",
-    "translation: тесты с переводами"
 ]
 
 filterwarnings = [
