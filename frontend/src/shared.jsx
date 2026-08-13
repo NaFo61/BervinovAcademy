@@ -1247,6 +1247,18 @@ const I = {
       <path d="M3 5h18l-7 9v6l-4-2v-4L3 5z" />
     </svg>,
 
+  Settings: ({ className }) =>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className={className}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3v2.2M12 18.8V21M4.9 6.5l1.6 1.6M17.5 15.9l1.6 1.6M3 12h2.2M18.8 12H21M4.9 17.5l1.6-1.6M17.5 8.1l1.6-1.6" strokeLinecap="round" />
+    </svg>,
+
+  LogOut: ({ className }) =>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className={className}>
+      <path d="M10 7V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-1" strokeLinecap="round" />
+      <path d="M15 12H3m0 0 3-3m-3 3 3 3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>,
+
   Send: ({ className }) =>
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className={className}>
       <path d="m4 12 16-8-6 18-3-7-7-3z" strokeLinejoin="round" />
@@ -1548,6 +1560,126 @@ function NotificationBell({ navigate }) {
   );
 }
 
+function UserMenu({
+  route,
+  navigate,
+  displayName,
+  email,
+  initials,
+  isMentor,
+  isAdmin,
+  onLogout,
+}) {
+  const [open, setOpen] = React.useState(false);
+  const wrapRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  React.useEffect(() => {
+    setOpen(false);
+  }, [route]);
+
+  const go = (id) => {
+    setOpen(false);
+    navigate(id);
+  };
+
+  const items = [
+    { id: 'profile', label: 'Профиль', icon: I.Users, action: () => go(Routes.PROFILE), active: route === Routes.PROFILE },
+    { id: 'settings', label: 'Настройки', icon: I.Settings, action: () => go(Routes.PROFILE_EDIT), active: route === Routes.PROFILE_EDIT },
+    { id: 'pro', label: 'Тариф Про', icon: I.Star, action: () => go(Routes.PRO), active: route === Routes.PRO },
+    { id: 'conferences', label: 'Созвоны', icon: I.Video, action: () => go(Routes.CONFERENCES), active: route === Routes.CONFERENCES },
+    ...(isMentor ? [{ id: 'mentor', label: 'Ментор', icon: I.Brain, action: () => go(Routes.MENTOR), active: route === Routes.MENTOR }] : []),
+    ...(isAdmin ? [{ id: 'school', label: 'Школа', icon: I.Book, href: '/admin/' }] : []),
+  ];
+
+  return (
+    <div className="site-header__user" ref={wrapRef}>
+      <button
+        type="button"
+        className="site-header__user-trigger"
+        aria-label="Меню аккаунта"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-50 text-[11px] font-bold text-sky-700 ring-1 ring-sky-200/80">
+          {initials}
+        </span>
+        <I.ChevronDown className={`w-3.5 h-3.5 text-ink/45 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="site-header__user-menu" role="menu">
+          <div className="site-header__user-head">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-50 text-sm font-bold text-sky-700 ring-1 ring-sky-200/80 shrink-0">
+              {initials}
+            </span>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-ink truncate">{displayName || 'Аккаунт'}</div>
+              {email ? <div className="text-xs text-ink/45 truncate mt-0.5">{email}</div> : null}
+            </div>
+          </div>
+          {items.map((item) => {
+            const Icon = item.icon;
+            if (item.href) {
+              return (
+                <a
+                  key={item.id}
+                  href={item.href}
+                  role="menuitem"
+                  className="site-header__user-item"
+                >
+                  <Icon className="site-header__user-ico" />
+                  <span>{item.label}</span>
+                </a>
+              );
+            }
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="menuitem"
+                onClick={item.action}
+                className={`site-header__user-item ${item.active ? 'is-active' : ''}`}
+              >
+                <Icon className="site-header__user-ico" />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+          <div className="site-header__user-sep" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={(e) => {
+              setOpen(false);
+              onLogout(e);
+            }}
+            className="site-header__user-item is-danger"
+          >
+            <I.LogOut className="site-header__user-ico" />
+            <span>Выйти</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TopNav({ route, navigate }) {
   const [session, setSession] = React.useState(() => !!getAccessToken());
   const [searchDraft, setSearchDraft] = React.useState('');
@@ -1620,9 +1752,10 @@ function TopNav({ route, navigate }) {
   const access = session ? getAccessToken() : null;
   const payload = access ? parseJwtPayload(access) : {};
   const displayName = [payload.first_name, payload.last_name].filter(Boolean).join(' ').trim();
+  const email = payload.email || '';
   const initials = displayName
     ? displayName.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() || '').join('')
-    : (payload.email?.[0] || 'U').toUpperCase();
+    : (email?.[0] || 'U').toUpperCase();
   const isMentor = payload.role === 'mentor' || payload.role === 'admin';
   const isAdmin = payload.role === 'admin';
 
@@ -1649,14 +1782,13 @@ function TopNav({ route, navigate }) {
     navigate(Routes.LANDING);
   };
 
-  /* Профиль — только через аватар, чтобы шапка не разъезжалась */
+  /* Ментор / Школа / Профиль — в меню аккаунта, чтобы шапка не разъезжалась */
   const links = [
     { id: Routes.LANDING, label: 'Главная' },
     { id: Routes.CATALOG, label: 'Каталог' },
     { id: Routes.PLAYGROUND, label: 'Python' },
     { id: Routes.WHITEBOARD, label: 'Доска' },
     { id: Routes.PRO, label: 'Про' },
-    ...(isMentor ? [{ id: Routes.MENTOR, label: 'Ментор' }] : []),
   ];
 
   const go = (id) => {
@@ -1697,11 +1829,6 @@ function TopNav({ route, navigate }) {
               {l.label}
             </button>
           ))}
-          {isAdmin && (
-            <a href="/admin/" className="site-header__nav-item">
-              Школа
-            </a>
-          )}
         </nav>
 
         <div className="flex-1 min-w-0" />
@@ -1748,17 +1875,16 @@ function TopNav({ route, navigate }) {
                 )}
               </button>
               <NotificationBell navigate={navigate} />
-              <button
-                type="button"
-                onClick={() => go(Routes.PROFILE)}
-                className={`site-header__icon-btn ${route === Routes.PROFILE || route === Routes.PROFILE_EDIT ? 'is-active' : ''}`}
-                title={displayName || 'Профиль'}
-                aria-label="Профиль"
-              >
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-50 text-[11px] font-bold text-sky-700 ring-1 ring-sky-200/80">
-                  {initials}
-                </span>
-              </button>
+              <UserMenu
+                route={route}
+                navigate={navigate}
+                displayName={displayName}
+                email={email}
+                initials={initials}
+                isMentor={isMentor}
+                isAdmin={isAdmin}
+                onLogout={handleLogout}
+              />
             </>
           ) : (
             <button
@@ -1817,31 +1943,55 @@ function TopNav({ route, navigate }) {
               </button>
             ))}
             {session && (
-              <button
-                type="button"
-                onClick={() => go(Routes.PROFILE)}
-                className={`h-11 rounded-xl text-sm font-semibold transition-colors ${
-                  route === Routes.PROFILE || route === Routes.PROFILE_EDIT
-                    ? 'bg-sky-50 text-sky-800 ring-1 ring-sky-200'
-                    : 'bg-ink/[0.03] text-ink/75 hover:bg-ink/[0.06]'
-                }`}
-              >
-                Профиль
-              </button>
-            )}
-            {isAdmin && (
-              <a href="/admin/" className="h-11 rounded-xl text-sm font-semibold bg-ink/[0.03] text-ink/75 flex items-center justify-center">
-                Школа
-              </a>
-            )}
-            {session && (
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="h-11 rounded-xl text-sm font-semibold text-rose-600 bg-rose-50/80 col-span-2"
-              >
-                Выйти
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => go(Routes.PROFILE)}
+                  className={`h-11 rounded-xl text-sm font-semibold transition-colors ${
+                    route === Routes.PROFILE
+                      ? 'bg-sky-50 text-sky-800 ring-1 ring-sky-200'
+                      : 'bg-ink/[0.03] text-ink/75 hover:bg-ink/[0.06]'
+                  }`}
+                >
+                  Профиль
+                </button>
+                <button
+                  type="button"
+                  onClick={() => go(Routes.PROFILE_EDIT)}
+                  className={`h-11 rounded-xl text-sm font-semibold transition-colors ${
+                    route === Routes.PROFILE_EDIT
+                      ? 'bg-sky-50 text-sky-800 ring-1 ring-sky-200'
+                      : 'bg-ink/[0.03] text-ink/75 hover:bg-ink/[0.06]'
+                  }`}
+                >
+                  Настройки
+                </button>
+                {isMentor && (
+                  <button
+                    type="button"
+                    onClick={() => go(Routes.MENTOR)}
+                    className={`h-11 rounded-xl text-sm font-semibold transition-colors ${
+                      route === Routes.MENTOR
+                        ? 'bg-sky-50 text-sky-800 ring-1 ring-sky-200'
+                        : 'bg-ink/[0.03] text-ink/75 hover:bg-ink/[0.06]'
+                    }`}
+                  >
+                    Ментор
+                  </button>
+                )}
+                {isAdmin && (
+                  <a href="/admin/" className="h-11 rounded-xl text-sm font-semibold bg-ink/[0.03] text-ink/75 flex items-center justify-center">
+                    Школа
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="h-11 rounded-xl text-sm font-semibold text-rose-600 bg-rose-50/80 col-span-2"
+                >
+                  Выйти
+                </button>
+              </>
             )}
           </nav>
         </div>
