@@ -157,6 +157,11 @@ class User(UUIDPublicIdMixin, AbstractBaseUser, PermissionsMixin):
         unique=True,
         help_text=_("Email пользователя"),
     )
+    email_verified = models.BooleanField(
+        verbose_name=_("Email подтверждён"),
+        default=False,
+        help_text=_("Пользователь подтвердил почту кодом из письма"),
+    )
     role = models.CharField(
         verbose_name=_("Роль"),
         max_length=50,

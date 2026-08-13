@@ -123,6 +123,11 @@ UNFOLD = {
                         "icon": "workspace_premium",
                         "link": "/admin/subscriptions/entitlement/",
                     },
+                    {
+                        "title": _("Промокоды"),
+                        "icon": "confirmation_number",
+                        "link": "/admin/subscriptions/promocode/",
+                    },
                 ],
             },
             {
@@ -139,6 +144,11 @@ UNFOLD = {
                         "title": _("Записи на курсы"),
                         "icon": "how_to_reg",
                         "link": "/admin/education/enrollment/",
+                    },
+                    {
+                        "title": _("Сертификаты"),
+                        "icon": "workspace_premium",
+                        "link": "/admin/progress/coursecertificate/",
                     },
                     {
                         "title": _("Контрольные"),
@@ -275,6 +285,13 @@ EMAIL_BACKEND = config(
     "EMAIL_BACKEND",
     default="django.core.mail.backends.console.EmailBackend",
 )
+EMAIL_HOST = config("EMAIL_HOST", default="")
+EMAIL_PORT = config("EMAIL_PORT", default="587", cast=int)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=False, cast=bool)
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=False, cast=bool)
+EMAIL_TIMEOUT = config("EMAIL_TIMEOUT", default=20, cast=int)
 DEFAULT_FROM_EMAIL = config(
     "DEFAULT_FROM_EMAIL", default="noreply@bervinov.dev"
 )

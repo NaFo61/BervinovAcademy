@@ -26,7 +26,7 @@ function ProPage({ navigate }) {
     (async () => {
       try {
         const data = await window.apiJson('/api/subscriptions/plans/pro/', {
-          auth: !!localStorage.getItem('access_token'),
+          auth: !!window.getAccessToken(),
         });
         if (!cancelled) {
           setPlan(data);
@@ -112,6 +112,11 @@ function ProPage({ navigate }) {
                   : 'Доступ активен.'}
                 {' '}Курсы бесплатные — Про открывает менторский сервис вокруг них.
               </p>
+              <p className="mt-5 text-sm font-semibold text-ink/70">Продлить другим промокодом</p>
+              <PromoRedeemForm
+                onGranted={(sub) => setPlan((prev) => ({ ...prev, subscription: sub }))}
+                successText="Срок Про продлён."
+              />
               <div className="mt-5 flex flex-wrap gap-2">
                 <button type="button" onClick={() => navigate(Routes.CATALOG)}
                   className="h-11 px-5 rounded-xl btn-grad text-white text-sm font-semibold">
@@ -125,22 +130,21 @@ function ProPage({ navigate }) {
             </>
           ) : (
             <>
-              <h2 className="text-xl font-extrabold tracking-tight">Как подключить</h2>
+              <h2 className="text-xl font-extrabold tracking-tight">Промокод</h2>
               <p className="mt-2 text-[15px] text-ink/65 leading-relaxed">
+                Введите код — тариф Про включится сразу.
+              </p>
+              <PromoRedeemForm onGranted={(sub) => setPlan((prev) => ({ ...prev, subscription: sub }))}/>
+              <p className="mt-4 text-[13px] text-ink/45 leading-relaxed">
                 {plan.cta_text}
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
-                {!localStorage.getItem('access_token') ? (
+                {!window.getAccessToken() ? (
                   <button type="button" onClick={() => navigate(Routes.AUTH)}
                     className="h-11 px-5 rounded-xl btn-grad text-white text-sm font-semibold">
                     Войти
                   </button>
-                ) : (
-                  <button type="button" onClick={() => navigate(Routes.PROFILE)}
-                    className="h-11 px-5 rounded-xl btn-grad text-white text-sm font-semibold">
-                    Открыть профиль
-                  </button>
-                )}
+                ) : null}
                 <button type="button" onClick={() => navigate(Routes.CATALOG)}
                   className="h-11 px-5 rounded-xl bg-white ring-1 ring-black/[0.08] text-sm font-semibold">
                   Смотреть курсы бесплатно
@@ -155,3 +159,60 @@ function ProPage({ navigate }) {
 }
 
 window.ProPage = ProPage;
+
+function PromoRedeemForm({ onGranted, successText }) {
+  const [code, setCode] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const [ok, setOk] = React.useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!window.getAccessToken()) {
+      setError('Сначала войдите в аккаунт.');
+      return;
+    }
+    const trimmed = (code || '').trim();
+    if (!trimmed) {
+      setError('Введите промокод.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    setOk('');
+    try {
+      const data = await window.apiJson('/api/subscriptions/redeem/', {
+        method: 'POST',
+        auth: true,
+        body: { code: trimmed },
+      });
+      setOk(successText || 'Про включён.');
+      setCode('');
+      if (data?.subscription && onGranted) onGranted(data.subscription);
+    } catch (err) {
+      setError(err.message || 'Не удалось применить код');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="mt-5 flex flex-col gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="Например EGE2026"
+          autoComplete="off"
+          className="flex-1 h-11 px-4 rounded-xl bg-white ring-1 ring-black/[0.08] text-sm outline-none focus:ring-violet-400"
+        />
+        <button type="submit" disabled={busy}
+          className="h-11 px-5 rounded-xl btn-grad text-white text-sm font-semibold disabled:opacity-60">
+          {busy ? 'Проверяем…' : 'Применить'}
+        </button>
+      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      {ok && <p className="text-sm text-emerald-700 font-semibold">{ok}</p>}
+    </form>
+  );
+}

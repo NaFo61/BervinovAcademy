@@ -135,7 +135,7 @@ function LearnHelpDrawer({ open, onClose, navigate, courseTitle, moduleTitle, le
   const [loadError, setLoadError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const ChatThreadView = window.ChatThreadView;
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('access_token') : null;
+  const token = typeof localStorage !== 'undefined' ? window.getAccessToken() : null;
 
   const context = React.useMemo(() => ({
     course_title: courseTitle || '',

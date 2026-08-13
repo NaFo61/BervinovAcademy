@@ -3,6 +3,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.routers import DefaultRouter
 
 from users.viewsets import (
+    EmailVerifyViewSet,
     OAuthViewSet,
     PasswordResetViewSet,
     RecoverySetupViewSet,
@@ -20,6 +21,9 @@ auth_router.register(r"logout", UserLogoutViewSet, basename="logout")
 auth_router.register(r"refresh", TokenRefreshViewSet, basename="refresh")
 auth_router.register(
     r"password-reset", PasswordResetViewSet, basename="password-reset"
+)
+auth_router.register(
+    r"email-verify", EmailVerifyViewSet, basename="email-verify"
 )
 
 oauth_start = OAuthViewSet.as_view(

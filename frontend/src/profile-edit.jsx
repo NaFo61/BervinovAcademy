@@ -18,7 +18,7 @@ function ProfileEditPage({ navigate }) {
   const [saved, setSaved] = React.useState(false);
 
   React.useEffect(() => {
-    if (!localStorage.getItem('access_token')) {
+    if (!window.getAccessToken()) {
       setLoading(false);
       setError('no_token');
       return;
@@ -198,6 +198,8 @@ function ProfileEditPage({ navigate }) {
           </div>
         </form>
 
+        <EmailVerifySection user={user} onUser={setUser} />
+
         <RecoveryAccessSection user={user} onUser={setUser} />
 
         <div className="mt-6">
@@ -226,6 +228,133 @@ function Field({ label, value, onChange, required, type = 'text', autoComplete, 
       />
       {hint ? <p className="text-xs text-ink/45 mt-1">{hint}</p> : null}
     </div>
+  );
+}
+
+function EmailVerifySection({ user, onUser }) {
+  const email = user?.email || '';
+  const verified = !!user?.email_verified;
+  const [code, setCode] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState('');
+  const [info, setInfo] = React.useState('');
+  const [devCode, setDevCode] = React.useState('');
+  const [awaitingCode, setAwaitingCode] = React.useState(false);
+
+  if (!email) {
+    return (
+      <section className="mt-8 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft p-6 sm:p-8">
+        <h2 className="text-xl font-extrabold tracking-tight">Подтверждение почты</h2>
+        <p className="text-sm text-ink/60 mt-1">
+          Сначала укажи email в блоке «Восстановление доступа» ниже — затем можно подтвердить кодом из письма.
+        </p>
+      </section>
+    );
+  }
+
+  const sendCode = async () => {
+    setBusy(true);
+    setErr('');
+    setInfo('');
+    setDevCode('');
+    try {
+      const data = await window.apiJson('/api/auth/email-verify/request/', {
+        method: 'POST',
+        auth: true,
+        body: {},
+      });
+      if (data.email_verified) {
+        onUser({ ...user, email_verified: true, recovery: { ...(user.recovery || {}), email_verified: true } });
+        setInfo(data.message || 'Почта уже подтверждена.');
+        setAwaitingCode(false);
+      } else {
+        setAwaitingCode(true);
+        setInfo(data.message || 'Код отправлен на почту.');
+        if (data.dev_code) setDevCode(data.dev_code);
+      }
+      window.notifyAuthChanged();
+    } catch (ex) {
+      setErr(ex.message || 'Не удалось отправить код');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirm = async (e) => {
+    e.preventDefault();
+    if (!code.trim()) {
+      setErr('Введи код из письма.');
+      return;
+    }
+    setBusy(true);
+    setErr('');
+    setInfo('');
+    try {
+      const data = await window.apiJson('/api/auth/email-verify/confirm/', {
+        method: 'POST',
+        auth: true,
+        body: { code: code.trim() },
+      });
+      if (data.user) onUser(data.user);
+      else onUser({ ...user, email_verified: true });
+      setCode('');
+      setAwaitingCode(false);
+      setInfo(data.message || 'Почта подтверждена.');
+      window.notifyAuthChanged();
+    } catch (ex) {
+      setErr(ex.message || 'Неверный код');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="mt-8 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft p-6 sm:p-8 space-y-4">
+      <div>
+        <h2 className="text-xl font-extrabold tracking-tight">Подтверждение почты</h2>
+        <p className="text-sm text-ink/60 mt-1">
+          Код придёт на {email}. Нужен, чтобы восстановить пароль и убедиться, что почта твоя.
+        </p>
+      </div>
+
+      {verified ? (
+        <p className="text-sm font-medium text-emerald-700 bg-emerald-50 rounded-xl px-4 py-3">
+          Почта подтверждена
+        </p>
+      ) : (
+        <>
+          <p className="text-sm text-amber-800 bg-amber-50 rounded-xl px-4 py-3">
+            Почта ещё не подтверждена
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={busy} onClick={sendCode}
+              className="h-10 px-4 rounded-xl btn-grad text-white text-sm font-semibold disabled:opacity-50">
+              {awaitingCode ? 'Отправить код ещё раз' : 'Отправить код'}
+            </button>
+          </div>
+          {awaitingCode || devCode ? (
+            <form onSubmit={confirm} className="space-y-3 pt-1">
+              <Field
+                label="Код из письма"
+                value={code}
+                onChange={setCode}
+                placeholder="6 цифр"
+                autoComplete="one-time-code"
+              />
+              {devCode ? (
+                <p className="text-xs text-ink/45">Dev-код: <span className="font-mono">{devCode}</span></p>
+              ) : null}
+              <button type="submit" disabled={busy}
+                className="h-10 px-4 rounded-xl ring-1 ring-black/[0.08] text-sm font-semibold disabled:opacity-50">
+                Подтвердить
+              </button>
+            </form>
+          ) : null}
+        </>
+      )}
+      {err ? <p className="text-sm text-red-600">{err}</p> : null}
+      {info ? <p className="text-sm text-emerald-700">{info}</p> : null}
+    </section>
   );
 }
 
@@ -301,7 +430,10 @@ function RecoveryAccessSection({ user, onUser }) {
       <div className="rounded-xl bg-black/[0.03] px-4 py-3 text-sm space-y-1.5">
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-ink/70">
           <span>Пароль: {hasPassword ? 'есть' : 'нет'}</span>
-          <span>Email: {hasEmail ? (user.email || 'есть') : 'нет'}</span>
+          <span>
+            Email: {hasEmail ? (user.email || 'есть') : 'нет'}
+            {hasEmail ? (user.email_verified ? ' · подтверждён' : ' · не подтверждён') : ''}
+          </span>
           <span>Телефон: {hasPhone ? (user.phone || 'есть') : 'нет'}</span>
         </div>
         <p className={`text-sm ${ready ? 'text-emerald-700' : 'text-ink/60'}`}>{statusLine}</p>
@@ -503,7 +635,7 @@ function VkConnectPanel({ user, onUser }) {
           ) : (
             <button type="button" disabled={busy} onClick={() => startLink('yandex')}
               className="h-10 px-4 rounded-xl text-sm font-semibold ring-1 ring-black/[0.08] inline-flex items-center gap-2 disabled:opacity-50">
-              <I.Yandex className="w-4 h-4 text-[#FC3F1D]" /> Привязать Яндекс
+              <I.Yandex className="w-4 h-4" /> Привязать Яндекс
             </button>
           )}
           {oauth.vk ? (
@@ -514,7 +646,7 @@ function VkConnectPanel({ user, onUser }) {
           ) : (
             <button type="button" disabled={busy} onClick={() => startLink('vk')}
               className="h-10 px-4 rounded-xl text-sm font-semibold ring-1 ring-black/[0.08] inline-flex items-center gap-2 disabled:opacity-50">
-              <I.VK className="w-4 h-4 text-[#0077FF]" /> Привязать VK
+              <I.VK className="w-4 h-4" /> Привязать VK
             </button>
           )}
         </div>

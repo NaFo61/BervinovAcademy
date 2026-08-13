@@ -119,7 +119,7 @@ function ConferencesPage({ navigate }) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [previewConf, setPreviewConf] = React.useState(null);
-  const token = localStorage.getItem('access_token');
+  const token = window.getAccessToken();
   const payload = token ? window.parseJwtPayload(token) : {};
   const isMentor = payload.role === 'mentor' || payload.role === 'admin';
   const myId = window.currentUserPublicId

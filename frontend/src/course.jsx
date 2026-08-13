@@ -48,7 +48,7 @@ function CoursePage({ navigate, hashParams }) {
 
   React.useEffect(() => {
     if (!courseId || loadState !== 'ok') return;
-    if (!localStorage.getItem('access_token')) {
+    if (!window.getAccessToken()) {
       setEnrollment(null);
       return;
     }
@@ -68,7 +68,7 @@ function CoursePage({ navigate, hashParams }) {
   }, [courseId, loadState]);
 
   const handleEnroll = async () => {
-    if (!localStorage.getItem('access_token')) {
+    if (!window.getAccessToken()) {
       navigate(Routes.AUTH);
       return;
     }
@@ -82,7 +82,7 @@ function CoursePage({ navigate, hashParams }) {
   };
 
   const handleStartLearning = async () => {
-    if (!localStorage.getItem('access_token')) {
+    if (!window.getAccessToken()) {
       navigate(Routes.AUTH);
       return;
     }
@@ -243,6 +243,13 @@ function CourseHero({ course, navigate, modules, totalLessons, totalQuizzes, tot
                 <I.Play className="w-5 h-5 text-violet-600"/>
                 {enrollment ? 'Продолжить' : 'Начать обучение'}
               </button>
+              {enrollment?.certificate_public_id && (
+                <button
+                  onClick={() => navigate(Routes.CERTIFICATE, { id: enrollment.certificate_public_id })}
+                  className="h-14 px-6 rounded-2xl bg-white/15 backdrop-blur border border-white/30 text-white font-semibold inline-flex items-center gap-2 hover:bg-white/25 transition-colors">
+                  <I.Trophy className="w-5 h-5"/> Открыть сертификат
+                </button>
+              )}
               {!enrollment && (
                 <button
                   onClick={onEnroll}
@@ -286,7 +293,7 @@ function CourseHighlights({ course }) {
     { icon: I.Code,    tint: '#2563EB', title: 'Практика с первого дня',    desc: 'Каждый модуль заканчивается реальной задачей. Не «а вот пример», а «напиши сам».' },
     { icon: I.Chat,    tint: '#06B6D4', title: 'Живое code review',         desc: 'Ментор открывает твоё решение, прогоняет его и оставляет комментарии прямо в строках.' },
     { icon: I.Sparkle, tint: '#0EA5E9', title: 'Без воды',                  desc: 'Никаких 3-часовых лекций. Каждый урок — одна тема, один навык, одна задача.' },
-    { icon: I.Trophy,  tint: '#7C3AED', title: 'Сертификат по итогам',      desc: 'После защиты финального проекта получишь именной сертификат.' },
+    { icon: I.Trophy,  tint: '#7C3AED', title: 'Сертификат по итогам',      desc: 'Когда все уроки пройдены на 100%, открывается именной сертификат.' },
   ];
   return (
     <div>
@@ -470,6 +477,13 @@ function CourseSidebar({ course, navigate, totalLessons, totalQuizzes, totalHour
             <button onClick={onEnroll} disabled={enrollBusy}
               className="w-full h-11 rounded-xl border border-black/[0.08] text-sm font-semibold text-ink/70 hover:border-violet-300 hover:text-violet-600 transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-60">
               {enrollBusy ? 'Записываем…' : 'Записаться на курс'}
+            </button>
+          )}
+          {enrollment?.certificate_public_id && (
+            <button type="button"
+              onClick={() => navigate(Routes.CERTIFICATE, { id: enrollment.certificate_public_id })}
+              className="w-full h-11 rounded-xl border border-violet-200 text-sm font-semibold text-violet-700 hover:bg-violet-50 transition-colors inline-flex items-center justify-center gap-2 mt-2">
+              <I.Trophy className="w-4 h-4"/> Открыть сертификат
             </button>
           )}
 

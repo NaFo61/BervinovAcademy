@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .email_verify import confirm_verify_code, issue_verify_code
 from .models import User
 from .oauth import (
     PROVIDERS,
@@ -27,6 +28,7 @@ from .serializers import (
     ContactConflict,
     CustomTokenObtainPairSerializer,
     CustomTokenRefreshSerializer,
+    EmailVerifyConfirmSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     RecoverySetupSerializer,
@@ -130,6 +132,57 @@ class PasswordResetViewSet(viewsets.GenericViewSet):
             )
         return Response(
             {"message": "Пароль успешно изменён. Теперь можно войти."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class EmailVerifyViewSet(viewsets.GenericViewSet):
+    permission_classes = [IsAuthenticated]
+    throttle_scope = "password_reset"
+
+    @action(detail=False, methods=["post"], url_path="request")
+    def request_code(self, request, *args, **kwargs):
+        ok, error, dev_code = issue_verify_code(request.user)
+        if not ok:
+            return Response(
+                {"detail": error}, status=status.HTTP_400_BAD_REQUEST
+            )
+        if request.user.email_verified:
+            return Response(
+                {
+                    "message": "Почта уже подтверждена.",
+                    "email_verified": True,
+                },
+                status=status.HTTP_200_OK,
+            )
+        payload = {
+            "message": "Код подтверждения отправлен на вашу почту.",
+            "email_verified": False,
+        }
+        if dev_code:
+            payload["dev_code"] = dev_code
+        return Response(payload, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["post"], url_path="confirm")
+    def confirm(self, request, *args, **kwargs):
+        serializer = EmailVerifyConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        ok, error = confirm_verify_code(
+            request.user, serializer.validated_data["code"]
+        )
+        if not ok:
+            return Response(
+                {"detail": error}, status=status.HTTP_400_BAD_REQUEST
+            )
+        request.user.refresh_from_db()
+        return Response(
+            {
+                "message": "Почта подтверждена.",
+                "email_verified": True,
+                "user": UserPrivateProfileSerializer(
+                    request.user, context={"request": request}
+                ).data,
+            },
             status=status.HTTP_200_OK,
         )
 

@@ -6,10 +6,11 @@ from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from education.services import build_enrollments_payload
-from progress.profile_serializers import (
-    UserProgressStatsSerializer,
-    build_achievements_payload,
+from progress.certificates import (
+    list_certificates_for_user,
+    serialize_certificate,
 )
+from progress.profile_serializers import UserProgressStatsSerializer
 from progress.stats import build_activity_payload
 
 from .models import User
@@ -254,7 +255,7 @@ class MentorProfileSerializer(serializers.Serializer):
 class UserPublicProfileSerializer(serializers.ModelSerializer):
     mentor_profile = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField()
-    achievements = serializers.SerializerMethodField()
+    certificates = serializers.SerializerMethodField()
     enrollments = serializers.SerializerMethodField()
     activity = serializers.SerializerMethodField()
 
@@ -267,8 +268,10 @@ class UserPublicProfileSerializer(serializers.ModelSerializer):
     def get_progress(self, obj):
         return UserProgressStatsSerializer.from_user(obj).data
 
-    def get_achievements(self, obj):
-        return build_achievements_payload(obj)
+    def get_certificates(self, obj):
+        return [
+            serialize_certificate(c) for c in list_certificates_for_user(obj)
+        ]
 
     def get_enrollments(self, obj):
         return build_enrollments_payload(obj)
@@ -289,7 +292,7 @@ class UserPublicProfileSerializer(serializers.ModelSerializer):
             "last_login",
             "mentor_profile",
             "progress",
-            "achievements",
+            "certificates",
             "enrollments",
             "activity",
         )
@@ -300,7 +303,7 @@ class UserPublicProfileSerializer(serializers.ModelSerializer):
             "last_login",
             "mentor_profile",
             "progress",
-            "achievements",
+            "certificates",
             "enrollments",
             "activity",
         )
@@ -317,8 +320,13 @@ def build_recovery_payload(user) -> dict:
         "has_usable_password": has_password,
         "has_email": has_email,
         "has_phone": has_phone,
+        "email_verified": bool(getattr(user, "email_verified", False)),
         "ready": ready,
     }
+
+
+class EmailVerifyConfirmSerializer(serializers.Serializer):
+    code = serializers.CharField(min_length=4, max_length=12)
 
 
 class ContactConflict(Exception):
@@ -492,6 +500,7 @@ class RecoverySetupSerializer(serializers.Serializer):
 class UserPrivateProfileSerializer(UserPublicProfileSerializer):
     email = serializers.EmailField(allow_null=True, read_only=True)
     phone = serializers.CharField(allow_null=True, read_only=True)
+    email_verified = serializers.BooleanField(read_only=True)
     subscription = serializers.SerializerMethodField()
     oauth = serializers.SerializerMethodField()
     vk = serializers.SerializerMethodField()
@@ -527,6 +536,7 @@ class UserPrivateProfileSerializer(UserPublicProfileSerializer):
         fields: tuple[str, ...] = UserPublicProfileSerializer.Meta.fields + (
             "email",
             "phone",
+            "email_verified",
             "subscription",
             "oauth",
             "vk",
@@ -539,9 +549,10 @@ class UserPrivateProfileSerializer(UserPublicProfileSerializer):
             "last_login",
             "mentor_profile",
             "progress",
-            "achievements",
+            "certificates",
             "email",
             "phone",
+            "email_verified",
             "subscription",
             "oauth",
             "vk",

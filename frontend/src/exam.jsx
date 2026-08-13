@@ -884,7 +884,7 @@ function ExamContent({ courseId, examId, stepParam, navigate, embedded }) {
   }, []);
 
   React.useEffect(() => {
-    if (!localStorage.getItem('access_token')) {
+    if (!window.getAccessToken()) {
       navigate(Routes.AUTH);
       return;
     }

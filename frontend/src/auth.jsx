@@ -292,6 +292,9 @@ function AuthForm({ mode, setMode, navigate }) {
   const [pass, setPass] = React.useState('');
   const [pass2, setPass2] = React.useState('');
   const [showPass, setShowPass] = React.useState(false);
+  const [rememberMe, setRememberMe] = React.useState(() => (
+    typeof window.isRememberAuth === 'function' ? window.isRememberAuth() : true
+  ));
   const [touched, setTouched] = React.useState({});
   const [loading, setLoading] = React.useState(false);
   const [serverError, setServerError] = React.useState('');
@@ -342,8 +345,9 @@ function AuthForm({ mode, setMode, navigate }) {
           method: 'POST',
           body: { login: email.trim(), password: pass },
         });
-        if (data.access) localStorage.setItem('access_token', data.access);
-        if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
+        if (data.access || data.refresh) {
+          window.setAuthTokens(data.access, data.refresh, rememberMe);
+        }
       } else {
         const data = await window.apiJson('/api/auth/register/', {
           method: 'POST',
@@ -355,8 +359,9 @@ function AuthForm({ mode, setMode, navigate }) {
             password_confirm: pass2,
           },
         });
-        if (data.access) localStorage.setItem('access_token', data.access);
-        if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
+        if (data.access || data.refresh) {
+          window.setAuthTokens(data.access, data.refresh, true);
+        }
       }
       window.notifyAuthChanged();
       navigate(window.Routes.PROFILE);
@@ -454,19 +459,24 @@ function AuthForm({ mode, setMode, navigate }) {
               <Field label="Email или телефон" value={email} onChange={setEmail}
                 onBlur={() => setTouched((t) => ({ ...t, email: true }))}
                 placeholder="you@bervinov.dev или +7…" error={errors.email}
-                Icon={I.Mail}/>
+                Icon={I.Mail} name="username" autoComplete="username"/>
               <Field label="Пароль" type={showPass ? 'text' : 'password'} value={pass} onChange={setPass}
                 onBlur={() => setTouched((t) => ({ ...t, pass: true }))}
                 placeholder="••••••••" error={errors.pass}
-                Icon={I.Lock}
+                Icon={I.Lock} name="password" autoComplete={rememberMe ? 'current-password' : 'off'}
                 rightSlot={(
                   <button type="button" onClick={() => setShowPass((s) => !s)} className="text-ink/40 hover:text-ink">
                     <I.Eye className="w-4 h-4"/>
                   </button>
                 )}/>
               <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="w-4 h-4 rounded bg-black/[0.06] grid place-items-center"/>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded border-black/20 text-violet-600 focus:ring-violet-500"
+                  />
                   <span className="text-ink/60">Запомнить меня</span>
                 </label>
                 <button type="button" onClick={() => { setShowForgot(true); setServerError(''); }}
@@ -538,11 +548,11 @@ function AuthForm({ mode, setMode, navigate }) {
           <div className="grid grid-cols-2 gap-3">
             <button type="button" disabled={loading} onClick={() => startOAuth('yandex')}
               className="h-10 leading-none overflow-visible rounded-xl bg-white ring-1 ring-black/[0.08] hover:ring-violet-300 transition-colors text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50">
-              <I.Yandex className="w-5 h-5 text-[#FC3F1D]"/> <span className="leading-none">Яндекс</span>
+              <I.Yandex className="w-5 h-5"/> <span className="leading-none">Яндекс</span>
             </button>
             <button type="button" disabled={loading} onClick={() => startOAuth('vk')}
               className="h-10 leading-none overflow-visible rounded-xl bg-white ring-1 ring-black/[0.08] hover:ring-violet-300 transition-colors text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50">
-              <I.VK className="w-5 h-5 text-[#0077FF]"/> <span className="leading-none">VK</span>
+              <I.VK className="w-5 h-5"/> <span className="leading-none">VK</span>
             </button>
           </div>
           <div className="text-center text-sm text-ink/60 pt-2 pb-1">
@@ -604,15 +614,17 @@ function RegisterNote() {
   );
 }
 
-function Field({ label, type = 'text', value, onChange, onBlur, placeholder, error, Icon, rightSlot, inputMode }) {
+function Field({
+  label, type = 'text', value, onChange, onBlur, placeholder, error, Icon, rightSlot, inputMode, name, autoComplete,
+}) {
   const id = React.useId();
   return (
     <div>
       <label htmlFor={id} className="text-xs font-semibold uppercase tracking-widest text-ink/60 ml-1">{label}</label>
       <div className={`auth-input-wrap mt-1.5 flex items-center gap-2 px-3.5 h-12 rounded-xl ${error ? 'is-error' : ''}`}>
         {Icon && <Icon className="w-4 h-4 text-ink/40 shrink-0"/>}
-        <input id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur}
-          placeholder={placeholder} inputMode={inputMode}
+        <input id={id} name={name} type={type} value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur}
+          placeholder={placeholder} inputMode={inputMode} autoComplete={autoComplete}
           className="flex-1 min-w-0 bg-transparent text-sm placeholder:text-ink/35 caret-violet-600 selection:bg-violet-200/50 outline-none"/>
         {rightSlot}
       </div>
@@ -789,7 +801,7 @@ function AuthCallbackPage({ navigate }) {
       if (codeVerifier) body.code_verifier = codeVerifier;
 
       try {
-        if (mode === 'link' && localStorage.getItem('access_token')) {
+        if (mode === 'link' && window.getAccessToken()) {
           await window.apiJson(`/api/auth/oauth/${provider}/link/`, {
             method: 'POST',
             auth: true,
@@ -811,8 +823,9 @@ function AuthCallbackPage({ navigate }) {
           method: 'POST',
           body,
         });
-        if (data.access) localStorage.setItem('access_token', data.access);
-        if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
+        if (data.access || data.refresh) {
+          window.setAuthTokens(data.access, data.refresh, true);
+        }
         sessionStorage.removeItem('oauth_state');
         sessionStorage.removeItem('oauth_provider');
         sessionStorage.removeItem('oauth_redirect_uri');

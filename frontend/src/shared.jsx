@@ -20,6 +20,7 @@ const Routes = {
   CONFERENCES: 'conferences',
   MESSAGES: 'messages',
   PRO: 'pro',
+  CERTIFICATE: 'certificate',
   PLAYGROUND: 'playground',
   WHITEBOARD: 'whiteboard',
 };
@@ -138,6 +139,66 @@ function getApiBase() {
   return typeof b === 'string' ? b.replace(/\/$/, '') : '';
 }
 
+const AUTH_ACCESS_KEY = 'access_token';
+const AUTH_REFRESH_KEY = 'refresh_token';
+const AUTH_REMEMBER_KEY = 'auth_remember';
+
+function isRememberAuth() {
+  if (typeof localStorage === 'undefined') return true;
+  return localStorage.getItem(AUTH_REMEMBER_KEY) !== '0';
+}
+
+function getAccessToken() {
+  if (typeof localStorage === 'undefined') return null;
+  return localStorage.getItem(AUTH_ACCESS_KEY) || sessionStorage.getItem(AUTH_ACCESS_KEY);
+}
+
+function getRefreshToken() {
+  if (typeof localStorage === 'undefined') return null;
+  return localStorage.getItem(AUTH_REFRESH_KEY) || sessionStorage.getItem(AUTH_REFRESH_KEY);
+}
+
+function hasAuthSession() {
+  return !!getAccessToken();
+}
+
+/** Persist JWT. remember=true → localStorage (после закрытия браузера); false → sessionStorage. */
+function setAuthTokens(access, refresh, remember) {
+  if (typeof localStorage === 'undefined') return;
+  let keep = remember;
+  if (typeof keep !== 'boolean') {
+    if (localStorage.getItem(AUTH_ACCESS_KEY) || localStorage.getItem(AUTH_REFRESH_KEY)) {
+      keep = true;
+    } else if (sessionStorage.getItem(AUTH_ACCESS_KEY) || sessionStorage.getItem(AUTH_REFRESH_KEY)) {
+      keep = false;
+    } else {
+      keep = isRememberAuth();
+    }
+  } else {
+    localStorage.setItem(AUTH_REMEMBER_KEY, keep ? '1' : '0');
+  }
+  const store = keep ? localStorage : sessionStorage;
+  const other = keep ? sessionStorage : localStorage;
+  other.removeItem(AUTH_ACCESS_KEY);
+  other.removeItem(AUTH_REFRESH_KEY);
+  if (access) store.setItem(AUTH_ACCESS_KEY, access);
+  else store.removeItem(AUTH_ACCESS_KEY);
+  if (refresh) store.setItem(AUTH_REFRESH_KEY, refresh);
+  else if (refresh === null) store.removeItem(AUTH_REFRESH_KEY);
+}
+
+function clearAuthTokens() {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.removeItem(AUTH_ACCESS_KEY);
+  localStorage.removeItem(AUTH_REFRESH_KEY);
+  sessionStorage.removeItem(AUTH_ACCESS_KEY);
+  sessionStorage.removeItem(AUTH_REFRESH_KEY);
+}
+
+function brandIconUrl(name) {
+  return `${getAppBase()}/icons/${name}.svg`;
+}
+
 function getWsBase() {
   const api = getApiBase();
   if (api) {
@@ -153,7 +214,7 @@ function getWsBase() {
 }
 
 function openChatThreadWs(threadPublicId, onEvent) {
-  const token = localStorage.getItem('access_token');
+  const token = getAccessToken();
   if (!token || !threadPublicId) return () => {};
   const url = `${getWsBase()}/ws/chat/threads/${encodeURIComponent(threadPublicId)}/?token=${encodeURIComponent(token)}`;
   let ws;
@@ -342,7 +403,7 @@ async function fetchCoursesList() {
 }
 
 async function refreshAccessToken() {
-  const refresh = localStorage.getItem('refresh_token');
+  const refresh = getRefreshToken();
   if (!refresh) return false;
   try {
     const data = await fetchApiJson('/api/auth/refresh/', {
@@ -351,8 +412,7 @@ async function refreshAccessToken() {
       _retry: false,
     });
     if (data && data.access) {
-      localStorage.setItem('access_token', data.access);
-      if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
+      setAuthTokens(data.access, data.refresh || refresh);
       notifyAuthChanged();
       return true;
     }
@@ -402,7 +462,7 @@ async function fetchApiJson(path, opts = {}) {
   const headers = { ...extraHeaders };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (auth) {
-    const t = localStorage.getItem('access_token');
+    const t = getAccessToken();
     if (t) headers['Authorization'] = 'Bearer ' + t;
   }
   const res = await fetch(url, {
@@ -423,8 +483,7 @@ async function fetchApiJson(path, opts = {}) {
     if (renewed) {
       return fetchApiJson(path, { ...opts, _retry: false });
     }
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    clearAuthTokens();
     notifyAuthChanged();
   }
   if (!res.ok) {
@@ -446,7 +505,7 @@ async function enrollInCourse(coursePublicId) {
 }
 
 async function fetchMyEnrollments() {
-  if (!localStorage.getItem('access_token')) return [];
+  if (!getAccessToken()) return [];
   try {
     return await fetchApiJson('/api/education/enrollments/', { auth: true });
   } catch (_) {
@@ -479,7 +538,7 @@ async function fetchApiForm(path, formData, opts = {}) {
   const url = `${getApiBase()}${path.startsWith('/') ? path : '/' + path}`;
   const headers = { ...extraHeaders };
   if (auth) {
-    const t = localStorage.getItem('access_token');
+    const t = getAccessToken();
     if (t) headers['Authorization'] = 'Bearer ' + t;
   }
   const res = await fetch(url, {
@@ -500,8 +559,7 @@ async function fetchApiForm(path, formData, opts = {}) {
     if (renewed) {
       return fetchApiForm(path, formData, { ...opts, _retry: false });
     }
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    clearAuthTokens();
     notifyAuthChanged();
   }
   if (!res.ok) {
@@ -864,7 +922,7 @@ function InlineReferenceSolution({ referenceSolution, unlocked, loggedIn, onLogi
 }
 
 function LessonCommentsBlock({ lessonKind, lessonId, onLogin, className }) {
-  const loggedIn = !!localStorage.getItem('access_token');
+  const loggedIn = !!getAccessToken();
   const [items, setItems] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [text, setText] = React.useState('');
@@ -1013,7 +1071,7 @@ function LessonDiscussionSection({
   wrongAttempts,
   sessionFails,
 }) {
-  const loggedIn = !!localStorage.getItem('access_token');
+  const loggedIn = !!getAccessToken();
 
   return (
     <div id="lesson-discussion" className="mt-12 pt-8 border-t border-black/[0.06]">
@@ -1256,18 +1314,16 @@ const I = {
       <path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.8 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2 1-.3 2-.4 3-.4s2 .1 3 .4c2.3-1.5 3.3-1.2 3.3-1.2.7 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.5-2.7 5.5-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.5-1.5 7.8-5.8 7.8-10.9C23.5 5.7 18.3.5 12 .5z" />
     </svg>,
 
-  // Brand marks (Simple Icons paths, evenodd). Color via text-* / currentColor.
+  // Official brand marks (Wikimedia / VK brand kit), served from /icons/*.svg
   Yandex: ({ className }) =>
-  <svg viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd"
-      className={`block shrink-0 ${className || ''}`} aria-hidden="true" focusable="false">
-      <path d="M0 3.612C0 1.617 1.617 0 3.612 0h16.776C22.383 0 24 1.617 24 3.612v16.776c0 1.995-1.617 3.612-3.612 3.612H3.612C1.617 24 0 22.383 0 20.388V3.612zm13.08 1.83h-2.14v10.37H7.69v2.14h7.53v-2.14h-2.14V5.442zm2.73 0v12.51h2.14V5.442h-2.14z" />
-    </svg>,
+  <img src={brandIconUrl('yandex')} alt=""
+      className={`block shrink-0 object-contain ${className || ''}`}
+      width="20" height="20" aria-hidden="true" />,
 
   VK: ({ className }) =>
-  <svg viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd"
-      className={`block shrink-0 ${className || ''}`} aria-hidden="true" focusable="false">
-      <path d="M15.684 0H8.316C1.592 0 0 1.592 0 8.316v7.368C0 22.408 1.592 24 8.316 24h7.368C22.408 24 24 22.408 24 15.684V8.316C24 1.592 22.408 0 15.684 0zm3.692 17.123h-1.744c-.66 0-.864-.525-2.05-1.727-1.033-1.01-1.49-1.135-1.744-1.135-.356 0-.458.102-.458.593v1.575c0 .424-.135.688-1.261.688-1.862 0-3.926-1.128-5.384-3.226-2.19-3.134-2.79-5.48-2.79-5.97 0-.254.102-.491.593-.491h1.744c.44 0 .61.203.78.677.863 2.49 2.303 4.675 2.896 4.675.22 0 .322-.102.322-.66V9.721c-.068-1.186-.695-1.287-.695-1.71 0-.203.17-.407.44-.407h2.744c.373 0 .508.203.508.643v3.473c0 .372.17.508.271.508.22 0 .407-.136.813-.542 1.254-1.406 2.151-3.574 2.151-3.574.119-.254.339-.491.762-.491h1.744c.508 0 .61.271.508.643-.22 1.017-2.354 4.031-2.354 4.031-.186.305-.254.44 0 .712.186.203.796.779 1.203 1.253.745.847 1.32 1.558 1.473 2.05.17.49-.085.744-.576.744z" />
-    </svg>,
+  <img src={brandIconUrl('vk')} alt=""
+      className={`block shrink-0 object-contain ${className || ''}`}
+      width="20" height="20" aria-hidden="true" />,
 
 };
 
@@ -1297,7 +1353,7 @@ async function enableWebPushNotifications() {
     window.alert('Браузер не поддерживает Web Push.');
     return false;
   }
-  if (!localStorage.getItem('access_token')) {
+  if (!getAccessToken()) {
     window.alert('Сначала войди в аккаунт.');
     return false;
   }
@@ -1349,7 +1405,7 @@ function NotificationBell({ navigate }) {
   const wrapRef = React.useRef(null);
 
   const load = React.useCallback(async () => {
-    if (!localStorage.getItem('access_token')) {
+    if (!getAccessToken()) {
       setItems([]);
       return;
     }
@@ -1403,7 +1459,7 @@ function NotificationBell({ navigate }) {
     } catch (_) { /* ignore */ }
   };
 
-  if (!localStorage.getItem('access_token')) return null;
+  if (!getAccessToken()) return null;
 
   return (
     <div className="relative" ref={wrapRef}>
@@ -1493,7 +1549,7 @@ function NotificationBell({ navigate }) {
 }
 
 function TopNav({ route, navigate }) {
-  const [session, setSession] = React.useState(() => !!localStorage.getItem('access_token'));
+  const [session, setSession] = React.useState(() => !!getAccessToken());
   const [searchDraft, setSearchDraft] = React.useState('');
   const [chatUnread, setChatUnread] = React.useState(0);
   const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -1501,7 +1557,7 @@ function TopNav({ route, navigate }) {
   const searchRef = React.useRef(null);
 
   const syncChatUnread = React.useCallback(async () => {
-    if (!localStorage.getItem('access_token')) {
+    if (!getAccessToken()) {
       setChatUnread(0);
       return;
     }
@@ -1509,7 +1565,7 @@ function TopNav({ route, navigate }) {
   }, []);
 
   React.useEffect(() => {
-    const sync = () => setSession(!!localStorage.getItem('access_token'));
+    const sync = () => setSession(!!getAccessToken());
     window.addEventListener('auth-changed', sync);
     window.addEventListener('storage', sync);
     return () => {
@@ -1556,7 +1612,7 @@ function TopNav({ route, navigate }) {
     setMobileOpen(false);
   }, [route]);
 
-  const access = session ? localStorage.getItem('access_token') : null;
+  const access = session ? getAccessToken() : null;
   const payload = access ? parseJwtPayload(access) : {};
   const displayName = [payload.first_name, payload.last_name].filter(Boolean).join(' ').trim();
   const initials = displayName
@@ -1576,14 +1632,13 @@ function TopNav({ route, navigate }) {
 
   const handleLogout = async (e) => {
     e.preventDefault();
-    const refresh = localStorage.getItem('refresh_token');
+    const refresh = getRefreshToken();
     if (refresh) {
       try {
         await fetchApiJson('/api/auth/logout/', { method: 'POST', body: { refresh }, auth: true });
       } catch (_) {/* ignore invalid/expired */}
     }
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    clearAuthTokens();
     setSession(false);
     notifyAuthChanged();
     navigate(Routes.LANDING);
@@ -1780,27 +1835,34 @@ function TopNav({ route, navigate }) {
   );
 }
 
-/** Мягкий баннер: пароль / контакты после входа через VK или Яндекс. */
+/** Мягкий баннер: пароль / контакты после OAuth + подтверждение почты. */
 function RecoveryBanner({ navigate }) {
   const [recovery, setRecovery] = React.useState(null);
+  const [me, setMe] = React.useState(null);
   const [dismissed, setDismissed] = React.useState(false);
+  const [emailDismissed, setEmailDismissed] = React.useState(false);
 
   const load = React.useCallback(async () => {
-    if (!localStorage.getItem('access_token')) {
+    if (!getAccessToken()) {
       setRecovery(null);
+      setMe(null);
       return;
     }
     try {
       const data = await fetchApiJson('/api/users/me/', { auth: true });
+      setMe(data);
       setRecovery(data.recovery || null);
-      // Старый ключ 7-дневного snooze больше не используем.
       if (data.public_id) {
         try {
           localStorage.removeItem(`ba_recovery_snooze:${data.public_id}`);
+          const until = localStorage.getItem(`ba_email_verify_snooze:${data.public_id}`);
+          if (until && Number(until) > Date.now()) setEmailDismissed(true);
+          else setEmailDismissed(false);
         } catch (_) { /* ignore */ }
       }
     } catch (_) {
       setRecovery(null);
+      setMe(null);
     }
   }, []);
 
@@ -1814,61 +1876,118 @@ function RecoveryBanner({ navigate }) {
     return () => window.removeEventListener('auth-changed', onAuth);
   }, [load]);
 
-  // Пока !ready — напоминаем. «Позже» только на эту загрузку страницы; после F5 снова видно.
-  if (dismissed || !recovery?.needs_setup) {
+  const needsEmailVerify = !!(me?.email && !me?.email_verified && !emailDismissed);
+  const needsRecovery = !dismissed && !!recovery?.needs_setup;
+
+  if (!needsRecovery && !needsEmailVerify) {
     return null;
   }
 
-  const hint = (!recovery.has_email && !recovery.has_phone)
-    ? 'Лучше указать и почту, и телефон — так надёжнее. Достаточно и одного.'
-    : (!recovery.has_email || !recovery.has_phone)
-      ? 'Можно добавить ещё один контакт — так безопаснее.'
-      : '';
+  const hint = needsRecovery
+    ? ((!recovery.has_email && !recovery.has_phone)
+      ? 'Лучше указать и почту, и телефон — так надёжнее. Достаточно и одного.'
+      : (!recovery.has_email || !recovery.has_phone)
+        ? 'Можно добавить ещё один контакт — так безопаснее.'
+        : '')
+    : '';
 
-  const onLater = () => {
-    setDismissed(true);
+  const onLater = () => setDismissed(true);
+  const onEmailLater = () => {
+    setEmailDismissed(true);
+    if (me?.public_id) {
+      try {
+        localStorage.setItem(
+          `ba_email_verify_snooze:${me.public_id}`,
+          String(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        );
+      } catch (_) { /* ignore */ }
+    }
   };
 
   return (
-    <div
-      role="region"
-      aria-label="Восстановление доступа"
-      className="border-b border-amber-200/80 bg-amber-50/95 text-ink"
-    >
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold">Добавь пароль на всякий случай</div>
-          <p className="text-xs sm:text-sm text-ink/65 mt-0.5">
-            Тогда сможешь войти и без VK или Яндекса. Можно сделать позже.
-            {hint ? <> {hint}</> : null}
-          </p>
+    <>
+      {needsRecovery ? (
+        <div
+          role="region"
+          aria-label="Восстановление доступа"
+          className="border-b border-amber-200/80 bg-amber-50/95 text-ink"
+        >
+          <div className="max-w-7xl mx-auto px-5 sm:px-8 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold">Добавь пароль на всякий случай</div>
+              <p className="text-xs sm:text-sm text-ink/65 mt-0.5">
+                Тогда сможешь войти и без VK или Яндекса. Можно сделать позже.
+                {hint ? <> {hint}</> : null}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => navigate(Routes.PROFILE_EDIT)}
+                className="h-9 px-4 rounded-xl text-sm font-semibold btn-grad text-white"
+              >
+                Задать пароль
+              </button>
+              <button
+                type="button"
+                onClick={onLater}
+                className="h-9 px-3 rounded-xl text-sm font-semibold text-ink/60 hover:bg-black/[0.04]"
+              >
+                Позже
+              </button>
+              <button
+                type="button"
+                onClick={onLater}
+                aria-label="Закрыть"
+                className="w-9 h-9 rounded-xl text-ink/45 hover:bg-black/[0.04] text-lg leading-none"
+              >
+                ×
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => navigate(Routes.PROFILE_EDIT)}
-            className="h-9 px-4 rounded-xl text-sm font-semibold btn-grad text-white"
-          >
-            Задать пароль
-          </button>
-          <button
-            type="button"
-            onClick={onLater}
-            className="h-9 px-3 rounded-xl text-sm font-semibold text-ink/60 hover:bg-black/[0.04]"
-          >
-            Позже
-          </button>
-          <button
-            type="button"
-            onClick={onLater}
-            aria-label="Закрыть"
-            className="w-9 h-9 rounded-xl text-ink/45 hover:bg-black/[0.04] text-lg leading-none"
-          >
-            ×
-          </button>
+      ) : null}
+      {needsEmailVerify ? (
+        <div
+          role="region"
+          aria-label="Подтверждение почты"
+          className="border-b border-sky-200/80 bg-sky-50/95 text-ink"
+        >
+          <div className="max-w-7xl mx-auto px-5 sm:px-8 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold">Подтверди почту</div>
+              <p className="text-xs sm:text-sm text-ink/65 mt-0.5">
+                Пришлём код на {me.email}. Так можно восстановить пароль, если забудешь.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => navigate(Routes.PROFILE_EDIT)}
+                className="h-9 px-4 rounded-xl text-sm font-semibold btn-grad text-white"
+              >
+                Подтвердить
+              </button>
+              <button
+                type="button"
+                onClick={onEmailLater}
+                className="h-9 px-3 rounded-xl text-sm font-semibold text-ink/60 hover:bg-black/[0.04]"
+              >
+                Позже
+              </button>
+              <button
+                type="button"
+                onClick={onEmailLater}
+                aria-label="Закрыть"
+                className="w-9 h-9 rounded-xl text-ink/45 hover:bg-black/[0.04] text-lg leading-none"
+              >
+                ×
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      ) : null}
+    </>
   );
 }
 
@@ -2063,6 +2182,13 @@ Object.assign(window, {
   useAppRoute,
   getApiBase,
   getWsBase,
+  getAccessToken,
+  getRefreshToken,
+  hasAuthSession,
+  isRememberAuth,
+  setAuthTokens,
+  clearAuthTokens,
+  brandIconUrl,
   openChatThreadWs,
   openChatWithUser,
   openChatWithCourse,

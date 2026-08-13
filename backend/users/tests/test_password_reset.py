@@ -4,6 +4,8 @@ from rest_framework.test import APIClient
 
 from users.tests.conftest import make_user
 
+pytestmark = pytest.mark.django_db
+
 
 @pytest.fixture(autouse=True)
 def clear_cache():

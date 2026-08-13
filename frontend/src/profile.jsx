@@ -21,7 +21,7 @@ function ProfilePage({ navigate, hashParams }) {
         try {
           const data = await window.apiJson(
             `/api/users/${encodeURIComponent(viewUserId)}/`,
-            { auth: !!localStorage.getItem('access_token') },
+            { auth: !!window.getAccessToken() },
           );
           if (!cancelled) {
             setUser(data);
@@ -39,7 +39,7 @@ function ProfilePage({ navigate, hashParams }) {
       return () => { cancelled = true; };
     }
 
-    if (!localStorage.getItem('access_token')) {
+    if (!window.getAccessToken()) {
       setLoading(false);
       setUser(null);
       setError('no_token');
@@ -123,7 +123,7 @@ function ProfilePage({ navigate, hashParams }) {
             <CoursesProgressChart enrollments={user.enrollments}/>
           </div>
           <MyCourses enrollments={user.enrollments} navigate={navigate}/>
-          <Achievements items={user.achievements?.items || []} unlockedCount={user.achievements?.unlocked_count}/>
+          <CertificatesList items={user.certificates || []} navigate={navigate}/>
         </>
       ) : (
         <>
@@ -137,7 +137,7 @@ function ProfilePage({ navigate, hashParams }) {
               value={user.progress?.courses_completed ?? 0}
               sub={`теорий: ${user.progress?.theories_read ?? 0}`}/>
           </div>
-          <Achievements items={user.achievements?.items || []} unlockedCount={user.achievements?.unlocked_count}/>
+          <CertificatesList items={user.certificates || []} navigate={navigate}/>
         </>
       )}
     </div>
@@ -176,7 +176,7 @@ function ProfileHeader({ user, navigate, isOwnProfile }) {
   const [callError, setCallError] = React.useState('');
 
   const isMentorViewer = React.useMemo(() => {
-    const t = localStorage.getItem('access_token');
+    const t = window.getAccessToken();
     if (!t) return false;
     const p = window.parseJwtPayload(t);
     return p.role === 'mentor' || p.role === 'admin';
@@ -512,8 +512,11 @@ function MyCourses({ enrollments, navigate }) {
             <div className="h-2 bg-black/[0.05] rounded-full overflow-hidden">
               <div className="h-full grad-bg rounded-full" style={{ width: `${e.percent || 0}%` }}/>
             </div>
-            <div className="text-xs text-ink/45 mt-2">
-              Начат {new Date(e.started_at).toLocaleDateString('ru-RU')}
+            <div className="text-xs text-ink/45 mt-2 flex items-center justify-between gap-2">
+              <span>Начат {new Date(e.started_at).toLocaleDateString('ru-RU')}</span>
+              {e.certificate_public_id && (
+                <span className="text-violet-600 font-semibold">Сертификат</span>
+              )}
             </div>
           </button>
         ))}
@@ -522,47 +525,36 @@ function MyCourses({ enrollments, navigate }) {
   );
 }
 
-// ----- ACHIEVEMENTS -----
-function Achievements({ items, unlockedCount }) {
+function CertificatesList({ items, navigate }) {
   const list = items || [];
-  const total = list.length;
-  const unlocked = typeof unlockedCount === 'number'
-    ? unlockedCount
-    : list.filter((i) => i.unlocked).length;
   return (
     <section className="max-w-7xl mx-auto px-5 sm:px-8 mt-10">
       <div className="flex items-end justify-between mb-5">
-        <h2 className="text-2xl font-bold">Достижения</h2>
-        <div className="text-sm text-ink/55">
-          <span className="font-semibold text-violet-600">{unlocked}</span> / {total || '—'} открыто
-        </div>
+        <h2 className="text-2xl font-bold">Сертификаты</h2>
+        {list.length > 0 && (
+          <div className="text-sm text-ink/55">
+            <span className="font-semibold text-violet-600">{list.length}</span> получено
+          </div>
+        )}
       </div>
       <div className="bg-white rounded-2xl ring-1 ring-black/[0.04] shadow-soft p-6">
         {list.length === 0 ? (
-          <p className="text-sm text-ink/55 text-center py-6">Достижения появятся после первой активности</p>
+          <p className="text-sm text-ink/55 text-center py-6">
+            Сертификат появится, когда курс будет пройден на 100%.
+          </p>
         ) : (
-        <div className="grid grid-cols-5 sm:grid-cols-10 gap-3 sm:gap-4">
-          {list.map((b, i) => (
-            <FM.motion.div key={b.public_id || b.code}
-              initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.04 }}
-              className="group relative aspect-square">
-              <div className={`w-full h-full rounded-2xl flex items-center justify-center text-3xl transition-all
-                ${b.unlocked ? 'shadow-soft' : 'opacity-40 grayscale'}`}
-                style={{ background: b.unlocked ? 'linear-gradient(135deg, #2563EB22, #06B6D408)' : 'rgba(0,0,0,0.04)',
-                         border: b.unlocked ? '1px solid #2563EB33' : '1px solid rgba(0,0,0,0.06)' }}>
-                {b.unlocked ? (b.emoji || '🏆') : <I.Lock className="w-5 h-5 text-ink/50"/>}
-              </div>
-              {/* tooltip */}
-              <div className="absolute z-10 left-1/2 -translate-x-1/2 -top-2 -translate-y-full opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
-                <div className="bg-ink text-white text-[11px] px-2.5 py-1.5 rounded-lg whitespace-nowrap">
-                  <div className="font-semibold">{b.title}</div>
-                  <div className="text-white/65 text-[10px]">{b.description}</div>
-                </div>
-              </div>
-            </FM.motion.div>
-          ))}
-        </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {list.map((c) => (
+              <button key={c.public_id} type="button"
+                onClick={() => navigate(window.Routes.CERTIFICATE, { id: c.public_id })}
+                className="text-left rounded-2xl p-5 ring-1 ring-black/[0.06] hover:shadow-glow transition-shadow bg-[#FBF8F1]">
+                <div className="text-[10px] uppercase tracking-widest text-ink/40">Сертификат</div>
+                <div className="font-bold mt-1 leading-snug">{c.course_title}</div>
+                <div className="text-xs text-ink/50 mt-2">{c.student_name}</div>
+                <div className="text-xs font-mono text-ink/40 mt-1">{c.serial}</div>
+              </button>
+            ))}
+          </div>
         )}
       </div>
     </section>

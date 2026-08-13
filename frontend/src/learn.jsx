@@ -114,6 +114,7 @@ function LearnPage({ navigate, hashParams }) {
 
   // ── progress (backend only) ──
   const [completed, setCompleted] = React.useState(new Set());
+  const [certificateId, setCertificateId] = React.useState(null);
   const [helpOpen, setHelpOpen] = React.useState(false);
 
   const markDone = React.useCallback((type, id) => {
@@ -126,11 +127,12 @@ function LearnPage({ navigate, hashParams }) {
 
   const refreshCourseProgress = React.useCallback(() => {
     if (!courseId) return Promise.resolve();
-    const token = localStorage.getItem('access_token');
+    const token = window.getAccessToken();
     if (!token) return Promise.resolve();
     return window.fetchCourseProgress(courseId)
       .then((data) => {
         setCompleted(new Set(data?.completed || []));
+        setCertificateId(data?.certificate_public_id || null);
       })
       .catch(() => {});
   }, [courseId]);
@@ -138,7 +140,7 @@ function LearnPage({ navigate, hashParams }) {
   // ── enroll + load progress from backend ──
   React.useEffect(() => {
     if (courseState !== 'ok' || !courseId) return;
-    const token = localStorage.getItem('access_token');
+    const token = window.getAccessToken();
     if (!token) return;
     window.enrollInCourse(courseId).catch(() => {});
     refreshCourseProgress();
@@ -302,7 +304,7 @@ function LearnPage({ navigate, hashParams }) {
     if (!lessonData || lessonLoading) return;
     const id = lessonData.public_id || lessonId;
     if (!id) return;
-    const token = localStorage.getItem('access_token');
+    const token = window.getAccessToken();
     if (token) {
       window.fetchApiJson('/api/progress/theory/', {
         method: 'POST',
@@ -333,7 +335,7 @@ function LearnPage({ navigate, hashParams }) {
     if (!selectedRadio || submitted) return;
     setSubmitLoading(true);
     let res = null;
-    const token = localStorage.getItem('access_token');
+    const token = window.getAccessToken();
     if (token) {
       try {
         res = await window.fetchApiJson('/api/progress/radio/', {
@@ -375,7 +377,7 @@ function LearnPage({ navigate, hashParams }) {
     if (submitted) return;
     setSubmitLoading(true);
     let res = null;
-    const token = localStorage.getItem('access_token');
+    const token = window.getAccessToken();
     if (token) {
       try {
         res = await window.fetchApiJson('/api/progress/checkbox/', {
@@ -399,7 +401,7 @@ function LearnPage({ navigate, hashParams }) {
     if (submitted || !String(shortAnswerText || '').trim()) return;
     setSubmitLoading(true);
     let res = null;
-    const token = localStorage.getItem('access_token');
+    const token = window.getAccessToken();
     if (token) {
       try {
         res = await window.fetchApiJson('/api/progress/short-answer/', {
@@ -637,6 +639,16 @@ function LearnPage({ navigate, hashParams }) {
             />
           ) : (
           <div className="max-w-3xl mx-auto px-5 sm:px-10 py-10">
+
+            {progressPct === 100 && certificateId && (
+              <button type="button"
+                onClick={() => navigate(Routes.CERTIFICATE, { id: certificateId })}
+                className="mb-8 w-full text-left rounded-2xl p-5 bg-[#FBF8F1] ring-1 ring-violet-200 shadow-soft hover:shadow-glow transition-shadow">
+                <div className="text-[11px] font-semibold uppercase tracking-widest text-violet-700">Курс пройден</div>
+                <div className="mt-1 font-extrabold text-[17px]">Именной сертификат готов</div>
+                <div className="text-sm text-ink/55 mt-1">Откройте и при желании распечатайте.</div>
+              </button>
+            )}
 
             {/* module tiles */}
             {currentModule && (
@@ -925,7 +937,7 @@ function TheoryLesson({ lesson, isDone, onComplete, onLogin }) {
 // ─── Radio question ──────────────────────────────────────────────────────────
 
 function RadioLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson }) {
-  const loggedIn  = !!localStorage.getItem('access_token');
+  const loggedIn  = !!window.getAccessToken();
   const isCorrect = result?.is_correct;
   const [sessionFails, setSessionFails] = React.useState(0);
   const prevResultId = React.useRef(null);
@@ -1050,7 +1062,7 @@ function RadioLesson({ lesson, selected, setSelected, submitted, result, loading
 // ─── Checkbox question ───────────────────────────────────────────────────────
 
 function CheckboxLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson }) {
-  const loggedIn  = !!localStorage.getItem('access_token');
+  const loggedIn  = !!window.getAccessToken();
   const isCorrect = result?.is_correct;
   const [sessionFails, setSessionFails] = React.useState(0);
   const prevSubmitKey = React.useRef(null);
@@ -1182,7 +1194,7 @@ function CheckboxLesson({ lesson, selected, setSelected, submitted, result, load
 function ShortAnswerLesson({
   lesson, answer, setAnswer, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson,
 }) {
-  const loggedIn  = !!localStorage.getItem('access_token');
+  const loggedIn  = !!window.getAccessToken();
   const isCorrect = result?.is_correct;
   const [sessionFails, setSessionFails] = React.useState(0);
   const prevResultId = React.useRef(null);
@@ -1513,7 +1525,7 @@ function CodeSubmissionResult({ result, points, loggedIn, onLogin, onRetry, solu
 }
 
 function CodingLesson({ lesson, isDone, onComplete, onLogin, onRefreshLesson }) {
-  const loggedIn = !!localStorage.getItem('access_token');
+  const loggedIn = !!window.getAccessToken();
   const [code, setCode] = React.useState(lesson.initial_code || DEFAULT_PYTHON_CODE);
   const [submitLoading, setSubmitLoading] = React.useState(false);
   const [submitError, setSubmitError] = React.useState(null);

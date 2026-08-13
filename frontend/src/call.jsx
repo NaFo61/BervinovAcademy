@@ -369,7 +369,7 @@ function CallPage({ navigate, hashParams }) {
 
   const notifyLeave = React.useCallback((keepalive = false) => {
     if (!confId || endSentRef.current) return;
-    const token = localStorage.getItem('access_token');
+    const token = window.getAccessToken();
     if (!token) return;
     try {
       window.fetch(
@@ -389,7 +389,7 @@ function CallPage({ navigate, hashParams }) {
       setError('Не указана конференция');
       return undefined;
     }
-    if (!localStorage.getItem('access_token')) {
+    if (!window.getAccessToken()) {
       setPhase('auth');
       return undefined;
     }
@@ -410,7 +410,7 @@ function CallPage({ navigate, hashParams }) {
         );
         if (cancelled) return;
 
-        const payload = window.parseJwtPayload(localStorage.getItem('access_token') || '');
+        const payload = window.parseJwtPayload(window.getAccessToken() || '');
         const myId = window.currentUserPublicId
           ? window.currentUserPublicId(payload)
           : String(payload.public_id || payload.user_id || '');

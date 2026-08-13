@@ -66,7 +66,10 @@ class CustomUserAdmin(ModelAdmin):
         )
 
     fieldsets = (
-        (_("Основная информация"), {"fields": ("email", "phone", "password")}),
+        (
+            _("Основная информация"),
+            {"fields": ("email", "email_verified", "phone", "password")},
+        ),
         (
             _("Личная информация"),
             {

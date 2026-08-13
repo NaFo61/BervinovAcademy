@@ -176,7 +176,7 @@ function MentorPage({ navigate }) {
   };
 
   React.useEffect(() => {
-    const token = localStorage.getItem('access_token');
+    const token = window.getAccessToken();
     if (!token) {
       setAccessState('guest');
       setLoading(false);

@@ -9,7 +9,7 @@ function whiteboardFeatureEnabled() {
 }
 
 function WhiteboardPage({ navigate }) {
-  const token = localStorage.getItem('access_token');
+  const token = window.getAccessToken();
   const hostRef = React.useRef(null);
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(true);

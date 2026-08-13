@@ -1,19 +1,16 @@
-from datetime import timedelta
-import hashlib
-import logging
-import secrets
-
 from django.conf import settings
-from django.contrib.auth.hashers import check_password, make_password
-from django.core.mail import send_mail
-from django.utils import timezone
 
+from .email_codes import (
+    clear_code,
+    generate_code,
+    get_code_entry,
+    send_code_email,
+    store_code,
+    validate_code_entry,
+)
 from .models import User
 
-logger = logging.getLogger(__name__)
-
-CODE_TTL = timedelta(minutes=15)
-CODE_LENGTH = 6
+PREFIX = "pwd_reset"
 
 
 def normalize_login(login: str) -> str:
@@ -32,64 +29,24 @@ def find_user_by_login(login: str) -> User | None:
     return User.objects.filter(phone=normalized, is_active=True).first()
 
 
-def _hash_code(code: str) -> str:
-    return make_password(code)
-
-
-def _code_matches(code: str, code_hash: str) -> bool:
-    return check_password(code, code_hash)
-
-
-def generate_reset_code() -> str:
-    return "".join(str(secrets.randbelow(10)) for _ in range(CODE_LENGTH))
-
-
-def _cache_key(login: str) -> str:
-    digest = hashlib.sha256(normalize_login(login).encode()).hexdigest()
-    return f"pwd_reset:{digest}"
-
-
-def store_reset_code(login: str, code: str) -> None:
-    from django.core.cache import cache
-
-    payload = {
-        "code_hash": _hash_code(code),
-        "expires_at": (timezone.now() + CODE_TTL).isoformat(),
-    }
-    cache.set(
-        _cache_key(login), payload, timeout=int(CODE_TTL.total_seconds())
-    )
-
-
-def get_reset_entry(login: str) -> dict | None:
-    from django.core.cache import cache
-
-    return cache.get(_cache_key(login))
-
-
-def clear_reset_code(login: str) -> None:
-    from django.core.cache import cache
-
-    cache.delete(_cache_key(login))
-
-
 def deliver_reset_code(user: User, code: str) -> None:
     message = (
         f"Код для восстановления пароля в Bervinov Academy: {code}\n"
-        f"Код действует 15 минут."
+        f"Код действует 15 минут.\n\n"
+        f"Если вы не запрашивали сброс — просто проигнорируйте письмо."
     )
     if user.email:
-        send_mail(
+        send_code_email(
+            to_email=user.email,
             subject="Восстановление пароля — Bervinov Academy",
-            message=message,
-            from_email=getattr(
-                settings, "DEFAULT_FROM_EMAIL", "noreply@bervinov.dev"
-            ),
-            recipient_list=[user.email],
-            fail_silently=True,
+            body=message,
         )
         return
-    logger.info("Password reset requested for phone user id=%s", user.pk)
+    import logging
+
+    logging.getLogger(__name__).info(
+        "Password reset requested for phone user id=%s", user.pk
+    )
 
 
 def issue_reset_code(login: str) -> tuple[bool, str | None]:
@@ -98,8 +55,8 @@ def issue_reset_code(login: str) -> tuple[bool, str | None]:
     if not user:
         return False, None
 
-    code = generate_reset_code()
-    store_reset_code(login, code)
+    code = generate_code()
+    store_code(PREFIX, normalize_login(login), code)
     deliver_reset_code(user, code)
     dev_code = code if settings.DEBUG else None
     return True, dev_code
@@ -108,23 +65,13 @@ def issue_reset_code(login: str) -> tuple[bool, str | None]:
 def confirm_reset_code(
     login: str, code: str, password: str
 ) -> tuple[bool, str | None]:
-    entry = get_reset_entry(login)
-    if not entry:
-        return False, "Код не найден или истёк. Запросите новый."
-
-    try:
-        expires_at = timezone.datetime.fromisoformat(entry["expires_at"])
-        if timezone.is_naive(expires_at):
-            expires_at = timezone.make_aware(expires_at)
-    except (TypeError, ValueError):
-        return False, "Код недействителен. Запросите новый."
-
-    if timezone.now() > expires_at:
-        clear_reset_code(login)
-        return False, "Код истёк. Запросите новый."
-
-    if not _code_matches(code.strip(), entry["code_hash"]):
-        return False, "Неверный код."
+    identity = normalize_login(login)
+    entry = get_code_entry(PREFIX, identity)
+    ok, error = validate_code_entry(entry, code)
+    if not ok:
+        if error and "истёк" in error.lower():
+            clear_code(PREFIX, identity)
+        return False, error
 
     user = find_user_by_login(login)
     if not user:
@@ -132,5 +79,5 @@ def confirm_reset_code(
 
     user.set_password(password)
     user.save(update_fields=["password"])
-    clear_reset_code(login)
+    clear_code(PREFIX, identity)
     return True, None

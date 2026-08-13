@@ -423,6 +423,18 @@ def _maybe_fill_oauth_contacts(user, profile: dict[str, Any]) -> None:
         else:
             user.email = email
             update_fields.append("email")
+            if profile.get("provider") == "yandex":
+                user.email_verified = True
+                update_fields.append("email_verified")
+    elif (
+        profile.get("provider") == "yandex"
+        and email
+        and user.email
+        and user.email.lower() == email
+        and not user.email_verified
+    ):
+        user.email_verified = True
+        update_fields.append("email_verified")
 
     if phone and not user.phone:
         taken = User.objects.filter(phone=phone).exclude(pk=user.pk).exists()
@@ -472,6 +484,8 @@ def resolve_or_create_user(profile: dict[str, Any]):
     }
     if provider == "yandex":
         kwargs["yandex_id"] = pid
+        if kwargs.get("email"):
+            kwargs["email_verified"] = True
     else:
         kwargs["vk_id"] = int(pid)
 
@@ -479,6 +493,7 @@ def resolve_or_create_user(profile: dict[str, Any]):
     if email and User.objects.filter(email__iexact=email).exists():
         logger.info("OAuth create: email taken, skip email=%s", email)
         kwargs["email"] = None
+        kwargs.pop("email_verified", None)
     if phone and User.objects.filter(phone=phone).exists():
         logger.info("OAuth create: phone taken, skip phone=%s", phone)
         kwargs["phone"] = None
