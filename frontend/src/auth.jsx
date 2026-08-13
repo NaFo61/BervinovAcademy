@@ -469,20 +469,35 @@ function AuthForm({ mode, setMode, navigate }) {
                     <I.Eye className="w-4 h-4"/>
                   </button>
                 )}/>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <label className="group inline-flex items-center gap-2.5 min-h-11 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-black/20 text-violet-600 focus:ring-violet-500"
+                    className="sr-only peer"
                   />
-                  <span className="text-ink/60">Запомнить меня</span>
+                  <span
+                    aria-hidden="true"
+                    className={`relative w-10 h-6 rounded-full shrink-0 transition-colors duration-200 motion-reduce:transition-none
+                      ring-1 ring-black/[0.08] peer-focus-visible:ring-2 peer-focus-visible:ring-violet-500/50
+                      ${rememberMe
+                        ? 'bg-gradient-to-r from-violet-600 to-cyan-500'
+                        : 'bg-black/[0.10] group-hover:bg-black/[0.14]'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm
+                      transition-transform duration-200 ease-out motion-reduce:transition-none
+                      ${rememberMe ? 'translate-x-4' : 'translate-x-0'}`}/>
+                  </span>
+                  <span className="text-sm font-medium text-ink/70 group-hover:text-ink">
+                    Запомнить меня
+                  </span>
                 </label>
                 <button
                   type="button"
                   onClick={() => { setShowForgot(true); setServerError(''); setServerInfo(''); }}
-                  className="text-sm font-semibold text-sky-700 hover:text-sky-800 hover:underline self-start sm:self-auto"
+                  className="text-sm font-semibold text-violet-600 hover:text-violet-700
+                    underline-offset-2 hover:underline self-start sm:self-auto min-h-11"
                 >
                   Забыли пароль?
                 </button>
