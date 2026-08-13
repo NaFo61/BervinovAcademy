@@ -1,8 +1,8 @@
 from django.contrib import admin, messages
 from django.utils.translation import gettext_lazy as _
-from unfold.admin import ModelAdmin
+from unfold.admin import ModelAdmin, TabularInline
 
-from .models import Entitlement, Plan
+from .models import Entitlement, Plan, PromoCode, PromoRedemption
 
 
 @admin.register(Plan)
@@ -49,3 +49,46 @@ class EntitlementAdmin(ModelAdmin):
             _("Отозвано выдач: %(n)s") % {"n": updated},
             messages.SUCCESS,
         )
+
+
+class PromoRedemptionInline(TabularInline):
+    model = PromoRedemption
+    extra = 0
+    autocomplete_fields = ("user", "entitlement")
+    readonly_fields = ("public_id", "created_at")
+
+
+@admin.register(PromoCode)
+class PromoCodeAdmin(ModelAdmin):
+    list_display = (
+        "code",
+        "duration_days",
+        "is_active",
+        "expires_at",
+        "redemption_count",
+        "max_redemptions",
+        "created_at",
+    )
+    list_filter = ("is_active",)
+    search_fields = ("code", "note")
+    readonly_fields = ("public_id", "created_at")
+    autocomplete_fields = ("created_by",)
+    inlines = (PromoRedemptionInline,)
+
+    @admin.display(description=_("Использовано"))
+    def redemption_count(self, obj):
+        return obj.redemptions.count()
+
+
+@admin.register(PromoRedemption)
+class PromoRedemptionAdmin(ModelAdmin):
+    list_display = ("promo", "user", "created_at")
+    search_fields = (
+        "promo__code",
+        "user__email",
+        "user__phone",
+        "user__first_name",
+        "user__last_name",
+    )
+    autocomplete_fields = ("promo", "user", "entitlement")
+    readonly_fields = ("public_id", "created_at")

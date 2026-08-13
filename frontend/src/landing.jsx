@@ -88,7 +88,6 @@ function Hero({ navigate }) {
 function HeroLessonCard() {
   const M = FM.motion;
   const [progress, setProgress] = React.useState(0);
-  const [achievements, setAchievements] = React.useState([]);
 
   React.useEffect(() => {
     let raf;
@@ -101,26 +100,6 @@ function HeroLessonCard() {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
-
-  // Spawn achievements periodically
-  React.useEffect(() => {
-    const pool = [
-      { icon: '✅', text: 'Задача решена!', tint: '#22C55E' },
-      { icon: '🔥', text: 'Серия 7 дней', tint: '#06B6D4' },
-      { icon: '⚡', text: '+15 XP', tint: '#2563EB' },
-      { icon: '🏆', text: 'Урок 3/12', tint: '#38BDF8' },
-    ];
-    let i = 0;
-    let uid = 0;
-    const id = setInterval(() => {
-      uid += 1;
-      const a = { ...pool[i % pool.length], key: `ach-${uid}` };
-      i++;
-      setAchievements((prev) => [...prev, a].slice(-3));
-      setTimeout(() => setAchievements((p) => p.filter((x) => x.key !== a.key)), 3200);
-    }, 1700);
-    return () => clearInterval(id);
   }, []);
 
   return (
@@ -201,34 +180,6 @@ function HeroLessonCard() {
             <I.Chat className="w-3.5 h-3.5"/> Написать
           </button>
         </div>
-      </div>
-
-      {/* floating achievements */}
-      <div className="absolute inset-0 pointer-events-none">
-        <FM.AnimatePresence>
-          {achievements.map((a, idx) => (
-            <M.div
-              key={a.key}
-              initial={{ opacity: 0, x: -20, y: 0, scale: 0.8 }}
-              animate={{ opacity: 1, x: 0, y: -idx * 12, scale: 1 }}
-              exit={{ opacity: 0, x: 30, scale: 0.9 }}
-              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className="absolute bg-white shadow-glow rounded-2xl px-3.5 py-2.5 ring-1 ring-black/5 flex items-center gap-2.5"
-              style={{
-                top: `${20 + idx * 14}%`,
-                left: idx % 2 === 0 ? '-12%' : 'auto',
-                right: idx % 2 === 1 ? '-8%' : 'auto',
-              }}>
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-lg" style={{ background: `${a.tint}22` }}>
-                {a.icon}
-              </div>
-              <div>
-                <div className="text-sm font-semibold leading-tight">{a.text}</div>
-                <div className="text-[10px] text-ink/50">только что</div>
-              </div>
-            </M.div>
-          ))}
-        </FM.AnimatePresence>
       </div>
     </M.div>
   );

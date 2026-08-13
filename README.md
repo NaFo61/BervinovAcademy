@@ -369,8 +369,19 @@ flowchart LR
 # В контейнере backend
 docker compose exec backend pytest -v --reuse-db
 
-# Локально из каталога backend (с настроенной БД)
+# Локально из корня репозитория
 pytest -v
+
+# Security-набор + coverage
+pytest backend/users/tests/test_auth_security.py \
+  backend/notify/tests/test_webpush_security.py \
+  backend/communication/tests/test_livekit_webhook_security.py \
+  backend/content/tests/test_idor_lookups.py \
+  backend/school_platform/tests/test_health.py -v --cov
+
+# Postman / Newman (живой HTTP smoke) — см. postman/README.md
+newman run postman/BervinovAcademy.postman_collection.json \
+  -e postman/local.postman_environment.json
 ```
 
 ---

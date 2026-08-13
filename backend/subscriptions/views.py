@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .services import ensure_pro_plan, subscription_payload
+from .services import (
+    PromoRedeemError,
+    ensure_pro_plan,
+    redeem_promo,
+    subscription_payload,
+)
 
 FEATURE_COPY = {
     "mentor_chat": {
@@ -47,8 +53,7 @@ class ProPlanView(APIView):
             "features": features,
             "purchase_available": False,
             "cta_text": (
-                "Покупка скоро. Пока тариф Про выдаёт администратор — "
-                "напишите, если хотите подключить."
+                "Оплата картой скоро. Если есть промокод — введите его ниже."
             ),
         }
         user = request.user
@@ -64,3 +69,23 @@ class MySubscriptionView(APIView):
 
     def get(self, request):
         return Response(subscription_payload(request.user))
+
+
+class RedeemPromoView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        raw = ""
+        if isinstance(request.data, dict):
+            raw = request.data.get("code") or ""
+        try:
+            _entitlement, promo = redeem_promo(user=request.user, code=raw)
+        except PromoRedeemError as exc:
+            raise ValidationError({"detail": str(exc)}) from exc
+        return Response(
+            {
+                "ok": True,
+                "duration_days": promo.duration_days,
+                "subscription": subscription_payload(request.user),
+            }
+        )

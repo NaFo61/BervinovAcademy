@@ -30,6 +30,7 @@ class EnrollmentSerializer(serializers.ModelSerializer):
     percent = serializers.SerializerMethodField()
     completed_steps = serializers.SerializerMethodField()
     total_steps = serializers.SerializerMethodField()
+    certificate_public_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Enrollment
@@ -45,6 +46,7 @@ class EnrollmentSerializer(serializers.ModelSerializer):
             "started_at",
             "last_activity_at",
             "completed_at",
+            "certificate_public_id",
         )
         read_only_fields = fields
 
@@ -65,3 +67,15 @@ class EnrollmentSerializer(serializers.ModelSerializer):
 
     def get_total_steps(self, obj) -> int:
         return self._detail(obj)["total_steps"]
+
+    def get_certificate_public_id(self, obj):
+        from progress.certificates import get_certificate, issue_certificate
+
+        detail = self._detail(obj)
+        total = detail["total_steps"]
+        done = detail["completed_steps"]
+        if total > 0 and done >= total:
+            cert = issue_certificate(obj.user, obj.course)
+            return str(cert.public_id)
+        cert = get_certificate(obj.user, obj.course)
+        return str(cert.public_id) if cert else None

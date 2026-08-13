@@ -168,8 +168,8 @@ function ForgotPasswordPanel({ onBack, onDone }) {
         Восстановление <span className="grad-text">пароля</span>
       </h2>
       <p className="text-sm text-ink/60 mt-2">
-        {step === 'contact' && 'Укажи email или телефон — пришлём код для сброса.'}
-        {step === 'code' && 'Введи код из письма или SMS.'}
+        {step === 'contact' && 'Укажи email — пришлём код для сброса пароля.'}
+        {step === 'code' && 'Введи 6-значный код из письма.'}
         {step === 'password' && 'Придумай новый надёжный пароль.'}
       </p>
 
@@ -206,7 +206,7 @@ function ForgotPasswordPanel({ onBack, onDone }) {
               <Field label="Email или телефон" value={login} onChange={setLogin}
                 placeholder="you@bervinov.dev или +7…" Icon={I.Mail}/>
               <p className="text-xs text-ink/50 mt-2 leading-relaxed">
-                На email придёт письмо с кодом. Для телефона код появится в консоли сервера в режиме разработки.
+                На почту придёт письмо с кодом. Код действует 15 минут.
               </p>
             </>
           )}
@@ -469,7 +469,7 @@ function AuthForm({ mode, setMode, navigate }) {
                     <I.Eye className="w-4 h-4"/>
                   </button>
                 )}/>
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -479,8 +479,11 @@ function AuthForm({ mode, setMode, navigate }) {
                   />
                   <span className="text-ink/60">Запомнить меня</span>
                 </label>
-                <button type="button" onClick={() => { setShowForgot(true); setServerError(''); }}
-                  className="text-violet-600 hover:underline font-medium">
+                <button
+                  type="button"
+                  onClick={() => { setShowForgot(true); setServerError(''); setServerInfo(''); }}
+                  className="inline-flex items-center justify-center h-9 px-3 rounded-xl text-sm font-semibold text-violet-700 bg-violet-500/10 hover:bg-violet-500/15 ring-1 ring-violet-200/80 transition-colors self-start sm:self-auto"
+                >
                   Забыли пароль?
                 </button>
               </div>

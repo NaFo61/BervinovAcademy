@@ -2,7 +2,7 @@ import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from progress.models import Achievement, UserAchievement, UserAnswerRadio
+from progress.models import UserAnswerRadio
 
 
 @pytest.mark.django_db
@@ -13,16 +13,15 @@ class TestProfileProgressApi:
         c.force_authenticate(user=student_user)
         return c
 
-    def test_me_includes_progress_and_achievements(self, client):
+    def test_me_includes_progress(self, client):
         resp = client.get("/api/users/me/")
         assert resp.status_code == status.HTTP_200_OK
         assert "progress" in resp.data
         assert resp.data["progress"]["tasks_solved"] == 0
-        assert "achievements" in resp.data
-        assert "items" in resp.data["achievements"]
-        assert resp.data["achievements"]["total_count"] >= 1
+        assert "achievements" not in resp.data
+        assert "certificates" in resp.data
 
-    def test_correct_radio_unlocks_first_task_achievement(
+    def test_correct_radio_counts_as_solved(
         self, client, student_user, radio_question, radio_answers
     ):
         correct = next(a for a in radio_answers if a.is_correct)
@@ -36,17 +35,6 @@ class TestProfileProgressApi:
         )
         resp = client.get("/api/users/me/")
         assert resp.data["progress"]["tasks_solved"] == 1
-        first = Achievement.objects.get(code="tasks_1")
-        assert UserAchievement.objects.filter(
-            user=student_user, achievement=first
-        ).exists()
-        unlocked = [
-            item
-            for item in resp.data["achievements"]["items"]
-            if item["unlocked"]
-        ]
-        codes = {item["code"] for item in unlocked}
-        assert "tasks_1" in codes
 
     def test_wrong_radio_does_not_count_as_solved(
         self, client, student_user, radio_question, radio_answers

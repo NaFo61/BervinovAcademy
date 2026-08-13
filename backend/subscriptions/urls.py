@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import MySubscriptionView, ProPlanView
+from .views import MySubscriptionView, ProPlanView, RedeemPromoView
 
 urlpatterns = [
     path(
@@ -12,5 +12,10 @@ urlpatterns = [
         "subscriptions/me/",
         MySubscriptionView.as_view(),
         name="subscriptions-me",
+    ),
+    path(
+        "subscriptions/redeem/",
+        RedeemPromoView.as_view(),
+        name="subscriptions-redeem",
     ),
 ]

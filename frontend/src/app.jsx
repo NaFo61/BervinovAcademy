@@ -20,11 +20,12 @@ const CallPage = window.CallPage;
 const ConferencesPage = window.ConferencesPage;
 const MessagesPage = window.MessagesPage;
 const ProPage = window.ProPage;
+const CertificatePage = window.CertificatePage;
 const PlaygroundPage = window.PlaygroundPage;
 const WhiteboardPage = window.WhiteboardPage;
 
 const NO_FOOTER_ROUTES = new Set([
-  Routes.PROBLEM, Routes.AUTH, Routes.AUTH_CALLBACK, Routes.LEARN, Routes.EXAM, Routes.CALL, Routes.PLAYGROUND, Routes.WHITEBOARD,
+  Routes.PROBLEM, Routes.AUTH, Routes.AUTH_CALLBACK, Routes.LEARN, Routes.EXAM, Routes.CALL, Routes.PLAYGROUND, Routes.WHITEBOARD, Routes.CERTIFICATE,
 ]);
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
     [Routes.CONFERENCES]: ConferencesPage,
     [Routes.MESSAGES]: MessagesPage,
     [Routes.PRO]: ProPage,
+    [Routes.CERTIFICATE]: CertificatePage,
     [Routes.PLAYGROUND]: PlaygroundPage,
     [Routes.WHITEBOARD]: WhiteboardPage,
   }[route] || LandingPage;

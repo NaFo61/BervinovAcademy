@@ -7,6 +7,7 @@ from unfold.decorators import action, display
 
 from progress.models import (
     CodeSubmission,
+    CourseCertificate,
     LessonUserComment,
     UserAnswerCheckBox,
     UserAnswerRadio,
@@ -947,3 +948,28 @@ class LessonUserCommentAdmin(ModelAdmin):
     def body_preview(self, obj):
         text = obj.body or ""
         return text[:80] + ("…" if len(text) > 80 else "")
+
+
+@admin.register(CourseCertificate)
+class CourseCertificateAdmin(ModelAdmin):
+    list_display = (
+        "user",
+        "course",
+        "serial_display",
+        "issued_at",
+    )
+    search_fields = (
+        "user__email",
+        "user__phone",
+        "user__first_name",
+        "user__last_name",
+        "course__title",
+    )
+    autocomplete_fields = ("user", "course")
+    readonly_fields = ("public_id", "issued_at", "serial_display")
+    list_filter = ("course",)
+    ordering = ("-issued_at",)
+
+    @admin.display(description=_("Номер"))
+    def serial_display(self, obj):
+        return obj.serial

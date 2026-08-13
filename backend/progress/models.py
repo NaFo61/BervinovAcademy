@@ -7,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from content.models import (
     CheckBoxAnswerOption,
     CodingChallenge,
+    Course,
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
     LessonShortAnswer,
@@ -510,4 +511,47 @@ class LessonUserComment(UUIDPublicIdMixin, models.Model):
 
     def __str__(self):
         preview = (self.body[:40] + "…") if len(self.body) > 40 else self.body
-        return f"{self.user} — {self.lesson_kind}:{self.lesson_public_id} — {preview}"
+        return (
+            f"{self.user} — {self.lesson_kind}:"
+            f"{self.lesson_public_id} — {preview}"
+        )
+
+
+class CourseCertificate(UUIDPublicIdMixin, models.Model):
+    """Именной сертификат: выдаётся при 100% курса."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="course_certificates",
+        verbose_name=_("Ученик"),
+    )
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name="certificates",
+        verbose_name=_("Курс"),
+    )
+    issued_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Выдан"),
+        db_index=True,
+    )
+
+    class Meta:
+        verbose_name = _("Сертификат")
+        verbose_name_plural = _("Сертификаты")
+        ordering = ("-issued_at",)
+        unique_together = ("user", "course")
+        indexes = [
+            models.Index(fields=["user", "-issued_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user} — {self.course.title}"
+
+    @property
+    def serial(self) -> str:
+        hex8 = str(self.public_id).replace("-", "")[:8].upper()
+        year = self.issued_at.year if self.issued_at else timezone.now().year
+        return f"BA-{year}-{hex8}"

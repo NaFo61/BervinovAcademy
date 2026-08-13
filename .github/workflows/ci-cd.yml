@@ -126,6 +126,9 @@ jobs:
         run: python manage.py migrate --noinput
 
       - name: Pytest
+        # Override --reuse-db from pyproject: fresh DB on every CI run.
+        # JUnit helps debug Postgres-only failures (SQLite often hides them).
+        # Coverage: real --cov (artifact was previously empty).
         env:
           DB_ENGINE: django.db.backends.postgresql
           DB_NAME: test_db
@@ -137,10 +140,11 @@ jobs:
           DEBUG: "False"
           CELERY_BROKER_URL: redis://localhost:6379/0
           CELERY_RESULT_BACKEND: redis://localhost:6379/0
-        # Override --reuse-db from pyproject: fresh DB on every CI run.
-        # JUnit helps debug Postgres-only failures (SQLite often hides them).
+          COVERAGE_FILE: backend/.coverage
         run: >
           pytest -n auto --create-db
+          --cov --cov-report=term-missing:skip-covered
+          --cov-report=xml:coverage.xml
           --junitxml=pytest-report.xml -ra
 
       - name: Upload pytest report
@@ -156,7 +160,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pytest-coverage
-          path: backend/.coverage
+          path: |
+            backend/.coverage
+            coverage.xml
           if-no-files-found: ignore
 
   # ---------------------------------------------------------------------------

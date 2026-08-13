@@ -80,7 +80,27 @@ testpaths = [
     "backend/exams/tests",
     "backend/subscriptions/tests",
     "backend/notify/tests",
+    "backend/school_platform/tests",
     "deploy/tests",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["backend"]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "*/manage.py",
+    "*/wsgi.py",
+    "*/asgi.py",
+]
+
+[tool.coverage.report]
+skip_empty = true
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
 ]
 
 markers = [

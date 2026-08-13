@@ -1,7 +1,11 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from progress.views import CourseProgressView
+from progress.views import (
+    CertificateDetailView,
+    CertificateListView,
+    CourseProgressView,
+)
 from progress.viewsets import (
     LessonUserCommentViewSet,
     UserAnswerCheckBoxViewSet,
@@ -44,6 +48,16 @@ urlpatterns = [
         "progress/course/",
         CourseProgressView.as_view(),
         name="course-progress",
+    ),
+    path(
+        "progress/certificates/",
+        CertificateListView.as_view(),
+        name="certificate-list",
+    ),
+    path(
+        "progress/certificates/<uuid:public_id>/",
+        CertificateDetailView.as_view(),
+        name="certificate-detail",
     ),
     path("progress/", include(answers_router.urls)),
 ]

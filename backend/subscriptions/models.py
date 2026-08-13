@@ -71,6 +71,7 @@ class Entitlement(UUIDPublicIdMixin, models.Model):
     class Source(models.TextChoices):
         ADMIN_GRANT = "admin_grant", _("Выдача админом")
         PURCHASE = "purchase", _("Покупка")
+        PROMO = "promo", _("Промокод")
 
     user = models.ForeignKey(
         User,
@@ -134,3 +135,100 @@ class Entitlement(UUIDPublicIdMixin, models.Model):
             return False
         now = timezone.now()
         return self.starts_at <= now < self.ends_at
+
+
+def _normalize_promo_code(raw: str) -> str:
+    return "".join(str(raw or "").split()).upper()
+
+
+class PromoCode(UUIDPublicIdMixin, models.Model):
+    """Промокод: ученик вводит код — получает Про."""
+
+    code = models.CharField(
+        max_length=32,
+        unique=True,
+        verbose_name=_("Код"),
+        help_text=_("Латиница и цифры, например EGE2026"),
+    )
+    duration_days = models.PositiveIntegerField(
+        default=DEFAULT_PRO_DURATION_DAYS,
+        verbose_name=_("Срок Про (дней)"),
+    )
+    max_redemptions = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Лимит использований"),
+        help_text=_("Пусто — без лимита"),
+    )
+    is_active = models.BooleanField(default=True, verbose_name=_("Активен"))
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Действует до"),
+    )
+    note = models.CharField(
+        max_length=255, blank=True, verbose_name=_("Заметка")
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True, verbose_name=_("Создан")
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_promo_codes",
+        verbose_name=_("Кто создал"),
+    )
+
+    class Meta:
+        verbose_name = _("Промокод")
+        verbose_name_plural = _("Промокоды")
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return self.code
+
+    def save(self, *args, **kwargs):
+        self.code = _normalize_promo_code(self.code)
+        super().save(*args, **kwargs)
+
+
+class PromoRedemption(UUIDPublicIdMixin, models.Model):
+    """Факт применения промокода."""
+
+    promo = models.ForeignKey(
+        PromoCode,
+        on_delete=models.CASCADE,
+        related_name="redemptions",
+        verbose_name=_("Промокод"),
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="promo_redemptions",
+        verbose_name=_("Пользователь"),
+    )
+    entitlement = models.ForeignKey(
+        Entitlement,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="promo_redemptions",
+        verbose_name=_("Выдача"),
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True, verbose_name=_("Когда")
+    )
+
+    class Meta:
+        verbose_name = _("Использование промокода")
+        verbose_name_plural = _("Использования промокодов")
+        ordering = ("-created_at",)
+        unique_together = ("promo", "user")
+        indexes = [
+            models.Index(fields=["user", "-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user} ← {self.promo.code}"

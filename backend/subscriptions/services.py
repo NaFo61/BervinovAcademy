@@ -16,6 +16,9 @@ from .models import (
     PRO_FEATURES,
     Entitlement,
     Plan,
+    PromoCode,
+    PromoRedemption,
+    _normalize_promo_code,
 )
 
 __all__ = [
@@ -30,6 +33,8 @@ __all__ = [
     "subscription_payload",
     "user_has_feature",
     "user_is_pro",
+    "PromoRedeemError",
+    "redeem_promo",
 ]
 
 
@@ -153,3 +158,50 @@ def subscription_payload(user) -> dict:
         "features": sorted(ent.plan.feature_set()),
         "ends_at": ent.ends_at.isoformat(),
     }
+
+
+class PromoRedeemError(Exception):
+    """Понятная ошибка для ученика при вводе промокода."""
+
+
+@transaction.atomic
+def redeem_promo(*, user, code: str) -> tuple[Entitlement, PromoCode]:
+    """Применить промокод и выдать/продлить Про."""
+    normalized = _normalize_promo_code(code)
+    if not normalized:
+        raise PromoRedeemError("Введите промокод.")
+
+    promo = (
+        PromoCode.objects.select_for_update().filter(code=normalized).first()
+    )
+    if promo is None:
+        raise PromoRedeemError("Такого промокода нет.")
+    if not promo.is_active:
+        raise PromoRedeemError("Промокод отключён.")
+
+    now = timezone.now()
+    if promo.expires_at and promo.expires_at <= now:
+        raise PromoRedeemError("Срок промокода истёк.")
+
+    already = PromoRedemption.objects.filter(promo=promo, user=user).exists()
+    if already:
+        raise PromoRedeemError("Вы уже использовали этот промокод.")
+
+    used = promo.redemptions.count()
+    if promo.max_redemptions is not None and used >= promo.max_redemptions:
+        raise PromoRedeemError(
+            "Промокод уже использован максимальное число раз."
+        )
+
+    entitlement = grant_pro(
+        user=user,
+        duration_days=promo.duration_days,
+        source=Entitlement.Source.PROMO,
+        note=f"promo:{promo.code}",
+    )
+    PromoRedemption.objects.create(
+        promo=promo,
+        user=user,
+        entitlement=entitlement,
+    )
+    return entitlement, promo

@@ -33,6 +33,9 @@ def sync_enrollment_status(enrollment: Enrollment) -> Enrollment:
             enrollment.save(
                 update_fields=["status", "completed_at", "last_activity_at"]
             )
+        from progress.certificates import issue_certificate
+
+        issue_certificate(enrollment.user, enrollment.course)
     elif enrollment.status == Enrollment.Status.COMPLETED and done < total:
         enrollment.status = Enrollment.Status.ACTIVE
         enrollment.completed_at = None
@@ -46,6 +49,13 @@ def build_enrollment_payload(enrollment: Enrollment) -> dict:
     sync_enrollment_status(enrollment)
     detail = get_course_progress_detail(enrollment.user, enrollment.course)
     course = enrollment.course
+    cert_pid = None
+    if enrollment.status == Enrollment.Status.COMPLETED:
+        from progress.certificates import get_certificate
+
+        cert = get_certificate(enrollment.user, course)
+        if cert:
+            cert_pid = str(cert.public_id)
     return {
         "public_id": str(enrollment.public_id),
         "course_public_id": str(course.public_id),
@@ -62,6 +72,7 @@ def build_enrollment_payload(enrollment: Enrollment) -> dict:
             if enrollment.completed_at
             else None
         ),
+        "certificate_public_id": cert_pid,
     }
 
 

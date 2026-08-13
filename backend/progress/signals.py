@@ -5,16 +5,9 @@ from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from progress.achievements import sync_achievements_for_user
 from progress.kafka_payloads import build_code_submission_kafka_payload
 from progress.kafka_publisher import publish_code_submission_to_kafka
-from progress.models import (
-    CodeSubmission,
-    UserAnswerCheckBox,
-    UserAnswerRadio,
-    UserAnswerShort,
-    UserLessonTheoryRead,
-)
+from progress.models import CodeSubmission
 
 logger = logging.getLogger(__name__)
 
@@ -46,31 +39,3 @@ def enqueue_new_code_submission_to_kafka(sender, instance, created, **kwargs):
         "Kafka: отправка %s будет опубликована после commit транзакции.",
         instance.public_id,
     )
-
-
-def _sync_user_achievements(sender, instance, **kwargs):
-    user = getattr(instance, "user", None)
-    if user is None:
-        return
-    if (
-        sender is CodeSubmission
-        and instance.status != CodeSubmission.STATUS_COMPLETED
-    ):
-        return
-    if sender is UserAnswerRadio and not instance.is_correct:
-        return
-    if sender is UserAnswerCheckBox and not instance.is_correct:
-        return
-    if sender is UserAnswerShort and not instance.is_correct:
-        return
-    transaction.on_commit(lambda u=user: sync_achievements_for_user(u))
-
-
-for _sender in (
-    UserAnswerRadio,
-    UserAnswerCheckBox,
-    UserAnswerShort,
-    UserLessonTheoryRead,
-    CodeSubmission,
-):
-    post_save.connect(_sync_user_achievements, sender=_sender)
