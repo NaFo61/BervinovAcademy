@@ -3,6 +3,7 @@ from django.core.cache import cache
 import pytest
 from rest_framework.test import APIClient
 
+from users.email_codes import build_code_email
 from users.tests.conftest import make_user
 
 pytestmark = pytest.mark.django_db
@@ -45,6 +46,10 @@ def test_email_verify_happy_path(api, settings):
     assert code
     assert len(mail.outbox) == 1
     assert code in mail.outbox[0].body
+    html = mail.outbox[0].alternatives[0][0]
+    assert mail.outbox[0].alternatives[0][1] == "text/html"
+    assert code in html
+    assert "Подтверждение почты" in html
 
     bad = api.post(
         "/api/auth/email-verify/confirm/",
@@ -94,3 +99,24 @@ def test_password_reset_sends_email(api, settings):
     assert resp.data.get("dev_code")
     assert len(mail.outbox) == 1
     assert "Восстановление" in mail.outbox[0].subject
+    html = mail.outbox[0].alternatives[0][0]
+    assert mail.outbox[0].alternatives[0][1] == "text/html"
+    assert resp.data["dev_code"] in html
+    assert "Восстановление пароля" in html
+
+
+def test_code_email_html_includes_branding(settings):
+    settings.FRONTEND_URL = "https://academy.bervinov-miron.ru"
+    subject, plain, html = build_code_email(
+        kind="email_verify",
+        code="216075",
+        to_email="student@academy.com",
+        recipient_name="Мирон Бервинов",
+    )
+    assert "Подтверждение почты" in subject
+    assert "216075" in plain
+    assert 'lang="ru"' in html
+    assert "Мирон Бервинов" in html
+    assert "https://academy.bervinov-miron.ru/profile" in html
+    assert 'role="presentation"' in html
+    assert "Ваш код" in html

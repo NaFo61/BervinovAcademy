@@ -1,0 +1,4 @@
+{{ plain_lead }}: {{ code }}
+Код действует {{ ttl_minutes }} минут.
+
+{{ disclaimer }}

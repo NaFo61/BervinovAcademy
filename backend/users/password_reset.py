@@ -30,16 +30,12 @@ def find_user_by_login(login: str) -> User | None:
 
 
 def deliver_reset_code(user: User, code: str) -> None:
-    message = (
-        f"Код для восстановления пароля в Bervinov Academy: {code}\n"
-        f"Код действует 15 минут.\n\n"
-        f"Если вы не запрашивали сброс — просто проигнорируйте письмо."
-    )
     if user.email:
         send_code_email(
             to_email=user.email,
-            subject="Восстановление пароля — Bervinov Academy",
-            body=message,
+            kind="password_reset",
+            code=code,
+            recipient_name=user.get_full_name(),
         )
         return
     import logging

@@ -6,10 +6,12 @@ from datetime import timedelta
 import hashlib
 import logging
 import secrets
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -79,8 +81,104 @@ def validate_code_entry(
     return True, None
 
 
-def send_code_email(*, to_email: str, subject: str, body: str) -> bool:
-    """Отправить письмо. False при ошибке SMTP (уже залогировано)."""
+CODE_EMAILS = {
+    "email_verify": {
+        "subject": "Подтверждение почты — Bervinov Academy",
+        "heading": "Подтверждение почты",
+        "intro": (
+            "Введите этот код в Bervinov Academy, " "чтобы подтвердить почту."
+        ),
+        "plain_lead": ("Код для подтверждения почты в Bervinov Academy"),
+        "disclaimer": (
+            "Если вы не запрашивали подтверждение — " "проигнорируйте письмо."
+        ),
+        "preheader": "Код подтверждения почты, действует 15 минут",
+        "cta_label": "Открыть Академию",
+        "cta_path": "/profile",
+    },
+    "password_reset": {
+        "subject": "Восстановление пароля — Bervinov Academy",
+        "heading": "Восстановление пароля",
+        "intro": ("Введите этот код на сайте, чтобы задать новый пароль."),
+        "plain_lead": ("Код для восстановления пароля в Bervinov Academy"),
+        "disclaimer": (
+            "Если вы не запрашивали сброс — просто " "проигнорируйте письмо."
+        ),
+        "preheader": "Код для сброса пароля, действует 15 минут",
+        "cta_label": "Открыть Академию",
+        "cta_path": "/auth",
+    },
+}
+
+
+def _frontend_base() -> str:
+    return (getattr(settings, "FRONTEND_URL", "") or "").rstrip("/")
+
+
+def _recipient_label(name: str | None, email: str) -> str:
+    cleaned = (name or "").strip()
+    return cleaned or email
+
+
+def _recipient_initial(name: str | None, email: str) -> str:
+    label = _recipient_label(name, email)
+    for char in label:
+        if char.isalnum():
+            return char.upper()
+    return "B"
+
+
+def build_code_email(
+    *,
+    kind: str,
+    code: str,
+    to_email: str,
+    recipient_name: str | None = None,
+) -> tuple[str, str, str]:
+    """Тема, обычный текст и HTML для письма с кодом."""
+    spec = CODE_EMAILS[kind]
+    ttl_minutes = int(CODE_TTL.total_seconds() // 60)
+    base = _frontend_base()
+    site_host = urlparse(base).netloc if base else ""
+    context = {
+        "subject": spec["subject"],
+        "heading": spec["heading"],
+        "intro": spec["intro"],
+        "plain_lead": spec["plain_lead"],
+        "code": code,
+        "ttl_minutes": ttl_minutes,
+        "disclaimer": spec["disclaimer"],
+        "preheader": spec["preheader"],
+        "cta_label": spec["cta_label"],
+        "cta_url": f"{base}{spec['cta_path']}" if base else "",
+        "catalog_url": f"{base}/catalog" if base else "",
+        "auth_url": f"{base}/auth" if base else "",
+        "site_url": base,
+        "site_host": site_host or base,
+        "recipient_email": to_email,
+        "recipient_name": _recipient_label(recipient_name, to_email),
+        "recipient_initial": _recipient_initial(recipient_name, to_email),
+        "year": timezone.now().year,
+    }
+    plain = render_to_string("emails/code.txt", context).strip() + "\n"
+    html = render_to_string("emails/code.html", context)
+    return spec["subject"], plain, html
+
+
+def send_code_email(
+    *,
+    to_email: str,
+    kind: str,
+    code: str,
+    recipient_name: str | None = None,
+) -> bool:
+    """Отправить HTML-письмо с текстовой копией. False при ошибке SMTP."""
+    subject, body, html = build_code_email(
+        kind=kind,
+        code=code,
+        to_email=to_email,
+        recipient_name=recipient_name,
+    )
     from_email = getattr(
         settings, "DEFAULT_FROM_EMAIL", "noreply@bervinov.dev"
     )
@@ -90,6 +188,7 @@ def send_code_email(*, to_email: str, subject: str, body: str) -> bool:
             message=body,
             from_email=from_email,
             recipient_list=[to_email],
+            html_message=html,
             fail_silently=False,
         )
         return bool(sent)

@@ -34,15 +34,11 @@ def issue_verify_code(user: User) -> tuple[bool, str | None, str | None]:
 
     code = generate_code()
     store_code(PREFIX, _identity(user), code)
-    body = (
-        f"Код для подтверждения почты в Bervinov Academy: {code}\n"
-        f"Код действует 15 минут.\n\n"
-        f"Если вы не запрашивали подтверждение — проигнорируйте письмо."
-    )
     sent = send_code_email(
         to_email=email,
-        subject="Подтверждение почты — Bervinov Academy",
-        body=body,
+        kind="email_verify",
+        code=code,
+        recipient_name=user.get_full_name(),
     )
     if not sent and not settings.DEBUG:
         return (

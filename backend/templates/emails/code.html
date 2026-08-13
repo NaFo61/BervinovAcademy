@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
+  <title>{{ subject }}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F6F8FC;">
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#F6F8FC;">
+    {{ preheader }}: {{ code }}
+  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F6F8FC;">
+    <tr>
+      <td align="center" style="padding:28px 12px 36px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;">
+          <tr>
+            <td style="padding:0 4px 20px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td valign="middle" style="padding:0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="40" height="40" align="center" valign="middle" bgcolor="#2563EB" aria-hidden="true" style="width:40px;height:40px;background-color:#2563EB;border-radius:12px;font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;color:#ffffff;line-height:40px;">B</td>
+                        <td width="12" style="width:12px;font-size:0;line-height:0;">&nbsp;</td>
+                        <td valign="middle" style="font-family:Arial,Helvetica,sans-serif;">
+                          <div style="font-size:16px;font-weight:700;color:#0B1226;line-height:20px;">Bervinov Academy</div>
+                          <div style="font-size:13px;color:#475569;line-height:18px;padding-top:2px;">ЕГЭ · информатика</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  {% if catalog_url or auth_url %}
+                  <td valign="middle" align="right" style="padding:0;">
+                    {% if catalog_url %}
+                    <a href="{{ catalog_url }}" style="display:inline-block;margin-left:6px;padding:8px 12px;border-radius:8px;background-color:#EEF2F7;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:600;color:#334155;text-decoration:none;">Каталог</a>
+                    {% endif %}
+                    {% if auth_url %}
+                    <a href="{{ auth_url }}" style="display:inline-block;margin-left:6px;padding:8px 12px;border-radius:8px;background-color:#EEF2F7;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:600;color:#334155;text-decoration:none;">Войти</a>
+                    {% endif %}
+                  </td>
+                  {% endif %}
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 0 12px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;border-radius:12px;border:1px solid #E8EEF7;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="40" height="40" align="center" valign="middle" bgcolor="#EEF2F7" aria-hidden="true" style="width:40px;height:40px;background-color:#EEF2F7;border-radius:20px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#475569;line-height:40px;">{{ recipient_initial }}</td>
+                        <td width="12" style="width:12px;font-size:0;line-height:0;">&nbsp;</td>
+                        <td valign="middle" style="font-family:Arial,Helvetica,sans-serif;">
+                          {% if recipient_name and recipient_name != recipient_email %}
+                          <div style="font-size:16px;font-weight:700;color:#0B1226;line-height:22px;">{{ recipient_name }}</div>
+                          <div style="font-size:13px;color:#64748B;line-height:18px;padding-top:2px;">{{ recipient_email }}</div>
+                          {% else %}
+                          <div style="font-size:16px;font-weight:700;color:#0B1226;line-height:22px;">{{ recipient_email }}</div>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 0 12px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;border-radius:12px;border:1px solid #E8EEF7;">
+                <tr>
+                  <td style="padding:24px 24px 8px;font-family:Arial,Helvetica,sans-serif;">
+                    <h1 style="margin:0;font-size:20px;line-height:28px;font-weight:700;color:#0B1226;">{{ heading }}</h1>
+                    <p style="margin:8px 0 0;font-size:15px;line-height:22px;color:#475569;">{{ intro }}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:16px 24px 24px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#EEF4FF;border-radius:10px;">
+                      <tr>
+                        <td align="center" style="padding:22px 16px;">
+                          <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#1D4ED8;line-height:16px;">Ваш код</div>
+                          <div style="padding-top:8px;font-family:'Courier New',Courier,monospace;font-size:36px;line-height:44px;font-weight:700;letter-spacing:0.18em;color:#0B1226;">{{ code }}</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 0 12px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;border-radius:12px;border:1px solid #E8EEF7;">
+                {% if cta_url %}
+                <tr>
+                  <td align="center" style="padding:28px 24px 8px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td align="center" bgcolor="#2563EB" style="border-radius:10px;background-color:#2563EB;">
+                          <a href="{{ cta_url }}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:20px;font-weight:700;color:#ffffff;text-decoration:none;">{{ cta_label }}</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                {% endif %}
+                <tr>
+                  <td align="center" style="padding:{% if cta_url %}12px 28px 28px{% else %}24px 28px{% endif %};font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:21px;color:#64748B;">
+                    Код действует {{ ttl_minutes }} минут. После этого запросите новый.
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 0 20px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;border-radius:12px;border:1px solid #E8EEF7;">
+                <tr>
+                  <td style="padding:24px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;color:#0B1226;">
+                    Спасибо, что вы с нами!<br />
+                    Команда Bervinov Academy
+                    {% if site_url %}
+                    <div style="padding-top:12px;font-size:14px;line-height:20px;">
+                      <a href="{{ site_url }}" style="color:#2563EB;text-decoration:none;font-weight:600;">{{ site_host }}</a>
+                    </div>
+                    {% endif %}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:4px 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:20px;color:#475569;">
+              Это письмо отправлено на {{ recipient_email }}.
+              {{ disclaimer }}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:12px 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#64748B;">
+              © Bervinov Academy, {{ year }}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
