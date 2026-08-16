@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="560" viewBox="0 0 720 560">
+  <!--
+    ???? ?2 — ?? ?? ?????, ??????? ??????? ??? ???????????
+    AB BC CD DE EF FA | FG GC GD | AH HD HE
+    H–D ???? ?????, G ???? ???? ? F–G ?? ?????????? H–D
+  -->
+  <rect width="720" height="560" fill="#ffffff"/>
+  <g stroke="#111111" stroke-width="2.2" stroke-linecap="round" fill="none">
+    <line x1="180" y1="70"  x2="400" y2="50"/>   <!-- A-B -->
+    <line x1="400" y1="50"  x2="600" y2="180"/>  <!-- B-C -->
+    <line x1="600" y1="180" x2="520" y2="480"/>  <!-- C-D -->
+    <line x1="520" y1="480" x2="240" y2="500"/>  <!-- D-E -->
+    <line x1="240" y1="500" x2="80"  y2="280"/>  <!-- E-F -->
+    <line x1="80"  y1="280" x2="180" y2="70"/>   <!-- F-A -->
+    <line x1="80"  y1="280" x2="380" y2="220"/>  <!-- F-G -->
+    <line x1="380" y1="220" x2="600" y2="180"/>  <!-- G-C -->
+    <line x1="380" y1="220" x2="520" y2="480"/>  <!-- G-D -->
+    <line x1="180" y1="70"  x2="160" y2="320"/>  <!-- A-H -->
+    <line x1="160" y1="320" x2="520" y2="480"/>  <!-- H-D (???? G) -->
+    <line x1="160" y1="320" x2="240" y2="500"/>  <!-- H-E -->
+  </g>
+  <g fill="#111111">
+    <circle cx="180" cy="70"  r="5.5"/>
+    <circle cx="400" cy="50"  r="5.5"/>
+    <circle cx="600" cy="180" r="5.5"/>
+    <circle cx="520" cy="480" r="5.5"/>
+    <circle cx="240" cy="500" r="5.5"/>
+    <circle cx="80"  cy="280" r="5.5"/>
+    <circle cx="380" cy="220" r="5.5"/>
+    <circle cx="160" cy="320" r="5.5"/>
+  </g>
+  <g fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700">
+    <text x="152" y="52">A</text>
+    <text x="412" y="40">B</text>
+    <text x="614" y="175">C</text>
+    <text x="532" y="508">D</text>
+    <text x="212" y="532">E</text>
+    <text x="42"  y="290">F</text>
+    <text x="392" y="208">G</text>
+    <text x="118" y="340">H</text>
+  </g>
+</svg>

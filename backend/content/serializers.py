@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+from content.attachments import LessonAttachmentsMixin
+
 from .models import (
     CheckBoxAnswerOption,
     CodingChallenge,
@@ -93,7 +95,9 @@ class LessonTheoryShortSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class LessonTheorySerializer(serializers.ModelSerializer):
+class LessonTheorySerializer(
+    LessonAttachmentsMixin, serializers.ModelSerializer
+):
     module_public_id = serializers.UUIDField(
         source="module.public_id", read_only=True
     )
@@ -131,6 +135,7 @@ class LessonTheorySerializer(serializers.ModelSerializer):
             "video",
             "has_video",
             "video_requires_pro",
+            "attachments",
             "order_index",
             "is_active",
         )
@@ -398,7 +403,9 @@ class LessonRadioListSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class LessonRadioDetailSerializer(serializers.ModelSerializer):
+class LessonRadioDetailSerializer(
+    LessonAttachmentsMixin, serializers.ModelSerializer
+):
     module_public_id = serializers.UUIDField(
         source="module.public_id", read_only=True
     )
@@ -443,6 +450,7 @@ class LessonRadioDetailSerializer(serializers.ModelSerializer):
             "wrong_attempts",
             "has_reference_solution",
             "reference_solution",
+            "attachments",
             "order_index",
             "points",
             "is_active",
@@ -473,7 +481,9 @@ class LessonCheckBoxListSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class LessonCheckBoxDetailSerializer(serializers.ModelSerializer):
+class LessonCheckBoxDetailSerializer(
+    LessonAttachmentsMixin, serializers.ModelSerializer
+):
     module_public_id = serializers.UUIDField(
         source="module.public_id", read_only=True
     )
@@ -518,6 +528,7 @@ class LessonCheckBoxDetailSerializer(serializers.ModelSerializer):
             "wrong_attempts",
             "has_reference_solution",
             "reference_solution",
+            "attachments",
             "order_index",
             "points",
             "is_active",
@@ -548,7 +559,9 @@ class LessonShortAnswerListSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class LessonShortAnswerDetailSerializer(serializers.ModelSerializer):
+class LessonShortAnswerDetailSerializer(
+    LessonAttachmentsMixin, serializers.ModelSerializer
+):
     module_public_id = serializers.UUIDField(
         source="module.public_id", read_only=True
     )
@@ -593,6 +606,7 @@ class LessonShortAnswerDetailSerializer(serializers.ModelSerializer):
             "wrong_attempts",
             "has_reference_solution",
             "reference_solution",
+            "attachments",
             "order_index",
             "points",
             "is_active",
@@ -655,7 +669,9 @@ class CodingChallengeListSerializer(serializers.ModelSerializer):
         )
 
 
-class CodingChallengeDetailSerializer(serializers.ModelSerializer):
+class CodingChallengeDetailSerializer(
+    LessonAttachmentsMixin, serializers.ModelSerializer
+):
     """Детальный сериализатор задачи"""
 
     difficulty_display = serializers.CharField(
@@ -722,6 +738,7 @@ class CodingChallengeDetailSerializer(serializers.ModelSerializer):
             "memory_limit_mb",
             "test_cases",
             "user_solved",
+            "attachments",
             "created_at",
         )
 

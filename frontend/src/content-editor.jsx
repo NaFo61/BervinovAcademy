@@ -156,6 +156,84 @@ function TestsEditor({ tests, setTests }) {
   );
 }
 
+function AttachmentsEditor({ kind, publicId, items, onChange }) {
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState('');
+  const list = Array.isArray(items) ? items : [];
+
+  const upload = async (file) => {
+    if (!file || busy) return;
+    setBusy(true);
+    setErr('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const row = await window.fetchApiForm(
+        `/api/mentoring/editor/lessons/${encodeURIComponent(kind)}/${encodeURIComponent(publicId)}/attachments/`,
+        fd,
+        { method: 'POST', auth: true },
+      );
+      onChange([...(list || []), row]);
+    } catch (e) {
+      setErr(e.message || 'Не удалось загрузить файл');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (row) => {
+    if (busy) return;
+    setBusy(true);
+    setErr('');
+    try {
+      await window.fetchApiJson(
+        `/api/mentoring/editor/lessons/${encodeURIComponent(kind)}/${encodeURIComponent(publicId)}/attachments/${encodeURIComponent(row.public_id)}/`,
+        { method: 'DELETE', auth: true },
+      );
+      onChange(list.filter((x) => x.public_id !== row.public_id));
+    } catch (e) {
+      setErr(e.message || 'Не удалось удалить');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div>
+      <FieldLabel hint="PDF, Word, Excel, презентации, картинки, zip, txt, md. До 20 МБ. Ученик увидит файлы в задании.">
+        Файлы к заданию
+      </FieldLabel>
+      {err && <p className="mb-2 text-sm text-red-600">{err}</p>}
+      <ul className="space-y-2 mb-3">
+        {list.map((row) => (
+          <li key={row.public_id} className="flex items-center gap-2 min-h-11 px-3 py-2 rounded-xl ring-1 ring-black/[0.06] bg-white">
+            <span className="flex-1 min-w-0 text-sm font-medium truncate">{row.name}</span>
+            <span className="text-[11px] text-ink/40 shrink-0">{window.formatFileSize?.(row.size)}</span>
+            <button type="button" onClick={() => remove(row)} disabled={busy}
+              className="h-9 px-3 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50">
+              Удалить
+            </button>
+          </li>
+        ))}
+      </ul>
+      <label className="inline-flex items-center justify-center h-11 px-4 rounded-xl text-sm font-semibold ring-1 ring-black/[0.08] bg-white cursor-pointer">
+        {busy ? 'Загрузка…' : '+ Файл'}
+        <input
+          type="file"
+          className="sr-only"
+          disabled={busy}
+          accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.zip,.txt,.md"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) upload(file);
+          }}
+        />
+      </label>
+    </div>
+  );
+}
+
 async function saveLesson(kind, publicId, payload, videoFile) {
   const path = `/api/mentoring/editor/lessons/${encodeURIComponent(kind)}/${encodeURIComponent(publicId)}/`;
   if (videoFile) {
@@ -180,6 +258,7 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
   const [error, setError] = React.useState('');
   const [success, setSuccess] = React.useState('');
   const [videoFile, setVideoFile] = React.useState(null);
+  const [confirmHide, setConfirmHide] = React.useState(false);
 
   React.useEffect(() => {
     setLoading(true);
@@ -187,6 +266,7 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
     setSuccess('');
     setVideoFile(null);
     setTab('main');
+    setConfirmHide(false);
     window.fetchApiJson(
       `/api/mentoring/editor/lessons/${encodeURIComponent(kind)}/${encodeURIComponent(lesson.public_id)}/`,
       { auth: true },
@@ -213,6 +293,7 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
       delete payload.module_public_id;
       delete payload.course_public_id;
       delete payload.public_id;
+      delete payload.attachments;
       const saved = await saveLesson(kind, form.public_id, payload, videoFile);
       setForm(saved);
       setVideoFile(null);
@@ -225,8 +306,14 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
     }
   };
 
-  const handleDelete = async () => {
-    if (!form || !window.confirm('Скрыть урок? Ученики перестанут его видеть.')) return;
+  const handleDelete = () => {
+    if (!form) return;
+    setConfirmHide(true);
+  };
+
+  const confirmHideLesson = async () => {
+    if (!form) return;
+    setConfirmHide(false);
     try {
       await window.fetchApiJson(
         `/api/mentoring/editor/lessons/${encodeURIComponent(kind)}/${encodeURIComponent(form.public_id)}/`,
@@ -254,6 +341,18 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      {window.ConfirmDialog && (
+        <window.ConfirmDialog
+          open={confirmHide}
+          title="Скрыть урок?"
+          body="Ученики перестанут его видеть. Сам урок останется в редакторе."
+          confirmLabel="Скрыть"
+          cancelLabel="Отмена"
+          danger
+          onConfirm={confirmHideLesson}
+          onCancel={() => setConfirmHide(false)}
+        />
+      )}
       <div className="flex flex-wrap items-start gap-3 mb-5 shrink-0">
         <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${meta.color}`}>{meta.emoji} {meta.label}</span>
         <h2 className="text-xl font-extrabold text-ink flex-1 min-w-0">{form.title || 'Без названия'}</h2>
@@ -368,6 +467,13 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
               <FieldLabel hint="Показывается ученику на вкладке задания">Заметка преподавателя</FieldLabel>
               <TextArea value={form.comment} onChange={(v) => setForm({ ...form, comment: v })} rows={3}/>
             </div>
+
+            <AttachmentsEditor
+              kind={kind}
+              publicId={form.public_id}
+              items={form.attachments}
+              onChange={(next) => setForm({ ...form, attachments: next })}
+            />
 
             {(kind === 'radio' || kind === 'checkbox' || kind === 'short_answer') && (
               <div>

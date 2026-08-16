@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="560" viewBox="0 0 720 560">
+  <!-- Плоский граф в стиле ЕГЭ: белый фон, точки, подписи снаружи, рёбра не через вершины -->
+  <rect width="720" height="560" fill="#ffffff"/>
+
+  <!--
+    Внешний контур: H–D–A–C–B–H
+    Внутри: F (слева, далеко от H–D), E (центр), G (справа)
+    Рёбра: B-C, B-H, C-A, C-G, A-D, A-G, D-H, G-E, E-F, F-H
+  -->
+  <g stroke="#111111" stroke-width="2.2" stroke-linecap="round" fill="none">
+    <line x1="290" y1="70"  x2="500" y2="155"/>  <!-- D-A -->
+    <line x1="290" y1="70"  x2="120" y2="445"/>  <!-- D-H -->
+    <line x1="120" y1="445" x2="530" y2="500"/>  <!-- H-B -->
+    <line x1="530" y1="500" x2="610" y2="265"/>  <!-- B-C -->
+    <line x1="610" y1="265" x2="500" y2="155"/>  <!-- C-A -->
+    <line x1="500" y1="155" x2="490" y2="310"/>  <!-- A-G -->
+    <line x1="610" y1="265" x2="490" y2="310"/>  <!-- C-G -->
+    <line x1="490" y1="310" x2="355" y2="345"/>  <!-- G-E -->
+    <line x1="355" y1="345" x2="265" y2="270"/>  <!-- E-F -->
+    <line x1="265" y1="270" x2="120" y2="445"/>  <!-- F-H -->
+  </g>
+
+  <g fill="#111111">
+    <circle cx="290" cy="70"  r="5.5"/> <!-- D -->
+    <circle cx="500" cy="155" r="5.5"/> <!-- A -->
+    <circle cx="610" cy="265" r="5.5"/> <!-- C -->
+    <circle cx="530" cy="500" r="5.5"/> <!-- B -->
+    <circle cx="120" cy="445" r="5.5"/> <!-- H -->
+    <circle cx="265" cy="270" r="5.5"/> <!-- F — внутри, далеко от D–H -->
+    <circle cx="355" cy="345" r="5.5"/> <!-- E -->
+    <circle cx="490" cy="310" r="5.5"/> <!-- G -->
+  </g>
+
+  <g fill="#111111" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700">
+    <text x="302" y="54">D</text>
+    <text x="512" y="140">A</text>
+    <text x="624" y="260">C</text>
+    <text x="542" y="528">B</text>
+    <text x="80"  y="472">H</text>
+    <text x="240" y="252">F</text>
+    <text x="338" y="378">E</text>
+    <text x="502" y="338">G</text>
+  </g>
+</svg>

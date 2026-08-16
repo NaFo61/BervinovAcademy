@@ -95,6 +95,38 @@ def test_apply_result_wrong_answer_stores_feedback_fields(
 
 
 @pytest.mark.django_db
+def test_apply_result_keeps_multiline_output(student_user, coding_challenge):
+    sub = CodeSubmission.objects.create(
+        user=student_user,
+        challenge=coding_challenge,
+        code="print(1)",
+        status="pending",
+    )
+    sample = (
+        "Traceback (most recent call last):\n"
+        '  File "x.py", line 1\n'
+        "    1/0\n"
+        "ZeroDivisionError: division by zero\n"
+    )
+    ok, _ = apply_code_submission_result_payload(
+        {
+            "submission_public_id": str(sub.public_id),
+            "status": "error",
+            "message": "Ошибка выполнения на тесте № 1 (код 1).",
+            "passed_tests": 0,
+            "total_tests": 1,
+            "failed_test_number": 1,
+            "actual_output": sample,
+            "expected_output": None,
+        }
+    )
+    assert ok
+    sub.refresh_from_db()
+    assert "\n" in sub.test_results["actual_output"]
+    assert sub.test_results["actual_output"] == sample
+
+
+@pytest.mark.django_db
 def test_apply_result_missing_submission_id():
     ok, reason = apply_code_submission_result_payload({"status": "accepted"})
     assert not ok

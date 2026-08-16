@@ -1,6 +1,8 @@
+from pathlib import Path
 import random
 
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from fixture.course_fixtures import COURSE_FIXTURES
@@ -23,6 +25,14 @@ from translations.models import TranslationMemory
 from users.models import Mentor, Specialization, Student
 
 User = get_user_model()
+ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
+
+
+def _attach_asset(field, filename: str) -> None:
+    path = ASSETS_DIR / filename
+    if not path.is_file():
+        return
+    field.save(filename, ContentFile(path.read_bytes()), save=True)
 
 
 class Command(BaseCommand):
@@ -138,20 +148,39 @@ class Command(BaseCommand):
 
     def create_mentors(self, specializations, technologies):
         """Создает менторов с технологиями"""
-        russian_names = [
-            ("Иван", "Иванов"),
-            ("Петр", "Петров"),
-            ("Сергей", "Сергеев"),
-            ("Алексей", "Алексеев"),
-            ("Дмитрий", "Дмитриев"),
-            ("Андрей", "Андреев"),
-            ("Михаил", "Михайлов"),
-            ("Анна", "Аннова"),
-            ("Елена", "Еленова"),
-            ("Ольга", "Ольгова"),
+        mentors = [
+            (
+                "Иван",
+                "Соколов",
+                "С 2013 года веду информатику в 10–11. На уроке один тип задания, потом короткий код под него — без воды.",
+                "avatar-mentor-01.jpg",
+            ),
+            (
+                "Мария",
+                "Лебедева",
+                "Люблю, когда ученик сам находит лишнюю единицу в матрице смежности. Не подсказываю ответ сразу.",
+                "avatar-mentor-02.jpg",
+            ),
+            (
+                "Павел",
+                "Крылов",
+                "Кодирование объясняю таблицей: слово, префикс, условие Фано. Никакой «магии алфавита».",
+                "avatar-mentor-03.jpg",
+            ),
+            (
+                "Елена",
+                "Орлова",
+                "№9 — это формулы и аккуратно прочитанное условие, не «открой Excel и угадай».",
+                "avatar-mentor-04.jpg",
+            ),
+            (
+                "Никита",
+                "Волков",
+                "Тем, кто боится Python: пишем 10–15 строк. input, цикл, print. Фреймворки не трогаем.",
+                "avatar-mentor-05.jpg",
+            ),
         ]
 
-        # Маппинг специализаций к соответствующим технологиям
         specialization_tech_map = {
             "web": [
                 "JavaScript",
@@ -186,20 +215,11 @@ class Command(BaseCommand):
             "business": ["Excel", "SQL", "Tableau", "Power BI", "Python"],
         }
 
-        for i in range(5):
-            has_email = random.choice([True, False])
-            has_phone = not has_email if random.choice([True, False]) else True
-
-            email = f"mentor{i + 1}@academy.com" if has_email else None
-            phone = self.generate_phone() if has_phone else None
-
-            while phone and User.objects.filter(phone=phone).exists():
-                phone = self.generate_phone()
-
-            if email and User.objects.filter(email=email).exists():
+        for i, (first_name, last_name, bio, avatar_name) in enumerate(mentors):
+            email = f"mentor{i + 1}@academy.com"
+            phone = f"+7 (999) 200-10-{10 + i:02d}"
+            if User.objects.filter(email=email).exists():
                 continue
-
-            first_name, last_name = russian_names[i]
 
             user = User.objects.create_user(
                 email=email,
@@ -208,7 +228,9 @@ class Command(BaseCommand):
                 first_name=first_name,
                 last_name=last_name,
                 role="mentor",
+                bio=bio,
             )
+            _attach_asset(user.avatar, avatar_name)
 
             specialization = (
                 random.choice(specializations) if specializations else None
@@ -272,33 +294,31 @@ class Command(BaseCommand):
         )
 
     def create_students(self):
-        russian_names = [
-            ("Александр", "Александров"),
-            ("Владимир", "Владимиров"),
-            ("Николай", "Николаев"),
-            ("Артем", "Артемов"),
-            ("Максим", "Максимов"),
-            ("Кирилл", "Кириллов"),
-            ("Екатерина", "Екатеринина"),
-            ("Мария", "Мариева"),
-            ("Наталья", "Натальева"),
-            ("Светлана", "Светланова"),
+        students = [
+            ("Артём", "Белов"),
+            ("Дарья", "Козлова"),
+            ("Илья", "Морозов"),
+            ("Софья", "Новикова"),
+            ("Егор", "Савельев"),
+            ("Алина", "Фролова"),
+            ("Максим", "Гусев"),
+            ("Полина", "Ершова"),
+            ("Кирилл", "Павлов"),
+            ("Вика", "Зайцева"),
+        ]
+        avatars = [
+            "avatar-student-01.jpg",
+            "avatar-student-02.jpg",
+            "avatar-student-03.jpg",
+            "avatar-student-04.jpg",
+            "avatar-student-05.jpg",
         ]
 
-        for i in range(10):
-            has_email = random.choice([True, False])
-            has_phone = not has_email if random.choice([True, False]) else True
-
-            email = f"student{i + 1}@academy.com" if has_email else None
-            phone = self.generate_phone() if has_phone else None
-
-            while phone and User.objects.filter(phone=phone).exists():
-                phone = self.generate_phone()
-
-            if email and User.objects.filter(email=email).exists():
+        for i, (first_name, last_name) in enumerate(students):
+            email = f"student{i + 1}@academy.com"
+            phone = f"+7 (999) 300-20-{10 + i:02d}"
+            if User.objects.filter(email=email).exists():
                 continue
-
-            first_name, last_name = russian_names[i]
 
             user = User.objects.create_user(
                 email=email,
@@ -308,7 +328,7 @@ class Command(BaseCommand):
                 last_name=last_name,
                 role="student",
             )
-
+            _attach_asset(user.avatar, avatars[i % len(avatars)])
             Student.objects.create(user=user)
         self.stdout.write(self.style.SUCCESS("Создано 10 студентов"))
 
@@ -401,6 +421,7 @@ class Command(BaseCommand):
             if slug:
                 create_kwargs["slug"] = slug
             course = Course.objects.create(**create_kwargs)
+            _attach_asset(course.image, "course-ege-banner.jpg")
             tags = [
                 tech_by_name[name]
                 for name in fixture.get("technologies", [])

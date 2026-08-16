@@ -28,7 +28,7 @@ function Hero({ navigate }) {
           <M.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/70 backdrop-blur border border-violet-500/15 text-xs font-medium text-ink/70 mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-flame-500 animate-pulseDot"/>
-            Набор на весенний поток открыт · скидка 30% до 30 мая
+            Набор на 2026/27 · можно войти с любой темы, не с сентября
           </M.div>
           <M.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.05 }}
             className="text-[40px] sm:text-[56px] lg:text-[64px] font-extrabold leading-[1.02] tracking-tight">
@@ -73,7 +73,7 @@ function Hero({ navigate }) {
                 {[0,1,2,3,4].map(i => <I.Star key={i} className="w-3.5 h-3.5 text-flame-500"/>)}
                 <span className="ml-1 font-semibold">4.9</span>
               </div>
-              <div className="text-ink/55 text-xs mt-0.5">5 600+ выпускников уже работают</div>
+              <div className="text-ink/55 text-xs mt-0.5">закрывают №1, №4, №9 и №10 без паники</div>
             </div>
           </M.div>
         </div>
@@ -121,7 +121,7 @@ function HeroLessonCard() {
               <I.Clock className="w-3 h-3"/> 18 мин
             </div>
           </div>
-          <div className="mt-3 text-xl font-bold leading-tight">Декораторы: как работают на самом деле</div>
+          <div className="mt-3 text-xl font-bold leading-tight">Таблица дорог: как не задвоить ребро</div>
         </div>
 
         {/* progress */}
@@ -140,22 +140,22 @@ function HeroLessonCard() {
             <span className="w-2.5 h-2.5 rounded-full bg-rose-400/70"/>
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400/70"/>
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/70"/>
-            <span className="ml-2 text-slate-400 text-[10px]">decorator.py</span>
+            <span className="ml-2 text-slate-400 text-[10px]">roads.py</span>
           </div>
-          <div><span className="text-violet-300">def</span> <span className="text-amber-300">timeit</span>(func):</div>
-          <div className="pl-4"><span className="text-violet-300">def</span> <span className="text-amber-300">wrapper</span>(*args, **kw):</div>
-          <div className="pl-8"><span className="text-slate-400"># замеряем время</span></div>
-          <div className="pl-8">t = <span className="text-cyan-300">time</span>.<span className="text-amber-300">monotonic</span>()</div>
-          <div className="pl-8"><span className="text-violet-300">return</span> func(*args, **kw)</div>
-          <div className="pl-4"><span className="text-violet-300">return</span> wrapper</div>
+          <div><span className="text-violet-300">n</span> = <span className="text-amber-300">int</span>(input())</div>
+          <div>edges = <span className="text-amber-300">0</span></div>
+          <div><span className="text-violet-300">for</span> i <span className="text-violet-300">in</span> <span className="text-amber-300">range</span>(n):</div>
+          <div className="pl-4">row = list(<span className="text-amber-300">map</span>(int, input().split()))</div>
+          <div className="pl-4">edges += <span className="text-amber-300">sum</span>(row[i+1:])</div>
+          <div><span className="text-violet-300">print</span>(edges)</div>
         </div>
 
         {/* tasks row */}
         <div className="px-5 pb-5 space-y-2">
           {[
-            { label: 'Прочитать материал', done: true },
-            { label: 'Решить задачу: @cache', done: progress > 35 },
-            { label: 'Сдать ментору', done: progress > 78 },
+            { label: 'Прочитать теорию по матрице', done: true },
+            { label: 'Считать рёбра в таблице 5×5', done: progress > 35 },
+            { label: 'Сдать короткий код', done: progress > 78 },
           ].map((t, i) => (
             <div key={i} className="flex items-center gap-3 text-sm">
               <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-all
@@ -169,9 +169,9 @@ function HeroLessonCard() {
 
         {/* mentor strip */}
         <div className="border-t border-black/5 px-5 py-3 flex items-center gap-3 bg-paper">
-          <div className="avatar-ring"><div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-xs font-bold grad-text">КР</div></div>
+          <div className="avatar-ring"><div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-xs font-bold grad-text">ИС</div></div>
           <div className="flex-1">
-            <div className="text-xs font-semibold">Ведущий ментор</div>
+            <div className="text-xs font-semibold">Иван Соколов</div>
             <div className="text-[11px] text-ink/55 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulseDot"/> Ментор онлайн
             </div>
@@ -189,38 +189,38 @@ function WhySection() {
   const M = FM.motion;
   const items = [
     {
-      title: 'Живая проверка кода',
-      desc: 'Ментор открывает твоё решение, прогоняет его, оставляет комментарии прямо в строках. Не «принято», а «смотри, здесь можно проще».',
-      Icon: I.Code, tint: '#2563EB',
+      title: 'Как на уроке, не как в учебнике',
+      desc: 'Сначала условие из КИМ, потом таблица или 10 строк кода. Без «в этом курсе вы научитесь».',
+      Icon: I.Book, tint: '#2563EB',
     },
     {
-      title: 'Объясняю просто',
-      desc: 'Без академического жаргона. Метафоры, схемы и примеры из реальных проектов — пока не щёлкнет.',
-      Icon: I.Brain, tint: '#06B6D4',
+      title: 'Те самые номера',
+      desc: 'Графы и дороги, условие Фано, поиск куска в тексте, ячейки в таблице. То, что спрашивают на ЕГЭ.',
+      Icon: I.Layers, tint: '#06B6D4',
     },
     {
-      title: 'Задачи из реальных проектов',
-      desc: 'Не «отсортируй массив N-м способом». Парсер, очередь задач, мини-CRM — то, что встретишь на работе.',
-      Icon: I.Layers, tint: '#0EA5E9',
+      title: 'Python на 15 строк',
+      desc: 'input, цикл, print. Фреймворки не трогаем — на экзамене их нет, и в курсе тоже.',
+      Icon: I.Code, tint: '#0EA5E9',
     },
     {
-      title: 'Личный чат с ментором',
-      desc: 'Застрял в 23:47? Напиши. Отвечаю в течение суток, обычно — за час. Без скриптов и шаблонов.',
+      title: 'Чат с преподавателем',
+      desc: 'Застрял на матрице в одиннадцатом вечера — напиши. Разберём, где задвоил ребро.',
       Icon: I.Chat, tint: '#06B6D4',
     },
   ];
   return (
     <section className="relative bg-white">
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-24">
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-14 sm:py-24">
         <div className="flex items-end justify-between flex-wrap gap-6 mb-12">
           <div>
             <div className="text-xs font-semibold uppercase tracking-widest text-violet-600 mb-3">Почему со мной</div>
             <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight max-w-2xl">
-              Не курсы «галочкой» — а <span className="grad-text">реальный рост</span> в коде.
+              Готовим к <span className="grad-text">информатике</span>, а не к «айти».
             </h2>
           </div>
           <p className="text-ink/60 max-w-sm">
-            Я преподаю программирование с 2018 года. Через мои руки прошло 5 600+ учеников — от школьников до тимлидов, которые «перезаливают» себя в новый стек.
+            Ведём 10–11 класс: один тип задания за урок, потом короткий код или таблица. Без воды и без обещаний «тимлидом за месяц».
           </p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -273,7 +273,7 @@ function TopCourses({ navigate }) {
 
   return (
     <section className="relative bg-paper">
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-24">
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-14 sm:py-24">
         <div className="flex items-end justify-between flex-wrap gap-6 mb-12">
           <div>
             <div className="text-xs font-semibold uppercase tracking-widest text-violet-600 mb-3">Курс подготовки</div>
@@ -319,17 +319,17 @@ function CTABand({ navigate }) {
   const M = FM.motion;
   return (
     <section className="relative bg-white">
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 pb-24">
-        <div className="relative overflow-hidden rounded-3xl grad-bg p-10 sm:p-14 text-white">
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 pb-14 sm:pb-24">
+        <div className="relative overflow-hidden rounded-3xl grad-bg p-6 sm:p-10 lg:p-14 text-white">
           <div className="absolute -top-20 -right-10 w-72 h-72 rounded-full bg-white/15 blur-3xl"/>
           <div className="absolute -bottom-20 -left-10 w-72 h-72 rounded-full bg-white/10 blur-3xl"/>
           <div className="relative flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div>
               <div className="text-xs uppercase tracking-widest opacity-80 mb-3">Готов начать?</div>
               <h3 className="text-3xl sm:text-4xl font-extrabold leading-tight max-w-2xl">
-                Первый урок и встреча с ментором — бесплатно.
+                Начни с таблицы дорог — это первый урок.
               </h3>
-              <p className="opacity-85 mt-3 max-w-xl">Зарегистрируйся, выбери курс и через 24 часа получишь персональный план обучения от куратора.</p>
+              <p className="opacity-85 mt-3 max-w-xl">Зарегистрируйся, открой курс и сразу решай. Созвон с преподавателем — когда застрянешь, не «через 24 часа план от куратора».</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <button onClick={() => navigate(Routes.AUTH)} className="h-14 px-7 rounded-2xl bg-white text-violet-600 font-bold inline-flex items-center gap-2 hover:scale-[1.02] transition-transform">

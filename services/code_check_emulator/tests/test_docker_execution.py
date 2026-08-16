@@ -17,6 +17,7 @@ from app.docker_execution import (
 def test_normalize_stdout_strips_trailing_newlines() -> None:
     assert normalize_stdout_for_compare("hello\n\n") == "hello"
     assert normalize_stdout_for_compare(None) == ""
+    assert normalize_stdout_for_compare("1\n  2\n") == "1\n  2"
 
 
 def test_build_manifest_sorts_by_order_index() -> None:
@@ -132,3 +133,26 @@ def test_build_kafka_payload_passes_failure_feedback() -> None:
     assert out["failed_test_number"] == 2
     assert out["actual_output"] == "aa"
     assert out["expected_output"] == "a"
+
+
+def test_build_kafka_payload_keeps_multiline_output() -> None:
+    traceback = (
+        "Traceback (most recent call last):\n"
+        '  File "solution.py", line 2, in <module>\n'
+        "    print(1/0)\n"
+        "ZeroDivisionError: division by zero\n"
+    )
+    out = build_kafka_payload_from_sandbox(
+        "sub-3",
+        {
+            "status": "error",
+            "passed_tests": 0,
+            "total_tests": 1,
+            "message": "Ошибка выполнения на тесте № 1 (код 1).",
+            "failed_test_number": 1,
+            "actual_output": traceback,
+            "expected_output": None,
+        },
+    )
+    assert "\n" in out["actual_output"]
+    assert out["actual_output"] == traceback

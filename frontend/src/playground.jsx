@@ -63,13 +63,44 @@ function ensurePyodide(onStatus) {
 async function runPythonInBrowser(code, stdinText) {
   const pyodide = await ensurePyodide();
   const stdin = String(stdinText ?? '');
-  const chunks = [];
-  const push = (s) => { if (s != null && s !== '') chunks.push(String(s)); };
+  const stdoutChunks = [];
+  const stderrChunks = [];
+  const decoder = new TextDecoder('utf-8');
+  const pushDecoded = (target, s) => {
+    if (s == null || s === '') return;
+    if (typeof s === 'string') {
+      target.push(s);
+      return;
+    }
+    try {
+      target.push(decoder.decode(s));
+    } catch (_) {
+      target.push(String(s));
+    }
+  };
 
-  pyodide.setStdout({ batched: (s) => push(s) });
-  pyodide.setStderr({ batched: (s) => push(s) });
+  const attach = (setter, target) => {
+    try {
+      setter({
+        write(buf) {
+          pushDecoded(target, buf);
+          return buf?.length ?? buf?.byteLength ?? 0;
+        },
+        isatty: false,
+      });
+    } catch (_) {
+      setter({
+        batched: (s) => {
+          const text = String(s ?? '');
+          target.push(text.endsWith('\n') ? text : `${text}\n`);
+        },
+      });
+    }
+  };
 
-  // Кормим input() из поля «Входные данные» (по строкам).
+  attach((opts) => pyodide.setStdout(opts), stdoutChunks);
+  attach((opts) => pyodide.setStderr(opts), stderrChunks);
+
   await pyodide.runPythonAsync(`
 import sys
 from io import StringIO
@@ -80,10 +111,19 @@ sys.stdin = StringIO(${JSON.stringify(stdin)})
     await pyodide.runPythonAsync(code || '');
   } catch (err) {
     const msg = err?.message || String(err);
-    push(msg);
-    return { ok: false, output: chunks.join('') };
+    return {
+      ok: false,
+      stdout: stdoutChunks.join(''),
+      stderr: stderrChunks.join(''),
+      error: msg,
+    };
   }
-  return { ok: true, output: chunks.join('') };
+  return {
+    ok: true,
+    stdout: stdoutChunks.join(''),
+    stderr: stderrChunks.join(''),
+    error: '',
+  };
 }
 
 function PlaygroundPage({ navigate }) {
@@ -91,9 +131,20 @@ function PlaygroundPage({ navigate }) {
   const [code, setCode] = React.useState(stash.code || DEFAULT_PLAYGROUND_CODE);
   const [stdin, setStdin] = React.useState(stash.stdin || '');
   const [stdout, setStdout] = React.useState('');
+  const [stderr, setStderr] = React.useState('');
+  const [runError, setRunError] = React.useState('');
   const [status, setStatus] = React.useState('');
   const [running, setRunning] = React.useState(false);
   const [readyHint, setReadyHint] = React.useState('Первый запуск подгрузит Python (~10–20 МБ).');
+  const [editorH, setEditorH] = React.useState(320);
+
+  React.useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const apply = () => setEditorH(mq.matches ? 420 : 260);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
 
   React.useEffect(() => {
     // warm load in background
@@ -104,13 +155,20 @@ function PlaygroundPage({ navigate }) {
     if (running) return;
     setRunning(true);
     setStdout('');
+    setStderr('');
+    setRunError('');
     setStatus('Выполнение…');
     try {
       const result = await runPythonInBrowser(code, stdin);
-      setStdout(result.output || (result.ok ? '(нет вывода)' : ''));
+      setStdout(result.stdout || '');
+      setStderr(result.stderr || '');
+      setRunError(result.error || '');
+      if (!result.stdout && !result.stderr && !result.error && result.ok) {
+        setStdout('(нет вывода)');
+      }
       setStatus(result.ok ? 'Готово' : 'Ошибка выполнения');
     } catch (e) {
-      setStdout(e.message || String(e));
+      setRunError(e.message || String(e));
       setStatus('Ошибка');
     } finally {
       setRunning(false);
@@ -173,7 +231,7 @@ function PlaygroundPage({ navigate }) {
           <window.PythonCodeEditor
             value={code}
             onChange={setCode}
-            height={420}
+            height={editorH}
             filename="main.py"
             readOnly={running}
           />
@@ -199,14 +257,22 @@ function PlaygroundPage({ navigate }) {
                 <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-300/90">Вывод</span>
                 <button
                   type="button"
-                  onClick={() => setStdout('')}
+                  onClick={() => { setStdout(''); setStderr(''); setRunError(''); }}
                   className="text-[10px] font-semibold text-white/40 hover:text-white/70"
                 >
                   Очистить
                 </button>
               </div>
-              <pre className="flex-1 overflow-auto p-4 text-xs font-mono text-emerald-100/90 whitespace-pre-wrap leading-[1.55] min-h-[180px]">
-                {stdout || <span className="text-white/25">Здесь появится print() и ошибки…</span>}
+              <pre className="flex-1 overflow-auto p-4 text-xs font-mono leading-[1.55] min-h-[180px] whitespace-pre-wrap break-words">
+                {!stdout && !stderr && !runError ? (
+                  <span className="text-white/25">Здесь появится print() и ошибки…</span>
+                ) : (
+                  <>
+                    {stdout ? <span className="text-emerald-100/90">{stdout}</span> : null}
+                    {stderr ? <span className="block text-red-400">{stderr}</span> : null}
+                    {runError ? <span className="block text-red-400">{runError}</span> : null}
+                  </>
+                )}
               </pre>
             </div>
           </div>

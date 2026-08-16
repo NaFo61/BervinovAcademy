@@ -534,6 +534,7 @@ function RecoveryAccessSection({ user, onUser }) {
 function VkConnectPanel({ user, onUser }) {
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState('');
+  const [unlinkProvider, setUnlinkProvider] = React.useState(null);
   const vk = user?.vk || {};
   const oauth = user?.oauth || {};
 
@@ -567,9 +568,12 @@ function VkConnectPanel({ user, onUser }) {
     }
   };
 
-  const unlink = async (provider) => {
-    const label = provider === 'yandex' ? 'Яндекс' : 'VK';
-    if (!window.confirm(`Отвязать ${label}?`)) return;
+  const unlink = (provider) => setUnlinkProvider(provider);
+
+  const confirmUnlink = async () => {
+    const provider = unlinkProvider;
+    setUnlinkProvider(null);
+    if (!provider) return;
     setBusy(true); setErr('');
     try {
       await window.apiJson(`/api/auth/oauth/${provider}/unlink/`, {
@@ -584,8 +588,22 @@ function VkConnectPanel({ user, onUser }) {
     }
   };
 
+  const unlinkLabel = unlinkProvider === 'yandex' ? 'Яндекс' : unlinkProvider === 'vk' ? 'VK' : '';
+
   return (
     <div className="space-y-3">
+      {window.ConfirmDialog && (
+        <window.ConfirmDialog
+          open={!!unlinkProvider}
+          title={`Отвязать ${unlinkLabel}?`}
+          body="Вход через эту соцсеть перестанет работать, пока не привяжете снова."
+          confirmLabel="Отвязать"
+          cancelLabel="Оставить"
+          danger
+          onConfirm={confirmUnlink}
+          onCancel={() => setUnlinkProvider(null)}
+        />
+      )}
       <div className="rounded-2xl ring-1 ring-violet-200/80 bg-violet-50/50 p-4 sm:p-5 space-y-3">
         <div className="flex items-start gap-3">
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-500/15 text-violet-700">

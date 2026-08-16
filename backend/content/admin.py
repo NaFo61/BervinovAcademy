@@ -10,6 +10,7 @@ from content.models import (
     CodingChallenge,
     Course,
     Exam,
+    LessonAttachment,
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
     LessonTheory,
@@ -1794,3 +1795,18 @@ class TestCaseAdmin(ModelAdmin):
         return format_html(
             '<code title="{}">{}</code>', obj.expected_output, preview
         )
+
+
+@admin.register(LessonAttachment)
+class LessonAttachmentAdmin(ModelAdmin):
+    """Файлы преподавателя к заданию."""
+
+    list_display = ("original_name", "size", "created_at")
+    search_fields = ("original_name",)
+    readonly_fields = (
+        "public_id",
+        "size",
+        "content_type",
+        "created_at",
+    )
+    icon = "attach_file"

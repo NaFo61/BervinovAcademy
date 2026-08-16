@@ -112,7 +112,7 @@ function ExamTimerBar({ remaining, durationMinutes, warn }) {
 
 // ─── Landing ─────────────────────────────────────────────────────────────────
 
-function ExamLanding({ exam, access, starting, onStart, onBack, embedded }) {
+function ExamLanding({ exam, access, starting, startError, onStart, onBack, embedded }) {
   const latest = access?.latest_attempt;
   const wrapClass = embedded
     ? 'py-10 px-5'
@@ -172,6 +172,12 @@ function ExamLanding({ exam, access, starting, onStart, onBack, embedded }) {
             <div className="mt-1 text-ink/60">
               {latest.score}/{latest.max_score} баллов · {latest.passed ? 'зачёт' : 'незачёт'}
             </div>
+          </div>
+        )}
+
+        {startError && (
+          <div className="mt-6 p-4 rounded-xl bg-rose-50 ring-1 ring-rose-200 text-sm text-rose-800">
+            {startError}
           </div>
         )}
 
@@ -314,15 +320,18 @@ function ExamLessonHeader({ kind, title, label }) {
 function ExamRadioPanel({ lesson, step, attemptId, onUpdated }) {
   const [selected, setSelected] = React.useState(step?.payload?.selected_answer_public_id || null);
   const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState('');
   const answered = step?.answered;
 
   React.useEffect(() => {
     setSelected(step?.payload?.selected_answer_public_id || null);
+    setError('');
   }, [lesson.public_id, step?.answered]);
 
   const submit = async () => {
     if (!selected || answered || loading) return;
     setLoading(true);
+    setError('');
     try {
       const data = await window.fetchApiJson(
         `/api/exams/attempts/${encodeURIComponent(attemptId)}/radio/`,
@@ -330,7 +339,7 @@ function ExamRadioPanel({ lesson, step, attemptId, onUpdated }) {
       );
       onUpdated(data);
     } catch (e) {
-      alert(e.message || 'Не удалось отправить ответ');
+      setError(e.message || 'Не удалось отправить ответ');
     }
     setLoading(false);
   };
@@ -373,6 +382,7 @@ function ExamRadioPanel({ lesson, step, attemptId, onUpdated }) {
           Ответить
         </button>
       )}
+      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       {answered && (
         <div className={`mt-7 p-4 rounded-xl border ${step.is_correct ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
           <span className="font-bold text-sm">{step.is_correct ? 'Верно' : 'Неверно'}</span>
@@ -389,10 +399,12 @@ function ExamCheckboxPanel({ lesson, step, attemptId, onUpdated }) {
   const initial = new Set(step?.payload?.selected_answer_public_ids || []);
   const [selected, setSelected] = React.useState(initial);
   const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState('');
   const answered = step?.answered;
 
   React.useEffect(() => {
     setSelected(new Set(step?.payload?.selected_answer_public_ids || []));
+    setError('');
   }, [lesson.public_id, step?.answered]);
 
   const toggle = (id) => {
@@ -407,6 +419,7 @@ function ExamCheckboxPanel({ lesson, step, attemptId, onUpdated }) {
   const submit = async () => {
     if (answered || loading) return;
     setLoading(true);
+    setError('');
     try {
       const data = await window.fetchApiJson(
         `/api/exams/attempts/${encodeURIComponent(attemptId)}/checkbox/`,
@@ -418,7 +431,7 @@ function ExamCheckboxPanel({ lesson, step, attemptId, onUpdated }) {
       );
       onUpdated(data);
     } catch (e) {
-      alert(e.message || 'Не удалось отправить ответ');
+      setError(e.message || 'Не удалось отправить ответ');
     }
     setLoading(false);
   };
@@ -455,6 +468,7 @@ function ExamCheckboxPanel({ lesson, step, attemptId, onUpdated }) {
           Ответить
         </button>
       )}
+      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       {answered && (
         <div className={`mt-7 p-4 rounded-xl border ${step.is_correct ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
           <span className="font-bold text-sm">{step.is_correct ? 'Верно' : 'Неверно'}</span>
@@ -565,6 +579,8 @@ function ExamActiveSession({
   const [remaining, setRemaining] = React.useState(attempt.remaining_seconds || 0);
   const [focusToast, setFocusToast] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
+  const [confirmSubmit, setConfirmSubmit] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState('');
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [lessonData, setLessonData] = React.useState(null);
   const [lessonLoading, setLessonLoading] = React.useState(false);
@@ -674,9 +690,12 @@ function ExamActiveSession({
     setSidebarOpen(false);
   };
 
-  const handleSubmitExam = async () => {
-    if (!window.confirm('Завершить контрольную? После этого изменить ответы нельзя.')) return;
+  const handleSubmitExam = () => setConfirmSubmit(true);
+
+  const submitExam = async () => {
+    setConfirmSubmit(false);
     setSubmitting(true);
+    setSubmitError('');
     try {
       const data = await window.fetchApiJson(
         `/api/exams/attempts/${encodeURIComponent(attempt.public_id)}/submit/`,
@@ -684,10 +703,23 @@ function ExamActiveSession({
       );
       onFinish(data);
     } catch (e) {
-      alert(e.message || 'Не удалось завершить');
+      setSubmitError(e.message || 'Не удалось завершить');
     }
     setSubmitting(false);
   };
+
+  const finishDialog = window.ConfirmDialog ? (
+    <window.ConfirmDialog
+      open={confirmSubmit}
+      title="Завершить контрольную?"
+      body="После этого изменить ответы нельзя."
+      confirmLabel="Завершить"
+      cancelLabel="Ещё порешать"
+      danger
+      onConfirm={submitExam}
+      onCancel={() => setConfirmSubmit(false)}
+    />
+  ) : null;
 
   const stepState = steps.find(
     (s) => s.kind === currentStep?.kind && s.public_id === currentStep?.public_id,
@@ -738,6 +770,7 @@ function ExamActiveSession({
   if (embedded) {
     return (
       <div className="flex flex-col min-h-0">
+        {finishDialog}
         <ExamTimerBar
           remaining={remaining}
           durationMinutes={exam.duration_minutes}
@@ -746,6 +779,11 @@ function ExamActiveSession({
         {focusToast && (
           <div className="px-4 py-2 bg-amber-100 border-b border-amber-300 text-sm text-amber-900 text-center">
             {focusToast}
+          </div>
+        )}
+        {submitError && (
+          <div className="px-4 py-2 bg-rose-50 border-b border-rose-200 text-sm text-rose-800 text-center">
+            {submitError}
           </div>
         )}
         <div className="px-5 sm:px-10 py-6 border-b border-black/[0.06] bg-white shrink-0">
@@ -758,14 +796,14 @@ function ExamActiveSession({
               {attempt.score || 0}/{attempt.max_score} б.
             </div>
           </div>
-          <div className="grid grid-cols-8 sm:grid-cols-12 md:grid-cols-16 gap-1.5">
+          <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-1.5">
             {steps.map((s, i) => {
               const locked = isStepLockedLinear(steps, i, attempt.navigation_mode);
               const active = i === currentIdx;
               return (
                 <button key={s.public_id} type="button" disabled={locked} onClick={() => goStep(i)}
                   title={s.title}
-                  className={`aspect-square rounded-lg text-[11px] font-bold transition-all
+                  className={`min-h-[44px] aspect-square rounded-lg text-[11px] font-bold transition-all
                     ${active ? 'grad-bg text-white shadow-soft ring-2 ring-violet-300' : 'bg-black/[0.04] text-ink/55 hover:bg-violet-500/10'}
                     ${locked ? 'opacity-30 cursor-not-allowed' : ''}`}>
                   {s.answered && s.kind !== 'theory' && s.is_correct ? '✓'
@@ -791,6 +829,7 @@ function ExamActiveSession({
 
   return (
     <div className="flex overflow-hidden" style={{ height: 'calc(100vh - 5.25rem)' }}>
+      {finishDialog}
       {sidebarOpen && (
         <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)}/>
       )}
@@ -846,6 +885,11 @@ function ExamActiveSession({
             {focusToast}
           </div>
         )}
+        {submitError && (
+          <div className="px-4 py-2 bg-rose-50 border-b border-rose-200 text-sm text-rose-800 text-center">
+            {submitError}
+          </div>
+        )}
         <div className="bg-white border-b px-4 py-3 flex items-center gap-3 shrink-0">
           <button type="button" onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-lg hover:bg-black/[0.04]">
             <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
@@ -872,6 +916,7 @@ function ExamContent({ courseId, examId, stepParam, navigate, embedded }) {
   const [exam, setExam] = React.useState(null);
   const [attempt, setAttempt] = React.useState(null);
   const [error, setError] = React.useState('');
+  const [startError, setStartError] = React.useState('');
   const [starting, setStarting] = React.useState(false);
 
   const loadExam = React.useCallback(async () => {
@@ -927,6 +972,7 @@ function ExamContent({ courseId, examId, stepParam, navigate, embedded }) {
   const handleStart = async () => {
     if (!examId || starting) return;
     setStarting(true);
+    setStartError('');
     try {
       const att = await window.fetchApiJson(
         `/api/exams/${encodeURIComponent(examId)}/start/`,
@@ -939,7 +985,7 @@ function ExamContent({ courseId, examId, stepParam, navigate, embedded }) {
         navigate(Routes.LEARN, window.buildExamQuery(courseId, examId, first.kind, first.public_id));
       }
     } catch (e) {
-      alert(e.message || 'Не удалось начать');
+      setStartError(e.message || 'Не удалось начать');
     }
     setStarting(false);
   };
@@ -970,6 +1016,7 @@ function ExamContent({ courseId, examId, stepParam, navigate, embedded }) {
         exam={exam}
         access={exam.access}
         starting={starting}
+        startError={startError}
         onStart={handleStart}
         onBack={() => navigate(Routes.COURSE, { id: courseId })}
         embedded={embedded}

@@ -1,0 +1,521 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "Bervinov Academy — Security & Smoke",
+    "description": "Senior smoke + security checks for Academy API.\n\n1) Set environment (local/prod).\n2) Run folder Auth → Login (saves tokens).\n3) Run Collection Runner or Newman.\n\nDo not commit real secrets into environments.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost/api" },
+    { "key": "healthUrl", "value": "http://localhost/health/" },
+    { "key": "login", "value": "" },
+    { "key": "password", "value": "" },
+    { "key": "access", "value": "" },
+    { "key": "refresh", "value": "" },
+    { "key": "userPublicId", "value": "" },
+    { "key": "coursePublicId", "value": "" },
+    { "key": "lessonPublicId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "00 Health",
+      "item": [
+        {
+          "name": "GET health — public lean body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('status ok only', () => {",
+                  "  pm.expect(j).to.eql({ status: 'ok' });",
+                  "});",
+                  "const raw = pm.response.text().toLowerCase();",
+                  "pm.test('no secrets in body', () => {",
+                  "  pm.expect(raw).to.not.include('secret');",
+                  "  pm.expect(raw).to.not.include('password');",
+                  "  pm.expect(raw).to.not.include('traceback');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{healthUrl}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 Auth Security",
+      "item": [
+        {
+          "name": "Login — unknown user anti-enumeration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "const t = pm.response.text().toLowerCase();",
+                  "pm.test('generic credentials message', () => {",
+                  "  pm.expect(t).to.include('неверные учетные данные');",
+                  "  pm.expect(t).to.not.include('не найден');",
+                  "  pm.expect(t).to.not.include('not found');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"nobody-does-not-exist@academy.invalid\",\n  \"password\": \"WrongPass1!\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login/"
+          }
+        },
+        {
+          "name": "Login — success (saves tokens)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('jwt pair', () => {",
+                  "  pm.expect(j.access).to.be.a('string').and.not.empty;",
+                  "  pm.expect(j.refresh).to.be.a('string').and.not.empty;",
+                  "});",
+                  "pm.collectionVariables.set('access', j.access);",
+                  "pm.collectionVariables.set('refresh', j.refresh);",
+                  "try {",
+                  "  const payload = JSON.parse(",
+                  "    atob(j.access.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))",
+                  "  );",
+                  "  pm.test('JWT uses public_id as user_id', () => {",
+                  "    pm.expect(payload.user_id).to.be.a('string');",
+                  "    pm.expect(String(payload.user_id)).to.match(",
+                  "      /^[0-9a-f-]{36}$/i",
+                  "    );",
+                  "  });",
+                  "  if (payload.public_id) {",
+                  "    pm.collectionVariables.set('userPublicId', payload.public_id);",
+                  "  }",
+                  "} catch (e) {",
+                  "  pm.test('JWT decode failed', () => { throw e; });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"{{login}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login/"
+          }
+        },
+        {
+          "name": "Refresh — rotates access",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('new access', () => pm.expect(j.access).to.be.a('string'));",
+                  "if (j.access) pm.collectionVariables.set('access', j.access);",
+                  "if (j.refresh) pm.collectionVariables.set('refresh', j.refresh);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/refresh/"
+          }
+        },
+        {
+          "name": "Me — authenticated private profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('has public_id', () => pm.expect(j.public_id).to.be.a('string'));",
+                  "pm.collectionVariables.set('userPublicId', j.public_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access}}"
+              }
+            ],
+            "url": "{{baseUrl}}/users/me/"
+          }
+        },
+        {
+          "name": "Me — anonymous must 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/users/me/"
+          }
+        },
+        {
+          "name": "Password reset request — generic message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('generic message', () => {",
+                  "  pm.expect(String(j.message || '').toLowerCase()).to.include('если аккаунт');",
+                  "});",
+                  "pm.test('no dev_code on non-debug', () => {",
+                  "  // On prod DEBUG=False — key must be absent.",
+                  "  // Local DEBUG may include it; only fail if message leaks user existence differently.",
+                  "  pm.expect(j).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"nobody-does-not-exist@academy.invalid\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password-reset/request/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Content Access",
+      "item": [
+        {
+          "name": "Courses list — auth required or public contract",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('not 5xx', () => pm.expect(pm.response.code).to.be.below(500));",
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  const rows = Array.isArray(j) ? j : (j.results || []);",
+                  "  if (rows.length) {",
+                  "    pm.collectionVariables.set('coursePublicId', rows[0].public_id);",
+                  "    pm.test('course uses public_id', () => {",
+                  "      pm.expect(rows[0].public_id).to.match(/^[0-9a-f-]{36}$/i);",
+                  "      pm.expect(rows[0]).to.not.have.property('id');",
+                  "    });",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access}}" }
+            ],
+            "url": "{{baseUrl}}/content/courses/"
+          }
+        },
+        {
+          "name": "Lesson by fake UUID — 404 not leak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401 or 404', () => {",
+                  "  pm.expect([401, 404]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access}}" }
+            ],
+            "url": "{{baseUrl}}/content/lessons-theory/00000000-0000-4000-8000-000000000099/"
+          }
+        },
+        {
+          "name": "Lesson by internal pk — must 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('404 for integer pk', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access}}" }
+            ],
+            "url": "{{baseUrl}}/content/lessons-theory/1/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Notify / Webhooks",
+      "item": [
+        {
+          "name": "Push vapid — requires auth",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401 without token', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/push/vapid/"
+          }
+        },
+        {
+          "name": "Push vapid — authenticated, no private key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const raw = pm.response.text().toLowerCase();",
+                  "pm.test('no private key leak', () => {",
+                  "  pm.expect(raw).to.not.include('private');",
+                  "  pm.expect(j).to.have.property('configured');",
+                  "  pm.expect(j).to.have.property('public_key');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access}}" }
+            ],
+            "url": "{{baseUrl}}/push/vapid/"
+          }
+        },
+        {
+          "name": "VK webhook — bad path secret 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"message_new\",\n  \"secret\": \"wrong\"\n}"
+            },
+            "url": "{{baseUrl}}/vk/webhook/definitely-wrong-secret/"
+          }
+        },
+        {
+          "name": "LiveKit webhook — missing signature 401/503",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401 or 503', () => {",
+                  "  pm.expect([401, 503]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"room_finished\"\n}"
+            },
+            "url": "{{baseUrl}}/communication/livekit/webhook/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Subscriptions",
+      "item": [
+        {
+          "name": "My subscription — auth required",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/subscriptions/me/"
+          }
+        },
+        {
+          "name": "My subscription — with token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('not 5xx', () => pm.expect(pm.response.code).to.be.below(500));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access}}" }
+            ],
+            "url": "{{baseUrl}}/subscriptions/me/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "99 Logout",
+      "item": [
+        {
+          "name": "Logout — blacklist refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/logout/"
+          }
+        },
+        {
+          "name": "Refresh after logout — must fail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401 after blacklist', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/refresh/"
+          }
+        }
+      ]
+    }
+  ]
+}

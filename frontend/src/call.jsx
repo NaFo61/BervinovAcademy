@@ -189,12 +189,16 @@ function CallPage({ navigate, hashParams }) {
   const [chatLoadError, setChatLoadError] = React.useState('');
   const [callChatUnread, setCallChatUnread] = React.useState(0);
   const [callWhiteboardPreview, setCallWhiteboardPreview] = React.useState(null);
+  const [confirmMode, setConfirmMode] = React.useState(null);
+  const [endKind, setEndKind] = React.useState(null);
 
   const ChatThreadView = window.ChatThreadView;
 
   const callRootRef = React.useRef(null);
   const roomRef = React.useRef(null);
   const endSentRef = React.useRef(false);
+  const leaveKindRef = React.useRef(null);
+  const joinedAtRef = React.useRef(null);
   const whiteboardEnabledRef = React.useRef(true);
   const LK = window.LivekitClient || window.LiveKit;
 
@@ -452,7 +456,11 @@ function CallPage({ navigate, hashParams }) {
           });
         }
         room.on(LK.RoomEvent.Disconnected, () => {
-          if (!cancelled) setPhase('ended');
+          if (!cancelled) {
+            if (!leaveKindRef.current) leaveKindRef.current = 'remote';
+            setEndKind(leaveKindRef.current);
+            setPhase('ended');
+          }
         });
 
         await room.connect(join.livekit_url, join.token);
@@ -477,6 +485,7 @@ function CallPage({ navigate, hashParams }) {
           setVideoOff(true);
         }
         if (warnings.length) setMediaWarning(warnings.join(' · '));
+        joinedAtRef.current = Date.now();
         setPhase('in_call');
         bumpLayout();
       } catch (e) {
@@ -498,22 +507,16 @@ function CallPage({ navigate, hashParams }) {
   }, [confId, cleanupRoom, bumpLayout, notifyLeave, LK]);
 
   React.useEffect(() => {
-    if (!isMentor || phase !== 'in_call') return undefined;
-    const onBeforeUnload = (event) => {
-      event.preventDefault();
-      event.returnValue = 'Вы покинете созвон. Завершить его можно кнопкой внутри звонка.';
-      return event.returnValue;
-    };
+    if (phase !== 'in_call') return undefined;
     const onPageHide = () => notifyLeave(true);
-    window.addEventListener('beforeunload', onBeforeUnload);
     window.addEventListener('pagehide', onPageHide);
-    return () => {
-      window.removeEventListener('beforeunload', onBeforeUnload);
-      window.removeEventListener('pagehide', onPageHide);
-    };
-  }, [isMentor, phase, notifyLeave]);
+    return () => window.removeEventListener('pagehide', onPageHide);
+  }, [phase, notifyLeave]);
 
   const leaveCall = async () => {
+    leaveKindRef.current = 'self';
+    setEndKind('self');
+    setConfirmMode(null);
     setPhase('ending');
     try {
       await window.fetchApiJson(
@@ -525,24 +528,22 @@ function CallPage({ navigate, hashParams }) {
     setPhase('ended');
   };
 
-  const finishCall = async () => {
+  const finishCall = async ({ saveBoard = false } = {}) => {
     if (!isMentor) return leaveCall();
-    if (whiteboardEnabled && !whiteboardSaved) {
-      const saveFirst = window.confirm(
-        'Сохранить доску как конспект перед завершением созвона?',
-      );
-      if (saveFirst) {
-        await saveWhiteboard();
-      }
+    setConfirmMode(null);
+    if (saveBoard) {
+      await saveWhiteboard();
     }
-    if (!window.confirm('Завершить конференцию для всех участников?')) return;
+    leaveKindRef.current = 'host_end';
+    setEndKind('host_end');
     setPhase('ending');
     try {
       endSentRef.current = true;
-      await window.fetchApiJson(
+      const ended = await window.fetchApiJson(
         `/api/communication/conferences/${encodeURIComponent(confId)}/end/`,
         { method: 'POST', auth: true },
       );
+      if (ended) setConference(ended);
     } catch (_) { /* ignore */ }
     await cleanupRoom();
     setPhase('ended');
@@ -628,8 +629,18 @@ function CallPage({ navigate, hashParams }) {
     const endedTitle = conference
       ? `${participantName(conference.mentor)} ↔ ${participantName(conference.guest)}`
       : '';
+    const durationSec = conference?.duration_seconds
+      ?? (joinedAtRef.current ? Math.round((Date.now() - joinedAtRef.current) / 1000) : 0);
+    const kind = endKind || leaveKindRef.current || 'remote';
+    const heading = kind === 'self' ? 'Вы вышли из созвона' : 'Созвон завершён';
+    const returnLabel = (() => {
+      const raw = window.consumeCallReturnPath?.() || '';
+      if (raw.includes('/learn')) return 'Вернуться к уроку';
+      if (raw.includes('/course')) return 'К курсу';
+      return 'К созвонам';
+    })();
     return (
-      <div className="max-w-lg mx-auto px-5 py-20 text-center">
+      <div className="max-w-lg mx-auto px-5 py-16 text-center">
         {showEndedPreview && endedWhiteboard?.image_url && WhiteboardPreviewModal && (
           <WhiteboardPreviewModal
             conferenceId={confId}
@@ -637,8 +648,23 @@ function CallPage({ navigate, hashParams }) {
             onClose={() => setShowEndedPreview(false)}
           />
         )}
-        <div className="text-2xl font-bold">Созвон завершён</div>
-        <p className="text-sm text-ink/60 mt-2">Спасибо за встречу!</p>
+        <div className="text-2xl font-bold">{heading}</div>
+        <p className="text-sm text-ink/60 mt-2">
+          {kind === 'host_end' ? 'Ведущий завершил встречу для всех.' : kind === 'self' ? 'Остальные могут продолжать, если ведущий не завершил звонок.' : 'Встреча закрыта.'}
+        </p>
+        <div className="mt-6 rounded-2xl bg-white ring-1 ring-black/[0.06] p-5 text-left space-y-3">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-widest text-ink/40">Длительность</div>
+            <div className="mt-1 text-lg font-bold">{window.formatCallDuration?.(durationSec) || `${durationSec} с`}</div>
+          </div>
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-widest text-ink/40">Кто был</div>
+            <ul className="mt-1 text-sm text-ink/80 space-y-1">
+              {conference?.mentor ? <li>Ведущий: {participantName(conference.mentor)}</li> : null}
+              {conference?.guest ? <li>Участник: {participantName(conference.guest)}</li> : null}
+            </ul>
+          </div>
+        </div>
         {endedWhiteboard?.image_url && (
           <div className="mt-6 text-left">
             <div className="text-xs font-semibold uppercase tracking-widest text-ink/45 mb-2">
@@ -650,19 +676,19 @@ function CallPage({ navigate, hashParams }) {
                 className="w-full h-auto max-h-56 object-contain bg-slate-50"/>
             </button>
             <button type="button" onClick={() => setShowEndedPreview(true)}
-              className="mt-3 h-10 px-4 rounded-xl bg-white ring-1 ring-black/[0.08] text-sm font-semibold">
+              className="mt-3 h-11 px-4 rounded-xl bg-white ring-1 ring-black/[0.08] text-sm font-semibold">
               Открыть конспект
             </button>
           </div>
         )}
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
+        <div className="mt-8 flex flex-col sm:flex-row flex-wrap justify-center gap-3">
+          <button type="button" onClick={() => (window.goAfterCall ? window.goAfterCall(navigate) : navigate(Routes.CONFERENCES))}
+            className="h-11 px-6 rounded-xl btn-grad text-white text-sm font-semibold">
+            {returnLabel}
+          </button>
           <button type="button" onClick={() => navigate(Routes.CONFERENCES)}
             className="h-11 px-6 rounded-xl bg-white ring-1 ring-black/[0.08] text-sm font-semibold">
             История созвонов
-          </button>
-          <button type="button" onClick={() => navigate(Routes.PROFILE)}
-            className="h-11 px-6 rounded-xl btn-grad text-white text-sm font-semibold">
-            В профиль
           </button>
         </div>
       </div>
@@ -704,7 +730,32 @@ function CallPage({ navigate, hashParams }) {
 
   return (
     <div ref={callRootRef} data-screen-label="Call"
-      className={`${isFullscreen ? 'h-screen max-h-screen' : 'h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)]'} overflow-hidden bg-[#070b18] text-white flex flex-col relative`}>
+      className={`${isFullscreen ? 'h-screen max-h-screen' : 'h-full max-h-full min-h-0'} overflow-hidden bg-[#070b18] text-white flex flex-col relative`}>
+      {window.ConfirmDialog && (
+        <window.ConfirmDialog
+          open={confirmMode === 'leave'}
+          title="Выйти из созвона?"
+          body="Вы отключитесь. Остальные останутся в звонке, пока ведущий его не завершит."
+          confirmLabel="Выйти"
+          cancelLabel="Остаться"
+          onConfirm={leaveCall}
+          onCancel={() => setConfirmMode(null)}
+        />
+      )}
+      {window.ConfirmDialog && (
+        <window.ConfirmDialog
+          open={confirmMode === 'end'}
+          title="Завершить для всех?"
+          body="Созвон закроется у всех участников. Вернуться в этот же звонок уже не получится."
+          confirmLabel="Завершить"
+          extraLabel={whiteboardEnabled && !whiteboardSaved ? 'Сохранить доску и завершить' : undefined}
+          cancelLabel="Отмена"
+          danger
+          onConfirm={() => finishCall({ saveBoard: false })}
+          onExtra={() => finishCall({ saveBoard: true })}
+          onCancel={() => setConfirmMode(null)}
+        />
+      )}
       {callWhiteboardPreview && WhiteboardPreviewModal && (
         <WhiteboardPreviewModal
           conferenceId={callWhiteboardPreview}
@@ -738,23 +789,24 @@ function CallPage({ navigate, hashParams }) {
         </aside>
       )}
       {!isCleanMode && (
-        <div className="px-4 sm:px-6 py-3 flex items-center justify-between border-b border-white/10 bg-white/[0.03]">
-          <div>
-            <div className="font-semibold">{title}</div>
+        <div className="px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-white/[0.03]">
+          <div className="min-w-0">
+            <div className="font-semibold truncate">{title}</div>
             <div className="text-xs text-white/50">
               {STATUS_LABELS[conference?.status] || 'Созвон'}
               {screenTile ? ' · идёт демонстрация экрана' : ''}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={leaveCall}
-              className="h-9 px-4 rounded-lg bg-white/10 hover:bg-white/15 text-sm font-semibold">
+          <div className="flex items-center gap-2 shrink-0">
+            <button type="button" onClick={() => setConfirmMode('leave')}
+              className="h-11 px-3 sm:px-4 rounded-lg bg-white/10 hover:bg-white/15 text-sm font-semibold">
               Выйти
             </button>
             {isMentor && (
-              <button type="button" onClick={finishCall}
-                className="h-9 px-4 rounded-lg bg-rose-600 hover:bg-rose-500 text-sm font-semibold">
-                Завершить для всех
+              <button type="button" onClick={() => setConfirmMode('end')}
+                className="h-11 px-3 sm:px-4 rounded-lg bg-rose-600 hover:bg-rose-500 text-sm font-semibold">
+                <span className="sm:hidden">Всем</span>
+                <span className="hidden sm:inline">Завершить для всех</span>
               </button>
             )}
           </div>
@@ -832,7 +884,7 @@ function CallPage({ navigate, hashParams }) {
 
       {audioPubs.map((item) => <AudioTrack key={item.key} publication={item.pub} />)}
 
-      <div className={`${isCleanMode ? 'fixed bottom-4 left-1/2 -translate-x-1/2 z-20 rounded-2xl bg-black/45 backdrop-blur-xl px-4 py-3' : 'p-4 pb-6'} flex flex-wrap items-center justify-center gap-3`}>
+        <div className={`${isCleanMode ? 'fixed bottom-4 left-1/2 -translate-x-1/2 z-20 rounded-2xl bg-black/45 backdrop-blur-xl px-3 py-3 max-w-[calc(100vw-1.5rem)]' : 'p-3 sm:p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]'} flex flex-wrap items-center justify-center gap-2 sm:gap-3`}>
         <div className="flex items-center gap-1 rounded-full bg-white/10 p-1">
           <ModeButton active={displayMode === 'grid'} onClick={() => setDisplayMode('grid')}>Мозаика</ModeButton>
           <ModeButton active={displayMode === 'focus'} onClick={() => setDisplayMode('focus')}>Важное</ModeButton>
@@ -1009,7 +1061,7 @@ function ModeButton({ active, onClick, children }) {
 function CallControl({ children, label, active, onClick, badge = 0 }) {
   return (
     <button type="button" onClick={onClick} title={label}
-      className={`relative flex flex-col items-center gap-1 min-w-[72px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-300 rounded-xl ${active ? 'text-cyan-200' : 'text-white/90'}`}>
+      className={`relative flex flex-col items-center gap-1 min-w-[3.5rem] sm:min-w-[72px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-300 rounded-xl ${active ? 'text-cyan-200' : 'text-white/90'}`}>
       <span className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
         active ? 'bg-cyan-500/70' : 'bg-white/12 hover:bg-white/20'
       }`}>

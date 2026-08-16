@@ -6,8 +6,8 @@ const FloatingShapes = window.FloatingShapes;
 
 const AUTH_EASE = [0.16, 1, 0.3, 1];
 const AUTH_SWAP_MS = 0.48;
-/** Фиксированная высота карточки — не меняется при переключении режима */
-const AUTH_CARD_H = 'h-[min(940px,calc(100vh-5.5rem))] lg:h-[940px]';
+/** Фиксированная высота карточки на десктопе; на телефоне — по содержимому */
+const AUTH_CARD_H = 'h-auto lg:h-[940px]';
 
 function AuthPage({ navigate }) {
   const M = FM.motion;
@@ -15,7 +15,7 @@ function AuthPage({ navigate }) {
   const isLogin = mode === 'login';
 
   return (
-    <div data-screen-label="05 Auth" className="min-h-[calc(100vh-64px)] relative overflow-hidden">
+    <div data-screen-label="05 Auth" className="min-h-[calc(100vh-64px)] relative overflow-x-hidden lg:overflow-hidden">
       <div className="absolute inset-0 mesh-bg" style={{ transform: 'translateZ(0)' }}/>
       <FloatingShapes/>
       <div className="absolute inset-0 pointer-events-none"
@@ -58,11 +58,11 @@ function AuthPage({ navigate }) {
           </div>
 
           {/* Mobile: без смены мест, фиксированный порядок */}
-          <div className="lg:hidden flex flex-col h-full overflow-y-auto scrollbar-thin">
-            <div className="p-8 sm:p-10 shrink-0">
+          <div className="lg:hidden flex flex-col">
+            <div className="p-5 sm:p-10 shrink-0">
               <AuthForm mode={mode} setMode={setMode} navigate={navigate}/>
             </div>
-            <div className="grad-bg-soft border-t border-black/[0.06] p-8 sm:p-10 shrink-0">
+            <div className="grad-bg-soft border-t border-black/[0.06] p-5 sm:p-10 shrink-0">
               <AuthIllustration mode={mode}/>
             </div>
           </div>

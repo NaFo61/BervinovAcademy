@@ -197,7 +197,7 @@ function ConferencesPage({ navigate }) {
             <ul className="divide-y divide-black/[0.06]">
               {rows.map((row) => (
                 <li key={row.public_id} className="px-5 py-4 flex flex-wrap items-center gap-3">
-                  <div className="flex-1 min-w-[200px]">
+                    <div className="flex-1 min-w-0">
                     <div className="font-semibold text-sm">{participantName(otherParty(row))}</div>
                     <div className="text-xs text-ink/45 mt-0.5">
                       {new Date(row.created_at).toLocaleString('ru-RU')}
@@ -211,14 +211,14 @@ function ConferencesPage({ navigate }) {
                     {row.has_whiteboard && (
                       <button type="button"
                         onClick={() => setPreviewConf(row)}
-                        className="h-9 px-4 rounded-lg bg-white ring-1 ring-black/[0.08] text-xs font-semibold">
+                        className="h-11 px-4 rounded-lg bg-white ring-1 ring-black/[0.08] text-xs font-semibold">
                         Конспект
                       </button>
                     )}
                     {canRejoin(row) && (
                       <button type="button"
                         onClick={() => window.openConferenceCall(navigate, row.public_id)}
-                        className="h-9 px-4 rounded-lg btn-grad text-white text-xs font-semibold">
+                        className="h-11 px-4 rounded-lg btn-grad text-white text-xs font-semibold">
                         {row.status === 'active' ? 'Вернуться' : 'Войти'}
                       </button>
                     )}
@@ -231,7 +231,7 @@ function ConferencesPage({ navigate }) {
                           );
                           load();
                         }}
-                        className="h-9 px-4 rounded-lg bg-white ring-1 ring-black/[0.08] text-xs font-semibold">
+                        className="h-11 px-4 rounded-lg bg-white ring-1 ring-black/[0.08] text-xs font-semibold">
                         Отменить
                       </button>
                     )}

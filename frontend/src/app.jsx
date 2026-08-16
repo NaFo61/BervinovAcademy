@@ -5,6 +5,7 @@ const Routes = window.Routes;
 const TopNav = window.TopNav;
 const RecoveryBanner = window.RecoveryBanner;
 const Footer = window.Footer;
+const AppNoticeHost = window.AppNoticeHost;
 const LandingPage = window.LandingPage;
 const CatalogPage = window.CatalogPage;
 const ProblemPage = window.ProblemPage;
@@ -59,6 +60,7 @@ function App() {
 
   return (
     <div className={`${hideChrome ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col`}>
+      {AppNoticeHost ? <AppNoticeHost /> : null}
       {!hideChrome && <TopNav route={route} navigate={navigate}/>}
       {!hideChrome && <RecoveryBanner navigate={navigate}/>}
       <main className={`flex-1 min-h-0 ${hideChrome ? 'overflow-hidden' : ''}`}>

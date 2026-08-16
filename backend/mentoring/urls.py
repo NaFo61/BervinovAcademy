@@ -4,6 +4,8 @@ from content.editor_views import (
     CourseEditorCreateView,
     CourseEditorOutlineView,
     ExamEditorCreateView,
+    LessonAttachmentCreateView,
+    LessonAttachmentDeleteView,
     LessonEditorCreateView,
     LessonEditorView,
     ModuleEditorCreateView,
@@ -116,5 +118,16 @@ urlpatterns = [
         "mentoring/editor/lessons/<str:kind>/<uuid:public_id>/",
         LessonEditorView.as_view(),
         name="editor-lesson-detail",
+    ),
+    path(
+        "mentoring/editor/lessons/<str:kind>/<uuid:public_id>/attachments/",
+        LessonAttachmentCreateView.as_view(),
+        name="editor-lesson-attachments",
+    ),
+    path(
+        "mentoring/editor/lessons/<str:kind>/<uuid:public_id>/"
+        "attachments/<uuid:attachment_id>/",
+        LessonAttachmentDeleteView.as_view(),
+        name="editor-lesson-attachment-delete",
     ),
 ]

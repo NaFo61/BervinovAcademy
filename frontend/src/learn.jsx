@@ -449,7 +449,7 @@ function LearnPage({ navigate, hashParams }) {
   const progressPct   = totalLessons ? Math.round((doneCount / totalLessons) * 100) : 0;
 
   return (
-    <div className="flex overflow-hidden" style={{ height: 'calc(100vh - 5.25rem)' }}>
+    <div className="flex overflow-hidden" style={{ height: 'calc(100dvh - 3.5rem)' }}>
 
       {/* ── Mobile sidebar backdrop ── */}
       {sidebarOpen && (
@@ -459,13 +459,13 @@ function LearnPage({ navigate, hashParams }) {
 
       {/* ══ LEFT SIDEBAR ══ */}
       <aside className={`
-        fixed lg:static z-40 inset-y-0 left-0
-        w-72 flex-shrink-0 flex flex-col
+        fixed lg:static z-40 left-0
+        top-14 lg:top-0 bottom-0
+        w-[min(18rem,calc(100vw-2.5rem))] flex-shrink-0 flex flex-col
         bg-white border-r border-black/[0.06]
         transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}
-        style={{ height: '100%' }}>
+      `}>
 
         {/* sidebar header */}
         <div className="px-5 pt-4 pb-3 border-b border-black/[0.06] shrink-0">
@@ -595,7 +595,7 @@ function LearnPage({ navigate, hashParams }) {
         <div className="bg-white border-b border-black/[0.06] px-4 py-3 flex items-center gap-3 shrink-0">
           {/* hamburger (mobile) */}
           <button onClick={() => setSidebarOpen(true)}
-            className="lg:hidden p-2 rounded-lg hover:bg-black/[0.04] text-ink/60 shrink-0"
+            className="lg:hidden w-11 h-11 rounded-lg hover:bg-black/[0.04] text-ink/60 shrink-0 inline-flex items-center justify-center"
             aria-label="Открыть меню">
             <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round"/>
@@ -638,7 +638,7 @@ function LearnPage({ navigate, hashParams }) {
               embedded
             />
           ) : (
-          <div className="max-w-3xl mx-auto px-5 sm:px-10 py-10">
+          <div className="max-w-3xl mx-auto px-4 sm:px-10 py-8 sm:py-10">
 
             {progressPct === 100 && certificateId && (
               <button type="button"
@@ -672,7 +672,7 @@ function LearnPage({ navigate, hashParams }) {
                     <div className="text-xs mt-1">Выберите другой модуль слева</div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-8 sm:grid-cols-12 md:grid-cols-16 gap-1.5">
+                  <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-1.5">
                     {moduleLessons.map((l, idx) => {
                       const active = currentLesson?.type === l.type && currentLesson?.id === l.id;
                       const done = completed.has(lessonKey(l.type, l.id));
@@ -690,7 +690,7 @@ function LearnPage({ navigate, hashParams }) {
                           type="button"
                           onClick={() => goTo(l)}
                           title={`${idx + 1}. ${l.title}`}
-                          className={`relative w-9 h-9 sm:w-10 sm:h-10 rounded-lg ring-1 transition-all select-none
+                          className={`relative min-w-[44px] min-h-[44px] w-full rounded-lg ring-1 transition-all select-none
                             ${active ? 'ring-violet-500 bg-violet-50' : 'ring-black/[0.06] bg-white hover:ring-violet-200 hover:bg-violet-50/30'}
                           `}
                         >
@@ -734,6 +734,7 @@ function LearnPage({ navigate, hashParams }) {
                   refreshCourseProgress();
                 }}
                 onLogin={() => navigate(Routes.AUTH)}
+                navigate={navigate}
               />
 
             ) : lessonType === 'radio' && lessonData ? (
@@ -877,10 +878,11 @@ print(solve())`;
 
 // ─── Theory lesson ───────────────────────────────────────────────────────────
 
-function TheoryLesson({ lesson, isDone, onComplete, onLogin }) {
+function TheoryLesson({ lesson, isDone, onComplete, onLogin, navigate }) {
   return (
     <div>
       <LessonHeader type="theory" title={lesson.title} label="Теоретический урок"/>
+      {window.LessonAttachments && <window.LessonAttachments items={lesson.attachments} />}
 
       {lesson.video ? (
         <window.VideoExplanation video={lesson.video} title="Видео-объяснение"/>
@@ -895,8 +897,8 @@ function TheoryLesson({ lesson, isDone, onComplete, onLogin }) {
               </p>
               <button
                 type="button"
-                onClick={() => window.location.hash = '#/pro'}
-                className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-violet-700 hover:text-violet-800"
+                onClick={() => (navigate ? navigate(window.Routes.PRO) : (window.location.href = '/pro'))}
+                className="mt-3 inline-flex items-center gap-1.5 min-h-11 text-[13px] font-semibold text-violet-700 hover:text-violet-800"
               >
                 Подключить Pro <I.ChevronRight className="w-3.5 h-3.5"/>
               </button>
@@ -971,6 +973,7 @@ function RadioLesson({ lesson, selected, setSelected, submitted, result, loading
   return (
     <div>
       <LessonHeader type="radio" title={lesson.title} label="Вопрос — один правильный ответ"/>
+      {window.LessonAttachments && <window.LessonAttachments items={lesson.attachments} />}
 
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
         <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
@@ -1105,6 +1108,7 @@ function CheckboxLesson({ lesson, selected, setSelected, submitted, result, load
   return (
     <div>
       <LessonHeader type="checkbox" title={lesson.title} label="Вопрос — несколько правильных ответов"/>
+      {window.LessonAttachments && <window.LessonAttachments items={lesson.attachments} />}
 
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
         <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
@@ -1227,6 +1231,7 @@ function ShortAnswerLesson({
   return (
     <div>
       <LessonHeader type="short_answer" title={lesson.title} label="Краткий ответ"/>
+      {window.LessonAttachments && <window.LessonAttachments items={lesson.attachments} />}
 
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
         <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
@@ -1468,7 +1473,7 @@ function CodeSubmissionResult({ result, points, loggedIn, onLogin, onRetry, solu
       )}
 
       {result.error_message && (
-        <pre className="mt-2 text-[13px] text-ink/75 whitespace-pre-wrap font-mono leading-relaxed">
+        <pre className="mt-3 p-4 rounded-xl bg-[#0d1117] text-[12px] text-red-300 whitespace-pre-wrap font-mono leading-[1.55] overflow-x-auto">
           {result.error_message}
         </pre>
       )}
@@ -1480,17 +1485,17 @@ function CodeSubmissionResult({ result, points, loggedIn, onLogin, onRetry, solu
       )}
 
       {(result.actual_output != null || result.expected_output != null) && (
-        <div className="mt-3 space-y-2 text-[13px] font-mono">
+        <div className="mt-3 rounded-xl bg-[#0d1117] p-4 space-y-3 text-[12px] font-mono overflow-x-auto">
           {result.actual_output != null && (
             <div>
-              <span className="text-ink/50">ваш вывод: </span>
-              <pre className="whitespace-pre-wrap mt-0.5 text-red-800">{result.actual_output}</pre>
+              <span className="text-white/40">ваш вывод</span>
+              <pre className="whitespace-pre-wrap mt-1 text-red-300">{result.actual_output}</pre>
             </div>
           )}
           {result.expected_output != null && (
             <div>
-              <span className="text-ink/50">ожидалось: </span>
-              <pre className="whitespace-pre-wrap mt-0.5 text-emerald-800">{result.expected_output}</pre>
+              <span className="text-white/40">ожидалось</span>
+              <pre className="whitespace-pre-wrap mt-1 text-emerald-300">{result.expected_output}</pre>
             </div>
           )}
         </div>
@@ -1640,6 +1645,7 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin, onRefreshLesson }) 
         badge={lesson.difficulty_display || lesson.difficulty}
         points={lesson.points}
       />
+      {window.LessonAttachments && <window.LessonAttachments items={lesson.attachments} />}
 
       {lesson.description && (
         <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft whitespace-pre-wrap text-[15px] text-ink/80 leading-relaxed">

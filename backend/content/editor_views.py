@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 from rest_framework import status
@@ -7,6 +10,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from unidecode import unidecode
 
+from content.attachments import (
+    KIND_FK,
+    MAX_FILES_PER_LESSON,
+    bind_parent,
+    serialize_attachment,
+    validate_upload,
+)
 from content.editor_registry import (
     LESSON_KINDS,
     build_course_editor_outline,
@@ -16,7 +26,7 @@ from content.editor_registry import (
     user_can_edit_course,
 )
 from content.editor_serializers import EDITOR_SERIALIZERS
-from content.models import Course, Exam, Module, Technology
+from content.models import Course, Exam, LessonAttachment, Module, Technology
 from mentoring.permissions import IsMentorOrAdmin
 
 
@@ -383,3 +393,77 @@ class LessonEditorCreateView(APIView):
             ser_cls(instance, context=_editor_context(request)).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class LessonAttachmentCreateView(APIView):
+    """``POST …/lessons/{kind}/{id}/attachments/`` — файл к заданию."""
+
+    permission_classes = [IsAuthenticated, IsMentorOrAdmin]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, kind, public_id):
+        if kind not in LESSON_KINDS:
+            return Response({"detail": "Неизвестный тип урока."}, status=400)
+        instance = get_lesson(kind, public_id)
+        denied = _check_lesson_access(request, instance)
+        if denied:
+            return denied
+        upload = request.FILES.get("file")
+        try:
+            validate_upload(upload)
+        except DjangoValidationError as exc:
+            payload = getattr(exc, "message_dict", None)
+            if not payload:
+                payload = {"detail": list(exc.messages)}
+            return Response(payload, status=400)
+        if instance.attachments.count() >= MAX_FILES_PER_LESSON:
+            return Response(
+                {
+                    "file": (
+                        "К одному заданию можно прикрепить "
+                        "не больше 10 файлов."
+                    )
+                },
+                status=400,
+            )
+        name = Path(getattr(upload, "name", "") or "file").name[:255]
+        attachment = LessonAttachment(
+            original_name=name,
+            content_type=(getattr(upload, "content_type", None) or "")[:128],
+            size=int(getattr(upload, "size", 0) or 0),
+            uploaded_by=request.user,
+        )
+        bind_parent(attachment=attachment, kind=kind, lesson=instance)
+        attachment.file = upload
+        attachment.save()
+        return Response(
+            serialize_attachment(attachment, request),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class LessonAttachmentDeleteView(APIView):
+    """``DELETE …/attachments/{attachment_id}/``"""
+
+    permission_classes = [IsAuthenticated, IsMentorOrAdmin]
+
+    def delete(self, request, kind, public_id, attachment_id):
+        if kind not in LESSON_KINDS:
+            return Response({"detail": "Неизвестный тип урока."}, status=400)
+        instance = get_lesson(kind, public_id)
+        denied = _check_lesson_access(request, instance)
+        if denied:
+            return denied
+        attachment = get_object_or_404(
+            LessonAttachment, public_id=attachment_id
+        )
+        fk = KIND_FK[kind]
+        if getattr(attachment, f"{fk}_id") != instance.pk:
+            return Response(
+                {"detail": "Файл не относится к этому уроку."},
+                status=404,
+            )
+        if attachment.file:
+            attachment.file.delete(save=False)
+        attachment.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

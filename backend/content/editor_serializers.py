@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from content.attachments import LessonAttachmentsMixin
 from content.models import (
     CheckBoxAnswerOption,
     CodingChallenge,
@@ -53,7 +54,9 @@ class EditorTestCaseSerializer(serializers.ModelSerializer):
         read_only_fields = ("order_index",)
 
 
-class EditorTheorySerializer(EditorVideoMixin, serializers.ModelSerializer):
+class EditorTheorySerializer(
+    LessonAttachmentsMixin, EditorVideoMixin, serializers.ModelSerializer
+):
     module_public_id = serializers.UUIDField(
         source="module.public_id", read_only=True
     )
@@ -70,10 +73,16 @@ class EditorTheorySerializer(EditorVideoMixin, serializers.ModelSerializer):
             "video_url",
             "video_file",
             "video",
+            "attachments",
             "order_index",
             "is_active",
         )
-        read_only_fields = ("public_id", "module_public_id", "video")
+        read_only_fields = (
+            "public_id",
+            "module_public_id",
+            "video",
+            "attachments",
+        )
 
     def validate_content(self, value):
         from common.html_sanitize import sanitize_html
@@ -81,7 +90,9 @@ class EditorTheorySerializer(EditorVideoMixin, serializers.ModelSerializer):
         return sanitize_html(value)
 
 
-class EditorRadioSerializer(EditorVideoMixin, serializers.ModelSerializer):
+class EditorRadioSerializer(
+    LessonAttachmentsMixin, EditorVideoMixin, serializers.ModelSerializer
+):
     module_public_id = serializers.UUIDField(
         source="module.public_id", read_only=True
     )
@@ -101,12 +112,18 @@ class EditorRadioSerializer(EditorVideoMixin, serializers.ModelSerializer):
             "video_url",
             "video_file",
             "video",
+            "attachments",
             "points",
             "order_index",
             "is_active",
             "answer_options",
         )
-        read_only_fields = ("public_id", "module_public_id", "video")
+        read_only_fields = (
+            "public_id",
+            "module_public_id",
+            "video",
+            "attachments",
+        )
 
     def validate_solution_text(self, value):
         from common.html_sanitize import sanitize_html
@@ -152,7 +169,9 @@ class EditorRadioSerializer(EditorVideoMixin, serializers.ModelSerializer):
         question.answers.exclude(pk__in=keep).delete()
 
 
-class EditorCheckboxSerializer(EditorVideoMixin, serializers.ModelSerializer):
+class EditorCheckboxSerializer(
+    LessonAttachmentsMixin, EditorVideoMixin, serializers.ModelSerializer
+):
     module_public_id = serializers.UUIDField(
         source="module.public_id", read_only=True
     )
@@ -174,12 +193,18 @@ class EditorCheckboxSerializer(EditorVideoMixin, serializers.ModelSerializer):
             "video_url",
             "video_file",
             "video",
+            "attachments",
             "points",
             "order_index",
             "is_active",
             "answer_options",
         )
-        read_only_fields = ("public_id", "module_public_id", "video")
+        read_only_fields = (
+            "public_id",
+            "module_public_id",
+            "video",
+            "attachments",
+        )
 
     def validate_solution_text(self, value):
         from common.html_sanitize import sanitize_html
@@ -226,7 +251,7 @@ class EditorCheckboxSerializer(EditorVideoMixin, serializers.ModelSerializer):
 
 
 class EditorShortAnswerSerializer(
-    EditorVideoMixin, serializers.ModelSerializer
+    LessonAttachmentsMixin, EditorVideoMixin, serializers.ModelSerializer
 ):
     module_public_id = serializers.UUIDField(
         source="module.public_id", read_only=True
@@ -248,11 +273,17 @@ class EditorShortAnswerSerializer(
             "video_url",
             "video_file",
             "video",
+            "attachments",
             "points",
             "order_index",
             "is_active",
         )
-        read_only_fields = ("public_id", "module_public_id", "video")
+        read_only_fields = (
+            "public_id",
+            "module_public_id",
+            "video",
+            "attachments",
+        )
 
     def validate_solution_text(self, value):
         from common.html_sanitize import sanitize_html
@@ -260,7 +291,9 @@ class EditorShortAnswerSerializer(
         return sanitize_html(value)
 
 
-class EditorCodingSerializer(EditorVideoMixin, serializers.ModelSerializer):
+class EditorCodingSerializer(
+    LessonAttachmentsMixin, EditorVideoMixin, serializers.ModelSerializer
+):
     module_public_id = serializers.UUIDField(
         source="module.public_id", read_only=True, allow_null=True
     )
@@ -283,6 +316,7 @@ class EditorCodingSerializer(EditorVideoMixin, serializers.ModelSerializer):
             "video_url",
             "video_file",
             "video",
+            "attachments",
             "initial_code",
             "solution_template",
             "assistant_prompt",
@@ -299,6 +333,7 @@ class EditorCodingSerializer(EditorVideoMixin, serializers.ModelSerializer):
             "module_public_id",
             "course_public_id",
             "video",
+            "attachments",
         )
 
     def validate_solution_text(self, value):

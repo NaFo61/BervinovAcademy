@@ -1024,3 +1024,88 @@ class TestCase(UUIDPublicIdMixin, models.Model):
                     % {"max": max_order + 1}
                 }
             )
+
+
+def lesson_attachment_upload_to(instance, filename):
+    from content.attachments import lesson_attachment_upload_to as _path
+
+    return _path(instance, filename)
+
+
+class LessonAttachment(UUIDPublicIdMixin, models.Model):
+    """Материал преподавателя к заданию (не сдача ученика)."""
+
+    theory = models.ForeignKey(
+        LessonTheory,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="attachments",
+        verbose_name=_("Теория"),
+    )
+    radio = models.ForeignKey(
+        LessonRadioQuestion,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="attachments",
+        verbose_name=_("Radio"),
+    )
+    checkbox = models.ForeignKey(
+        LessonCheckBoxQuestion,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="attachments",
+        verbose_name=_("Checkbox"),
+    )
+    short_answer = models.ForeignKey(
+        LessonShortAnswer,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="attachments",
+        verbose_name=_("Краткий ответ"),
+    )
+    coding = models.ForeignKey(
+        CodingChallenge,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="attachments",
+        verbose_name=_("Задача с кодом"),
+    )
+    file = models.FileField(
+        upload_to=lesson_attachment_upload_to,
+        verbose_name=_("Файл"),
+    )
+    original_name = models.CharField(
+        max_length=255,
+        verbose_name=_("Имя файла"),
+    )
+    content_type = models.CharField(
+        max_length=128,
+        blank=True,
+        verbose_name=_("MIME-тип"),
+    )
+    size = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Размер, байт"),
+    )
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="lesson_attachments",
+        verbose_name=_("Загрузил"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Файл задания")
+        verbose_name_plural = _("Файлы заданий")
+        ordering = ("created_at", "id")
+
+    def __str__(self):
+        return self.original_name or f"Attachment {self.public_id}"

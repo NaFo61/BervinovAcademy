@@ -462,7 +462,7 @@ function CatalogPage({ navigate, hashParams }) {
 
                   <button key={c} type="button" onClick={() => setCat(c)}
 
-                    className={`px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all ${
+                    className={`min-h-11 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all ${
 
                       cat === c
 

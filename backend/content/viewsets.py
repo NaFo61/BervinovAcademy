@@ -200,6 +200,7 @@ class LessonTheoryViewSet(
             .select_related(
                 "module", "module__course", "exam", "exam__course", "course"
             )
+            .prefetch_related("attachments")
         )
         queryset = filter_lessons_for_user(queryset, self.request.user)
         module_pub = self.request.query_params.get("module_public_id")
@@ -240,7 +241,9 @@ class LessonRadioQuestionViewSet(
         exam_pub = self.request.query_params.get("exam_public_id")
         if exam_pub:
             queryset = queryset.filter(exam__public_id=exam_pub)
-        return queryset.prefetch_related("answers").order_by("order_index")
+        return queryset.prefetch_related("answers", "attachments").order_by(
+            "order_index"
+        )
 
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -274,7 +277,9 @@ class LessonCheckBoxQuestionViewSet(
         exam_pub = self.request.query_params.get("exam_public_id")
         if exam_pub:
             queryset = queryset.filter(exam__public_id=exam_pub)
-        return queryset.prefetch_related("answers").order_by("order_index")
+        return queryset.prefetch_related("answers", "attachments").order_by(
+            "order_index"
+        )
 
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -300,6 +305,7 @@ class LessonShortAnswerViewSet(
             .select_related(
                 "module", "module__course", "exam", "exam__course", "course"
             )
+            .prefetch_related("attachments")
         )
         queryset = filter_lessons_for_user(queryset, self.request.user)
         module_pub = self.request.query_params.get("module_public_id")
@@ -339,6 +345,7 @@ class CodingChallengeViewSet(
             .select_related(
                 "module", "module__course", "exam", "exam__course", "course"
             )
+            .prefetch_related("attachments")
         )
         queryset = filter_lessons_for_user(queryset, self.request.user)
 

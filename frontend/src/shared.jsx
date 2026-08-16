@@ -621,7 +621,198 @@ async function createConference(guestPublicId) {
 
 function openConferenceCall(navigate, conferencePublicId) {
   if (!conferencePublicId) return;
+  try {
+    const here = `${location.pathname}${location.search}`;
+    if (!/\/call(?:\?|$)/.test(here)) {
+      sessionStorage.setItem('ba_call_return', here);
+    }
+  } catch (_) { /* private mode */ }
   navigate(Routes.CALL, { conf: conferencePublicId });
+}
+
+function consumeCallReturnPath() {
+  try {
+    return sessionStorage.getItem('ba_call_return') || '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function goAfterCall(navigate) {
+  const raw = consumeCallReturnPath();
+  try {
+    sessionStorage.removeItem('ba_call_return');
+  } catch (_) { /* private mode */ }
+  try {
+    const url = new URL(raw, location.origin);
+    const params = Object.fromEntries(url.searchParams.entries());
+    if (url.pathname.includes('/learn') && params.course) {
+      navigate(window.Routes.LEARN, params);
+      return;
+    }
+    if (url.pathname.includes('/course') && params.id) {
+      navigate(window.Routes.COURSE, params);
+      return;
+    }
+  } catch (_) { /* ignore */ }
+  navigate(window.Routes.CONFERENCES);
+}
+
+function formatCallDuration(seconds) {
+  const n = Math.max(0, Math.floor(Number(seconds) || 0));
+  const h = Math.floor(n / 3600);
+  const m = Math.floor((n % 3600) / 60);
+  const s = n % 60;
+  if (h) return `${h} ч ${m} мин`;
+  if (m) return `${m} мин ${s} с`;
+  return `${s} с`;
+}
+
+function formatFileSize(bytes) {
+  const n = Number(bytes) || 0;
+  if (n < 1024) return `${n} Б`;
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} КБ`;
+  return `${(n / (1024 * 1024)).toFixed(1)} МБ`;
+}
+
+function ConfirmDialog({
+  open,
+  title,
+  body,
+  confirmLabel = 'Продолжить',
+  cancelLabel = 'Отмена',
+  extraLabel,
+  danger = false,
+  hideCancel = false,
+  onConfirm,
+  onExtra,
+  onCancel,
+}) {
+  React.useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (event) => {
+      if (event.key === 'Escape') onCancel?.();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onCancel]);
+
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-0 sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ba-confirm-title"
+    >
+      <button type="button" className="absolute inset-0 bg-ink/50" aria-label="Закрыть" onClick={onCancel} />
+      <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-5 shadow-glow ring-1 ring-black/[0.08]">
+        <div id="ba-confirm-title" className="text-lg font-bold text-ink">{title}</div>
+        {body ? <p className="mt-2 text-sm text-ink/65 whitespace-pre-wrap">{body}</p> : null}
+        <div className="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+          {!hideCancel ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="h-11 px-4 rounded-xl text-sm font-semibold ring-1 ring-black/[0.08] bg-white"
+            >
+              {cancelLabel}
+            </button>
+          ) : null}
+          {extraLabel ? (
+            <button
+              type="button"
+              onClick={onExtra}
+              className="h-11 px-4 rounded-xl text-sm font-semibold ring-1 ring-violet-200 text-violet-700 bg-violet-50"
+            >
+              {extraLabel}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onConfirm}
+            className={`h-11 px-4 rounded-xl text-sm font-semibold text-white ${
+              danger ? 'bg-rose-600 hover:bg-rose-500' : 'btn-grad'
+            }`}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AppNoticeHost() {
+  const [notice, setNotice] = React.useState(null);
+  React.useEffect(() => {
+    window.showAppNotice = (opts) => {
+      const payload = typeof opts === 'string'
+        ? { title: 'Сообщение', body: opts }
+        : (opts || {});
+      setNotice({
+        title: payload.title || 'Сообщение',
+        body: payload.body || '',
+        confirmLabel: payload.confirmLabel || 'Понятно',
+      });
+    };
+    return () => {
+      if (window.showAppNotice) delete window.showAppNotice;
+    };
+  }, []);
+  return (
+    <ConfirmDialog
+      open={!!notice}
+      title={notice?.title}
+      body={notice?.body}
+      confirmLabel={notice?.confirmLabel || 'Понятно'}
+      hideCancel
+      onConfirm={() => setNotice(null)}
+      onCancel={() => setNotice(null)}
+    />
+  );
+}
+
+function notifyUser(title, body) {
+  if (typeof window.showAppNotice === 'function') {
+    window.showAppNotice({ title, body });
+  }
+}
+
+function LessonAttachments({ items }) {
+  const list = Array.isArray(items) ? items : [];
+  if (!list.length) return null;
+  return (
+    <div className="mt-5 rounded-2xl ring-1 ring-black/[0.06] bg-white p-4">
+      <div className="text-xs font-semibold uppercase tracking-widest text-ink/50 mb-3">
+        Материалы к заданию
+      </div>
+      <ul className="space-y-2">
+        {list.map((row) => {
+          const href = window.mediaUrl?.(row.url) || row.url || '';
+          return (
+            <li key={row.public_id || row.name}>
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 min-h-11 px-3 py-2 rounded-xl ring-1 ring-black/[0.06] hover:bg-violet-50/70 hover:ring-violet-200 transition-colors"
+              >
+                <span className="w-9 h-9 rounded-lg bg-violet-50 text-violet-700 flex items-center justify-center text-[11px] font-bold shrink-0">
+                  {(row.name || 'файл').split('.').pop()?.slice(0, 4).toUpperCase()}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-ink truncate">{row.name || 'Файл'}</span>
+                  <span className="block text-[11px] text-ink/45">{formatFileSize(row.size)}</span>
+                </span>
+                <span className="text-[12px] font-semibold text-violet-700 shrink-0">Скачать</span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 }
 
 async function fetchConferenceWhiteboard(conferencePublicId) {
@@ -1362,11 +1553,11 @@ function urlBase64ToUint8Array(base64String) {
 
 async function enableWebPushNotifications() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    window.alert('Браузер не поддерживает Web Push.');
+    notifyUser('Не получится', 'Этот браузер не умеет принимать уведомления с сайта.');
     return false;
   }
   if (!getAccessToken()) {
-    window.alert('Сначала войди в аккаунт.');
+    notifyUser('Нужен вход', 'Сначала войдите в аккаунт, потом включим уведомления.');
     return false;
   }
   try {
@@ -1374,12 +1565,12 @@ async function enableWebPushNotifications() {
     await navigator.serviceWorker.ready;
     const vapid = await fetchApiJson('/api/push/vapid/', { auth: true });
     if (!vapid.configured || !vapid.public_key) {
-      window.alert('Web Push ещё не настроен на сервере (VAPID).');
+      notifyUser('Пока недоступно', 'Уведомления на сервере ещё не настроены.');
       return false;
     }
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') {
-      window.alert('Разреши уведомления в браузере.');
+      notifyUser('Нужно разрешение', 'Разрешите уведомления в настройках браузера и попробуйте снова.');
       return false;
     }
     let sub = await reg.pushManager.getSubscription();
@@ -1398,14 +1589,14 @@ async function enableWebPushNotifications() {
         keys: json.keys,
       },
     });
-    window.alert('Push включены — будем слать важные уведомления.');
+    notifyUser('Готово', 'Push включены. Будем присылать важные уведомления.');
     return true;
   } catch (e) {
     const msg = e?.message || String(e);
     if (msg.includes('MIME type') || msg.includes('ServiceWorker')) {
-      window.alert('Push пока недоступен: обнови страницу после деплоя (файл sw.js).');
+      notifyUser('Обновите страницу', 'Push пока недоступны. Обновите страницу и попробуйте снова.');
     } else {
-      window.alert(msg || 'Не удалось включить Push');
+      notifyUser('Не удалось включить', msg || 'Не получилось включить уведомления.');
     }
     return false;
   }
@@ -1890,7 +2081,7 @@ function TopNav({ route, navigate }) {
             <button
               type="button"
               onClick={() => go(Routes.AUTH)}
-              className="btn-grad h-9 px-4 rounded-xl text-white text-sm font-semibold"
+              className="btn-grad h-11 px-4 rounded-xl text-white text-sm font-semibold"
             >
               Войти
             </button>
@@ -2378,6 +2569,13 @@ Object.assign(window, {
   openStudentProfile,
   createConference,
   openConferenceCall,
+  goAfterCall,
+  consumeCallReturnPath,
+  formatCallDuration,
+  formatFileSize,
+  ConfirmDialog,
+  AppNoticeHost,
+  LessonAttachments,
   enableWebPushNotifications,
   fetchConferenceWhiteboard,
   fetchNotifications,

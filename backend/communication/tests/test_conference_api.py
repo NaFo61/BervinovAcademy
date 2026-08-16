@@ -114,6 +114,57 @@ class TestConferenceApi:
         conf = Conference.objects.get(public_id=conf_id)
         assert conf.status == Conference.Status.ACTIVE
 
+    def test_guest_cannot_end_call(
+        self, mentor_client, student_client, student_user
+    ):
+        create = mentor_client.post(
+            "/api/communication/conferences/",
+            {"guest": str(student_user.public_id)},
+            format="json",
+        )
+        conf_id = create.data["public_id"]
+        resp = student_client.post(
+            f"/api/communication/conferences/{conf_id}/end/",
+        )
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        conf = Conference.objects.get(public_id=conf_id)
+        assert conf.status == Conference.Status.WAITING
+
+    def test_guest_leave_keeps_conference(
+        self, mentor_client, student_client, student_user
+    ):
+        create = mentor_client.post(
+            "/api/communication/conferences/",
+            {"guest": str(student_user.public_id)},
+            format="json",
+        )
+        conf_id = create.data["public_id"]
+        resp = student_client.post(
+            f"/api/communication/conferences/{conf_id}/leave/",
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        conf = Conference.objects.get(public_id=conf_id)
+        assert conf.status == Conference.Status.WAITING
+        assert conf.guest_in_room is False
+
+    def test_mentor_end_completes_for_everyone(
+        self, mentor_client, student_user
+    ):
+        create = mentor_client.post(
+            "/api/communication/conferences/",
+            {"guest": str(student_user.public_id)},
+            format="json",
+        )
+        conf_id = create.data["public_id"]
+        resp = mentor_client.post(
+            f"/api/communication/conferences/{conf_id}/end/",
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["status"] == "completed"
+        conf = Conference.objects.get(public_id=conf_id)
+        assert conf.status == Conference.Status.COMPLETED
+        assert conf.ended_at is not None
+
     def test_guest_declines(self, mentor_client, student_client, student_user):
         create = mentor_client.post(
             "/api/communication/conferences/",

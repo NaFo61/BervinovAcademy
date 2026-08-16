@@ -290,10 +290,13 @@
     box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
   }
   .site-header__icon-btn {
-    width: 2.25rem; height: 2.25rem; border-radius: 10px;
+    width: 2.75rem; height: 2.75rem; border-radius: 10px;
     display: inline-flex; align-items: center; justify-content: center;
     color: rgba(11,18,38,0.62);
     transition: background 140ms ease, color 140ms ease;
+  }
+  @media (min-width: 640px) {
+    .site-header__icon-btn { width: 2.25rem; height: 2.25rem; }
   }
   .site-header__icon-btn:hover { background: rgba(11,18,38,0.05); color: var(--ink); }
   .site-header__icon-btn.is-active {

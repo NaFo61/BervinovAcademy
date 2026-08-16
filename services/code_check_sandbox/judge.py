@@ -158,17 +158,19 @@ def main() -> int:
 
         if proc.returncode != 0:
             n = passed + 1
-            tail = (proc.stderr or "")[-800:].strip()
-            err_full = _clip((proc.stderr or "").strip())
+            err_text = proc.stderr or ""
+            out_text = proc.stdout or ""
             if hidden:
                 msg = f"Ошибка выполнения на скрытом тесте № {n}."
                 act: str | None = None
             else:
                 msg = (
-                    f"Ошибка выполнения на тесте № {n} (код {proc.returncode})"
-                    + (f": {tail}" if tail else ".")
+                    f"Ошибка выполнения на тесте № {n} "
+                    f"(код {proc.returncode})."
                 )
-                act = err_full if err_full else _clip((proc.stdout or "").strip())
+                act = _clip(
+                    err_text if err_text.strip() else out_text
+                )
             _emit(
                 {
                     "status": "error",
