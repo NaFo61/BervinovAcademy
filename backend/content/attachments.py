@@ -22,6 +22,7 @@ ALLOWED_EXTENSIONS = frozenset(
         ".jpeg",
         ".gif",
         ".webp",
+        ".svg",
         ".zip",
         ".txt",
         ".md",
@@ -83,8 +84,8 @@ def validate_upload(upload) -> None:
             {
                 "file": (
                     "Этот тип файла нельзя прикрепить. "
-                    "Можно: pdf, Word, Excel, PowerPoint, картинки, "
-                    "zip, txt, md."
+                    "Можно: pdf, Word, Excel, PowerPoint, картинки "
+                    "(включая svg), zip, txt, md."
                 )
             }
         )

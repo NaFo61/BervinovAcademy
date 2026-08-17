@@ -243,6 +243,112 @@ function WhiteboardApp({ container, roomId, syncBaseUrl, syncToken, licenseKey }
   );
 }
 
+function waitForEditor(timeoutMs = 15000) {
+  return new Promise((resolve, reject) => {
+    const started = Date.now();
+    const tick = () => {
+      for (const entry of mounts.values()) {
+        if (entry?.editor) {
+          resolve(entry.editor);
+          return;
+        }
+      }
+      if (Date.now() - started > timeoutMs) {
+        reject(new Error('Доска ещё не готова. Подождите секунду и откройте снова.'));
+        return;
+      }
+      requestAnimationFrame(tick);
+    };
+    tick();
+  });
+}
+
+function guessImageMime(src) {
+  const name = String(src || '').toLowerCase();
+  if (name.endsWith('.svg')) return 'image/svg+xml';
+  if (name.endsWith('.png')) return 'image/png';
+  if (name.endsWith('.gif')) return 'image/gif';
+  if (name.endsWith('.webp')) return 'image/webp';
+  if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'image/jpeg';
+  return 'image/png';
+}
+
+function loadImageSize(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      resolve({
+        w: img.naturalWidth || 800,
+        h: img.naturalHeight || 600,
+      });
+    };
+    img.onerror = () => resolve({ w: 800, h: 600 });
+    img.src = src;
+  });
+}
+
+async function createImagesFromUrls(urls = []) {
+  const list = (urls || []).map(String).filter(Boolean);
+  if (!list.length) return;
+  const editor = await waitForEditor();
+  const existing = new Set();
+  try {
+    for (const asset of editor.getAssets()) {
+      const key = asset?.meta?.importSrc || asset?.props?.src;
+      if (key) existing.add(String(key));
+    }
+  } catch (_) { /* older store */ }
+
+  let x = 0;
+  let placed = 0;
+  for (const src of list) {
+    if (existing.has(src)) continue;
+    const { w, h } = await loadImageSize(src);
+    const maxW = 1100;
+    const scale = w > maxW ? maxW / w : 1;
+    const dw = Math.max(120, Math.round(w * scale));
+    const dh = Math.max(80, Math.round(h * scale));
+    const assetId = AssetRecordType.createId();
+    editor.createAssets([{
+      id: assetId,
+      typeName: 'asset',
+      type: 'image',
+      meta: { importSrc: src },
+      props: {
+        name: decodeURIComponent(String(src).split('/').pop() || 'image'),
+        src,
+        w,
+        h,
+        mimeType: guessImageMime(src),
+        isAnimated: false,
+      },
+    }]);
+    editor.createShape({
+      type: 'image',
+      x,
+      y: 0,
+      props: {
+        w: dw,
+        h: dh,
+        assetId,
+        playing: true,
+        url: '',
+        crop: null,
+      },
+    });
+    existing.add(src);
+    x += dw + 48;
+    placed += 1;
+  }
+  if (placed > 0 && typeof editor.zoomToFit === 'function') {
+    try {
+      editor.zoomToFit({ animation: { duration: 200 } });
+    } catch (_) {
+      editor.zoomToFit();
+    }
+  }
+}
+
 function mount(container, options = {}) {
   if (!container) return;
   const roomId = options.roomId;
@@ -349,4 +455,11 @@ function mountReadOnly(container, options = {}) {
   mounts.set(container, { root, roomId: 'readonly', editor: null });
 }
 
-window.BervinovWhiteboard = { mount, unmount, exportPngBlob, exportSnapshotJson, mountReadOnly };
+window.BervinovWhiteboard = {
+  mount,
+  unmount,
+  exportPngBlob,
+  exportSnapshotJson,
+  mountReadOnly,
+  createImagesFromUrls,
+};

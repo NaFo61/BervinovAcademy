@@ -200,7 +200,7 @@ function AttachmentsEditor({ kind, publicId, items, onChange }) {
 
   return (
     <div>
-      <FieldLabel hint="PDF, Word, Excel, презентации, картинки, zip, txt, md. До 20 МБ. Ученик увидит файлы в задании.">
+      <FieldLabel hint="PDF, Word, Excel, презентации, картинки (png, jpg, svg), zip, txt, md. До 20 МБ. Ученик увидит файлы в задании.">
         Файлы к заданию
       </FieldLabel>
       {err && <p className="mb-2 text-sm text-red-600">{err}</p>}
@@ -222,7 +222,7 @@ function AttachmentsEditor({ kind, publicId, items, onChange }) {
           type="file"
           className="sr-only"
           disabled={busy}
-          accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.zip,.txt,.md"
+          accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.svg,.zip,.txt,.md"
           onChange={(e) => {
             const file = e.target.files?.[0];
             e.target.value = '';

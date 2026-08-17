@@ -14,6 +14,9 @@ function WhiteboardPage({ navigate }) {
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(true);
   const [roomId, setRoomId] = React.useState('');
+  const [importNotice, setImportNotice] = React.useState('');
+  const [backNav, setBackNav] = React.useState(null);
+  const [sideImages, setSideImages] = React.useState([]);
 
   React.useEffect(() => {
     if (!token) return undefined;
@@ -25,6 +28,10 @@ function WhiteboardPage({ navigate }) {
 
     let cancelled = false;
     let mounted = false;
+    const pending = window.consumeLessonBoardImport ? window.consumeLessonBoardImport() : null;
+    if (pending?.backRoute) {
+      setBackNav({ route: pending.backRoute, query: pending.backQuery || {} });
+    }
 
     (async () => {
       setLoading(true);
@@ -50,6 +57,25 @@ function WhiteboardPage({ navigate }) {
         });
         mounted = true;
         setLoading(false);
+        if (pending?.urls?.length) {
+          const notice = pending.title
+            ? `Картинка с задания «${pending.title}». Рисуйте на доске — это черновик.`
+            : 'Картинка задания. Рисуйте на доске — это черновик.';
+          if (api.createImagesFromUrls) {
+            setImportNotice(notice);
+            try {
+              await api.createImagesFromUrls(pending.urls);
+            } catch (err) {
+              if (!cancelled) {
+                setSideImages(pending.urls);
+                setImportNotice(err?.message || 'Схема слева. Рисуйте на доске справа.');
+              }
+            }
+          } else if (!cancelled) {
+            setSideImages(pending.urls);
+            setImportNotice(notice);
+          }
+        }
       } catch (err) {
         if (cancelled) return;
         setLoading(false);
@@ -86,10 +112,13 @@ function WhiteboardPage({ navigate }) {
       <div className="shrink-0 h-14 px-3 sm:px-5 flex items-center gap-3 border-b border-black/[0.08] bg-white">
         <button
           type="button"
-          onClick={() => navigate(Routes.PROFILE)}
+          onClick={() => {
+            if (backNav?.route) navigate(backNav.route, backNav.query);
+            else navigate(Routes.PROFILE);
+          }}
           className="h-9 px-3 rounded-lg text-sm font-medium text-ink/70 hover:bg-black/[0.04] shrink-0"
         >
-          ← Назад
+          ← {backNav?.route ? 'К заданию' : 'Назад'}
         </button>
         <div className="min-w-0 flex-1">
           <div className="text-base font-semibold text-ink truncate">Моя доска</div>
@@ -105,7 +134,23 @@ function WhiteboardPage({ navigate }) {
           Созвоны
         </button>
       </div>
-      <div className="relative flex-1 min-h-0 overflow-hidden">
+      <div className="relative flex-1 min-h-0 overflow-hidden flex flex-col lg:flex-row">
+        {sideImages.length > 0 && (
+          <div className="shrink-0 lg:w-[42%] max-h-[38vh] lg:max-h-none lg:h-full overflow-auto bg-white border-b lg:border-b-0 lg:border-r border-black/[0.08] p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-widest text-ink/45 mb-2">
+              Схема задания
+            </div>
+            {sideImages.map((src) => (
+              <img
+                key={src}
+                src={src}
+                alt="Схема задания"
+                className="w-full h-auto rounded-lg ring-1 ring-black/[0.06] bg-[#fafafa] mb-3"
+              />
+            ))}
+          </div>
+        )}
+        <div className="relative flex-1 min-h-0 overflow-hidden">
         {loading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-ink/50 bg-white/60">
             Подключение к доске…
@@ -124,6 +169,19 @@ function WhiteboardPage({ navigate }) {
           </div>
         )}
         <div ref={hostRef} className="absolute inset-0 whiteboard-studio" data-room={roomId} />
+        {importNotice && !error && (
+          <div className="absolute left-3 right-3 sm:left-auto sm:right-4 top-3 z-20 max-w-md rounded-xl bg-white/95 ring-1 ring-violet-200 shadow-soft px-4 py-3 text-sm text-ink/80">
+            {importNotice}
+            <button
+              type="button"
+              onClick={() => setImportNotice('')}
+              className="mt-2 block text-[12px] font-semibold text-violet-700"
+            >
+              Скрыть
+            </button>
+          </div>
+        )}
+        </div>
       </div>
     </div>
   );

@@ -277,7 +277,7 @@ function ExamResultScreen({ attempt, exam, courseId, navigate, embedded }) {
 
 // ─── Step panels ─────────────────────────────────────────────────────────────
 
-function ExamTheoryPanel({ lesson, marked, onMark }) {
+function ExamTheoryPanel({ lesson, marked, onMark, navigate }) {
   React.useEffect(() => {
     if (marked || !lesson?.public_id) return;
     onMark();
@@ -286,6 +286,9 @@ function ExamTheoryPanel({ lesson, marked, onMark }) {
   return (
     <div>
       <ExamLessonHeader kind="theory" title={lesson.title} label="Справочная теория"/>
+      {window.LessonAttachments && (
+        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+      )}
       <window.VideoExplanation video={lesson.video} title="Видео"/>
       <div
         className="theory-content mt-6"
@@ -317,7 +320,7 @@ function ExamLessonHeader({ kind, title, label }) {
   );
 }
 
-function ExamRadioPanel({ lesson, step, attemptId, onUpdated }) {
+function ExamRadioPanel({ lesson, step, attemptId, onUpdated, navigate }) {
   const [selected, setSelected] = React.useState(step?.payload?.selected_answer_public_id || null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
@@ -347,6 +350,9 @@ function ExamRadioPanel({ lesson, step, attemptId, onUpdated }) {
   return (
     <div>
       <ExamLessonHeader kind="radio" title={lesson.title} label="Один правильный ответ"/>
+      {window.LessonAttachments && (
+        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+      )}
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
         <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
       </div>
@@ -395,7 +401,7 @@ function ExamRadioPanel({ lesson, step, attemptId, onUpdated }) {
   );
 }
 
-function ExamCheckboxPanel({ lesson, step, attemptId, onUpdated }) {
+function ExamCheckboxPanel({ lesson, step, attemptId, onUpdated, navigate }) {
   const initial = new Set(step?.payload?.selected_answer_public_ids || []);
   const [selected, setSelected] = React.useState(initial);
   const [loading, setLoading] = React.useState(false);
@@ -439,6 +445,9 @@ function ExamCheckboxPanel({ lesson, step, attemptId, onUpdated }) {
   return (
     <div>
       <ExamLessonHeader kind="checkbox" title={lesson.title} label="Несколько правильных ответов"/>
+      {window.LessonAttachments && (
+        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+      )}
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
         <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
       </div>
@@ -478,7 +487,7 @@ function ExamCheckboxPanel({ lesson, step, attemptId, onUpdated }) {
   );
 }
 
-function ExamCodingPanel({ lesson, step, attemptId, onUpdated }) {
+function ExamCodingPanel({ lesson, step, attemptId, onUpdated, navigate }) {
   const [code, setCode] = React.useState(lesson.initial_code || DEFAULT_PYTHON_CODE);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
@@ -524,6 +533,9 @@ function ExamCodingPanel({ lesson, step, attemptId, onUpdated }) {
   return (
     <div>
       <ExamLessonHeader kind="coding" title={lesson.title} label="Задача с кодом"/>
+      {window.LessonAttachments && (
+        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+      )}
       <div className="mt-6 prose prose-sm max-w-none text-ink/75">
         <p>{lesson.description}</p>
         {lesson.instructions && <p className="whitespace-pre-wrap">{lesson.instructions}</p>}
@@ -736,6 +748,7 @@ function ExamActiveSession({
     <ExamTheoryPanel
       lesson={lessonData}
       marked={stepState.answered}
+      navigate={navigate}
       onMark={async () => {
         const data = await window.fetchApiJson(
           `/api/exams/attempts/${encodeURIComponent(attempt.public_id)}/theory/`,
@@ -750,6 +763,7 @@ function ExamActiveSession({
       step={stepState}
       attemptId={attempt.public_id}
       onUpdated={onAttemptChange}
+      navigate={navigate}
     />
   ) : currentStep?.kind === 'checkbox' ? (
     <ExamCheckboxPanel
@@ -757,6 +771,7 @@ function ExamActiveSession({
       step={stepState}
       attemptId={attempt.public_id}
       onUpdated={onAttemptChange}
+      navigate={navigate}
     />
   ) : currentStep?.kind === 'coding' ? (
     <ExamCodingPanel
@@ -764,6 +779,7 @@ function ExamActiveSession({
       step={stepState}
       attemptId={attempt.public_id}
       onUpdated={onAttemptChange}
+      navigate={navigate}
     />
   ) : null;
 

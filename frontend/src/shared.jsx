@@ -779,38 +779,140 @@ function notifyUser(title, body) {
   }
 }
 
-function LessonAttachments({ items }) {
+const LESSON_BOARD_IMPORT_KEY = 'bervinov.lessonBoardImport';
+
+function whiteboardFeatureEnabled() {
+  const meta = document.querySelector('meta[name="whiteboard-enabled"]');
+  if (!meta) return true;
+  return meta.getAttribute('content') !== 'false';
+}
+
+function isLessonImageAttachment(row) {
+  const ct = String(row?.content_type || '').toLowerCase();
+  if (ct.startsWith('image/')) return true;
+  const name = String(row?.name || row?.url || '').toLowerCase();
+  return /\.(png|jpe?g|gif|webp|svg)$/i.test(name);
+}
+
+function consumeLessonBoardImport() {
+  try {
+    const raw = sessionStorage.getItem(LESSON_BOARD_IMPORT_KEY);
+    sessionStorage.removeItem(LESSON_BOARD_IMPORT_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    const urls = Array.isArray(data?.urls) ? data.urls.filter(Boolean) : [];
+    if (!urls.length) return null;
+    return {
+      urls,
+      backRoute: data.backRoute || '',
+      backQuery: data.backQuery && typeof data.backQuery === 'object' ? data.backQuery : {},
+      title: data.title || '',
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function openLessonImagesOnBoard(navigate, { urls, title } = {}) {
+  const list = (urls || []).filter(Boolean);
+  if (!list.length || typeof navigate !== 'function') return;
+  const trimmed = stripAppBase(location.pathname).replace(/^\/+|\/+$/g, '');
+  const routeId = trimmed.split('/')[0] || Routes.LEARN;
+  try {
+    sessionStorage.setItem(LESSON_BOARD_IMPORT_KEY, JSON.stringify({
+      urls: list,
+      backRoute: KNOWN_ROUTES.has(routeId) ? routeId : Routes.LEARN,
+      backQuery: Object.fromEntries(new URLSearchParams(location.search)),
+      title: title || '',
+    }));
+  } catch (_) { /* quota */ }
+  navigate(Routes.WHITEBOARD);
+}
+
+function LessonAttachments({ items, navigate, lessonTitle }) {
   const list = Array.isArray(items) ? items : [];
   if (!list.length) return null;
+  const images = list.filter(isLessonImageAttachment);
+  const files = list.filter((row) => !isLessonImageAttachment(row));
+  const loggedIn = !!getAccessToken();
+  const canBoard = loggedIn && whiteboardFeatureEnabled() && images.length > 0 && typeof navigate === 'function';
+
   return (
-    <div className="mt-5 rounded-2xl ring-1 ring-black/[0.06] bg-white p-4">
-      <div className="text-xs font-semibold uppercase tracking-widest text-ink/50 mb-3">
-        Материалы к заданию
-      </div>
-      <ul className="space-y-2">
-        {list.map((row) => {
-          const href = window.mediaUrl?.(row.url) || row.url || '';
-          return (
-            <li key={row.public_id || row.name}>
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 min-h-11 px-3 py-2 rounded-xl ring-1 ring-black/[0.06] hover:bg-violet-50/70 hover:ring-violet-200 transition-colors"
-              >
-                <span className="w-9 h-9 rounded-lg bg-violet-50 text-violet-700 flex items-center justify-center text-[11px] font-bold shrink-0">
-                  {(row.name || 'файл').split('.').pop()?.slice(0, 4).toUpperCase()}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold text-ink truncate">{row.name || 'Файл'}</span>
-                  <span className="block text-[11px] text-ink/45">{formatFileSize(row.size)}</span>
-                </span>
-                <span className="text-[12px] font-semibold text-violet-700 shrink-0">Скачать</span>
-              </a>
-            </li>
-          );
-        })}
-      </ul>
+    <div className="mt-5 space-y-4">
+      {images.length > 0 && (
+        <div className="rounded-2xl ring-1 ring-black/[0.06] bg-white p-3 sm:p-4">
+          <div className="text-xs font-semibold uppercase tracking-widest text-ink/50 mb-3">
+            Схема к заданию
+          </div>
+          <div className="space-y-3">
+            {images.map((row) => {
+              const href = mediaUrl(row.url) || row.url || '';
+              return (
+                <figure key={row.public_id || row.name} className="overflow-hidden rounded-xl ring-1 ring-black/[0.06] bg-[#fafafa]">
+                  <img
+                    src={href}
+                    alt={row.name || 'Схема задания'}
+                    className="w-full max-h-[min(72vh,720px)] object-contain bg-white"
+                  />
+                </figure>
+              );
+            })}
+          </div>
+          {canBoard && (
+            <button
+              type="button"
+              onClick={() => openLessonImagesOnBoard(navigate, {
+                urls: images.map((row) => mediaUrl(row.url) || row.url).filter(Boolean),
+                title: lessonTitle,
+              })}
+              className="mt-3 min-h-11 w-full sm:w-auto px-4 rounded-xl text-sm font-semibold text-violet-800 bg-violet-50 ring-1 ring-violet-200 hover:bg-violet-100"
+            >
+              На личную доску
+            </button>
+          )}
+          {canBoard && (
+            <p className="mt-2 text-[12px] text-ink/45 leading-relaxed">
+              Картинка откроется на вашей доске. Можно рисовать сверху. Это черновик, на оценку не влияет.
+            </p>
+          )}
+          {!loggedIn && images.length > 0 && whiteboardFeatureEnabled() && (
+            <p className="mt-2 text-[12px] text-ink/45">
+              Войдите, чтобы рисовать на личной доске.
+            </p>
+          )}
+        </div>
+      )}
+      {files.length > 0 && (
+        <div className="rounded-2xl ring-1 ring-black/[0.06] bg-white p-4">
+          <div className="text-xs font-semibold uppercase tracking-widest text-ink/50 mb-3">
+            Материалы к заданию
+          </div>
+          <ul className="space-y-2">
+            {files.map((row) => {
+              const href = mediaUrl(row.url) || row.url || '';
+              return (
+                <li key={row.public_id || row.name}>
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 min-h-11 px-3 py-2 rounded-xl ring-1 ring-black/[0.06] hover:bg-violet-50/70 hover:ring-violet-200 transition-colors"
+                  >
+                    <span className="w-9 h-9 rounded-lg bg-violet-50 text-violet-700 flex items-center justify-center text-[11px] font-bold shrink-0">
+                      {(row.name || 'файл').split('.').pop()?.slice(0, 4).toUpperCase()}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-ink truncate">{row.name || 'Файл'}</span>
+                      <span className="block text-[11px] text-ink/45">{formatFileSize(row.size)}</span>
+                    </span>
+                    <span className="text-[12px] font-semibold text-violet-700 shrink-0">Скачать</span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
@@ -2576,6 +2678,7 @@ Object.assign(window, {
   ConfirmDialog,
   AppNoticeHost,
   LessonAttachments,
+  consumeLessonBoardImport,
   enableWebPushNotifications,
   fetchConferenceWhiteboard,
   fetchNotifications,

@@ -749,6 +749,7 @@ function LearnPage({ navigate, hashParams }) {
                 onRetry={handleRadioRetry}
                 onLogin={() => navigate(Routes.AUTH)}
                 onRefreshLesson={refreshLesson}
+                navigate={navigate}
               />
 
             ) : lessonType === 'checkbox' && lessonData ? (
@@ -763,6 +764,7 @@ function LearnPage({ navigate, hashParams }) {
                 onRetry={handleBoxRetry}
                 onLogin={() => navigate(Routes.AUTH)}
                 onRefreshLesson={refreshLesson}
+                navigate={navigate}
               />
 
             ) : lessonType === 'short_answer' && lessonData ? (
@@ -777,6 +779,7 @@ function LearnPage({ navigate, hashParams }) {
                 onRetry={handleShortRetry}
                 onLogin={() => navigate(Routes.AUTH)}
                 onRefreshLesson={refreshLesson}
+                navigate={navigate}
               />
 
             ) : lessonType === 'coding' && lessonData ? (
@@ -789,6 +792,7 @@ function LearnPage({ navigate, hashParams }) {
                 }}
                 onLogin={() => navigate(Routes.AUTH)}
                 onRefreshLesson={refreshLesson}
+                navigate={navigate}
               />
 
             ) : (
@@ -882,7 +886,9 @@ function TheoryLesson({ lesson, isDone, onComplete, onLogin, navigate }) {
   return (
     <div>
       <LessonHeader type="theory" title={lesson.title} label="Теоретический урок"/>
-      {window.LessonAttachments && <window.LessonAttachments items={lesson.attachments} />}
+      {window.LessonAttachments && (
+        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+      )}
 
       {lesson.video ? (
         <window.VideoExplanation video={lesson.video} title="Видео-объяснение"/>
@@ -938,7 +944,7 @@ function TheoryLesson({ lesson, isDone, onComplete, onLogin, navigate }) {
 
 // ─── Radio question ──────────────────────────────────────────────────────────
 
-function RadioLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson }) {
+function RadioLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson, navigate }) {
   const loggedIn  = !!window.getAccessToken();
   const isCorrect = result?.is_correct;
   const [sessionFails, setSessionFails] = React.useState(0);
@@ -973,7 +979,9 @@ function RadioLesson({ lesson, selected, setSelected, submitted, result, loading
   return (
     <div>
       <LessonHeader type="radio" title={lesson.title} label="Вопрос — один правильный ответ"/>
-      {window.LessonAttachments && <window.LessonAttachments items={lesson.attachments} />}
+      {window.LessonAttachments && (
+        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+      )}
 
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
         <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
@@ -1064,7 +1072,7 @@ function RadioLesson({ lesson, selected, setSelected, submitted, result, loading
 
 // ─── Checkbox question ───────────────────────────────────────────────────────
 
-function CheckboxLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson }) {
+function CheckboxLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson, navigate }) {
   const loggedIn  = !!window.getAccessToken();
   const isCorrect = result?.is_correct;
   const [sessionFails, setSessionFails] = React.useState(0);
@@ -1108,7 +1116,9 @@ function CheckboxLesson({ lesson, selected, setSelected, submitted, result, load
   return (
     <div>
       <LessonHeader type="checkbox" title={lesson.title} label="Вопрос — несколько правильных ответов"/>
-      {window.LessonAttachments && <window.LessonAttachments items={lesson.attachments} />}
+      {window.LessonAttachments && (
+        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+      )}
 
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
         <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
@@ -1196,7 +1206,7 @@ function CheckboxLesson({ lesson, selected, setSelected, submitted, result, load
 // ─── Short answer ────────────────────────────────────────────────────────────
 
 function ShortAnswerLesson({
-  lesson, answer, setAnswer, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson,
+  lesson, answer, setAnswer, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson, navigate,
 }) {
   const loggedIn  = !!window.getAccessToken();
   const isCorrect = result?.is_correct;
@@ -1231,7 +1241,9 @@ function ShortAnswerLesson({
   return (
     <div>
       <LessonHeader type="short_answer" title={lesson.title} label="Краткий ответ"/>
-      {window.LessonAttachments && <window.LessonAttachments items={lesson.attachments} />}
+      {window.LessonAttachments && (
+        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+      )}
 
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
         <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
@@ -1529,7 +1541,7 @@ function CodeSubmissionResult({ result, points, loggedIn, onLogin, onRetry, solu
   );
 }
 
-function CodingLesson({ lesson, isDone, onComplete, onLogin, onRefreshLesson }) {
+function CodingLesson({ lesson, isDone, onComplete, onLogin, onRefreshLesson, navigate }) {
   const loggedIn = !!window.getAccessToken();
   const [code, setCode] = React.useState(lesson.initial_code || DEFAULT_PYTHON_CODE);
   const [submitLoading, setSubmitLoading] = React.useState(false);
@@ -1645,7 +1657,9 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin, onRefreshLesson }) 
         badge={lesson.difficulty_display || lesson.difficulty}
         points={lesson.points}
       />
-      {window.LessonAttachments && <window.LessonAttachments items={lesson.attachments} />}
+      {window.LessonAttachments && (
+        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+      )}
 
       {lesson.description && (
         <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft whitespace-pre-wrap text-[15px] text-ink/80 leading-relaxed">

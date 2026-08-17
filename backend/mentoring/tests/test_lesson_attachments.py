@@ -85,6 +85,21 @@ class TestLessonAttachments:
         )
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 
+    def test_allows_svg(self, mentor_client, theory_lesson):
+        svg = SimpleUploadedFile(
+            "graph.svg",
+            b'<svg xmlns="http://www.w3.org/2000/svg"></svg>',
+            content_type="image/svg+xml",
+        )
+        resp = mentor_client.post(
+            f"/api/mentoring/editor/lessons/theory/"
+            f"{theory_lesson.public_id}/attachments/",
+            {"file": svg},
+            format="multipart",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["name"] == "graph.svg"
+
     def test_rejects_exe(self, mentor_client, theory_lesson):
         bad = SimpleUploadedFile(
             "virus.exe",
