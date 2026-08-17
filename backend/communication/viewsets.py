@@ -10,7 +10,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from mentoring.permissions import IsMentorOrAdmin
+from mentoring.permissions import IsAdminRole, IsMentorOrAdmin
 
 from . import services
 from .livekit_tokens import LiveKitNotConfiguredError, issue_room_token
@@ -24,6 +24,7 @@ from .serializers import (
     UserNotificationSerializer,
     WhiteboardTokenSerializer,
 )
+from .stats import build_call_stats, normalize_stats_days
 from .whiteboard_tokens import (
     issue_whiteboard_sync_token,
     personal_studio_room_id,
@@ -473,3 +474,13 @@ class LiveKitWebhookView(APIView):
                 ),
             }
         )
+
+
+class AdminCallStatsView(APIView):
+    """``GET /api/communication/admin/call-stats/?days=7`` — сводка звонков."""
+
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def get(self, request):
+        days = normalize_stats_days(request.query_params.get("days"))
+        return Response(build_call_stats(days=days))

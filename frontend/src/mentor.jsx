@@ -14,6 +14,50 @@ function studentPublicId(row) {
   return row.user_public_id || row.student?.public_id || null;
 }
 
+function formatEnrollDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}
+
+function NewStudentsBlock({ count, items, loading, onOpenProfile }) {
+  return (
+    <div className="bg-white rounded-2xl ring-1 ring-black/[0.04] shadow-soft p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-bold text-lg">Новые ученики</h2>
+          <p className="text-sm text-ink/55 mt-1">Записались на ваши курсы за 7 дней</p>
+        </div>
+        <div className="text-right">
+          <div className="text-3xl font-extrabold tracking-tight">{loading ? '…' : count}</div>
+          <div className="text-[11px] text-ink/45">за неделю</div>
+        </div>
+      </div>
+      {loading ? (
+        <p className="text-sm text-ink/50 mt-4">Загрузка…</p>
+      ) : count === 0 ? (
+        <p className="text-sm text-ink/50 mt-4">Пока нет новых учеников</p>
+      ) : (
+        <ul className="mt-4 divide-y divide-black/[0.05]">
+          {items.map((row) => (
+            <li key={`${row.user_public_id}-${row.course_public_id}`}
+              className="py-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <button type="button"
+                  onClick={() => onOpenProfile(row.user_public_id)}
+                  className="text-sm font-semibold text-violet-600 hover:underline">
+                  {studentName(row)}
+                </button>
+                <div className="text-xs text-ink/50 mt-0.5">{row.course_title || 'Курс'}</div>
+              </div>
+              <div className="text-xs text-ink/45">{formatEnrollDate(row.started_at)}</div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function MentorLink({ children, onClick, className }) {
   return (
     <button type="button" onClick={onClick}
@@ -103,6 +147,9 @@ function MentorPage({ navigate }) {
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [assignableMentors, setAssignableMentors] = React.useState([]);
   const [assignBusy, setAssignBusy] = React.useState(null);
+  const [newStudents, setNewStudents] = React.useState([]);
+  const [newStudentsCount, setNewStudentsCount] = React.useState(0);
+  const [newStudentsLoading, setNewStudentsLoading] = React.useState(true);
 
   const reloadCourses = React.useCallback(async (selectId) => {
     const data = await window.fetchApiJson('/api/mentoring/courses/', { auth: true });
@@ -209,10 +256,28 @@ function MentorPage({ navigate }) {
         } catch (_) {
           if (!cancelled) setAssignableMentors([]);
         }
+        try {
+          const fresh = await window.fetchApiJson(
+            '/api/mentoring/new-students/?days=7',
+            { auth: true },
+          );
+          if (!cancelled) {
+            setNewStudents(fresh?.results || []);
+            setNewStudentsCount(fresh?.count || 0);
+          }
+        } catch (_) {
+          if (!cancelled) {
+            setNewStudents([]);
+            setNewStudentsCount(0);
+          }
+        }
       } catch (e) {
         if (!cancelled) setError(e.message || 'Ошибка загрузки');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setNewStudentsLoading(false);
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -354,6 +419,13 @@ function MentorPage({ navigate }) {
         {error && (
           <div className="p-4 rounded-xl bg-red-50 text-red-700 text-sm ring-1 ring-red-200">{error}</div>
         )}
+
+        <NewStudentsBlock
+          count={newStudentsCount}
+          items={newStudents}
+          loading={newStudentsLoading}
+          onOpenProfile={openProfile}
+        />
 
         <div className="flex flex-wrap gap-2">
           {['courses', 'editor', 'students', 'code', 'quiz', 'exams', 'calls'].map((id) => (

@@ -24,14 +24,20 @@ def dashboard_callback(request, context):
     submissions_7d = 0
     course_names = []
     course_counts = []
+    call_stats_7d = None
+    call_stats_30d = None
 
     try:
         from exams.models import ExamAttempt
 
+        from communication.stats import build_call_stats
         from content.models import Course
         from education.models import Enrollment
         from progress.models import CodeSubmission
         from subscriptions.models import Entitlement
+
+        call_stats_7d = build_call_stats(days=7)
+        call_stats_30d = build_call_stats(days=30)
 
         total_courses = Course.objects.count()
         active_students = (
@@ -91,6 +97,12 @@ def dashboard_callback(request, context):
         course_names = [_("Нет данных")]
         course_counts = [0]
 
+    if call_stats_7d is None:
+        from communication.stats import empty_call_stats
+
+        call_stats_7d = empty_call_stats(7)
+        call_stats_30d = empty_call_stats(30)
+
     context.update(
         {
             "total_users": total_users,
@@ -108,6 +120,8 @@ def dashboard_callback(request, context):
             "users_last_30_days": User.objects.filter(
                 date_joined__gte=month_ago
             ).count(),
+            "call_stats_7d": call_stats_7d,
+            "call_stats_30d": call_stats_30d,
         }
     )
     return context

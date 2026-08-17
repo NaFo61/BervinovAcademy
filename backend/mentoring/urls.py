@@ -22,6 +22,7 @@ from .views import (
     MentorCodeSubmissionsView,
     MentorCoursesOverviewView,
     MentorCourseStudentsView,
+    MentorNewStudentsView,
     MentorQuizAnswersView,
     MyMentorView,
 )
@@ -33,6 +34,11 @@ urlpatterns = [
         "mentoring/courses/",
         MentorCoursesOverviewView.as_view(),
         name="courses-overview",
+    ),
+    path(
+        "mentoring/new-students/",
+        MentorNewStudentsView.as_view(),
+        name="new-students",
     ),
     path(
         "mentoring/courses/<uuid:course_public_id>/students/",

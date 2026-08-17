@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
+from django.utils import timezone
+
 from content.models import Course
 from education.models import Enrollment
 from progress.models import (
@@ -10,6 +14,49 @@ from progress.models import (
     UserAnswerRadio,
 )
 from progress.stats import get_course_progress_detail
+
+
+def normalize_window_days(raw, default: int = 7) -> int:
+    try:
+        days = int(raw)
+    except (TypeError, ValueError):
+        return default
+    if days in (7, 30):
+        return days
+    return default
+
+
+def build_new_students(user, *, days: int = 7) -> dict:
+    """Новые записи на курсы ментора (админ — все курсы)."""
+    days = normalize_window_days(days)
+    since = timezone.now() - timedelta(days=days)
+    qs = (
+        Enrollment.objects.filter(started_at__gte=since)
+        .select_related("user", "course")
+        .order_by("-started_at")
+    )
+    if user is not None and getattr(user, "role", None) == "mentor":
+        qs = qs.filter(course__mentor=user)
+
+    results = []
+    for enrollment in qs[:50]:
+        person = enrollment.user
+        course = enrollment.course
+        results.append(
+            {
+                "user_public_id": str(person.public_id),
+                "first_name": person.first_name,
+                "last_name": person.last_name,
+                "course_public_id": str(course.public_id),
+                "course_title": course.title,
+                "started_at": enrollment.started_at.isoformat(),
+            }
+        )
+    return {
+        "days": days,
+        "count": qs.count(),
+        "results": results,
+    }
 
 
 def build_courses_overview(user=None) -> list[dict]:

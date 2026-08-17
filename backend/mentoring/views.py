@@ -19,7 +19,9 @@ from .services import (
     build_code_submissions_payload,
     build_course_students,
     build_courses_overview,
+    build_new_students,
     build_quiz_answers_payload,
+    normalize_window_days,
 )
 
 
@@ -30,6 +32,16 @@ class MentorCoursesOverviewView(APIView):
 
     def get(self, request):
         return Response(build_courses_overview(request.user))
+
+
+class MentorNewStudentsView(APIView):
+    """``GET /api/mentoring/new-students/?days=7`` — новые записи на курсы."""
+
+    permission_classes = [IsAuthenticated, IsMentorOrAdmin]
+
+    def get(self, request):
+        days = normalize_window_days(request.query_params.get("days"))
+        return Response(build_new_students(request.user, days=days))
 
 
 class MentorCourseStudentsView(APIView):

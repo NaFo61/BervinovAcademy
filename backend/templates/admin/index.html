@@ -54,6 +54,96 @@
     </div>
   </div>
 
+  <h2 class="text-lg font-semibold mb-4">{% trans "Статистика по звонкам" %}</h2>
+  <p class="text-sm text-muted-foreground mb-4">
+    {% trans "За последние 7 дней. Ниже — также итог за 30 дней." %}
+  </p>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
+      <span class="text-sm text-muted-foreground">{% trans "Звонков (7 дней)" %}</span>
+      <span class="text-3xl font-bold mt-2 block">{{ call_stats_7d.total }}</span>
+    </div>
+    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
+      <span class="text-sm text-muted-foreground">{% trans "Завершено" %}</span>
+      <span class="text-3xl font-bold mt-2 block">{{ call_stats_7d.completed }}</span>
+    </div>
+    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
+      <span class="text-sm text-muted-foreground">{% trans "Идут сейчас" %}</span>
+      <span class="text-3xl font-bold mt-2 block">{{ call_stats_7d.in_progress }}</span>
+    </div>
+    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
+      <span class="text-sm text-muted-foreground">{% trans "Длительность" %}</span>
+      <span class="text-3xl font-bold mt-2 block">{{ call_stats_7d.total_duration_label }}</span>
+    </div>
+  </div>
+  <p class="text-sm text-muted-foreground mb-6">
+    {% trans "За 30 дней:" %}
+    <strong>{{ call_stats_30d.total }}</strong> {% trans "звонков" %},
+    {{ call_stats_30d.completed }} {% trans "завершено" %},
+    {{ call_stats_30d.in_progress }} {% trans "идут" %},
+    {{ call_stats_30d.total_duration_label }}.
+    <a href="/admin/communication/conference/" class="text-primary-600 font-semibold underline">
+      {% trans "Все созвоны" %}
+    </a>
+  </p>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <div class="bg-card rounded-2xl p-6 shadow-md border border-border overflow-x-auto">
+      <h3 class="text-base font-semibold mb-4">{% trans "По дням (7 дней)" %}</h3>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-muted-foreground border-b border-border">
+            <th class="py-2 pr-3 font-semibold">{% trans "Дата" %}</th>
+            <th class="py-2 pr-3 font-semibold">{% trans "Всего" %}</th>
+            <th class="py-2 pr-3 font-semibold">{% trans "Готово" %}</th>
+            <th class="py-2 pr-3 font-semibold">{% trans "Идут" %}</th>
+            <th class="py-2 font-semibold">{% trans "Время" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in call_stats_7d.by_day %}
+          <tr class="border-b border-border/60">
+            <td class="py-2 pr-3">{{ row.date }}</td>
+            <td class="py-2 pr-3">{{ row.total }}</td>
+            <td class="py-2 pr-3">{{ row.completed }}</td>
+            <td class="py-2 pr-3">{{ row.in_progress }}</td>
+            <td class="py-2">{{ row.duration_label }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="py-4 text-muted-foreground">{% trans "Пока нет звонков" %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="bg-card rounded-2xl p-6 shadow-md border border-border overflow-x-auto">
+      <h3 class="text-base font-semibold mb-4">{% trans "Последние звонки" %}</h3>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-muted-foreground border-b border-border">
+            <th class="py-2 pr-3 font-semibold">{% trans "Кто" %}</th>
+            <th class="py-2 pr-3 font-semibold">{% trans "Статус" %}</th>
+            <th class="py-2 font-semibold">{% trans "Время" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in call_stats_7d.recent %}
+          <tr class="border-b border-border/60">
+            <td class="py-2 pr-3">{{ row.mentor_name }} → {{ row.guest_name }}</td>
+            <td class="py-2 pr-3">{{ row.status }}</td>
+            <td class="py-2">{{ row.duration_label }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="py-4 text-muted-foreground">{% trans "Пока нет звонков" %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     <div class="bg-card rounded-2xl p-6 shadow-md border border-border">
       <h2 class="text-lg font-semibold mb-4">{% trans "Регистрации" %}</h2>

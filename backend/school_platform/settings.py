@@ -91,6 +91,11 @@ UNFOLD = {
                         "icon": "dashboard",
                         "link": reverse_lazy("admin:index"),
                     },
+                    {
+                        "title": _("Созвоны"),
+                        "icon": "videocam",
+                        "link": "/admin/communication/conference/",
+                    },
                 ],
             },
             {

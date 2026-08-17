@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .chat_viewsets import ChatMessageViewSet, ChatThreadViewSet
 from .viewsets import (
+    AdminCallStatsView,
     ConferenceViewSet,
     LiveKitWebhookView,
     MentorUserSearchView,
@@ -22,6 +23,10 @@ app_name = "communication"
 
 urlpatterns = [
     path("communication/users/search/", MentorUserSearchView.as_view()),
+    path(
+        "communication/admin/call-stats/",
+        AdminCallStatsView.as_view(),
+    ),
     path("communication/livekit/webhook/", LiveKitWebhookView.as_view()),
     path(
         "communication/whiteboard/studio/token/",
