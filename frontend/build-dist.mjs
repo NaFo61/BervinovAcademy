@@ -27,6 +27,7 @@ copy("index.html", "index.html");
 copy("src", "src");
 copy("public", "public");
 copy("icons", "icons");
+copy("img", "img");
 copy("sw.js", "sw.js");
 
 if (enableWhiteboard) {

@@ -9,6 +9,7 @@ const Routes = {
   CATALOG: 'catalog',
   COURSE: 'course',
   LEARN: 'learn',
+  NOT_FOUND: 'not-found',
   EXAM: 'exam',
   PROBLEM: 'problem',
   PROFILE: 'profile',
@@ -77,7 +78,7 @@ function migrateLegacyHashRoute() {
   const routeId = !routePart || routePart === Routes.LANDING
     ? Routes.LANDING
     : routePart.split('/')[0];
-  const next = pathForRoute(KNOWN_ROUTES.has(routeId) ? routeId : Routes.LANDING) + qs;
+  const next = pathForRoute(KNOWN_ROUTES.has(routeId) ? routeId : Routes.NOT_FOUND) + qs;
   history.replaceState(null, '', next);
 }
 
@@ -86,7 +87,7 @@ function parsePathRoute() {
   const trimmed = stripAppBase(location.pathname).replace(/^\/+|\/+$/g, '');
   const routeId = trimmed ? trimmed.split('/')[0] : Routes.LANDING;
   return {
-    path: KNOWN_ROUTES.has(routeId) ? routeId : Routes.LANDING,
+    path: KNOWN_ROUTES.has(routeId) ? routeId : Routes.NOT_FOUND,
     params: new URLSearchParams(location.search.replace(/^\?/, '')),
   };
 }
@@ -604,6 +605,130 @@ function buildExamQuery(courseId, examId, stepType, stepId) {
   const q = { course: courseId, exam: examId };
   if (stepType && stepId) q.step = `${stepType}-${stepId}`;
   return q;
+}
+
+const LESSON_KIND_PREFIXES = ['short_answer', 'checkbox', 'theory', 'radio', 'coding'];
+
+function parseLessonParam(param) {
+  const raw = String(param || '');
+  if (!raw) return { type: null, id: null };
+  const type = LESSON_KIND_PREFIXES.find((t) => raw.startsWith(`${t}-`));
+  if (!type) return { type: null, id: null };
+  const id = raw.slice(type.length + 1);
+  return { type, id: id || null };
+}
+
+function lessonDetailPath(type, id) {
+  if (!type || !id) return null;
+  const paths = {
+    theory: `/api/content/lessons-theory/${encodeURIComponent(id)}/`,
+    radio: `/api/content/lessons-radio/${encodeURIComponent(id)}/`,
+    checkbox: `/api/content/lessons-checkbox/${encodeURIComponent(id)}/`,
+    short_answer: `/api/content/short-answers/${encodeURIComponent(id)}/`,
+    coding: `/api/content/challenges/${encodeURIComponent(id)}/`,
+  };
+  return paths[type] || null;
+}
+
+function classifyLessonLoadError(err, hasToken) {
+  if (!hasToken) return 'auth';
+  const status = err && err.status;
+  if (status === 401) return 'auth';
+  if (status === 403) return 'forbidden';
+  if (status === 404) return 'not_found';
+  return 'network';
+}
+
+function appAssetUrl(path) {
+  const base = getAppBase();
+  const p = path.startsWith('/') ? path : '/' + path;
+  return `${base}${p}`;
+}
+
+function IllustrationBlock({ src, alt, title, text, actions }) {
+  return (
+    <div className="text-center py-8 sm:py-14 px-2">
+      {src ? (
+        <img
+          src={src}
+          alt={alt || ''}
+          className="mx-auto w-full max-w-[280px] sm:max-w-[320px] h-auto select-none pointer-events-none"
+        />
+      ) : null}
+      {title ? <div className="mt-5 text-[18px] font-extrabold text-ink">{title}</div> : null}
+      {text ? <p className="mt-2 text-sm text-ink/55 max-w-sm mx-auto leading-relaxed">{text}</p> : null}
+      {actions ? (
+        <div className="mt-5 flex flex-col sm:flex-row gap-2 justify-center items-center">
+          {actions}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function LessonLoadPlaceholder({ kind, onLogin, onRetry, onCatalog }) {
+  const src = appAssetUrl('/img/lesson-unavailable.jpg');
+  const btn = 'h-11 px-6 rounded-xl font-semibold';
+  if (kind === 'auth') {
+    return (
+      <IllustrationBlock
+        src={src}
+        alt="Нужно войти, чтобы открыть урок"
+        title="Войдите, чтобы открыть урок"
+        text="Текст и задания видны после входа в аккаунт."
+        actions={
+          <button type="button" onClick={onLogin} className={`btn-grad btn-shimmer text-white ${btn}`}>
+            Войти
+          </button>
+        }
+      />
+    );
+  }
+  if (kind === 'forbidden') {
+    return (
+      <IllustrationBlock
+        src={src}
+        alt="Нет доступа к уроку"
+        title="Нет доступа к этому уроку"
+        text="Войдите в свой аккаунт или откройте курс из каталога."
+        actions={
+          <>
+            <button type="button" onClick={onLogin} className={`btn-grad btn-shimmer text-white ${btn}`}>Войти</button>
+            <button type="button" onClick={onCatalog} className={`${btn} bg-white ring-1 ring-black/[0.08] text-ink`}>Каталог</button>
+          </>
+        }
+      />
+    );
+  }
+  if (kind === 'not_found') {
+    return (
+      <IllustrationBlock
+        src={src}
+        alt="Урок не найден"
+        title="Урок не найден"
+        text="Его убрали или ссылка устарела. Откройте курс заново."
+        actions={
+          <button type="button" onClick={onCatalog} className={`btn-grad btn-shimmer text-white ${btn}`}>
+            Каталог курсов
+          </button>
+        }
+      />
+    );
+  }
+  return (
+    <IllustrationBlock
+      src={src}
+      alt="Ошибка загрузки урока"
+      title="Нет связи с сервером"
+      text="Проверьте интернет и нажмите «Повторить»."
+      actions={
+        <>
+          <button type="button" onClick={onRetry} className={`btn-grad btn-shimmer text-white ${btn}`}>Повторить</button>
+          <button type="button" onClick={onCatalog} className={`${btn} bg-white ring-1 ring-black/[0.08] text-ink`}>Каталог</button>
+        </>
+      }
+    />
+  );
 }
 
 function openStudentProfile(navigate, userPublicId) {
@@ -2668,6 +2793,12 @@ Object.assign(window, {
   notifyAuthChanged,
   buildLearnQuery,
   buildExamQuery,
+  parseLessonParam,
+  lessonDetailPath,
+  classifyLessonLoadError,
+  appAssetUrl,
+  IllustrationBlock,
+  LessonLoadPlaceholder,
   openStudentProfile,
   createConference,
   openConferenceCall,

@@ -9,4 +9,6 @@ COPY . .
 RUN rm -rf dist && mkdir -p dist \
     && cp index.html dist/ \
     && cp -r src dist/ \
-    && (test -d public && cp -r public dist/ || true)
+    && (test -d public && cp -r public dist/ || true) \
+    && (test -d icons && cp -r icons dist/ || true) \
+    && (test -d img && cp -r img dist/ || true)

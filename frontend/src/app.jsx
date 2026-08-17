@@ -24,6 +24,7 @@ const ProPage = window.ProPage;
 const CertificatePage = window.CertificatePage;
 const PlaygroundPage = window.PlaygroundPage;
 const WhiteboardPage = window.WhiteboardPage;
+const NotFoundPage = window.NotFoundPage;
 
 const NO_FOOTER_ROUTES = new Set([
   Routes.PROBLEM, Routes.AUTH, Routes.AUTH_CALLBACK, Routes.LEARN, Routes.EXAM, Routes.CALL, Routes.PLAYGROUND, Routes.WHITEBOARD, Routes.CERTIFICATE,
@@ -53,7 +54,8 @@ function App() {
     [Routes.CERTIFICATE]: CertificatePage,
     [Routes.PLAYGROUND]: PlaygroundPage,
     [Routes.WHITEBOARD]: WhiteboardPage,
-  }[route] || LandingPage;
+    [Routes.NOT_FOUND]: NotFoundPage || (() => null),
+  }[route] || NotFoundPage || LandingPage;
 
   const pageProps = { navigate, hashParams, route };
   const hideChrome = isCallRoute || isWhiteboardRoute;

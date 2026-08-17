@@ -104,17 +104,32 @@ function CoursePage({ navigate, hashParams }) {
   }
 
   if (!course || loadState === 'err' || (loadState === 'idle' && !courseId)) {
+    const IllustrationBlock = window.IllustrationBlock;
+    const img = window.appAssetUrl ? window.appAssetUrl('/img/page-404.jpg') : '/img/page-404.jpg';
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-paper text-center px-6">
-        <div className="text-5xl">🔍</div>
-        <div className="text-xl font-bold text-ink/80">Курс не найден</div>
-        <p className="text-sm text-ink/55 max-w-sm">
-          {loadError || 'Возможно, курс был перемещён или ещё не добавлен в каталог.'}
-        </p>
-        <button onClick={() => navigate(Routes.CATALOG)}
-          className="btn-grad btn-shimmer mt-2 h-11 px-6 rounded-xl text-white font-semibold">
-          Открыть каталог
-        </button>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-paper px-6">
+        {IllustrationBlock ? (
+          <IllustrationBlock
+            src={img}
+            alt="Курс не найден"
+            title="Курс не найден"
+            text={loadError || 'Возможно, курс был перемещён или ещё не добавлен в каталог.'}
+            actions={
+              <button onClick={() => navigate(Routes.CATALOG)}
+                className="btn-grad btn-shimmer h-11 px-6 rounded-xl text-white font-semibold">
+                Открыть каталог
+              </button>
+            }
+          />
+        ) : (
+          <>
+            <div className="text-xl font-bold text-ink/80">Курс не найден</div>
+            <button onClick={() => navigate(Routes.CATALOG)}
+              className="btn-grad btn-shimmer mt-2 h-11 px-6 rounded-xl text-white font-semibold">
+              Открыть каталог
+            </button>
+          </>
+        )}
       </div>
     );
   }

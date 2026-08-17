@@ -1,5 +1,9 @@
 from common.drf import UUID_LOOKUP_REGEX
-from common.lesson_access import filter_lessons_for_user
+from common.lesson_access import (
+    enroll_reader_for_lesson,
+    filter_lessons_for_user,
+    user_is_staff_editor,
+)
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
@@ -32,6 +36,34 @@ from content.serializers import (
     ModuleDetailSerializer,
     ModuleListSerializer,
 )
+
+
+class AutoEnrollOnRetrieveMixin:
+    """
+    GET одного урока: сначала найти урок, затем записать на курс.
+
+    Список по-прежнему только для записанных (анти-скрапинг).
+    """
+
+    def finalize_lesson_queryset(self, queryset):
+        if getattr(self, "action", None) == "retrieve":
+            return queryset
+        return filter_lessons_for_user(queryset, self.request.user)
+
+    def get_object(self):
+        obj = super().get_object()
+        if getattr(self, "action", None) != "retrieve":
+            return obj
+        enroll_reader_for_lesson(self.request.user, obj)
+        if user_is_staff_editor(self.request.user):
+            return obj
+        allowed = filter_lessons_for_user(
+            self.get_queryset().filter(pk=obj.pk),
+            self.request.user,
+        ).exists()
+        if not allowed:
+            raise NotFound()
+        return obj
 
 
 class CourseViewSet(
@@ -183,6 +215,7 @@ class ModuleViewSet(
 
 
 class LessonTheoryViewSet(
+    AutoEnrollOnRetrieveMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
@@ -202,7 +235,7 @@ class LessonTheoryViewSet(
             )
             .prefetch_related("attachments")
         )
-        queryset = filter_lessons_for_user(queryset, self.request.user)
+        queryset = self.finalize_lesson_queryset(queryset)
         module_pub = self.request.query_params.get("module_public_id")
         if module_pub:
             queryset = queryset.filter(module__public_id=module_pub)
@@ -216,6 +249,7 @@ class LessonTheoryViewSet(
 
 
 class LessonRadioQuestionViewSet(
+    AutoEnrollOnRetrieveMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
@@ -234,7 +268,7 @@ class LessonRadioQuestionViewSet(
                 "module", "module__course", "exam", "exam__course", "course"
             )
         )
-        queryset = filter_lessons_for_user(queryset, self.request.user)
+        queryset = self.finalize_lesson_queryset(queryset)
         module_pub = self.request.query_params.get("module_public_id")
         if module_pub:
             queryset = queryset.filter(module__public_id=module_pub)
@@ -252,6 +286,7 @@ class LessonRadioQuestionViewSet(
 
 
 class LessonCheckBoxQuestionViewSet(
+    AutoEnrollOnRetrieveMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
@@ -270,7 +305,7 @@ class LessonCheckBoxQuestionViewSet(
                 "module", "module__course", "exam", "exam__course", "course"
             )
         )
-        queryset = filter_lessons_for_user(queryset, self.request.user)
+        queryset = self.finalize_lesson_queryset(queryset)
         module_pub = self.request.query_params.get("module_public_id")
         if module_pub:
             queryset = queryset.filter(module__public_id=module_pub)
@@ -288,6 +323,7 @@ class LessonCheckBoxQuestionViewSet(
 
 
 class LessonShortAnswerViewSet(
+    AutoEnrollOnRetrieveMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
@@ -307,7 +343,7 @@ class LessonShortAnswerViewSet(
             )
             .prefetch_related("attachments")
         )
-        queryset = filter_lessons_for_user(queryset, self.request.user)
+        queryset = self.finalize_lesson_queryset(queryset)
         module_pub = self.request.query_params.get("module_public_id")
         if module_pub:
             queryset = queryset.filter(module__public_id=module_pub)
@@ -323,6 +359,7 @@ class LessonShortAnswerViewSet(
 
 
 class CodingChallengeViewSet(
+    AutoEnrollOnRetrieveMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
@@ -347,7 +384,7 @@ class CodingChallengeViewSet(
             )
             .prefetch_related("attachments")
         )
-        queryset = filter_lessons_for_user(queryset, self.request.user)
+        queryset = self.finalize_lesson_queryset(queryset)
 
         course_pub = self.request.query_params.get("course_public_id")
         if course_pub:

@@ -90,10 +90,12 @@ function LearnPage({ navigate, hashParams }) {
   const examParam   = hashParams?.get('exam') || null;
   const stepParam   = hashParams?.get('step') || null;
   const ExamContent = window.ExamContent;
-
-  const dashIdx    = lessonParam ? lessonParam.indexOf('-') : -1;
-  const lessonType = dashIdx > 0 ? lessonParam.slice(0, dashIdx) : null;
-  const lessonId   = dashIdx > 0 ? lessonParam.slice(dashIdx + 1) : null;
+  const parsedLesson = (window.parseLessonParam || function (p) {
+    const i = p ? p.indexOf('-') : -1;
+    return i > 0 ? { type: p.slice(0, i), id: p.slice(i + 1) } : { type: null, id: null };
+  })(lessonParam);
+  const lessonType = parsedLesson.type;
+  const lessonId   = parsedLesson.id;
 
   // ── course state ──
   const [courseData, setCourseData] = React.useState(null);
@@ -103,6 +105,8 @@ function LearnPage({ navigate, hashParams }) {
   // ── lesson state ──
   const [lessonData, setLessonData]   = React.useState(null);
   const [lessonLoading, setLessonLoading] = React.useState(false);
+  const [lessonError, setLessonError] = React.useState(null);
+  const [lessonRetry, setLessonRetry] = React.useState(0);
 
   // ── quiz state ──
   const [selectedRadio, setSelectedRadio]         = React.useState(null);
@@ -256,10 +260,12 @@ function LearnPage({ navigate, hashParams }) {
     }
   }, [courseState, lessonType, lessonId, allLessons, currentIdx, moduleParam, courseId]);
 
-  // ── load lesson detail ──
+  // ── load lesson detail (enroll first, then GET) ──
   React.useEffect(() => {
-    if (examParam || !lessonType || !lessonId) return;
+    if (examParam || !lessonType || !lessonId) return undefined;
+    let cancelled = false;
     setLessonData(null);
+    setLessonError(null);
     setLessonLoading(true);
     setSubmitted(false);
     setSubmitResult(null);
@@ -267,31 +273,66 @@ function LearnPage({ navigate, hashParams }) {
     setSelectedBoxes(new Set());
     setShortAnswerText('');
 
-    const paths = {
-      theory:   `/api/content/lessons-theory/${encodeURIComponent(lessonId)}/`,
-      radio:    `/api/content/lessons-radio/${encodeURIComponent(lessonId)}/`,
-      checkbox: `/api/content/lessons-checkbox/${encodeURIComponent(lessonId)}/`,
-      short_answer: `/api/content/short-answers/${encodeURIComponent(lessonId)}/`,
-      coding:   `/api/content/challenges/${encodeURIComponent(lessonId)}/`,
-    };
-    const path = paths[lessonType];
-    if (!path) { setLessonLoading(false); return; }
+    const path = window.lessonDetailPath
+      ? window.lessonDetailPath(lessonType, lessonId)
+      : null;
+    if (!path) {
+      setLessonLoading(false);
+      setLessonError('not_found');
+      return undefined;
+    }
 
-    window.fetchApiJson(path, { auth: true })
-      .then(d => { setLessonData(d); setLessonLoading(false); })
-      .catch(() => setLessonLoading(false));
-  }, [lessonType, lessonId, examParam]);
+    (async () => {
+      const token = window.getAccessToken();
+      if (!token) {
+        if (!cancelled) {
+          setLessonError('auth');
+          setLessonLoading(false);
+        }
+        return;
+      }
+      if (courseId) {
+        try { await window.enrollInCourse(courseId); } catch (_) { /* retry below */ }
+      }
+      try {
+        const d = await window.fetchApiJson(path, { auth: true });
+        if (!cancelled) {
+          setLessonData(d);
+          setLessonLoading(false);
+        }
+      } catch (firstErr) {
+        let err = firstErr;
+        if (err.status === 404 && courseId) {
+          try {
+            await window.enrollInCourse(courseId);
+            const d = await window.fetchApiJson(path, { auth: true });
+            if (!cancelled) {
+              setLessonData(d);
+              setLessonLoading(false);
+            }
+            return;
+          } catch (e2) {
+            err = e2;
+          }
+        }
+        if (!cancelled) {
+          const kind = window.classifyLessonLoadError
+            ? window.classifyLessonLoadError(err, true)
+            : 'network';
+          setLessonError(kind);
+          setLessonLoading(false);
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [lessonType, lessonId, examParam, courseId, lessonRetry]);
 
   const refreshLesson = React.useCallback(() => {
     if (!lessonType || !lessonId) return Promise.resolve();
-    const paths = {
-      theory:   `/api/content/lessons-theory/${encodeURIComponent(lessonId)}/`,
-      radio:    `/api/content/lessons-radio/${encodeURIComponent(lessonId)}/`,
-      checkbox: `/api/content/lessons-checkbox/${encodeURIComponent(lessonId)}/`,
-      short_answer: `/api/content/short-answers/${encodeURIComponent(lessonId)}/`,
-      coding:   `/api/content/challenges/${encodeURIComponent(lessonId)}/`,
-    };
-    const path = paths[lessonType];
+    const path = window.lessonDetailPath
+      ? window.lessonDetailPath(lessonType, lessonId)
+      : null;
     if (!path) return Promise.resolve();
     return window.fetchApiJson(path, { auth: true })
       .then((d) => { setLessonData(d); return d; })
@@ -431,15 +472,32 @@ function LearnPage({ navigate, hashParams }) {
   }
 
   if (courseState === 'err' || !courseData) {
+    const IllustrationBlock = window.IllustrationBlock;
+    const img = window.appAssetUrl ? window.appAssetUrl('/img/page-404.jpg') : '/img/page-404.jpg';
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-paper text-center px-6">
-        <div className="text-5xl">🔍</div>
-        <div className="text-xl font-bold text-ink/80">Курс не найден</div>
-        <p className="text-sm text-ink/55 max-w-sm">{courseErr || 'Попробуйте открыть через каталог.'}</p>
-        <button onClick={() => navigate(Routes.CATALOG)}
-          className="btn-grad btn-shimmer h-11 px-6 rounded-xl text-white font-semibold mt-2">
-          Каталог курсов
-        </button>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-paper px-6">
+        {IllustrationBlock ? (
+          <IllustrationBlock
+            src={img}
+            alt="Курс не найден"
+            title="Курс не найден"
+            text={courseErr || 'Откройте каталог и выберите курс заново.'}
+            actions={
+              <button onClick={() => navigate(Routes.CATALOG)}
+                className="btn-grad btn-shimmer h-11 px-6 rounded-xl text-white font-semibold">
+                Каталог курсов
+              </button>
+            }
+          />
+        ) : (
+          <>
+            <div className="text-xl font-bold text-ink/80">Курс не найден</div>
+            <button onClick={() => navigate(Routes.CATALOG)}
+              className="btn-grad btn-shimmer h-11 px-6 rounded-xl text-white font-semibold mt-4">
+              Каталог курсов
+            </button>
+          </>
+        )}
       </div>
     );
   }
@@ -719,11 +777,19 @@ function LearnPage({ navigate, hashParams }) {
                 <span className="text-sm">Загружаем урок…</span>
               </div>
 
-            ) : !lessonData && lessonType ? (
-              <div className="text-center py-24 text-ink/40">
-                <div className="text-4xl mb-3">📭</div>
-                <div className="text-sm">Не удалось загрузить содержимое урока</div>
-              </div>
+            ) : (!lessonData && lessonType) || lessonError ? (
+              window.LessonLoadPlaceholder ? (
+                <window.LessonLoadPlaceholder
+                  kind={lessonError || 'not_found'}
+                  onLogin={() => navigate(Routes.AUTH)}
+                  onRetry={() => setLessonRetry((n) => n + 1)}
+                  onCatalog={() => navigate(Routes.CATALOG)}
+                />
+              ) : (
+                <div className="text-center py-24 text-ink/40">
+                  <div className="text-sm">Не удалось загрузить содержимое урока</div>
+                </div>
+              )
 
             ) : lessonType === 'theory' && lessonData ? (
               <TheoryLesson

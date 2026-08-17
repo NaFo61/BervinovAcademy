@@ -89,13 +89,16 @@ class TestContentIdor:
         )
         assert resp.status_code == 404
 
-    def test_unenrolled_cannot_read_challenge(self, stranger, catalog):
+    def test_retrieve_challenge_auto_enrolls(self, stranger, catalog):
         client = APIClient()
         client.force_authenticate(user=stranger)
         resp = client.get(
             f"/api/content/challenges/{catalog['challenge'].public_id}/"
         )
-        assert resp.status_code in (403, 404)
+        assert resp.status_code == 200
+        assert Enrollment.objects.filter(
+            user=stranger, course=catalog["course"]
+        ).exists()
 
     def test_enrolled_can_read_by_public_id(self, student, catalog):
         Enrollment.objects.create(user=student, course=catalog["course"])

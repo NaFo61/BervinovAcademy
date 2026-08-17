@@ -680,18 +680,21 @@ function ExamActiveSession({
   }, [attempt.public_id, attempt.status, attempt.tab_policy, attempt.tab_warn_limit]);
 
   React.useEffect(() => {
-    if (!currentStep) return;
+    if (!currentStep) return undefined;
+    let cancelled = false;
     setLessonData(null);
     setLessonLoading(true);
-    const paths = {
-      theory: `/api/content/lessons-theory/${encodeURIComponent(currentStep.public_id)}/`,
-      radio: `/api/content/lessons-radio/${encodeURIComponent(currentStep.public_id)}/`,
-      checkbox: `/api/content/lessons-checkbox/${encodeURIComponent(currentStep.public_id)}/`,
-      coding: `/api/content/challenges/${encodeURIComponent(currentStep.public_id)}/`,
-    };
-    window.fetchApiJson(paths[currentStep.kind])
-      .then((d) => { setLessonData(d); setLessonLoading(false); })
-      .catch(() => setLessonLoading(false));
+    const path = window.lessonDetailPath
+      ? window.lessonDetailPath(currentStep.kind, currentStep.public_id)
+      : null;
+    if (!path) {
+      setLessonLoading(false);
+      return undefined;
+    }
+    window.fetchApiJson(path, { auth: true })
+      .then((d) => { if (!cancelled) { setLessonData(d); setLessonLoading(false); } })
+      .catch(() => { if (!cancelled) setLessonLoading(false); });
+    return () => { cancelled = true; };
   }, [currentStep?.kind, currentStep?.public_id]);
 
   const goStep = (idx) => {
@@ -743,7 +746,16 @@ function ExamActiveSession({
       Загружаем задание…
     </div>
   ) : !lessonData ? (
-    <div className="text-center py-20 text-ink/45">Не удалось загрузить задание</div>
+    window.LessonLoadPlaceholder ? (
+      <window.LessonLoadPlaceholder
+        kind={window.getAccessToken() ? 'network' : 'auth'}
+        onLogin={() => navigate(Routes.AUTH)}
+        onRetry={() => window.location.reload()}
+        onCatalog={() => navigate(Routes.CATALOG)}
+      />
+    ) : (
+      <div className="text-center py-20 text-ink/45">Не удалось загрузить задание</div>
+    )
   ) : currentStep?.kind === 'theory' ? (
     <ExamTheoryPanel
       lesson={lessonData}

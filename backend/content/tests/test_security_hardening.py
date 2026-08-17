@@ -95,14 +95,35 @@ class TestLessonContentAccess:
         assert "<script>" not in (resp.data.get("content") or "")
         assert "ok" in (resp.data.get("content") or "")
 
-    def test_unenrolled_student_cannot_read_other_course(
+    def test_retrieve_auto_enrolls_student(
         self, other_student, course_with_theory
     ):
         client = APIClient()
         client.force_authenticate(user=other_student)
         theory = course_with_theory["theory"]
+        assert not Enrollment.objects.filter(
+            user=other_student, course=course_with_theory["course"]
+        ).exists()
         resp = client.get(f"/api/content/lessons-theory/{theory.public_id}/")
-        assert resp.status_code == 404
+        assert resp.status_code == 200
+        assert resp.data["title"] == "Theory"
+        assert Enrollment.objects.filter(
+            user=other_student, course=course_with_theory["course"]
+        ).exists()
+
+    def test_list_hides_lessons_until_enrolled(
+        self, other_student, course_with_theory
+    ):
+        client = APIClient()
+        client.force_authenticate(user=other_student)
+        resp = client.get("/api/content/lessons-theory/")
+        assert resp.status_code == 200
+        rows = (
+            resp.data
+            if isinstance(resp.data, list)
+            else resp.data.get("results")
+        )
+        assert rows == []
 
 
 @pytest.mark.django_db
