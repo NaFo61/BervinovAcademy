@@ -952,9 +952,6 @@ function TheoryLesson({ lesson, isDone, onComplete, onLogin, navigate }) {
   return (
     <div>
       <LessonHeader type="theory" title={lesson.title} label="Теоретический урок"/>
-      {window.LessonAttachments && (
-        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
-      )}
 
       {lesson.video ? (
         <window.VideoExplanation video={lesson.video} title="Видео-объяснение"/>
@@ -979,10 +976,19 @@ function TheoryLesson({ lesson, isDone, onComplete, onLogin, navigate }) {
         </div>
       ) : null}
 
-      <div
-        className="theory-content mt-6"
-        dangerouslySetInnerHTML={{ __html: window.sanitizeHtml(lesson.content || '<p>Содержимое урока ещё добавляется.</p>') }}
-      />
+      {window.TheoryBlocksView ? (
+        <window.TheoryBlocksView lesson={lesson} navigate={navigate} />
+      ) : (
+        <>
+          {window.LessonAttachments && (
+            <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+          )}
+          <div
+            className="theory-content mt-6"
+            dangerouslySetInnerHTML={{ __html: window.sanitizeHtml(lesson.content || '<p>Содержимое урока ещё добавляется.</p>') }}
+          />
+        </>
+      )}
       <window.LessonInstructorNote text={lesson.comment} />
 
       <div className="mt-10">

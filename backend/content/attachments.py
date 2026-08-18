@@ -29,7 +29,9 @@ ALLOWED_EXTENSIONS = frozenset(
     }
 )
 MAX_FILE_BYTES = 20 * 1024 * 1024
-MAX_FILES_PER_LESSON = 10
+IMAGE_EXTENSIONS = frozenset(
+    {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
+)
 
 KIND_FK = {
     "theory": "theory",
@@ -96,6 +98,18 @@ def validate_upload(upload) -> None:
         )
     if size <= 0:
         raise ValidationError({"file": "Пустой файл нельзя сохранить."})
+
+
+def is_image_attachment(obj) -> bool:
+    content_type = (getattr(obj, "content_type", None) or "").lower()
+    if content_type.startswith("image/"):
+        return True
+    name = (
+        getattr(obj, "original_name", None)
+        or (obj.file.name if getattr(obj, "file", None) else "")
+        or ""
+    )
+    return Path(str(name)).suffix.lower() in IMAGE_EXTENSIONS
 
 
 def serialize_attachment(obj, request=None) -> dict:

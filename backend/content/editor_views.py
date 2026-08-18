@@ -12,7 +12,6 @@ from unidecode import unidecode
 
 from content.attachments import (
     KIND_FK,
-    MAX_FILES_PER_LESSON,
     bind_parent,
     serialize_attachment,
     validate_upload,
@@ -314,6 +313,13 @@ class LessonEditorView(APIView):
                 return Response(
                     {"test_cases": "Некорректный JSON."}, status=400
                 )
+        if "blocks" in data and isinstance(data["blocks"], str):
+            import json
+
+            try:
+                data["blocks"] = json.loads(data["blocks"])
+            except json.JSONDecodeError:
+                return Response({"blocks": "Некорректный JSON."}, status=400)
 
         ser_cls = EDITOR_SERIALIZERS[kind]
         if kind in ("radio", "checkbox"):
@@ -416,16 +422,6 @@ class LessonAttachmentCreateView(APIView):
             if not payload:
                 payload = {"detail": list(exc.messages)}
             return Response(payload, status=400)
-        if instance.attachments.count() >= MAX_FILES_PER_LESSON:
-            return Response(
-                {
-                    "file": (
-                        "К одному заданию можно прикрепить "
-                        "не больше 10 файлов."
-                    )
-                },
-                status=400,
-            )
         name = Path(getattr(upload, "name", "") or "file").name[:255]
         attachment = LessonAttachment(
             original_name=name,
@@ -463,7 +459,12 @@ class LessonAttachmentDeleteView(APIView):
                 {"detail": "Файл не относится к этому уроку."},
                 status=404,
             )
+        attachment_public_id = attachment.public_id
         if attachment.file:
             attachment.file.delete(save=False)
         attachment.delete()
+        if kind == "theory":
+            from content.theory_blocks import prune_image_blocks
+
+            prune_image_blocks(instance, attachment_public_id)
         return Response(status=status.HTTP_204_NO_CONTENT)

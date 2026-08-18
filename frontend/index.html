@@ -473,7 +473,54 @@
   .theory-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 0.9rem; }
   .theory-content th, .theory-content td { border: 1px solid rgba(11,18,38,0.1); padding: 0.55rem 0.85rem; text-align: left; }
   .theory-content th { background: rgba(11,18,38,0.04); font-weight: 600; }
-  .theory-content hr { border: none; border-top: 1px solid rgba(11,18,38,0.08); margin: 1.5rem 0; }
+  .theory-content mark {
+    background: #FDE68A;
+    color: #0B1226;
+    padding: 0.05em 0.28em;
+    border-radius: 4px;
+  }
+  .theory-callout {
+    background: #FFFBEB;
+    border: 1px solid #FDE68A;
+    border-radius: 16px;
+    padding: 1rem 1.15rem;
+    color: #78350F;
+  }
+  .theory-callout p:last-child { margin-bottom: 0; }
+  .theory-figure {
+    margin: 0;
+    overflow: hidden;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 0 0 1px rgba(11,18,38,0.06);
+  }
+  .theory-figure img {
+    display: block;
+    width: 100%;
+    max-height: min(72vh, 720px);
+    object-fit: contain;
+    background: #fafafa;
+  }
+  .theory-figure figcaption {
+    padding: 0.7rem 1rem 0.9rem;
+    font-size: 13px;
+    color: rgba(11,18,38,0.55);
+    line-height: 1.45;
+  }
+  .theory-editor-text {
+    min-height: 4.5rem;
+    outline: none;
+  }
+  .theory-editor-text:empty:before {
+    content: attr(data-placeholder);
+    color: rgba(11,18,38,0.32);
+    pointer-events: none;
+  }
+  .theory-drop-active {
+    outline: 2px dashed #2563EB;
+    outline-offset: 4px;
+    background: rgba(37,99,235,0.04);
+  }
 
   .avatar-ring {
     background: linear-gradient(135deg, var(--c-1), var(--c-3), var(--c-5));
@@ -583,6 +630,7 @@
 <!-- WHITEBOARD_ASSETS_END -->
 
 <script type="text/babel" src="src/shared.jsx"></script>
+<script type="text/babel" src="src/theory-blocks.jsx"></script>
 <script type="text/babel" src="src/code-editor.jsx"></script>
 <script type="text/babel" src="src/landing.jsx"></script>
 <script type="text/babel" src="src/catalog.jsx"></script>

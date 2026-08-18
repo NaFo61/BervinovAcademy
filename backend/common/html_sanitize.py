@@ -39,6 +39,7 @@ ALLOWED_TAGS = frozenset(
         "td",
         "figure",
         "figcaption",
+        "mark",
     }
 )
 

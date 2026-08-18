@@ -305,6 +305,15 @@ class LessonTheory(UUIDPublicIdMixin, models.Model):
     )
     title = models.CharField(max_length=200, verbose_name=_("Название урока"))
     content = models.TextField(verbose_name=_("Содержание урока"))
+    blocks = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_("Блоки теории"),
+        help_text=_(
+            "Порядок урока: текст, картинка, заголовок, важно. "
+            "Пустой список — показываем поле «Содержание»."
+        ),
+    )
     comment = models.TextField(
         verbose_name=_("Заметка преподавателя"),
         blank=True,

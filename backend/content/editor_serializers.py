@@ -11,6 +11,11 @@ from content.models import (
     RadioAnswerOption,
     TestCase,
 )
+from content.theory_blocks import (
+    flatten_blocks,
+    normalize_blocks,
+    serialize_blocks_for_api,
+)
 from content.video_utils import build_video_payload
 
 
@@ -60,6 +65,7 @@ class EditorTheorySerializer(
     module_public_id = serializers.UUIDField(
         source="module.public_id", read_only=True
     )
+    blocks = serializers.JSONField(required=False)
 
     class Meta:
         model = LessonTheory
@@ -68,6 +74,7 @@ class EditorTheorySerializer(
             "module_public_id",
             "title",
             "content",
+            "blocks",
             "comment",
             "assistant_prompt",
             "video_url",
@@ -88,6 +95,27 @@ class EditorTheorySerializer(
         from common.html_sanitize import sanitize_html
 
         return sanitize_html(value)
+
+    def validate_blocks(self, value):
+        if self.instance is None:
+            return []
+        return normalize_blocks(value, theory=self.instance)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["blocks"] = serialize_blocks_for_api(
+            instance, self.context.get("request")
+        )
+        return data
+
+    def update(self, instance, validated_data):
+        blocks = validated_data.pop("blocks", None)
+        instance = super().update(instance, validated_data)
+        if blocks is not None:
+            instance.blocks = blocks
+            instance.content = flatten_blocks(blocks)
+            instance.save(update_fields=["blocks", "content"])
+        return instance
 
 
 class EditorRadioSerializer(

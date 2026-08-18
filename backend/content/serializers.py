@@ -121,7 +121,12 @@ class LessonTheorySerializer(
         data = super().to_representation(instance)
         from common.html_sanitize import sanitize_html
 
+        from content.theory_blocks import serialize_blocks_for_api
+
         data["content"] = sanitize_html(data.get("content"))
+        data["blocks"] = serialize_blocks_for_api(
+            instance, self.context.get("request")
+        )
         return data
 
     class Meta:
@@ -131,6 +136,7 @@ class LessonTheorySerializer(
             "module_public_id",
             "title",
             "content",
+            "blocks",
             "comment",
             "video",
             "has_video",

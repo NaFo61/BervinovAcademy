@@ -286,14 +286,20 @@ function ExamTheoryPanel({ lesson, marked, onMark, navigate }) {
   return (
     <div>
       <ExamLessonHeader kind="theory" title={lesson.title} label="Справочная теория"/>
-      {window.LessonAttachments && (
-        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
-      )}
       <window.VideoExplanation video={lesson.video} title="Видео"/>
-      <div
-        className="theory-content mt-6"
-        dangerouslySetInnerHTML={{ __html: window.sanitizeHtml(lesson.content || '<p>Текст теории.</p>') }}
-      />
+      {window.TheoryBlocksView ? (
+        <window.TheoryBlocksView lesson={lesson} navigate={navigate} />
+      ) : (
+        <>
+          {window.LessonAttachments && (
+            <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+          )}
+          <div
+            className="theory-content mt-6"
+            dangerouslySetInnerHTML={{ __html: window.sanitizeHtml(lesson.content || '<p>Текст теории.</p>') }}
+          />
+        </>
+      )}
       <window.LessonInstructorNote text={lesson.comment} />
       <div className="mt-8 flex items-center gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
         <span className="check-dot"/>

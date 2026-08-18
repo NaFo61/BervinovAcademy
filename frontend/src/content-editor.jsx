@@ -156,10 +156,12 @@ function TestsEditor({ tests, setTests }) {
   );
 }
 
-function AttachmentsEditor({ kind, publicId, items, onChange }) {
+function AttachmentsEditor({ kind, publicId, items, onChange, hideImages }) {
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState('');
-  const list = Array.isArray(items) ? items : [];
+  const list = (Array.isArray(items) ? items : []).filter((row) => (
+    hideImages ? !window.isLessonImageAttachment?.(row) : true
+  ));
 
   const upload = async (file) => {
     if (!file || busy) return;
@@ -200,8 +202,10 @@ function AttachmentsEditor({ kind, publicId, items, onChange }) {
 
   return (
     <div>
-      <FieldLabel hint="PDF, Word, Excel, презентации, картинки (png, jpg, svg), zip, txt, md. До 20 МБ. Ученик увидит файлы в задании.">
-        Файлы к заданию
+      <FieldLabel hint={hideImages
+        ? 'PDF, Word, Excel, презентации, zip, txt. Картинки добавляйте кнопкой «+ Картинка» в тексте урока. До 20 МБ на файл, без ограничения по числу.'
+        : 'PDF, Word, Excel, презентации, картинки (png, jpg, svg), zip, txt, md. До 20 МБ на файл, без ограничения по числу. Ученик увидит файлы в задании.'}>
+        {hideImages ? 'Документы к уроку' : 'Файлы к заданию'}
       </FieldLabel>
       {err && <p className="mb-2 text-sm text-red-600">{err}</p>}
       <ul className="space-y-2 mb-3">
@@ -222,7 +226,9 @@ function AttachmentsEditor({ kind, publicId, items, onChange }) {
           type="file"
           className="sr-only"
           disabled={busy}
-          accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.svg,.zip,.txt,.md"
+          accept={hideImages
+            ? '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt,.md'
+            : '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.svg,.zip,.txt,.md'}
           onChange={(e) => {
             const file = e.target.files?.[0];
             e.target.value = '';
@@ -271,7 +277,14 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
       `/api/mentoring/editor/lessons/${encodeURIComponent(kind)}/${encodeURIComponent(lesson.public_id)}/`,
       { auth: true },
     )
-      .then((d) => { setForm(d); setLoading(false); })
+      .then((d) => {
+        const next = { ...d };
+        if (kind === 'theory' && window.hydrateTheoryBlocks) {
+          next.blocks = window.hydrateTheoryBlocks(d);
+        }
+        setForm(next);
+        setLoading(false);
+      })
       .catch((e) => { setError(e.message); setLoading(false); });
   }, [kind, lesson.public_id]);
 
@@ -294,8 +307,16 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
       delete payload.course_public_id;
       delete payload.public_id;
       delete payload.attachments;
+      if (kind === 'theory' && window.serializeTheoryBlocksForSave) {
+        payload.blocks = window.serializeTheoryBlocksForSave(form.blocks);
+        delete payload.content;
+      }
       const saved = await saveLesson(kind, form.public_id, payload, videoFile);
-      setForm(saved);
+      const next = { ...saved };
+      if (kind === 'theory' && window.hydrateTheoryBlocks) {
+        next.blocks = window.hydrateTheoryBlocks(saved);
+      }
+      setForm(next);
       setVideoFile(null);
       setSuccess('Сохранено');
       onSaved?.(saved);
@@ -388,10 +409,6 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
             {kind === 'theory' && (
               <>
                 <div>
-                  <FieldLabel hint="HTML поддерживается">Содержание</FieldLabel>
-                  <TextArea value={form.content} onChange={(v) => setForm({ ...form, content: v })} rows={12}/>
-                </div>
-                <div>
                   <FieldLabel hint="YouTube, Rutube или VK — показывается в уроке">Видео к уроку</FieldLabel>
                   <TextInput value={form.video_url} onChange={(v) => setForm({ ...form, video_url: v })} placeholder="https://www.youtube.com/watch?v=…"/>
                 </div>
@@ -406,6 +423,27 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
                     </div>
                   )}
                 </div>
+                {window.TheoryBlocksEditor ? (
+                  <window.TheoryBlocksEditor
+                    kind={kind}
+                    publicId={form.public_id}
+                    blocks={form.blocks || []}
+                    attachments={form.attachments || []}
+                    onBlocks={(next) => setForm((f) => ({
+                      ...f,
+                      blocks: typeof next === 'function' ? next(f.blocks || []) : next,
+                    }))}
+                    onAttachments={(next) => setForm((f) => ({
+                      ...f,
+                      attachments: typeof next === 'function' ? next(f.attachments || []) : next,
+                    }))}
+                  />
+                ) : (
+                  <div>
+                    <FieldLabel hint="HTML поддерживается">Содержание</FieldLabel>
+                    <TextArea value={form.content} onChange={(v) => setForm({ ...form, content: v })} rows={12}/>
+                  </div>
+                )}
               </>
             )}
 
@@ -472,6 +510,7 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
               kind={kind}
               publicId={form.public_id}
               items={form.attachments}
+              hideImages={kind === 'theory'}
               onChange={(next) => setForm({ ...form, attachments: next })}
             />
 

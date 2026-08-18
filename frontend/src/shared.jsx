@@ -40,6 +40,7 @@ function sanitizeHtml(dirty) {
   return purify.sanitize(String(dirty), {
     USE_PROFILES: { html: true },
     ADD_ATTR: ['target', 'rel'],
+    ADD_TAGS: ['mark'],
   });
 }
 
@@ -954,11 +955,11 @@ function openLessonImagesOnBoard(navigate, { urls, title } = {}) {
   navigate(Routes.WHITEBOARD);
 }
 
-function LessonAttachments({ items, navigate, lessonTitle }) {
+function LessonAttachments({ items, navigate, lessonTitle, hideImages }) {
   const list = Array.isArray(items) ? items : [];
-  if (!list.length) return null;
-  const images = list.filter(isLessonImageAttachment);
+  const images = hideImages ? [] : list.filter(isLessonImageAttachment);
   const files = list.filter((row) => !isLessonImageAttachment(row));
+  if (!images.length && !files.length) return null;
   const loggedIn = !!getAccessToken();
   const canBoard = loggedIn && whiteboardFeatureEnabled() && images.length > 0 && typeof navigate === 'function';
 
@@ -2809,7 +2810,10 @@ Object.assign(window, {
   ConfirmDialog,
   AppNoticeHost,
   LessonAttachments,
+  isLessonImageAttachment,
+  openLessonImagesOnBoard,
   consumeLessonBoardImport,
+  whiteboardFeatureEnabled,
   enableWebPushNotifications,
   fetchConferenceWhiteboard,
   fetchNotifications,
