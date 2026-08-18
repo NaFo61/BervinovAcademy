@@ -110,7 +110,7 @@ services:
     working_dir: /app
     command: >
       sh -c "rm -rf dist && mkdir -p dist &&
-             cp index.html dist/ &&
+             cp index.html tailwind.css dist/ &&
              cp -r src dist/ &&
              (test -d public && cp -r public dist/ || true) &&
              cd whiteboard && npm install && npm run build"

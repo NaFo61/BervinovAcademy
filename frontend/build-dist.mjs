@@ -8,6 +8,33 @@ const root = __dirname;
 const dist = path.join(root, "dist");
 const enableWhiteboard = process.env.ENABLE_WHITEBOARD !== "false";
 
+const cssBin = process.platform === "win32" ? "npx.cmd" : "npx";
+const css = spawnSync(
+  cssBin,
+  [
+    "--yes",
+    "tailwindcss@3.4.17",
+    "-i",
+    "./src/tailwind-input.css",
+    "-o",
+    "./tailwind.css",
+    "--minify",
+  ],
+  {
+    cwd: root,
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  },
+);
+if (css.status !== 0) {
+  const existing = path.join(root, "tailwind.css");
+  if (!fs.existsSync(existing)) {
+    console.error("tailwind.css missing and CLI build failed");
+    process.exit(css.status ?? 1);
+  }
+  console.warn("Tailwind CLI unavailable; using committed tailwind.css");
+}
+
 fs.rmSync(dist, { recursive: true, force: true });
 fs.mkdirSync(dist, { recursive: true });
 
@@ -24,6 +51,7 @@ const copy = (from, to) => {
 };
 
 copy("index.html", "index.html");
+copy("tailwind.css", "tailwind.css");
 copy("src", "src");
 copy("public", "public");
 copy("icons", "icons");

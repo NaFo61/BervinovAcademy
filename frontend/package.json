@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npx --yes serve@14.2.4 -s -l 3000 .",
+    "build:css": "npx --yes tailwindcss@3.4.17 -i ./src/tailwind-input.css -o ./tailwind.css --minify",
     "build": "node build-dist.mjs",
     "preview": "npx --yes serve@14.2.4 -s -l 4173 dist"
   }

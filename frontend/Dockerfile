@@ -7,7 +7,7 @@ WORKDIR /app
 COPY . .
 
 RUN rm -rf dist && mkdir -p dist \
-    && cp index.html dist/ \
+    && cp index.html tailwind.css dist/ \
     && cp -r src dist/ \
     && (test -d public && cp -r public dist/ || true) \
     && (test -d icons && cp -r icons dist/ || true) \
