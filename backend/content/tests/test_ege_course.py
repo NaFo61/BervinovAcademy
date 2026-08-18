@@ -62,6 +62,9 @@ def test_seed_ege_structure():
         "Контрольная",
     ]
 
+    graphs = modules[0]
+    assert graphs.lessons_theories.filter(is_active=True).count() == 7
+
     for mod in modules[:3]:
         assert mod.lessons_theories.filter(is_active=True).count() >= 1
         assert mod.lessons_radio_questions.filter(is_active=True).count() >= 2
