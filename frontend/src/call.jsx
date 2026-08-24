@@ -1015,26 +1015,30 @@ function VideoTile({ tile, main = false, compact = false, clean = false, fit = '
 
 function WhiteboardTile({ roomId, syncToken, licenseKey }) {
   const hostRef = React.useRef(null);
+  const [bundleError, setBundleError] = React.useState('');
 
   React.useEffect(() => {
     const host = hostRef.current;
-    const api = window.BervinovWhiteboard;
-    if (!host || !roomId || !syncToken || !api?.mount) return undefined;
-
-    api.mount(host, { roomId, syncToken, licenseKey });
-
+    if (!host || !roomId || !syncToken) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const api = window.ensureWhiteboardBundle
+          ? await window.ensureWhiteboardBundle()
+          : window.BervinovWhiteboard;
+        if (cancelled || !api?.mount) return;
+        api.mount(host, { roomId, syncToken, licenseKey });
+      } catch (err) {
+        if (!cancelled) {
+          setBundleError(err?.message || 'Доска не загрузилась');
+        }
+      }
+    })();
     return () => {
-      api.unmount?.(host);
+      cancelled = true;
+      window.BervinovWhiteboard?.unmount?.(host);
     };
   }, [roomId, syncToken, licenseKey]);
-
-  if (!window.BervinovWhiteboard?.mount) {
-    return (
-      <div className="absolute inset-0 flex items-center justify-center bg-white text-slate-600 text-xs px-4 text-center">
-        Доска загружается…
-      </div>
-    );
-  }
 
   if (!syncToken) {
     return (
@@ -1044,7 +1048,15 @@ function WhiteboardTile({ roomId, syncToken, licenseKey }) {
     );
   }
 
-  return <div ref={hostRef} className="absolute inset-0 bg-[#f6f8fc] z-[1] pointer-events-auto touch-none" />;
+  return (
+    <div ref={hostRef} className="absolute inset-0 bg-[#f6f8fc] z-[1] pointer-events-auto touch-none">
+      {bundleError ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-white text-slate-600 text-xs px-4 text-center">
+          {bundleError}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function ModeButton({ active, onClick, children }) {

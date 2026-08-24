@@ -37,15 +37,19 @@ function WhiteboardPage({ navigate }) {
       setLoading(true);
       setError('');
       try {
-        const data = await window.apiJson('/api/communication/whiteboard/studio/token/', {
-          method: 'POST',
-          auth: true,
-          body: {},
-        });
+        const [data, api] = await Promise.all([
+          window.apiJson('/api/communication/whiteboard/studio/token/', {
+            method: 'POST',
+            auth: true,
+            body: {},
+          }),
+          window.ensureWhiteboardBundle
+            ? window.ensureWhiteboardBundle()
+            : Promise.resolve(window.BervinovWhiteboard),
+        ]);
         if (cancelled) return;
-        const api = window.BervinovWhiteboard;
         if (!api?.mount) {
-          throw new Error('Whiteboard bundle не загружен. Обновите страницу.');
+          throw new Error('Доска ещё загружается. Обновите страницу.');
         }
         const host = hostRef.current;
         if (!host) return;

@@ -73,7 +73,7 @@ function Hero({ navigate }) {
                 {[0,1,2,3,4].map(i => <I.Star key={i} className="w-3.5 h-3.5 text-flame-500"/>)}
                 <span className="ml-1 font-semibold">4.9</span>
               </div>
-              <div className="text-ink/55 text-xs mt-0.5">закрывают №1, №4, №9 и №10 без паники</div>
+              <div className="text-ink/55 text-xs mt-0.5">уже решают №1, №4, №9 и №10 на платформе</div>
             </div>
           </M.div>
         </div>
@@ -189,23 +189,23 @@ function WhySection() {
   const M = FM.motion;
   const items = [
     {
-      title: 'Как на уроке, не как в учебнике',
-      desc: 'Сначала условие из КИМ, потом таблица или 10 строк кода. Без «в этом курсе вы научитесь».',
+      title: 'Уроки по номерам ЕГЭ',
+      desc: 'Короткая теория, затем задание из варианта: таблица, граф или несколько строк кода.',
       Icon: I.Book, tint: '#2563EB',
     },
     {
-      title: 'Те самые номера',
-      desc: 'Графы и дороги, условие Фано, поиск куска в тексте, ячейки в таблице. То, что спрашивают на ЕГЭ.',
+      title: 'Практика как на экзамене',
+      desc: 'Графы и дороги, кодирование, поиск в тексте, электронные таблицы — то, что спрашивают на ЕГЭ.',
       Icon: I.Layers, tint: '#06B6D4',
     },
     {
-      title: 'Python на 15 строк',
-      desc: 'input, цикл, print. Фреймворки не трогаем — на экзамене их нет, и в курсе тоже.',
+      title: 'Код прямо на платформе',
+      desc: 'Пишете Python в браузере и сразу видите результат. Как на экзамене: ввод, цикл, вывод.',
       Icon: I.Code, tint: '#0EA5E9',
     },
     {
-      title: 'Чат с преподавателем',
-      desc: 'Застрял на матрице в одиннадцатом вечера — напиши. Разберём, где задвоил ребро.',
+      title: 'Преподаватель рядом',
+      desc: 'Не поняли задание — напишите в чат. Разберём вместе, даже вечером после школы.',
       Icon: I.Chat, tint: '#06B6D4',
     },
   ];
@@ -214,13 +214,13 @@ function WhySection() {
       <div className="max-w-7xl mx-auto px-5 sm:px-8 py-14 sm:py-24">
         <div className="flex items-end justify-between flex-wrap gap-6 mb-12">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-widest text-violet-600 mb-3">Почему со мной</div>
+            <div className="text-xs font-semibold uppercase tracking-widest text-violet-600 mb-3">Почему эта платформа</div>
             <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight max-w-2xl">
-              Готовим к <span className="grad-text">информатике</span>, а не к «айти».
+              Всё для ЕГЭ по <span className="grad-text">информатике</span> — в одном месте
             </h2>
           </div>
           <p className="text-ink/60 max-w-sm">
-            Ведём 10–11 класс: один тип задания за урок, потом короткий код или таблица. Без воды и без обещаний «тимлидом за месяц».
+            Курс для 10–11 класса: теория, тесты и задачи с кодом. Один тип задания — один урок. Можно начать с любой темы.
           </p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -329,7 +329,7 @@ function CTABand({ navigate }) {
               <h3 className="text-3xl sm:text-4xl font-extrabold leading-tight max-w-2xl">
                 Начни с таблицы дорог — это первый урок.
               </h3>
-              <p className="opacity-85 mt-3 max-w-xl">Зарегистрируйся, открой курс и сразу решай. Созвон с преподавателем — когда застрянешь, не «через 24 часа план от куратора».</p>
+              <p className="opacity-85 mt-3 max-w-xl">Зарегистрируйтесь, откройте курс и сразу решайте задания. Если застрянете — напишите преподавателю или созвонитесь.</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <button onClick={() => navigate(Routes.AUTH)} className="h-14 px-7 rounded-2xl bg-white text-violet-600 font-bold inline-flex items-center gap-2 hover:scale-[1.02] transition-transform">

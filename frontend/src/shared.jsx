@@ -404,9 +404,21 @@ async function fetchCoursesList() {
   return all;
 }
 
-async function refreshAccessToken() {
+function accessTokenTtlMs(token) {
+  const payload = parseJwtPayload(token);
+  if (!payload || typeof payload.exp !== 'number') return 0;
+  return payload.exp * 1000 - Date.now();
+}
+
+let refreshInFlight = null;
+
+async function refreshAccessTokenOnce() {
+  const access = getAccessToken();
+  if (access && accessTokenTtlMs(access) > 30000) return 'ok';
+
   const refresh = getRefreshToken();
-  if (!refresh) return false;
+  if (!refresh) return 'invalid';
+
   try {
     const data = await fetchApiJson('/api/auth/refresh/', {
       method: 'POST',
@@ -416,12 +428,73 @@ async function refreshAccessToken() {
     if (data && data.access) {
       setAuthTokens(data.access, data.refresh || refresh);
       notifyAuthChanged();
-      return true;
+      return 'ok';
     }
-  } catch (_) {
-    /* expired refresh */
+    return 'invalid';
+  } catch (err) {
+    const status = err && err.status;
+    if (status === 401 || status === 403) {
+      const latest = getRefreshToken();
+      const latestAccess = getAccessToken();
+      if (latest && latest !== refresh && latestAccess) return 'ok';
+      return 'invalid';
+    }
+    return 'unavailable';
   }
-  return false;
+}
+
+async function runRefreshWithLock() {
+  if (navigator.locks && typeof navigator.locks.request === 'function') {
+    return navigator.locks.request('ba-jwt-refresh', refreshAccessTokenOnce);
+  }
+  return refreshAccessTokenOnce();
+}
+
+async function refreshAccessTokenDetailed() {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = runRefreshWithLock().finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+async function refreshAccessToken() {
+  return (await refreshAccessTokenDetailed()) === 'ok';
+}
+
+let authKeepAliveId = null;
+
+function startAuthKeepAlive() {
+  if (authKeepAliveId != null) return;
+  const tick = () => {
+    if (!getAccessToken() || !getRefreshToken()) return;
+    if (accessTokenTtlMs(getAccessToken()) < 120000) {
+      refreshAccessTokenDetailed();
+    }
+  };
+  tick();
+  authKeepAliveId = window.setInterval(tick, 60000);
+}
+
+function ensureWhiteboardBundle(timeoutMs = 20000) {
+  if (window.BervinovWhiteboard?.mount) {
+    return Promise.resolve(window.BervinovWhiteboard);
+  }
+  return new Promise((resolve, reject) => {
+    const started = Date.now();
+    const tick = () => {
+      if (window.BervinovWhiteboard?.mount) {
+        resolve(window.BervinovWhiteboard);
+        return;
+      }
+      if (Date.now() - started > timeoutMs) {
+        reject(new Error('Доска ещё загружается. Обновите страницу.'));
+        return;
+      }
+      window.setTimeout(tick, 40);
+    };
+    tick();
+  });
 }
 
 function mediaUrl(path) {
@@ -481,12 +554,14 @@ async function fetchApiJson(path, opts = {}) {
     data = { _raw: text };
   }
   if (res.status === 401 && auth && _retry && !path.includes('/auth/refresh/')) {
-    const renewed = await refreshAccessToken();
-    if (renewed) {
+    const outcome = await refreshAccessTokenDetailed();
+    if (outcome === 'ok') {
       return fetchApiJson(path, { ...opts, _retry: false });
     }
-    clearAuthTokens();
-    notifyAuthChanged();
+    if (outcome === 'invalid') {
+      clearAuthTokens();
+      notifyAuthChanged();
+    }
   }
   if (!res.ok) {
     const msg = formatDrfError(data) || res.statusText || 'Ошибка запроса';
@@ -557,12 +632,14 @@ async function fetchApiForm(path, formData, opts = {}) {
     data = { _raw: text };
   }
   if (res.status === 401 && auth && _retry && !path.includes('/auth/refresh/')) {
-    const renewed = await refreshAccessToken();
-    if (renewed) {
+    const outcome = await refreshAccessTokenDetailed();
+    if (outcome === 'ok') {
       return fetchApiForm(path, formData, { ...opts, _retry: false });
     }
-    clearAuthTokens();
-    notifyAuthChanged();
+    if (outcome === 'invalid') {
+      clearAuthTokens();
+      notifyAuthChanged();
+    }
   }
   if (!res.ok) {
     const msg = formatDrfError(data) || res.statusText || 'Ошибка запроса';
@@ -1080,15 +1157,24 @@ function WhiteboardPreviewModal({ conferenceId, title, onClose }) {
 
   React.useEffect(() => {
     const host = viewerRef.current;
-    const api = window.BervinovWhiteboard;
-    if (!host || !board?.has_snapshot || viewMode !== 'board' || !api?.mountReadOnly) {
+    if (!host || !board?.has_snapshot || viewMode !== 'board') {
       return undefined;
     }
-    api.mountReadOnly(host, {
-      snapshot: board.snapshot_json,
-      licenseKey: board.license_key || '',
-    });
-    return () => api.unmount?.(host);
+    let cancelled = false;
+    (async () => {
+      try {
+        const api = await ensureWhiteboardBundle();
+        if (cancelled || !api?.mountReadOnly) return;
+        api.mountReadOnly(host, {
+          snapshot: board.snapshot_json,
+          licenseKey: board.license_key || '',
+        });
+      } catch (_) { /* keep image fallback */ }
+    })();
+    return () => {
+      cancelled = true;
+      window.BervinovWhiteboard?.unmount?.(host);
+    };
   }, [board, viewMode]);
 
   React.useEffect(() => {
@@ -2588,8 +2674,7 @@ function Footer({ navigate }) {
             </div>
           </div>
           <p className="text-sm text-ink/60 max-w-sm">
-            Учим программированию вживую: ментор смотрит твой код, отвечает на вопросы и помогает не сдаваться.
-
+            Онлайн-платформа подготовки к ЕГЭ по информатике: уроки, практика и разборы преподавателя.
           </p>
           <div className="mt-5 flex items-center gap-3">
             <a className="w-10 h-10 rounded-xl bg-black/[0.04] hover:bg-violet-500/10 hover:text-violet-600 flex items-center justify-center transition-colors text-ink/60" href="#"><I.VK className="w-4 h-4" /></a>
@@ -2787,6 +2872,7 @@ Object.assign(window, {
   fetchCourseProgress,
   enrollmentsByCourseId,
   refreshAccessToken,
+  ensureWhiteboardBundle,
   formatDrfError,
   mediaUrl,
   parseJwtPayload,
@@ -2842,3 +2928,5 @@ Object.assign(window, {
   FloatingShapes,
   FM,
 });
+
+startAuthKeepAlive();

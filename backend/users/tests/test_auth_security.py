@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from django.core.cache import cache
 import pytest
 from rest_framework.test import APIClient
@@ -273,6 +275,26 @@ class TestLogoutAndRefresh:
             format="json",
         )
         assert resp.status_code == 401
+
+    def test_refresh_token_lives_about_six_months(self, api):
+        _user(
+            email="longlived@academy.com",
+            phone="+79001112219",
+            password=STRONG_PASSWORD,
+        )
+        login = api.post(
+            "/api/auth/login/",
+            {
+                "login": "longlived@academy.com",
+                "password": STRONG_PASSWORD,
+            },
+            format="json",
+        )
+        assert login.status_code == 200
+        refresh = RefreshToken(login.data["refresh"])
+        assert refresh["exp"] - refresh["iat"] >= int(
+            timedelta(days=170).total_seconds()
+        )
 
 
 @pytest.mark.django_db

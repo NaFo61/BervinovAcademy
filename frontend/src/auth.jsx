@@ -490,7 +490,7 @@ function AuthForm({ mode, setMode, navigate }) {
                       ${rememberMe ? 'translate-x-4' : 'translate-x-0'}`}/>
                   </span>
                   <span className="text-sm font-medium text-ink/70 group-hover:text-ink">
-                    Запомнить меня
+                    Запомнить меня · до 6 месяцев
                   </span>
                 </label>
                 <button
