@@ -1,0 +1,254 @@
+{
+  "meta": {
+    "topic": "ЕГЭ, задание 1 — графы",
+    "images_dir": "images/"
+  },
+  "lessons": [
+    {
+      "type": "theory",
+      "title": "Таблица дорог и матрица смежности",
+      "content": "<h2>Что рисуют на №1</h2>\n<p>В КИМ дают таблицу: строки и столбцы — города, в клетке длина дороги или прочерк. Это уже граф: вершины — города, рёбра — дороги.</p>\n<p>Матрица смежности для неориентированного графа симметрична. Единица (или длина) в клетке <em>i, j</em> значит, что между вершинами есть ребро. Нули на диагонали — петли обычно не считают.</p>\n<h3>Как не завалить подсчёт</h3>\n<ul>\n<li>Ребро {A, B} в неориентированном графе считается <strong>один раз</strong>, хотя в матрице две единицы.</li>\n<li>Степень вершины — сколько единиц в её строке (без петли).</li>\n<li>Путь длины 2 из A в C ищут так: есть ли общий сосед. На черновике удобно выписать соседей столбцом.</li>\n</ul>\n<p>Не зубрите «формулу полного графа» вслепую. На экзамене чаще дают кривую таблицу с пятью городами и просят кратчайший маршрут или число дорог из пункта.</p>",
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "comment": "После теории откройте матрицу 4×4 на листочке и посчитайте рёбра вручную — так быстрее, чем смотреть разбор."
+    },
+    {
+      "type": "radio",
+      "title": "Сколько рёбер у K4",
+      "question_text": "Полный неориентированный граф на 4 вершинах. Сколько у него рёбер?",
+      "explanation": "Каждая пара вершин соединена: 4×3/2 = 6.",
+      "points": 3,
+      "answers": [
+        [
+          "4",
+          false
+        ],
+        [
+          "6",
+          true
+        ],
+        [
+          "8",
+          false
+        ],
+        [
+          "12",
+          false
+        ]
+      ],
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<p>Разбор на видео — как на уроке: сначала условие, потом короткий код или таблица.</p>"
+    },
+    {
+      "type": "radio",
+      "title": "Степень по строке матрицы",
+      "question_text": "В матрице смежности без петель строка вершины B: 1 0 1 1 0. Чему равна степень B?",
+      "explanation": "Считаем единицы в строке: три соседа.",
+      "points": 3,
+      "answers": [
+        [
+          "2",
+          false
+        ],
+        [
+          "3",
+          true
+        ],
+        [
+          "4",
+          false
+        ],
+        [
+          "5",
+          false
+        ]
+      ],
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<p>Разбор на видео — как на уроке: сначала условие, потом короткий код или таблица.</p>"
+    },
+    {
+      "type": "checkbox",
+      "title": "Что видно по матрице смежности",
+      "question_text": "Отметьте всё, что можно сразу прочитать из матрицы смежности неориентированного графа (без весов).",
+      "explanation": "Цвет картинки к матрице не относится. Остальное — да.",
+      "points": 4,
+      "answers": [
+        [
+          "Есть ли ребро между двумя вершинами",
+          true
+        ],
+        [
+          "Степень вершины",
+          true
+        ],
+        [
+          "Цвет вершин на картинке в учебнике",
+          false
+        ],
+        [
+          "Симметрична ли таблица (как проверка на ориентированность)",
+          true
+        ]
+      ],
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<p>Разбор на видео — как на уроке: сначала условие, потом короткий код или таблица.</p>"
+    },
+    {
+      "type": "checkbox",
+      "title": "Таблица дорог на ЕГЭ",
+      "question_text": "Что верно для типового №1 с таблицей расстояний между городами?",
+      "explanation": "Сумма всех клеток — не ответ: там дубли и длины, не число маршрутов.",
+      "points": 4,
+      "answers": [
+        [
+          "Прочерк часто значит «дороги нет»",
+          true
+        ],
+        [
+          "Кратчайший путь не всегда прямое ребро: иногда дешевле через третий город",
+          true
+        ],
+        [
+          "Достаточно сложить все числа в таблице и разделить на два",
+          false
+        ],
+        [
+          "Имеет смысл набросать граф на черновике, а не считать в уме",
+          true
+        ]
+      ],
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<p>Разбор на видео — как на уроке: сначала условие, потом короткий код или таблица.</p>"
+    },
+    {
+      "type": "coding",
+      "title": "Число рёбер по матрице",
+      "description": "Дана матрица смежности неориентированного графа без петель. Посчитайте число рёбер. Ребро {i, j} в матрице встречается дважды — считайте один раз.",
+      "instructions": "Сначала n — число вершин. Затем n строк по n чисел 0 или 1 через пробел.",
+      "initial_code": "n = int(input())\n# считайте верхний треугольник матрицы\n",
+      "solution_template": "n = int(input())\nedges = 0\nfor i in range(n):\n    row = list(map(int, input().split()))\n    for j in range(i + 1, n):\n        edges += row[j]\nprint(edges)",
+      "difficulty": "beginner",
+      "points": 10,
+      "test_cases": [
+        {
+          "input_data": "3\n0 1 1\n1 0 1\n1 1 0\n",
+          "expected_output": "3",
+          "is_hidden": false
+        },
+        {
+          "input_data": "4\n0 1 0 0\n1 0 1 1\n0 1 0 0\n0 1 0 0\n",
+          "expected_output": "3",
+          "is_hidden": false
+        },
+        {
+          "input_data": "1\n0\n",
+          "expected_output": "0",
+          "is_hidden": true
+        }
+      ],
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<pre><code>n = int(input())\nedges = 0\nfor i in range(n):\n    row = list(map(int, input().split()))\n    for j in range(i + 1, n):\n        edges += row[j]\nprint(edges)</code></pre>"
+    },
+    {
+      "type": "coding",
+      "title": "Степень вершины",
+      "description": "Вершины пронумерованы с 1. По матрице смежности выведите степень вершины k (число единиц в строке k, петлю не кладём — на диагонали нули).",
+      "instructions": "n и k. Затем матрица n×n.",
+      "initial_code": "n, k = map(int, input().split())\n# ваш код\n",
+      "solution_template": "n, k = map(int, input().split())\nrow = None\nfor i in range(n):\n    line = list(map(int, input().split()))\n    if i + 1 == k:\n        row = line\nprint(sum(row))",
+      "difficulty": "easy",
+      "points": 10,
+      "test_cases": [
+        {
+          "input_data": "4 2\n0 1 0 0\n1 0 1 1\n0 1 0 0\n0 1 0 0\n",
+          "expected_output": "3",
+          "is_hidden": false
+        },
+        {
+          "input_data": "3 1\n0 1 1\n1 0 0\n1 0 0\n",
+          "expected_output": "2",
+          "is_hidden": false
+        },
+        {
+          "input_data": "2 2\n0 0\n0 0\n",
+          "expected_output": "0",
+          "is_hidden": true
+        }
+      ],
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<pre><code>n, k = map(int, input().split())\nrow = None\nfor i in range(n):\n    line = list(map(int, input().split()))\n    if i + 1 == k:\n        row = line\nprint(sum(row))</code></pre>"
+    },
+    {
+      "type": "coding",
+      "title": "Изолированные вершины",
+      "description": "Сколько вершин имеют степень 0?",
+      "instructions": "n, затем матрица n×n из 0 и 1.",
+      "initial_code": "n = int(input())\n# ваш код\n",
+      "solution_template": "n = int(input())\niso = 0\nfor _ in range(n):\n    row = list(map(int, input().split()))\n    if sum(row) == 0:\n        iso += 1\nprint(iso)",
+      "difficulty": "easy",
+      "points": 10,
+      "test_cases": [
+        {
+          "input_data": "3\n0 1 0\n1 0 0\n0 0 0\n",
+          "expected_output": "1",
+          "is_hidden": false
+        },
+        {
+          "input_data": "2\n0 1\n1 0\n",
+          "expected_output": "0",
+          "is_hidden": false
+        },
+        {
+          "input_data": "1\n0\n",
+          "expected_output": "1",
+          "is_hidden": true
+        }
+      ],
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<pre><code>n = int(input())\niso = 0\nfor _ in range(n):\n    row = list(map(int, input().split()))\n    if sum(row) == 0:\n        iso += 1\nprint(iso)</code></pre>"
+    },
+    {
+      "type": "short_answer",
+      "title": "Что рисуют таблицей дорог",
+      "question_text": "Одним словом: набор вершин и рёбер в задании с городами и дорогами.",
+      "correct_answer": "Граф",
+      "answer_normalize": "strip_casefold",
+      "explanation": "Таблица дорог — это граф: города-вершины, дороги-рёбра.",
+      "points": 3,
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<p>Разбор на видео — как на уроке: сначала условие, потом короткий код или таблица.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "Рёбра у треугольника",
+      "question_text": "Сколько рёбер у полного графа на трёх вершинах (K3)? Только число.",
+      "correct_answer": "3",
+      "answer_normalize": "strip_casefold",
+      "explanation": "Треугольник: три ребра.",
+      "points": 3,
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<p>Разбор на видео — как на уроке: сначала условие, потом короткий код или таблица.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "Степень в K5",
+      "question_text": "В полном графе на 5 вершинах какая степень у каждой вершины?",
+      "correct_answer": "4",
+      "answer_normalize": "strip_casefold",
+      "explanation": "Соединена со всеми, кроме себя: 4.",
+      "points": 3,
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<p>Разбор на видео — как на уроке: сначала условие, потом короткий код или таблица.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "Формула полного графа",
+      "question_text": "Чему равно n(n−1)/2 при n = 6? Это число рёбер K6.",
+      "correct_answer": "15",
+      "answer_normalize": "strip_casefold",
+      "explanation": "6×5/2 = 15.",
+      "points": 3,
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<p>Разбор на видео — как на уроке: сначала условие, потом короткий код или таблица.</p>"
+    }
+  ]
+}

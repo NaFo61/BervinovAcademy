@@ -6,7 +6,6 @@ from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from fixture.course_fixtures import COURSE_FIXTURES
-from fixture.ege_n1 import apply_ege_n1_blocks
 
 from content.models import (
     CheckBoxAnswerOption,
@@ -506,19 +505,15 @@ class Command(BaseCommand):
         common = self._lesson_common(lesson)
 
         if kind == "theory":
-            theory = LessonTheory.objects.create(
+            LessonTheory.objects.create(
                 module=module,
                 exam=exam,
                 title=lesson["title"],
-                content=lesson.get("content") or "<p></p>",
+                content=lesson["content"],
                 order_index=order_index,
                 is_active=True,
                 **common,
             )
-            blocks = lesson.get("blocks")
-            assets_dir = lesson.get("assets_dir")
-            if blocks and assets_dir:
-                apply_ege_n1_blocks(theory, blocks, assets_dir)
             return
 
         if kind == "radio":

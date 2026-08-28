@@ -53,17 +53,15 @@ def test_seed_ege_structure():
     modules = list(
         course.modules.filter(is_active=True).order_by("order_index")
     )
-    assert len(modules) == 4
+    assert len(modules) == 5
     titles = [m.title for m in modules]
     assert titles == [
         "1-й урок ЕГЭ: Графы",
         "2-й урок ЕГЭ: Кодирование и поиск",
         "3-й урок ЕГЭ: Электронные таблицы",
+        "4-й урок ЕГЭ: Кодирование изображений",
         "Контрольная",
     ]
-
-    graphs = modules[0]
-    assert graphs.lessons_theories.filter(is_active=True).count() == 7
 
     for mod in modules[:3]:
         assert mod.lessons_theories.filter(is_active=True).count() >= 1
@@ -84,7 +82,7 @@ def test_seed_ege_structure():
         for q in mod.lessons_short_answers.filter(is_active=True):
             assert q.video_url
 
-    control = modules[3]
+    control = modules[4]
     assert control.lessons_theories.filter(is_active=True).count() == 0
     assert control.lessons_radio_questions.filter(is_active=True).count() >= 2
     assert (

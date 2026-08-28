@@ -81,6 +81,7 @@ testpaths = [
     "backend/subscriptions/tests",
     "backend/notify/tests",
     "backend/school_platform/tests",
+    "backend/fixture/tests",
     "deploy/tests",
 ]
 markers = [

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="120" viewBox="0 0 320 120">
+  <rect width="320" height="120" fill="#f8fafc"/>
+  <text x="16" y="24" font-family="Arial,sans-serif" font-size="14" fill="#334155">8:A5;L=0O A5B:0 4×3</text>
+  <g transform="translate(40,36)">
+    <rect x="0" y="0" width="30" height="30" fill="#ef4444" stroke="#64748b"/>
+    <rect x="30" y="0" width="30" height="30" fill="#22c55e" stroke="#64748b"/>
+    <rect x="60" y="0" width="30" height="30" fill="#3b82f6" stroke="#64748b"/>
+    <rect x="90" y="0" width="30" height="30" fill="#f59e0b" stroke="#64748b"/>
+    <rect x="0" y="30" width="30" height="30" fill="#a855f7" stroke="#64748b"/>
+    <rect x="30" y="30" width="30" height="30" fill="#06b6d4" stroke="#64748b"/>
+    <rect x="60" y="30" width="30" height="30" fill="#ec4899" stroke="#64748b"/>
+    <rect x="90" y="30" width="30" height="30" fill="#84cc16" stroke="#64748b"/>
+    <rect x="0" y="60" width="30" height="30" fill="#f97316" stroke="#64748b"/>
+    <rect x="30" y="60" width="30" height="30" fill="#14b8a6" stroke="#64748b"/>
+    <rect x="60" y="60" width="30" height="30" fill="#6366f1" stroke="#64748b"/>
+    <rect x="90" y="60" width="30" height="30" fill="#eab308" stroke="#64748b"/>
+  </g>
+</svg>

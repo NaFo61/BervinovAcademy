@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="340" height="160" viewBox="0 0 340 160">
+  <rect width="340" height="160" fill="#f8fafc"/>
+  <text x="16" y="24" font-family="Arial,sans-serif" font-size="14" fill="#334155">8B>20O 3;C18=0: A:>;L:> 18B =0 ?8:A5;L</text>
+  <rect x="24" y="44" width="90" height="50" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="34" y="74" font-size="13" fill="#1e3a8a">1 18B</text>
+  <text x="34" y="92" font-size="11" fill="#1e40af">2 F25B0</text>
+  <rect x="130" y="44" width="90" height="50" fill="#dcfce7" stroke="#22c55e"/>
+  <text x="140" y="74" font-size="13" fill="#14532d">8 18B</text>
+  <text x="140" y="92" font-size="11" fill="#166534">256 F25B>2</text>
+  <rect x="236" y="44" width="90" height="50" fill="#fce7f3" stroke="#ec4899"/>
+  <text x="246" y="74" font-size="13" fill="#831843">24 18B0</text>
+  <text x="246" y="92" font-size="11" fill="#9d174d">True Color</text>
+  <text x="24" y="130" font-size="12" fill="#475569">$>@<C;0: @07<5@ = H8@8=0 × 2KA>B0 × 3;C18=0 (18B) / 8</text>
+</svg>

@@ -181,9 +181,6 @@ __marimo__/
 media/
 staticfiles/
 
-# Картинки теории №1 грузятся в S3, не в git
-backend/fixture/assets/ege-n1/**/img/
-
 logs/
 logs
 

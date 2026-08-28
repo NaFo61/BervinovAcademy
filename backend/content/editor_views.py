@@ -1,8 +1,16 @@
 from pathlib import Path
+import tempfile
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
+from fixture.content_pack import (
+    ContentPackError,
+    import_content_pack,
+    import_result_to_dict,
+    inspect_content_pack,
+    preview_result_to_dict,
+)
 from rest_framework import status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
@@ -468,3 +476,78 @@ class LessonAttachmentDeleteView(APIView):
 
             prune_image_blocks(instance, attachment_public_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CourseContentPackImportView(APIView):
+    """``POST /api/mentoring/editor/courses/{course_public_id}/import-pack/``."""
+
+    permission_classes = [IsAuthenticated, IsMentorOrAdmin]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, course_public_id):
+        course = get_object_or_404(Course, public_id=course_public_id)
+        denied = _check_course_access(request, course)
+        if denied:
+            return denied
+
+        upload = request.FILES.get("archive")
+        if not upload:
+            return Response(
+                {
+                    "detail": "Выберите ZIP-архив с manifest.json и questions.json."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not str(upload.name or "").lower().endswith(".zip"):
+            return Response(
+                {"detail": "Нужен файл с расширением .zip."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        dry_run = str(request.data.get("dry_run", "")).lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                suffix=".zip", delete=False
+            ) as tmp:
+                for chunk in upload.chunks():
+                    tmp.write(chunk)
+                tmp_path = Path(tmp.name)
+
+            preview = inspect_content_pack(archive=tmp_path)
+            if preview.course_slug != course.slug:
+                return Response(
+                    {
+                        "detail": (
+                            f"В manifest указан курс «{preview.course_slug}», "
+                            f"а вы импортируете в «{course.slug}». "
+                            "Проверьте course_slug в manifest.json."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            result = import_content_pack(archive=tmp_path, dry_run=dry_run)
+            if dry_run:
+                payload = preview_result_to_dict(preview, dry_run=result)
+                payload["message"] = (
+                    f"Проверка пройдена: будет создано {result.stats.created}, "
+                    f"обновлено {result.stats.updated}."
+                )
+            else:
+                payload = import_result_to_dict(result)
+            return Response(payload)
+        except ContentPackError as exc:
+            return Response(
+                {"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST
+            )
+        finally:
+            if tmp_path is not None:
+                tmp_path.unlink(missing_ok=True)

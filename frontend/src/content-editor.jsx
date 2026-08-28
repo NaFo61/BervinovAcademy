@@ -720,6 +720,143 @@ function CoursePromptEditor({ courseId, outline, onSaved }) {
   );
 }
 
+function ContentPackImportPanel({ courseId, onImported }) {
+  const [open, setOpen] = React.useState(false);
+  const [file, setFile] = React.useState(null);
+  const [dragOver, setDragOver] = React.useState(false);
+  const [preview, setPreview] = React.useState(null);
+  const [busy, setBusy] = React.useState('');
+  const [error, setError] = React.useState('');
+  const inputRef = React.useRef(null);
+
+  const reset = () => {
+    setPreview(null);
+    setError('');
+  };
+
+  const pickFile = (next) => {
+    if (!next || !next.name.toLowerCase().endsWith('.zip')) {
+      setError('Нужен ZIP-архив с manifest.json и questions.json.');
+      return;
+    }
+    setFile(next);
+    reset();
+  };
+
+  const upload = async (dryRun) => {
+    if (!courseId || !file) return;
+    setBusy(dryRun ? 'preview' : 'import');
+    setError('');
+    try {
+      const form = new FormData();
+      form.append('archive', file);
+      if (dryRun) form.append('dry_run', '1');
+      const data = await window.fetchApiForm(
+        `/api/mentoring/editor/courses/${encodeURIComponent(courseId)}/import-pack/`,
+        form,
+        { method: 'POST', auth: true },
+      );
+      setPreview(data);
+      if (!dryRun && typeof onImported === 'function') onImported();
+    } catch (ex) {
+      setError(ex.message || 'Не удалось обработать архив');
+      setPreview(null);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  return (
+    <div className="rounded-2xl ring-1 ring-emerald-200 bg-emerald-50/50 overflow-hidden">
+      <button type="button" onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-emerald-50 transition-colors">
+        <span className="text-xl">📦</span>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-bold text-emerald-900">Импорт пакета заданий</div>
+          <div className="text-[11px] text-emerald-800/70">ZIP с manifest.json и questions.json</div>
+        </div>
+        <span className="text-[11px] text-emerald-700/70">{open ? 'Скрыть' : 'Открыть'}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-4 border-t border-emerald-100">
+          <div className="pt-3 text-[12px] text-ink/60 space-y-2">
+            <p><strong>Что положить в ZIP:</strong></p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><code className="text-[11px]">manifest.json</code> — куда вешать пакет (курс, модуль, pack_id)</li>
+              <li><code className="text-[11px]">questions.json</code> — теория и вопросы</li>
+              <li><code className="text-[11px]">images/</code> — картинки (если есть в вопросах)</li>
+            </ul>
+            <p>Повторный импорт с тем же pack_id обновляет вопросы по названию, не дублирует.</p>
+          </div>
+
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              pickFile(e.dataTransfer.files?.[0] || null);
+            }}
+            onClick={() => inputRef.current?.click()}
+            className={`rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-colors
+              ${dragOver ? 'border-emerald-400 bg-emerald-50' : 'border-emerald-200/80 bg-white/70 hover:border-emerald-300'}`}>
+            <input ref={inputRef} type="file" accept=".zip,application/zip" className="hidden"
+              onChange={(e) => pickFile(e.target.files?.[0] || null)} />
+            <div className="text-2xl mb-2">⬆️</div>
+            <p className="text-sm font-semibold text-ink/75">
+              {file ? file.name : 'Перетащите ZIP сюда или нажмите для выбора'}
+            </p>
+            <p className="text-[11px] text-ink/45 mt-1">Только .zip</p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={!file || !!busy} onClick={() => upload(true)}
+              className="h-10 px-4 rounded-xl text-sm font-semibold bg-white ring-1 ring-emerald-200 text-emerald-800 disabled:opacity-40">
+              {busy === 'preview' ? 'Проверяю…' : 'Проверить (без записи)'}
+            </button>
+            <button type="button" disabled={!file || !!busy} onClick={() => upload(false)}
+              className="h-10 px-4 rounded-xl text-sm font-semibold bg-emerald-600 text-white disabled:opacity-40">
+              {busy === 'import' ? 'Импортирую…' : 'Импортировать в курс'}
+            </button>
+          </div>
+
+          {error && (
+            <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm ring-1 ring-red-100">{error}</div>
+          )}
+
+          {preview && (
+            <div className="p-4 rounded-xl bg-white ring-1 ring-emerald-100 space-y-3 text-sm">
+              <p className="font-semibold text-emerald-900">{preview.message}</p>
+              <div className="grid sm:grid-cols-2 gap-2 text-[12px] text-ink/65">
+                <div><span className="text-ink/40">pack_id:</span> {preview.pack_id}</div>
+                <div><span className="text-ink/40">модуль:</span> {preview.module_title}</div>
+                <div><span className="text-ink/40">создать:</span> {preview.created}</div>
+                <div><span className="text-ink/40">обновить:</span> {preview.updated}</div>
+              </div>
+              {preview.lessons?.length > 0 && (
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-ink/40 mb-2">
+                    Уроки в архиве ({preview.lesson_count || preview.lessons.length})
+                  </div>
+                  <ul className="max-h-40 overflow-y-auto space-y-1 text-[12px] text-ink/70">
+                    {preview.lessons.map((ls) => (
+                      <li key={`${ls.index}-${ls.title}`} className="flex gap-2">
+                        <span className="text-ink/35 shrink-0">{ls.index}.</span>
+                        <span className="shrink-0">{KIND_META[ls.type]?.emoji || '•'}</span>
+                        <span className="truncate">{ls.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ModulePromptEditor({ mod, onSaved }) {
   const [open, setOpen] = React.useState(false);
   const [prompt, setPrompt] = React.useState(mod.assistant_prompt || '');
@@ -886,6 +1023,7 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
     <div className="space-y-4">
       <GlobalAssistantPromptPanel />
       <CoursePromptEditor courseId={courseId} outline={outline} onSaved={loadOutline} />
+      <ContentPackImportPanel courseId={courseId} onImported={loadOutline} />
       <div className="grid lg:grid-cols-[minmax(260px,320px)_1fr] gap-6 min-h-[560px]">
       <div className="bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft flex flex-col min-h-[480px] overflow-hidden">
         <div className="p-4 border-b border-black/[0.06] space-y-3">

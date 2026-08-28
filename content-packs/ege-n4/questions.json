@@ -1,0 +1,243 @@
+{
+  "meta": {
+    "topic": "ЕГЭ, задание 4 — кодирование",
+    "images_dir": "images/"
+  },
+  "lessons": [
+    {
+      "type": "theory",
+      "title": "Условие Фано и поиск в тексте",
+      "content": "<h2>Код, который однозначно читается</h2>\n<p>Условие Фано: <strong>ни одно кодовое слово не является началом другого</strong>. Тогда сообщение из 0 и 1 разбирается слева направо без развилок.</p>\n<p>Пример. Код: A=0, B=10, C=11 — Фано выполняется. Код A=0, B=01 — уже нет: 0 начало 01, декодер не знает, остановиться после первого нуля или читать дальше.</p>\n<h3>№10 — поиск в редакторе</h3>\n<p>Типичный сюжет: в файле считают, сколько раз встречается кусок вроде <code>TIK</code> или сколько строк содержат слово. На компьютере экзамена это делается поиском, в нашем курсе — коротким Python: <code>s.count(...)</code> или цикл по строкам.</p>\n<p>Путаница: «вхождений» и «строк, где встретилось». Это разные числа, если в одной строке слово дважды.</p>",
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "comment": "На черновике выпишите кодовые слова столбиком и проверьте префиксы парами — быстрее, чем рисовать дерево."
+    },
+    {
+      "type": "radio",
+      "title": "Какая пара ломает Фано",
+      "question_text": "Какая пара кодовых слов нарушает условие Фано?",
+      "explanation": "0 — префикс 10. Остальные пары друг другом не начинаются.",
+      "points": 3,
+      "answers": [
+        [
+          "10 и 11",
+          false
+        ],
+        [
+          "0 и 10",
+          true
+        ],
+        [
+          "01 и 10",
+          false
+        ],
+        [
+          "00 и 11",
+          false
+        ]
+      ],
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<p>Разбор на видео — как на уроке: сначала условие, потом короткий код или таблица.</p>"
+    },
+    {
+      "type": "radio",
+      "title": "Что считает s.count",
+      "question_text": "В Python для строки s выражение s.count('ab') считает…",
+      "explanation": "count идёт слева и не считает перекрытия вроде 'aaa'.count('aa') → 1.",
+      "points": 3,
+      "answers": [
+        [
+          "число непересекающихся вхождений подстроки ab слева направо",
+          true
+        ],
+        [
+          "число различных букв в s",
+          false
+        ],
+        [
+          "длину s минус 2",
+          false
+        ],
+        [
+          "только вхождения с начала строки",
+          false
+        ]
+      ],
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<p>Разбор на видео — как на уроке: сначала условие, потом короткий код или таблица.</p>"
+    },
+    {
+      "type": "checkbox",
+      "title": "Про Фано",
+      "question_text": "Отметьте верные утверждения.",
+      "explanation": "Разные слова ещё не спасают: 0 и 01 разные, Фано нет. Равная длина — да, префиксов короче нет.",
+      "points": 4,
+      "answers": [
+        [
+          "Если Фано выполняется, сообщение из алфавита кода декодируется однозначно слева направо",
+          true
+        ],
+        [
+          "Равная длина всех слов автоматически даёт Фано",
+          true
+        ],
+        [
+          "Достаточно, чтобы слова были разными — префиксы можно не проверять",
+          false
+        ],
+        [
+          "Дерево кода без внутренних пометок — удобная картинка того же условия",
+          true
+        ]
+      ],
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<p>Разбор на видео — как на уроке: сначала условие, потом короткий код или таблица.</p>"
+    },
+    {
+      "type": "checkbox",
+      "title": "Поиск в тексте",
+      "question_text": "Файл из нескольких строк. Что может быть ответом на №10?",
+      "explanation": "Зарплата к поиску в редакторе не относится.",
+      "points": 4,
+      "answers": [
+        [
+          "Сколько раз встречается кусок символов",
+          true
+        ],
+        [
+          "Сколько строк содержат данное слово",
+          true
+        ],
+        [
+          "Средняя зарплата автора файла",
+          false
+        ],
+        [
+          "Длина самой длинной строки",
+          true
+        ]
+      ],
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<p>Разбор на видео — как на уроке: сначала условие, потом короткий код или таблица.</p>"
+    },
+    {
+      "type": "coding",
+      "title": "Сколько раз встретился кусок",
+      "description": "Дана одна строка. Выведите, сколько раз в ней встречается подстрока pattern из второй строки. Считайте как str.count: без наложений.",
+      "instructions": "Строка 1 — текст. Строка 2 — образец.",
+      "initial_code": "s = input()\np = input()\n# ваш код\n",
+      "solution_template": "s = input()\np = input()\nprint(s.count(p))",
+      "difficulty": "beginner",
+      "points": 10,
+      "test_cases": [
+        {
+          "input_data": "abababa\nab\n",
+          "expected_output": "3",
+          "is_hidden": false
+        },
+        {
+          "input_data": "aaaa\naa\n",
+          "expected_output": "2",
+          "is_hidden": false
+        },
+        {
+          "input_data": "xyz\nqq\n",
+          "expected_output": "0",
+          "is_hidden": true
+        }
+      ],
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<pre><code>s = input()\np = input()\nprint(s.count(p))</code></pre>"
+    },
+    {
+      "type": "coding",
+      "title": "Строки с словом",
+      "description": "Сначала n. Затем n строк. Выведите, сколько из них содержат слово w (четвёртая строка ввода после n? Нет: w дано вторым после n, потом n строк текста).",
+      "instructions": "Первая строка: n. Вторая: слово w. Далее n строк.",
+      "initial_code": "n = int(input())\nw = input()\n# ваш код\n",
+      "solution_template": "n = int(input())\nw = input()\nprint(sum(1 for _ in range(n) if w in input()))",
+      "difficulty": "easy",
+      "points": 10,
+      "test_cases": [
+        {
+          "input_data": "3\nкот\nкотёнок\nпёс\nкот и кит\n",
+          "expected_output": "2",
+          "is_hidden": false
+        },
+        {
+          "input_data": "1\nab\nabab\n",
+          "expected_output": "1",
+          "is_hidden": false
+        },
+        {
+          "input_data": "2\nx\na\nb\n",
+          "expected_output": "0",
+          "is_hidden": true
+        }
+      ],
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<pre><code>n = int(input())\nw = input()\nprint(sum(1 for _ in range(n) if w in input()))</code></pre>"
+    },
+    {
+      "type": "coding",
+      "title": "Самая длинная строка",
+      "description": "n строк. Выведите длину самой длинной (в символах, как len).",
+      "instructions": "n, затем n строк.",
+      "initial_code": "n = int(input())\n# ваш код\n",
+      "solution_template": "n = int(input())\nprint(max(len(input()) for _ in range(n)))",
+      "difficulty": "easy",
+      "points": 10,
+      "test_cases": [
+        {
+          "input_data": "3\na\nabc\nab\n",
+          "expected_output": "3",
+          "is_hidden": false
+        },
+        {
+          "input_data": "1\nhello\n",
+          "expected_output": "5",
+          "is_hidden": false
+        },
+        {
+          "input_data": "2\n\nx\n",
+          "expected_output": "1",
+          "is_hidden": true
+        }
+      ],
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<pre><code>n = int(input())\nprint(max(len(input()) for _ in range(n)))</code></pre>"
+    },
+    {
+      "type": "short_answer",
+      "title": "Префикс",
+      "question_text": "Является ли слово 10 началом слова 101? Ответьте да или нет.",
+      "correct_answer": "да",
+      "answer_normalize": "strip_casefold",
+      "explanation": "10 — префикс 101.",
+      "points": 3,
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<p>Разбор на видео — как на уроке: сначала условие, потом короткий код или таблица.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "count без наложений",
+      "question_text": "Чему равно 'aaa'.count('aa') в Python?",
+      "correct_answer": "1",
+      "answer_normalize": "strip_casefold",
+      "explanation": "После первого 'aa' остаётся один символ.",
+      "points": 3,
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<p>Разбор на видео — как на уроке: сначала условие, потом короткий код или таблица.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "Равная длина",
+      "question_text": "Все кодовые слова длины 3 из нулей и единиц. Фано выполняется? да/нет",
+      "correct_answer": "да",
+      "answer_normalize": "strip_casefold",
+      "explanation": "Одинаковая длина — ни одно слово не начало другого.",
+      "points": 3,
+      "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "solution_text": "<p>Разбор на видео — как на уроке: сначала условие, потом короткий код или таблица.</p>"
+    }
+  ]
+}

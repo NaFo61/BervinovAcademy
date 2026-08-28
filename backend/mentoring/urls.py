@@ -1,6 +1,7 @@
 from django.urls import path
 
 from content.editor_views import (
+    CourseContentPackImportView,
     CourseEditorCreateView,
     CourseEditorOutlineView,
     ExamEditorCreateView,
@@ -94,6 +95,11 @@ urlpatterns = [
         "mentoring/editor/courses/",
         CourseEditorCreateView.as_view(),
         name="editor-course-create",
+    ),
+    path(
+        "mentoring/editor/courses/<uuid:course_public_id>/import-pack/",
+        CourseContentPackImportView.as_view(),
+        name="editor-course-import-pack",
     ),
     path(
         "mentoring/editor/courses/<uuid:course_public_id>/",
