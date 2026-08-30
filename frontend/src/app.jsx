@@ -58,14 +58,15 @@ function App() {
   }[route] || NotFoundPage || LandingPage;
 
   const pageProps = { navigate, hashParams, route };
-  const hideChrome = isCallRoute || isWhiteboardRoute;
+  const hideChrome = isCallRoute;
+  const fullViewportPage = isCallRoute || isWhiteboardRoute;
 
   return (
-    <div className={`${hideChrome ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col`}>
+    <div className={`${fullViewportPage ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col`}>
       {AppNoticeHost ? <AppNoticeHost /> : null}
       {!hideChrome && <TopNav route={route} navigate={navigate}/>}
       {!hideChrome && <RecoveryBanner navigate={navigate}/>}
-      <main className={`flex-1 min-h-0 ${hideChrome ? 'overflow-hidden' : ''}`}>
+      <main className={`flex-1 min-h-0 ${fullViewportPage ? 'overflow-hidden' : ''}`}>
         <Page {...pageProps}/>
       </main>
       {!NO_FOOTER_ROUTES.has(route) && <Footer navigate={navigate}/>}
