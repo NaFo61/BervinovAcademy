@@ -4,6 +4,7 @@ from io import BytesIO
 import json
 import zipfile
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -41,6 +42,15 @@ def _zip_bytes(*, manifest: dict, questions: dict) -> bytes:
     return buf.getvalue()
 
 
+def _zip_upload(*, manifest: dict, questions: dict) -> SimpleUploadedFile:
+    data = _zip_bytes(manifest=manifest, questions=questions)
+    return SimpleUploadedFile(
+        "pack.zip",
+        data,
+        content_type="application/zip",
+    )
+
+
 @pytest.fixture
 def mentor_client(mentor_user):
     client = APIClient()
@@ -76,11 +86,15 @@ class TestContentPackImportApi:
             "course_slug": course.slug,
             "module_title": module.title,
         }
-        data = _zip_bytes(manifest=manifest, questions=_sample_questions())
         url = f"/api/mentoring/editor/courses/{course.public_id}/import-pack/"
         response = mentor_client.post(
             url,
-            {"archive": ("pack.zip", data, "application/zip"), "dry_run": "1"},
+            {
+                "archive": _zip_upload(
+                    manifest=manifest, questions=_sample_questions()
+                ),
+                "dry_run": "1",
+            },
             format="multipart",
         )
         assert response.status_code == status.HTTP_200_OK
@@ -96,11 +110,14 @@ class TestContentPackImportApi:
             "course_slug": course.slug,
             "module_title": module.title,
         }
-        data = _zip_bytes(manifest=manifest, questions=_sample_questions())
         url = f"/api/mentoring/editor/courses/{course.public_id}/import-pack/"
         response = mentor_client.post(
             url,
-            {"archive": ("pack.zip", data, "application/zip")},
+            {
+                "archive": _zip_upload(
+                    manifest=manifest, questions=_sample_questions()
+                )
+            },
             format="multipart",
         )
         assert response.status_code == status.HTTP_200_OK
@@ -115,11 +132,14 @@ class TestContentPackImportApi:
             "course_slug": "other-slug",
             "module_title": module.title,
         }
-        data = _zip_bytes(manifest=manifest, questions=_sample_questions())
         url = f"/api/mentoring/editor/courses/{course.public_id}/import-pack/"
         response = mentor_client.post(
             url,
-            {"archive": ("pack.zip", data, "application/zip")},
+            {
+                "archive": _zip_upload(
+                    manifest=manifest, questions=_sample_questions()
+                )
+            },
             format="multipart",
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -134,11 +154,14 @@ class TestContentPackImportApi:
             "course_slug": course.slug,
             "module_title": "x",
         }
-        data = _zip_bytes(manifest=manifest, questions=_sample_questions())
         url = f"/api/mentoring/editor/courses/{course.public_id}/import-pack/"
         response = client.post(
             url,
-            {"archive": ("pack.zip", data, "application/zip")},
+            {
+                "archive": _zip_upload(
+                    manifest=manifest, questions=_sample_questions()
+                )
+            },
             format="multipart",
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -158,11 +181,14 @@ class TestContentPackImportApi:
             "course_slug": course.slug,
             "module_title": module.title,
         }
-        data = _zip_bytes(manifest=manifest, questions=_sample_questions())
         url = f"/api/mentoring/editor/courses/{course.public_id}/import-pack/"
         response = client.post(
             url,
-            {"archive": ("pack.zip", data, "application/zip")},
+            {
+                "archive": _zip_upload(
+                    manifest=manifest, questions=_sample_questions()
+                )
+            },
             format="multipart",
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
