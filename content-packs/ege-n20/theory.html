@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Задание 20 ЕГЭ: Ваня побеждает сразу</title>
+<style>
+  * { background: rgb(255, 255, 255) !important; }
+  body {
+    font-family: "Times New Roman", Times, serif;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+    color: #1a1a1a;
+    line-height: 1.55;
+    background: rgb(255, 255, 255);
+    font-style: italic;
+  }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  h2 {
+    font-size: 19px;
+    margin: 40px 0 12px;
+    padding-top: 16px;
+    border-top: 1px solid #ddd;
+  }
+  h3 { font-size: 16px; margin: 18px 0 8px; }
+  p, li { font-size: 16px; }
+  p { margin: 0 0 12px; }
+  ul, ol { margin: 0 0 12px; padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  .intro { font-size: 16px; color: #333; }
+  table.code-table {
+    border-collapse: collapse;
+    background: #ffffff;
+    margin: 14px auto;
+  }
+  table.code-table td, table.code-table th {
+    border: 1px solid #333;
+    padding: 6px 14px;
+    text-align: center;
+    font-size: 16px;
+    background: #ffffff;
+  }
+  table.code-table th { font-weight: bold; }
+  table.code-table td.left, table.code-table th.left { text-align: left; }
+  .mark { color: #2f6fbd; font-weight: bold; }
+  .table-scroll { overflow-x: auto; max-width: 100%; }
+  .box {
+    margin: 16px 0;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    padding: 16px 20px;
+  }
+  .box p:last-child { margin-bottom: 0; }
+  .example { margin-top: 8px; }
+  .question { font-size: 16px; }
+  .answer {
+    margin-top: 14px;
+    padding: 10px 18px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 16px;
+  }
+  .answer strong { font-size: 18px; }
+  .summary-table { margin-top: 8px; }
+  .graph-svg { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; }
+  .graph-svg text { font-family: "Times New Roman", Times, serif; }
+</style>
+</head>
+<body>
+
+<h1>Задание 20 ЕГЭ: Ваня побеждает сразу после Пети</h1>
+<p class="intro">Игра та же, что в задании 19: куча, команды, граница, Петя ходит первым. Теперь ищем другое стартовое число. Петя своим первым ходом победить не может. Зато какой бы ход он ни выбрал, Ваня следующим ходом заканчивает игру.</p>
+<p class="intro">Это не «Ваня вообще умеет выигрывать». Это более узкая вещь: каждый ход Пети сам по себе подставляет Ваню на позицию из девятнадцатого задания, откуда победа берётся одним действием.</p>
+
+<h2>Игрушка: граница 10, команды +1 и ×2</h2>
+<p>Из девятнадцатого мы уже знаем: сразу побеждают, начиная с 5. Теперь смотрим кучи меньше пяти.</p>
+<p>Из 4 Петя может получить 5 или 8. И 5, и 8 — это как раз мгновенные победы. Значит, куда бы Петя ни пошёл из 4, Ваня забирает партию своим первым ходом. Из 3 есть ход в 4, а из 4 Ваня мгновенно не побеждает. Тройка нам не подходит. Подходит только 4.</p>
+<table class="code-table"><tr><th>камней S</th><th>куда можно пойти</th><th class="left">что это значит</th></tr><tr><td>1</td><td>2, 2</td><td class="left">не из этих трёх</td></tr><tr><td>2</td><td>3, 4</td><td class="left">победа на втором ходу</td></tr><tr><td>3</td><td>4, 6</td><td class="left">победа на втором ходу</td></tr><tr><td>4</td><td>5, 8</td><td class="left">проигрыш</td></tr><tr><td>5</td><td>6, 10</td><td class="left">победа сразу</td></tr><tr><td>6</td><td>7, 12</td><td class="left">победа сразу</td></tr><tr><td>7</td><td>8, 14</td><td class="left">победа сразу</td></tr><tr><td>8</td><td>9, 16</td><td class="left">победа сразу</td></tr><tr><td>9</td><td>10, 18</td><td class="left">победа сразу</td></tr></table>
+<div class="box">
+  <p><strong>Как узнать такую кучу.</strong> Берём S, из которого нет хода за границу. Выписываем все результаты команд. Каждый из них должен сам уметь шагнуть за границу. Если хоть один результат такой, что соперник за один ход не заканчивает, S не берём.</p>
+</div>
+
+<h2>Пример 1. Граница 25</h2>
+<div class="example">
+<p class="question"><strong>Вопрос.</strong> Команды +1, +2, ×2, граница 25. Найдите наименьшее S, при котором Петя не побеждает первым ходом, но любой его ход оставляет Ване победу за один ход.</p>
+<p>Мгновенные победы начинаются с 13: это мы нашли в задании 19. Значит S надо искать левее 13.</p>
+<p>Из 12 ходы такие: 13, 14 и 24. Все три не меньше 13, из каждого Ваня удваивает или прибавляет и переходит 25. Других ходов у Пети нет. Из 11 есть ход в 12, а 12 мгновенной победой не является. Поэтому 11 не годится, 12 годится. Меньше двенадцати такой кучи нет.</p>
+<table class="code-table"><tr><th>камней S</th><th>куда можно пойти</th><th class="left">что это значит</th></tr><tr><td>1</td><td>2, 3, 2</td><td class="left">не из этих трёх</td></tr><tr><td>2</td><td>3, 4, 4</td><td class="left">не из этих трёх</td></tr><tr><td>3</td><td>4, 5, 6</td><td class="left">не из этих трёх</td></tr><tr><td>4</td><td>5, 6, 8</td><td class="left">не из этих трёх</td></tr><tr><td>5</td><td>6, 7, 10</td><td class="left">не из этих трёх</td></tr><tr><td>6</td><td>7, 8, 12</td><td class="left">победа на втором ходу</td></tr><tr><td>7</td><td>8, 9, 14</td><td class="left">не из этих трёх</td></tr><tr><td>8</td><td>9, 10, 16</td><td class="left">не из этих трёх</td></tr><tr><td>9</td><td>10, 11, 18</td><td class="left">не из этих трёх</td></tr><tr><td>10</td><td>11, 12, 20</td><td class="left">победа на втором ходу</td></tr><tr><td>11</td><td>12, 13, 22</td><td class="left">победа на втором ходу</td></tr><tr><td>12</td><td>13, 14, 24</td><td class="left">проигрыш</td></tr><tr><td>13</td><td>14, 15, 26</td><td class="left">победа сразу</td></tr><tr><td>14</td><td>15, 16, 28</td><td class="left">победа сразу</td></tr><tr><td>15</td><td>16, 17, 30</td><td class="left">победа сразу</td></tr><tr><td>16</td><td>17, 18, 32</td><td class="left">победа сразу</td></tr></table>
+<div class="answer">Наименьшее S: <strong>12</strong></div>
+</div>
+
+<h2>Пример 2. Граница 30</h2>
+<div class="example">
+<p class="question"><strong>Вопрос.</strong> Команды +1, +4, ×3, граница 30. Такое же наименьшее S.</p>
+<p>Мгновенные победы начинаются с 10. Из 9 получаются 10, 13 и 27. Из десятки Ваня умножает на 3 и получает 30. Из 13 и из 27 граница тоже берётся одним ходом. Из 8 есть ход 8+1 = 9, а девятка мгновенной не является. Значит ответ 9.</p>
+<table class="code-table"><tr><th>камней S</th><th>куда можно пойти</th><th class="left">что это значит</th></tr><tr><td>1</td><td>2, 5, 3</td><td class="left">не из этих трёх</td></tr><tr><td>2</td><td>3, 6, 6</td><td class="left">не из этих трёх</td></tr><tr><td>3</td><td>4, 7, 9</td><td class="left">победа на втором ходу</td></tr><tr><td>4</td><td>5, 8, 12</td><td class="left">не из этих трёх</td></tr><tr><td>5</td><td>6, 9, 15</td><td class="left">победа на втором ходу</td></tr><tr><td>6</td><td>7, 10, 18</td><td class="left">не из этих трёх</td></tr><tr><td>7</td><td>8, 11, 21</td><td class="left">не из этих трёх</td></tr><tr><td>8</td><td>9, 12, 24</td><td class="left">победа на втором ходу</td></tr><tr><td>9</td><td>10, 13, 27</td><td class="left">проигрыш</td></tr><tr><td>10</td><td>11, 14, 30</td><td class="left">победа сразу</td></tr><tr><td>11</td><td>12, 15, 33</td><td class="left">победа сразу</td></tr><tr><td>12</td><td>13, 16, 36</td><td class="left">победа сразу</td></tr></table>
+<div class="answer">Наименьшее S: <strong>9</strong></div>
+</div>
+
+<h2>Коротко, чтобы запомнить</h2>
+<ol>
+  <li>Сначала находим все кучи, откуда побеждают за один ход. Это задание 19.</li>
+  <li>Ищем кучу левее них.</li>
+  <li>Все её ходы, без исключения, должны вести в те кучи.</li>
+  <li>Если есть хоть один ход в сторону — куча не подходит.</li>
+  <li>Из подходящих берём наименьшую.</li>
+</ol>
+<table class="code-table summary-table">
+  <tr><th>Пример</th><th>Игра</th><th>Ответ</th></tr>
+  <tr><td>игрушка</td><td>до 10, +1 и ×2</td><td><strong>4</strong></td></tr>
+  <tr><td>1</td><td>до 25, +1, +2, ×2</td><td><strong>12</strong></td></tr>
+  <tr><td>2</td><td>до 30, +1, +4, ×3</td><td><strong>9</strong></td></tr>
+</table>
+
+</body>
+</html>

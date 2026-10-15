@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Задание 26 ЕГЭ: файлы на диске</title>
+<style>
+  * { background: rgb(255, 255, 255) !important; }
+  body {
+    font-family: "Times New Roman", Times, serif;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+    color: #1a1a1a;
+    line-height: 1.55;
+    background: rgb(255, 255, 255);
+    font-style: italic;
+  }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  h2 {
+    font-size: 19px;
+    margin: 40px 0 12px;
+    padding-top: 16px;
+    border-top: 1px solid #ddd;
+  }
+  h3 { font-size: 16px; margin: 18px 0 8px; }
+  p, li { font-size: 16px; }
+  p { margin: 0 0 12px; }
+  ul, ol { margin: 0 0 12px; padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  .intro { font-size: 16px; color: #333; }
+  table.code-table {
+    border-collapse: collapse;
+    background: #ffffff;
+    margin: 14px auto;
+  }
+  table.code-table td, table.code-table th {
+    border: 1px solid #333;
+    padding: 6px 14px;
+    text-align: center;
+    font-size: 16px;
+    background: #ffffff;
+  }
+  table.code-table th { font-weight: bold; }
+  table.code-table td.left, table.code-table th.left { text-align: left; }
+  .mark { color: #2f6fbd; font-weight: bold; }
+  .table-scroll { overflow-x: auto; max-width: 100%; }
+  .box {
+    margin: 16px 0;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    padding: 16px 20px;
+  }
+  .box p:last-child { margin-bottom: 0; }
+  .example { margin-top: 8px; }
+  .question { font-size: 16px; }
+  .answer {
+    margin-top: 14px;
+    padding: 10px 18px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 16px;
+  }
+  .answer strong { font-size: 18px; }
+  .summary-table { margin-top: 8px; }
+  .graph-svg { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; }
+  .graph-svg text { font-family: "Times New Roman", Times, serif; }
+</style>
+</head>
+<body>
+
+<h1>Задание 26 ЕГЭ: файлы на диске</h1>
+<p class="intro">Есть диск известного объёма и набор файлов. Файл кладут целиком или не кладут никак. Спрашивают две вещи. Сколько файлов удастся записать, если хотим как можно больше штук. И какой самый большой файл можно при этом сохранить — не один на весь диск, а в наборе, где файлов столько же, сколько в самом плотном по количеству.</p>
+<p class="intro">Больше всего штук набирается с самых маленьких. Крупный файл, положенный первым, съест место трёх мелких.</p>
+
+<h2>Игрушка: диск на 10</h2>
+<p>Файлы 3, 6, 2 и 4. Сортируем по возрастанию: 2, 3, 4, 6.</p>
+<table class="code-table"><tr><th>файл</th><th>решение</th><th>занято</th><th>свободно</th></tr><tr><td>2</td><td>берём</td><td>2</td><td>8</td></tr><tr><td>3</td><td>берём</td><td>5</td><td>5</td></tr><tr><td>4</td><td>берём</td><td>9</td><td>1</td></tr><tr><td>6</td><td>не берём</td><td>9</td><td>1</td></tr></table>
+<p>2+3+4 = 9, свободно 1. Шестёрка не входит. Файлов три. Второй вопрос: можно ли заменить кого-то из этих трёх так, чтобы крупнейший в наборе стал больше 4, а сумма всё ещё не превосходила 10?</p>
+<p>Мелочь 2 и 3 оставляем, это 5, свободно 5. Четвёрка в эти пять входит, шестёрка нет: 5+6 = 11. Крупнее четвёрки положить нечего. Самый большой файл так и остаётся 4.</p>
+<div class="answer">Файлов: <strong>3</strong>. Самый большой среди них: <strong>4</strong></div>
+
+<h2>План</h2>
+<div class="box">
+  <ol>
+    <li>Сортируем размеры по возрастанию.</li>
+    <li>Берём с маленьких, пока следующий ещё входит. Это максимум штук.</li>
+    <li>Для второго вопроса откладываем последний взятый: он самый крупный в этом наборе.</li>
+    <li>Смотрим, какое самое большое число из всего списка всё ещё входит в освободившееся место.</li>
+    <li>Один убрали, один положили. Количество файлов не меняется.</li>
+  </ol>
+</div>
+
+<h2>Пример 1. Диск на 100</h2>
+<div class="example">
+<p class="question"><strong>Вопрос.</strong> Диск 100. Файлы: 15, 8, 22, 7, 30, 11, 9, 18, 6, 25. Сколько файлов можно записать? Какой наибольший размер файла достижим в наборе с этим же количеством?</p>
+<p>Порядок такой: 6, 7, 8, 9, 11, 15, 18, 22, 25, 30.</p>
+<table class="code-table"><tr><th>файл</th><th>решение</th><th>занято</th><th>свободно</th></tr><tr><td>6</td><td>берём</td><td>6</td><td>94</td></tr><tr><td>7</td><td>берём</td><td>13</td><td>87</td></tr><tr><td>8</td><td>берём</td><td>21</td><td>79</td></tr><tr><td>9</td><td>берём</td><td>30</td><td>70</td></tr><tr><td>11</td><td>берём</td><td>41</td><td>59</td></tr><tr><td>15</td><td>берём</td><td>56</td><td>44</td></tr><tr><td>18</td><td>берём</td><td>74</td><td>26</td></tr><tr><td>22</td><td>берём</td><td>96</td><td>4</td></tr><tr><td>25</td><td>не берём</td><td>96</td><td>4</td></tr><tr><td>30</td><td>не берём</td><td>96</td><td>4</td></tr></table>
+<p>Восемь файлов занимают 96, свободно 4. Число 25 уже не входит. Количество — 8.</p>
+<p>Откладываем 22. Без него занято 74, свободно 26. В эти 26 входят 22 и 25. Тридцать не входит: 74+30 = 104. Заменяем 22 на 25. Файлов по-прежнему восемь, сумма 96 − 22 + 25 = 99.</p>
+<div class="answer">Файлов: <strong>8</strong>. Наибольший файл в таком наборе: <strong>25</strong></div>
+</div>
+
+<h2>Пример 2. Замена видна на маленьком диске</h2>
+<div class="example">
+<p class="question"><strong>Вопрос.</strong> Диск 20. Файлы: 9, 6, 5, 14, 4. Те же два числа в ответе.</p>
+<table class="code-table"><tr><th>файл</th><th>решение</th><th>занято</th><th>свободно</th></tr><tr><td>4</td><td>берём</td><td>4</td><td>16</td></tr><tr><td>5</td><td>берём</td><td>9</td><td>11</td></tr><tr><td>6</td><td>берём</td><td>15</td><td>5</td></tr><tr><td>9</td><td>не берём</td><td>15</td><td>5</td></tr><tr><td>14</td><td>не берём</td><td>15</td><td>5</td></tr></table>
+<p>Три файла: 4+5+6 = 15. Если шестёрку уже положили, девятка не входит. Откладываем шестёрку. Остаются 4 и 5, занято 9, свободно 11. В одиннадцать входят 6 и 9. Четырнадцать не входит: 9+14 = 23. Берём 9. Набор 4, 5 и 9 занимает 18. Файлов по-прежнему три, крупнейший уже не 6, а 9.</p>
+<div class="answer">Файлов: <strong>3</strong>. Наибольший файл в таком наборе: <strong>9</strong></div>
+</div>
+
+<h2>Коротко, чтобы запомнить</h2>
+<ol>
+  <li>Максимум штук даёт набор с самых маленьких файлов.</li>
+  <li>Файл не режут. Не влез очередной в отсортированном списке — более крупные тоже не влезут.</li>
+  <li>Второй вопрос не начинается с самого большого файла в одиночку: так штук станет меньше.</li>
+  <li>Меняем только крупнейший в уже набранном комплекте.</li>
+</ol>
+<table class="code-table summary-table">
+  <tr><th>Пример</th><th>Диск</th><th>Ответ</th></tr>
+  <tr><td>игрушка</td><td>10</td><td><strong>3 файла, крупнейший 4</strong></td></tr>
+  <tr><td>1</td><td>100</td><td><strong>8 файлов, крупнейший 25</strong></td></tr>
+  <tr><td>2</td><td>20</td><td><strong>3 файла, крупнейший 9</strong></td></tr>
+</table>
+
+</body>
+</html>

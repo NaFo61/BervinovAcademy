@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Задание 19 ЕГЭ: игра, победа за один ход</title>
+<style>
+  * { background: rgb(255, 255, 255) !important; }
+  body {
+    font-family: "Times New Roman", Times, serif;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+    color: #1a1a1a;
+    line-height: 1.55;
+    background: rgb(255, 255, 255);
+    font-style: italic;
+  }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  h2 {
+    font-size: 19px;
+    margin: 40px 0 12px;
+    padding-top: 16px;
+    border-top: 1px solid #ddd;
+  }
+  h3 { font-size: 16px; margin: 18px 0 8px; }
+  p, li { font-size: 16px; }
+  p { margin: 0 0 12px; }
+  ul, ol { margin: 0 0 12px; padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  .intro { font-size: 16px; color: #333; }
+  table.code-table {
+    border-collapse: collapse;
+    background: #ffffff;
+    margin: 14px auto;
+  }
+  table.code-table td, table.code-table th {
+    border: 1px solid #333;
+    padding: 6px 14px;
+    text-align: center;
+    font-size: 16px;
+    background: #ffffff;
+  }
+  table.code-table th { font-weight: bold; }
+  table.code-table td.left, table.code-table th.left { text-align: left; }
+  .mark { color: #2f6fbd; font-weight: bold; }
+  .table-scroll { overflow-x: auto; max-width: 100%; }
+  .box {
+    margin: 16px 0;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    padding: 16px 20px;
+  }
+  .box p:last-child { margin-bottom: 0; }
+  .example { margin-top: 8px; }
+  .question { font-size: 16px; }
+  .answer {
+    margin-top: 14px;
+    padding: 10px 18px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 16px;
+  }
+  .answer strong { font-size: 18px; }
+  .summary-table { margin-top: 8px; }
+  .graph-svg { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; }
+  .graph-svg text { font-family: "Times New Roman", Times, serif; }
+</style>
+</head>
+<body>
+<p class="intro">Страница для проверки. Ниже вся теория, как она пойдёт в урок.</p>
+<h1>Задание 19 ЕГЭ: игра, победа за один ход</h1>
+<p class="intro">Задания 19, 20 и 21 — одна игра, три вопроса. Есть куча камней. Двое ходят по очереди, Петя начинает. За ход кучу изменяют одной из разрешённых команд. Побеждает тот, кто первым доведёт число камней до заданной границы или дальше.</p>
+<p class="intro">В девятнадцатом спрашивают самое маленькое стартовое число, с которого Петя побеждает <strong>своим первым ходом</strong>. То есть одним действием сразу перешагивает границу. Чужой умной игры тут ещё нет: надо просто посмотреть, из каких куч граница достижима за шаг.</p>
+
+<h2>Игрушка: дотянуть до 10</h2>
+<p>Граница — 10. Команды две: прибавить 1 или умножить на 2. Петя побеждает сразу, если после его хода камней стало не меньше 10.</p>
+<p>Из 4: 4+1 = 5 и 4×2 = 8. Обе меньше 10, сразу победить нельзя. Из 5: 5×2 = 10, граница взята. Из 9 хватает даже +1. Значит самые левые такие кучи начинаются с пятёрки, и минимальная как раз 5.</p>
+<table class="code-table"><tr><th>камней S</th><th>куда можно пойти</th><th class="left">что это значит</th></tr><tr><td>1</td><td>2, 2</td><td class="left">не из этих трёх</td></tr><tr><td>2</td><td>3, 4</td><td class="left">победа на втором ходу</td></tr><tr><td>3</td><td>4, 6</td><td class="left">победа на втором ходу</td></tr><tr><td>4</td><td>5, 8</td><td class="left">проигрыш</td></tr><tr><td>5</td><td>6, 10</td><td class="left">победа сразу</td></tr><tr><td>6</td><td>7, 12</td><td class="left">победа сразу</td></tr><tr><td>7</td><td>8, 14</td><td class="left">победа сразу</td></tr><tr><td>8</td><td>9, 16</td><td class="left">победа сразу</td></tr><tr><td>9</td><td>10, 18</td><td class="left">победа сразу</td></tr></table>
+<div class="box">
+  <p>В таблице выше колонка «что это значит» заглядывает вперёд, в задания 20 и 21. Для девятнадцатого достаточно строк с пометкой «победа сразу». Минимальное S в этой колонке и есть ответ.</p>
+</div>
+
+<h2>План девятнадцатого</h2>
+<div class="box">
+  <ol>
+    <li>Выписываем команды.</li>
+    <li>Для каждого S считаем, куда ведёт каждая команда.</li>
+    <li>Если хотя бы один результат не меньше границы — из этого S побеждают первым ходом.</li>
+    <li>Среди таких S берём наименьшее.</li>
+  </ol>
+</div>
+
+<h2>Пример 1. Три команды, граница 25</h2>
+<div class="example">
+<p class="question"><strong>Вопрос.</strong> Команды: +1, +2, ×2. Победа, если камней стало не меньше 25. Какое наименьшее S даёт Пете победу первым ходом?</p>
+<p>Умножение на 2 обгоняет прибавление. 12×2 = 24, это ещё меньше 25. 13×2 = 26, уже хватает. Прибавить 1 до 25 можно только из 24, это больше тринадцати. Поэтому минимальное S — 13, за счёт удвоения.</p>
+<table class="code-table"><tr><th>камней S</th><th>куда можно пойти</th><th class="left">что это значит</th></tr><tr><td>1</td><td>2, 3, 2</td><td class="left">не из этих трёх</td></tr><tr><td>2</td><td>3, 4, 4</td><td class="left">не из этих трёх</td></tr><tr><td>3</td><td>4, 5, 6</td><td class="left">не из этих трёх</td></tr><tr><td>4</td><td>5, 6, 8</td><td class="left">не из этих трёх</td></tr><tr><td>5</td><td>6, 7, 10</td><td class="left">не из этих трёх</td></tr><tr><td>6</td><td>7, 8, 12</td><td class="left">победа на втором ходу</td></tr><tr><td>7</td><td>8, 9, 14</td><td class="left">не из этих трёх</td></tr><tr><td>8</td><td>9, 10, 16</td><td class="left">не из этих трёх</td></tr><tr><td>9</td><td>10, 11, 18</td><td class="left">не из этих трёх</td></tr><tr><td>10</td><td>11, 12, 20</td><td class="left">победа на втором ходу</td></tr><tr><td>11</td><td>12, 13, 22</td><td class="left">победа на втором ходу</td></tr><tr><td>12</td><td>13, 14, 24</td><td class="left">проигрыш</td></tr><tr><td>13</td><td>14, 15, 26</td><td class="left">победа сразу</td></tr><tr><td>14</td><td>15, 16, 28</td><td class="left">победа сразу</td></tr><tr><td>15</td><td>16, 17, 30</td><td class="left">победа сразу</td></tr><tr><td>16</td><td>17, 18, 32</td><td class="left">победа сразу</td></tr></table>
+<div class="answer">Наименьшее S: <strong>13</strong></div>
+</div>
+
+<h2>Пример 2. Другие команды, граница 30</h2>
+<div class="example">
+<p class="question"><strong>Вопрос.</strong> Команды: +1, +4, ×3. Граница 30. Наименьшее S, с которого первый же ход побеждает?</p>
+<p>Из 9: 9+1 = 10, 9+4 = 13, 9×3 = 27. Тридцати нет. Из 10: 10×3 = 30, этого достаточно. Прибавления догоняют границу только у больших куч, они минимальными не будут.</p>
+<table class="code-table"><tr><th>камней S</th><th>куда можно пойти</th><th class="left">что это значит</th></tr><tr><td>1</td><td>2, 5, 3</td><td class="left">не из этих трёх</td></tr><tr><td>2</td><td>3, 6, 6</td><td class="left">не из этих трёх</td></tr><tr><td>3</td><td>4, 7, 9</td><td class="left">победа на втором ходу</td></tr><tr><td>4</td><td>5, 8, 12</td><td class="left">не из этих трёх</td></tr><tr><td>5</td><td>6, 9, 15</td><td class="left">победа на втором ходу</td></tr><tr><td>6</td><td>7, 10, 18</td><td class="left">не из этих трёх</td></tr><tr><td>7</td><td>8, 11, 21</td><td class="left">не из этих трёх</td></tr><tr><td>8</td><td>9, 12, 24</td><td class="left">победа на втором ходу</td></tr><tr><td>9</td><td>10, 13, 27</td><td class="left">проигрыш</td></tr><tr><td>10</td><td>11, 14, 30</td><td class="left">победа сразу</td></tr><tr><td>11</td><td>12, 15, 33</td><td class="left">победа сразу</td></tr><tr><td>12</td><td>13, 16, 36</td><td class="left">победа сразу</td></tr></table>
+<div class="answer">Наименьшее S: <strong>10</strong></div>
+</div>
+
+<h2>Коротко, чтобы запомнить</h2>
+<ol>
+  <li>Девятнадцатое — про один ход Пети, без длинной стратегии.</li>
+  <li>Победа, если результат команды не меньше границы. «Больше» и «не меньше» в условии читают внимательно; в наших примерах граница входит.</li>
+  <li>Проверяем все команды, не только самую большую.</li>
+  <li>Ответ — минимальное такое S, не список всех.</li>
+</ol>
+<table class="code-table summary-table">
+  <tr><th>Пример</th><th>Игра</th><th>Ответ</th></tr>
+  <tr><td>игрушка</td><td>до 10, команды +1 и ×2</td><td><strong>5</strong></td></tr>
+  <tr><td>1</td><td>до 25, команды +1, +2, ×2</td><td><strong>13</strong></td></tr>
+  <tr><td>2</td><td>до 30, команды +1, +4, ×3</td><td><strong>10</strong></td></tr>
+</table>
+</body>
+</html>

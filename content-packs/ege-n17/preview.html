@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Задание 17 ЕГЭ: последовательность чисел</title>
+<style>
+  * { background: rgb(255, 255, 255) !important; }
+  body {
+    font-family: "Times New Roman", Times, serif;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+    color: #1a1a1a;
+    line-height: 1.55;
+    background: rgb(255, 255, 255);
+    font-style: italic;
+  }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  h2 {
+    font-size: 19px;
+    margin: 40px 0 12px;
+    padding-top: 16px;
+    border-top: 1px solid #ddd;
+  }
+  h3 { font-size: 16px; margin: 18px 0 8px; }
+  p, li { font-size: 16px; }
+  p { margin: 0 0 12px; }
+  ul, ol { margin: 0 0 12px; padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  .intro { font-size: 16px; color: #333; }
+  table.code-table {
+    border-collapse: collapse;
+    background: #ffffff;
+    margin: 14px auto;
+  }
+  table.code-table td, table.code-table th {
+    border: 1px solid #333;
+    padding: 6px 14px;
+    text-align: center;
+    font-size: 16px;
+    background: #ffffff;
+  }
+  table.code-table th { font-weight: bold; }
+  table.code-table td.left, table.code-table th.left { text-align: left; }
+  .mark { color: #2f6fbd; font-weight: bold; }
+  .table-scroll { overflow-x: auto; max-width: 100%; }
+  .box {
+    margin: 16px 0;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    padding: 16px 20px;
+  }
+  .box p:last-child { margin-bottom: 0; }
+  .example { margin-top: 8px; }
+  .question { font-size: 16px; }
+  .answer {
+    margin-top: 14px;
+    padding: 10px 18px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 16px;
+  }
+  .answer strong { font-size: 18px; }
+  .summary-table { margin-top: 8px; }
+  .graph-svg { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; }
+  .graph-svg text { font-family: "Times New Roman", Times, serif; }
+</style>
+</head>
+<body>
+<p class="intro">Страница для проверки. Ниже вся теория, как она пойдёт в урок.</p>
+<h1>Задание 17 ЕГЭ: последовательность чисел</h1>
+<p class="intro">В этом задании дают длинный ряд целых чисел, обычно файлом. Спрашивают не про весь ряд сразу, а про пары соседних чисел или про тройки подряд. Ответ почти всегда из двух чисел: сколько подходящих кусков и какая у них самая большая сумма.</p>
+<p class="intro">Файл на экзамене длинный, руками его не листают — для этого пишут программу. Но программа делает ровно то, что мы сейчас сделаем на коротком ряду из двенадцати чисел. Если на двенадцати понятно, на десяти тысячах правило то же.</p>
+
+<h2>Что такое пара и тройка</h2>
+<p>Ряд: 8, 6, 4, 15, 10, 2, 7, 12, 18, 3, 9, 14.</p>
+<p>Пара — это два числа, которые стоят рядом. Первая пара — 8 и 6, вторая — 6 и 4. Шестёрка входит в обе: в паре нет «использовал и выбросил». Тройка — три числа подряд: 8, 6, 4, затем 6, 4, 15, и так дальше. Крайние числа не склеиваются в кольцо, ряд заканчивается.</p>
+<p>В ряду из 12 чисел пар будет 11, троек — 10. Это легко проверить: пар всегда на одну меньше, чем чисел, троек — на две меньше.</p>
+
+<h2>Игрушка: оба чётные</h2>
+<p>Условие игрушки: оба числа пары чётные. Чётное — то, что делится на 2 без остатка. 8, 6, 4, 10, 2, 12, 18, 14 чётные. 15, 7, 3, 9 нечётные.</p>
+<p>Смотрим первую пару 8 и 6: оба чётные, сумма 14, ставим «да». Вторая 6 и 4 — тоже. Третья 4 и 15: пятнадцать нечётное, пара не подходит, клетка пустая. Пустая клетка — это тоже ответ по этой строке, её не пропускаем молча.</p>
+<table class="code-table"><tr><th>пара</th><th>левое</th><th>правое</th><th>сумма</th><th>оба чётные</th></tr><tr><td>1</td><td>8</td><td>6</td><td>14</td><td><span class="mark">да</span></td></tr><tr><td>2</td><td>6</td><td>4</td><td>10</td><td><span class="mark">да</span></td></tr><tr><td>3</td><td>4</td><td>15</td><td>19</td><td></td></tr><tr><td>4</td><td>15</td><td>10</td><td>25</td><td></td></tr><tr><td>5</td><td>10</td><td>2</td><td>12</td><td><span class="mark">да</span></td></tr><tr><td>6</td><td>2</td><td>7</td><td>9</td><td></td></tr><tr><td>7</td><td>7</td><td>12</td><td>19</td><td></td></tr><tr><td>8</td><td>12</td><td>18</td><td>30</td><td><span class="mark">да</span></td></tr><tr><td>9</td><td>18</td><td>3</td><td>21</td><td></td></tr><tr><td>10</td><td>3</td><td>9</td><td>12</td><td></td></tr><tr><td>11</td><td>9</td><td>14</td><td>23</td><td></td></tr></table>
+<p>Отмечены четыре пары. Суммы у них 14, 10, 12 и 30. Больше всех 30 — это 12 + 18. Количество и максимум — два разных вопроса, их не смешивают: в ответ экзамена обычно идут оба, здесь для ясности фиксируем каждый.</p>
+<div class="box">
+  <p><strong>План.</strong> Идём слева направо. Для каждой пары решаем «да» или «нет» по условию этой задачи. У тех, где «да», запоминаем сумму. В конце считаем, сколько было «да», и выбираем наибольшую сумму среди них.</p>
+</div>
+
+<h2>Пример 1. Ровно одно чётное</h2>
+<div class="example">
+<p class="question"><strong>Вопрос.</strong> В том же ряду сколько пар, где чётное ровно одно из двух чисел? Какая у таких пар наибольшая сумма?</p>
+<p>«Ровно одно» значит: одно чётное, второе нет. Оба чётные — уже не подходит, это был прошлый пример. Оба нечётные — тоже нет.</p>
+<p>Пара 4 и 15: четыре чётное, пятнадцать нет, сумма 19, ставим «да». Пара 8 и 6 мы в прошлый раз взяли, сейчас оба чётные — клетка пустая. Пара 15 и 10: снова ровно одно чётное, сумма 25.</p>
+<table class="code-table"><tr><th>пара</th><th>левое</th><th>правое</th><th>сумма</th><th>ровно одно чётное</th></tr><tr><td>1</td><td>8</td><td>6</td><td>14</td><td></td></tr><tr><td>2</td><td>6</td><td>4</td><td>10</td><td></td></tr><tr><td>3</td><td>4</td><td>15</td><td>19</td><td><span class="mark">да</span></td></tr><tr><td>4</td><td>15</td><td>10</td><td>25</td><td><span class="mark">да</span></td></tr><tr><td>5</td><td>10</td><td>2</td><td>12</td><td></td></tr><tr><td>6</td><td>2</td><td>7</td><td>9</td><td><span class="mark">да</span></td></tr><tr><td>7</td><td>7</td><td>12</td><td>19</td><td><span class="mark">да</span></td></tr><tr><td>8</td><td>12</td><td>18</td><td>30</td><td></td></tr><tr><td>9</td><td>18</td><td>3</td><td>21</td><td><span class="mark">да</span></td></tr><tr><td>10</td><td>3</td><td>9</td><td>12</td><td></td></tr><tr><td>11</td><td>9</td><td>14</td><td>23</td><td><span class="mark">да</span></td></tr></table>
+<p>Шесть отметок. Суммы: 19, 25, 9, 19, 21, 23. Наибольшая — 25.</p>
+<div class="answer">Пар: <strong>6</strong>. Наибольшая сумма: <strong>25</strong>.</div>
+</div>
+
+<h2>Пример 2. Тройка, сумма делится на 5</h2>
+<div class="example">
+<p class="question"><strong>Вопрос.</strong> Сколько троек подряд имеют сумму, делящуюся на 5, и какая из этих сумм самая большая?</p>
+<p>Тройка занимает три позиции. Первая: 8+6+4 = 18, на 5 не делится. Вторая: 6+4+15 = 25, делится, это первая отметка. Дальше большинство сумм мимо, пока не дойдём до 18+3+9 = 30. Тридцать на 5 делится.</p>
+<div class="table-scroll">
+<table class="code-table"><tr><th>тройка</th><th>числа</th><th>сумма</th><th>делится на 5</th></tr><tr><td>1</td><td>8, 6, 4</td><td>18</td><td></td></tr><tr><td>2</td><td>6, 4, 15</td><td>25</td><td><span class="mark">да</span></td></tr><tr><td>3</td><td>4, 15, 10</td><td>29</td><td></td></tr><tr><td>4</td><td>15, 10, 2</td><td>27</td><td></td></tr><tr><td>5</td><td>10, 2, 7</td><td>19</td><td></td></tr><tr><td>6</td><td>2, 7, 12</td><td>21</td><td></td></tr><tr><td>7</td><td>7, 12, 18</td><td>37</td><td></td></tr><tr><td>8</td><td>12, 18, 3</td><td>33</td><td></td></tr><tr><td>9</td><td>18, 3, 9</td><td>30</td><td><span class="mark">да</span></td></tr><tr><td>10</td><td>3, 9, 14</td><td>26</td><td></td></tr></table>
+</div>
+<p>Отметки две. Суммы 25 и 30. Больше — 30. Обратите внимание: 12+18 = 30 было в примере про пары, но это другая компания чисел. Тройку 12, 18, 3 мы тоже проверяли, её сумма 33, и она как раз не подошла.</p>
+<div class="answer">Троек: <strong>2</strong>. Наибольшая сумма: <strong>30</strong>.</div>
+</div>
+
+<h2>Пример 3. Другой ряд, оба делятся на 3</h2>
+<div class="example">
+<p class="question"><strong>Вопрос.</strong> Ряд: 9, 6, 4, 12, 15, 8, 3, 18, 7, 21. Сколько пар, в которых оба числа делятся на 3? Какая сумма таких пар наибольшая?</p>
+<p>Делится на 3 — это про само число, не про сумму. 9 делится, 6 делится, 4 нет, 12 делится, 15 делится, 8 нет, 3 делится, 18 делится, 7 нет, 21 делится.</p>
+<p>Первая пара 9 и 6 подходит, сумма 15. Пара 6 и 4 не подходит из-за четвёрки, хотя шестёрка хорошая: нужны оба. Пара 12 и 15 даёт 27 — пока это рекорд.</p>
+<table class="code-table"><tr><th>пара</th><th>левое</th><th>правое</th><th>сумма</th><th>оба делятся на 3</th></tr><tr><td>1</td><td>9</td><td>6</td><td>15</td><td><span class="mark">да</span></td></tr><tr><td>2</td><td>6</td><td>4</td><td>10</td><td></td></tr><tr><td>3</td><td>4</td><td>12</td><td>16</td><td></td></tr><tr><td>4</td><td>12</td><td>15</td><td>27</td><td><span class="mark">да</span></td></tr><tr><td>5</td><td>15</td><td>8</td><td>23</td><td></td></tr><tr><td>6</td><td>8</td><td>3</td><td>11</td><td></td></tr><tr><td>7</td><td>3</td><td>18</td><td>21</td><td><span class="mark">да</span></td></tr><tr><td>8</td><td>18</td><td>7</td><td>25</td><td></td></tr><tr><td>9</td><td>7</td><td>21</td><td>28</td><td></td></tr></table>
+<div class="answer">Пар: <strong>3</strong>. Наибольшая сумма: <strong>27</strong>.</div>
+</div>
+
+<h2>Коротко, чтобы запомнить</h2>
+<ol>
+  <li>Пара — два соседних числа. Одно и то же число может входить в две пары.</li>
+  <li>Пар на одну меньше, чем чисел. Троек — на две меньше.</li>
+  <li>Условие читаем буквально: «оба», «хотя бы одно», «ровно одно» — это три разных фильтра.</li>
+  <li>Сначала столбец «да/нет», потом количество, потом максимум суммы только по строкам с «да».</li>
+  <li>Длинный файл на экзамене обрабатывают программой, но программа повторяет этот столбик.</li>
+</ol>
+<table class="code-table summary-table">
+  <tr><th>Пример</th><th>Что спросили</th><th>Ответ</th></tr>
+  <tr><td>игрушка</td><td>оба чётные: сколько и максимум суммы</td><td><strong>4 и 30</strong></td></tr>
+  <tr><td>1</td><td>ровно одно чётное</td><td><strong>6 и 25</strong></td></tr>
+  <tr><td>2</td><td>тройки, сумма делится на 5</td><td><strong>2 и 30</strong></td></tr>
+  <tr><td>3</td><td>оба делятся на 3</td><td><strong>3 и 27</strong></td></tr>
+</table>
+</body>
+</html>
