@@ -7,10 +7,10 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.db.models import Max
 from django.utils import timezone
-from notify.dispatch import create_and_deliver, site_url
 
 from communication.models import UserNotification
 from education.models import Enrollment
+from notify.dispatch import create_and_deliver, site_url
 from progress.stats import compute_streak_days
 
 User = get_user_model()
