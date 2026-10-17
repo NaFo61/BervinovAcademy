@@ -1,17 +1,28 @@
 from django.urls import path
+
 from notify.views import (
-    VkStatusView,
-    VkWebhookView,
+    TelegramLinkView,
+    TelegramStatusView,
+    TelegramWebhookView,
     WebPushSubscribeView,
     WebPushVapidView,
 )
 
 urlpatterns = [
-    path("vk/status/", VkStatusView.as_view(), name="vk-status"),
     path(
-        "vk/webhook/<str:secret>/",
-        VkWebhookView.as_view(),
-        name="vk-webhook",
+        "telegram/status/",
+        TelegramStatusView.as_view(),
+        name="telegram-status",
+    ),
+    path(
+        "telegram/link/",
+        TelegramLinkView.as_view(),
+        name="telegram-link",
+    ),
+    path(
+        "telegram/webhook/<str:secret>/",
+        TelegramWebhookView.as_view(),
+        name="telegram-webhook",
     ),
     path(
         "push/vapid/",

@@ -203,7 +203,7 @@ function ProfileEditPage({ navigate }) {
         <RecoveryAccessSection user={user} onUser={setUser} />
 
         <div className="mt-6">
-          <VkConnectPanel user={user} onUser={setUser} />
+          <AccountConnectPanel user={user} onUser={setUser} />
         </div>
       </div>
     </div>
@@ -531,11 +531,13 @@ function RecoveryAccessSection({ user, onUser }) {
   );
 }
 
-function VkConnectPanel({ user, onUser }) {
+function AccountConnectPanel({ user, onUser }) {
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState('');
+  const [hint, setHint] = React.useState('');
   const [unlinkProvider, setUnlinkProvider] = React.useState(null);
-  const vk = user?.vk || {};
+  const [confirmTelegram, setConfirmTelegram] = React.useState(false);
+  const telegram = user?.telegram || {};
   const oauth = user?.oauth || {};
 
   const refreshMe = async () => {
@@ -588,7 +590,38 @@ function VkConnectPanel({ user, onUser }) {
     }
   };
 
+  const linkTelegram = async () => {
+    setBusy(true); setErr(''); setHint('');
+    try {
+      const data = await window.apiJson('/api/telegram/link/', { method: 'POST', auth: true });
+      if (data.start_url) {
+        window.open(data.start_url, '_blank', 'noopener');
+        setHint('В Telegram нажми Start. Потом обнови статус здесь.');
+        return;
+      }
+      setErr('Бот ещё не настроен. Напиши администратору.');
+    } catch (e) {
+      setErr(e.message || 'Не удалось открыть бота');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmUnlinkTelegram = async () => {
+    setConfirmTelegram(false);
+    setBusy(true); setErr(''); setHint('');
+    try {
+      await window.apiJson('/api/telegram/link/', { method: 'DELETE', auth: true });
+      await refreshMe();
+    } catch (e) {
+      setErr(e.message || 'Не удалось отвязать Telegram');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const unlinkLabel = unlinkProvider === 'yandex' ? 'Яндекс' : unlinkProvider === 'vk' ? 'VK' : '';
+  const tgName = telegram.username ? `@${telegram.username}` : 'аккаунт';
 
   return (
     <div className="space-y-3">
@@ -604,33 +637,44 @@ function VkConnectPanel({ user, onUser }) {
           onCancel={() => setUnlinkProvider(null)}
         />
       )}
-      <div className="rounded-2xl ring-1 ring-violet-200/80 bg-violet-50/50 p-4 sm:p-5 space-y-3">
-        <div className="flex items-start gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-500/15 text-violet-700">
-            <I.VK className="w-5 h-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="font-bold text-ink">Чат и уведомления VK</div>
-            <p className="text-sm text-ink/60 mt-0.5">
-              Пиши сообществу VK — сообщения уходят ментору на сайт. Ответы ментора приходят в VK.
-            </p>
-            {vk.linked ? (
-              <p className="text-sm text-emerald-700 mt-2 font-medium">
-                VK привязан{vk.messages_allowed ? ' · сообщения разрешены' : ' · напиши сообществу, чтобы разрешить сообщения'}
-              </p>
-            ) : (
-              <p className="text-sm text-ink/45 mt-2">Сначала привяжи VK через OAuth ниже</p>
-            )}
-          </div>
+      {window.ConfirmDialog && (
+        <window.ConfirmDialog
+          open={confirmTelegram}
+          title="Отвязать Telegram?"
+          body="Бот перестанет писать в этот чат, пока не привяжете снова."
+          confirmLabel="Отвязать"
+          cancelLabel="Оставить"
+          danger
+          onConfirm={confirmUnlinkTelegram}
+          onCancel={() => setConfirmTelegram(false)}
+        />
+      )}
+      <div className="rounded-2xl ring-1 ring-sky-200/80 bg-sky-50/50 p-4 sm:p-5 space-y-3">
+        <div className="min-w-0 flex-1">
+          <div className="font-bold text-ink">Telegram</div>
+          <p className="text-sm text-ink/60 mt-0.5">
+            Привяжи бота — потом сюда будут приходить уведомления школы.
+          </p>
+          {telegram.linked ? (
+            <p className="text-sm text-emerald-700 mt-2 font-medium">Привязан {tgName}</p>
+          ) : (
+            <p className="text-sm text-ink/45 mt-2">Пока не привязан</p>
+          )}
         </div>
         {err && <p className="text-sm text-red-600">{err}</p>}
+        {hint && <p className="text-sm text-ink/70">{hint}</p>}
         <div className="flex flex-wrap gap-2">
-          {vk.linked && vk.write_url ? (
-            <a href={vk.write_url} target="_blank" rel="noreferrer"
-              className="h-10 px-4 rounded-xl btn-grad text-white text-sm font-semibold inline-flex items-center">
-              Написать сообществу
-            </a>
-          ) : null}
+          {telegram.linked ? (
+            <button type="button" disabled={busy} onClick={() => setConfirmTelegram(true)}
+              className="h-10 px-4 rounded-xl text-sm font-semibold text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50 disabled:opacity-50">
+              Отвязать Telegram
+            </button>
+          ) : (
+            <button type="button" disabled={busy} onClick={linkTelegram}
+              className="h-10 px-4 rounded-xl btn-grad text-white text-sm font-semibold disabled:opacity-50">
+              Привязать Telegram
+            </button>
+          )}
           <button type="button" onClick={refreshMe}
             className="h-10 px-4 rounded-xl text-sm font-semibold ring-1 ring-black/[0.08] bg-white hover:bg-black/[0.02]">
             Обновить статус

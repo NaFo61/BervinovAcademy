@@ -80,7 +80,10 @@ class CustomUserAdmin(ModelAdmin):
                     "bio",
                     "yandex_id",
                     "vk_id",
-                    "vk_messages_allowed",
+                    "telegram_id",
+                    "telegram_chat_id",
+                    "telegram_username",
+                    "telegram_linked_at",
                 )
             },
         ),

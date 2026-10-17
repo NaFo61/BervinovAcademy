@@ -1,6 +1,13 @@
+# Архив: VK-бот снят (2026-10-08)
+
+Бот сообщества VK убран. Вход через VK и Яндекс остаётся.
+База нового бота: `docs/specs/telegram-bot.md`.
+
+Ниже — старое ТЗ, его больше не делаем.
+
 # FEATURE: VK chat bridge + OAuth (без Telegram)
 
-Status: **IMPLEMENTED** (2026-08-06)
+Status: **СНЯТО** (бот сообщества). OAuth VK/Яндекс живой.
 
 ## Goal
 

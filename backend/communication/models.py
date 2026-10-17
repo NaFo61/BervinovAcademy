@@ -281,7 +281,7 @@ class ChatMessage(UUIDPublicIdMixin, models.Model):
 
     class Source(models.TextChoices):
         SITE = "site", _("Сайт")
-        VK = "vk", _("VK")
+        TELEGRAM = "telegram", _("Telegram")
 
     thread = models.ForeignKey(
         DirectThread,

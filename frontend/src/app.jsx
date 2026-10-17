@@ -19,6 +19,7 @@ const MentorPage = window.MentorPage;
 const ExamPage = window.ExamPage;
 const CallPage = window.CallPage;
 const ConferencesPage = window.ConferencesPage;
+const LessonsPage = window.LessonsPage;
 const MessagesPage = window.MessagesPage;
 const ProPage = window.ProPage;
 const CertificatePage = window.CertificatePage;
@@ -49,6 +50,7 @@ function App() {
     [Routes.AUTH_CALLBACK]: AuthCallbackPage,
     [Routes.CALL]: CallPage,
     [Routes.CONFERENCES]: ConferencesPage,
+    [Routes.LESSONS]: LessonsPage,
     [Routes.MESSAGES]: MessagesPage,
     [Routes.PRO]: ProPage,
     [Routes.CERTIFICATE]: CertificatePage,

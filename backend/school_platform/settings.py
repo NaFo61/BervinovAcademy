@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "education",
     "progress",
     "mentoring",
+    "tutoring",
     "exams",
     "content",
     "communication",
@@ -117,6 +118,16 @@ UNFOLD = {
                         "title": _("Студенты"),
                         "icon": "group",
                         "link": "/admin/users/student/",
+                    },
+                    {
+                        "title": _("Занятия"),
+                        "icon": "event",
+                        "link": "/admin/tutoring/tutoringlesson/",
+                    },
+                    {
+                        "title": _("Доступ к занятиям"),
+                        "icon": "key",
+                        "link": "/admin/tutoring/lessonaccess/",
                     },
                     {
                         "title": _("Тарифы"),
@@ -423,6 +434,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "notify.send_study_reminders",
         "schedule": crontab(hour=18, minute=0),
     },
+    "send-lesson-reminders": {
+        "task": "tutoring.send_lesson_reminders",
+        "schedule": crontab(minute="*/5"),
+    },
 }
 
 # LiveKit (видеоконференции ментор ↔ участник)
@@ -456,12 +471,9 @@ YANDEX_OAUTH_CLIENT_SECRET = config(
 ).strip()
 VK_OAUTH_CLIENT_ID = config("VK_OAUTH_CLIENT_ID", default="").strip()
 VK_OAUTH_CLIENT_SECRET = config("VK_OAUTH_CLIENT_SECRET", default="").strip()
-VK_GROUP_TOKEN = config("VK_GROUP_TOKEN", default="").strip()
-VK_GROUP_ID = config("VK_GROUP_ID", default="").strip()
-VK_CALLBACK_CONFIRMATION = config(
-    "VK_CALLBACK_CONFIRMATION", default=""
-).strip()
-VK_CALLBACK_SECRET = config("VK_CALLBACK_SECRET", default="").strip()
+TELEGRAM_BOT_TOKEN = config("TELEGRAM_BOT_TOKEN", default="").strip()
+TELEGRAM_BOT_USERNAME = config("TELEGRAM_BOT_USERNAME", default="").strip()
+TELEGRAM_WEBHOOK_SECRET = config("TELEGRAM_WEBHOOK_SECRET", default="").strip()
 VAPID_PUBLIC_KEY = config("VAPID_PUBLIC_KEY", default="").strip()
 VAPID_PRIVATE_KEY = config("VAPID_PRIVATE_KEY", default="").strip()
 VAPID_ADMIN_EMAIL = config(

@@ -269,7 +269,6 @@ def test_oauth_unlink_keeps_vk_when_yandex_removed():
         phone=None,
         yandex_id="ya-a",
         vk_id=99,
-        vk_messages_allowed=True,
     )
     user.set_unusable_password()
     user.save()

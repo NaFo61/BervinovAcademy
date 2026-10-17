@@ -195,12 +195,31 @@ class User(UUIDPublicIdMixin, AbstractBaseUser, PermissionsMixin):
         null=True,
         blank=True,
         unique=True,
-        help_text=_("Идентификатор VK (OAuth и сообщения сообщества)"),
+        help_text=_("Идентификатор VK ID (вход)"),
     )
-    vk_messages_allowed = models.BooleanField(
-        verbose_name=_("VK: сообщения разрешены"),
-        default=False,
-        help_text=_("Пользователь разрешил сообщения от сообщества"),
+    telegram_id = models.BigIntegerField(
+        verbose_name=_("Telegram ID"),
+        null=True,
+        blank=True,
+        unique=True,
+        help_text=_("Числовой id пользователя в Telegram"),
+    )
+    telegram_chat_id = models.BigIntegerField(
+        verbose_name=_("Telegram chat id"),
+        null=True,
+        blank=True,
+        help_text=_("Куда бот пишет в личный чат"),
+    )
+    telegram_username = models.CharField(
+        verbose_name=_("Telegram username"),
+        max_length=64,
+        blank=True,
+        default="",
+    )
+    telegram_linked_at = models.DateTimeField(
+        verbose_name=_("Telegram привязан"),
+        null=True,
+        blank=True,
     )
     date_joined = models.DateTimeField(
         verbose_name=_("Дата регистрации"),

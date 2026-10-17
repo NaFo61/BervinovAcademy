@@ -628,12 +628,10 @@ def create_message(
                 f"{sender.first_name} {sender.last_name}".strip()
                 or "Собеседник"
             )
+            from communication.models import UserNotification
             from notify.dispatch import create_and_deliver, site_url
 
-            from communication.models import UserNotification
-
-            # In-app только для студента (ментор и так в кабинете);
-            # VK/Push — обоим. Сообщения из VK не эхоим обратно в VK.
+            # In-app только для студента (ментор и так в кабинете).
             persist = recipient.pk == thread.student_id
             other_id = (
                 thread.mentor.public_id
@@ -647,7 +645,6 @@ def create_message(
                 body=preview,
                 url=site_url(f"/messages?user={other_id}"),
                 persist=persist,
-                skip_vk=(source == ChatMessage.Source.VK),
             )
 
     return message

@@ -472,6 +472,24 @@ def _attach_images(
             save=True,
         )
 
+    _retarget_inline_images(lesson_obj)
+
+
+def _retarget_inline_images(lesson_obj) -> None:
+    """Подменить images/имя.png на адрес уже загруженного файла."""
+    content = getattr(lesson_obj, "content", "") or ""
+    if "images/" not in content:
+        return
+    updated = content
+    for attachment in lesson_obj.attachments.all():
+        name = (attachment.original_name or "").strip()
+        if not name or not attachment.file:
+            continue
+        updated = updated.replace(f"images/{name}", attachment.file.url)
+    if updated != content:
+        lesson_obj.content = updated
+        lesson_obj.save(update_fields=["content"])
+
 
 def _guess_content_type(suffix: str) -> str:
     mapping = {

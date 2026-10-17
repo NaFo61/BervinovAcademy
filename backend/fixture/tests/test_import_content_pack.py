@@ -14,6 +14,7 @@ from content.models import (
     LessonCheckBoxQuestion,
     LessonRadioQuestion,
     LessonShortAnswer,
+    LessonTheory,
     Module,
     RadioAnswerOption,
 )
@@ -215,3 +216,44 @@ def test_import_missing_module_raises(tmp_path, ege_course):
 
     with pytest.raises(CommandError, match="не найден"):
         call_command("import_content_pack", str(archive))
+
+
+@pytest.mark.django_db
+def test_import_rewrites_theory_image_src(tmp_path, ege_course):
+    course, module = ege_course
+    manifest = {
+        "pack_id": "ege-n1-practice",
+        "course_slug": course.slug,
+        "module_title": module.title,
+    }
+    questions = {
+        "meta": {"images_dir": "images/"},
+        "lessons": [
+            {
+                "type": "theory",
+                "title": "Теория со схемой",
+                "content": (
+                    "<p>Схема</p>" '<img src="images/scheme.png" alt="схема">'
+                ),
+                "images": ["scheme.png"],
+            }
+        ],
+    }
+    archive = tmp_path / "pack.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr(
+            "manifest.json",
+            json.dumps(manifest, ensure_ascii=False),
+        )
+        zf.writestr(
+            "questions.json",
+            json.dumps(questions, ensure_ascii=False),
+        )
+        zf.writestr("images/scheme.png", b"\x89PNG\r\n")
+
+    import_content_pack(archive=archive, dry_run=False)
+
+    theory = LessonTheory.objects.get(module=module, title="Теория со схемой")
+    attachment = theory.attachments.get()
+    assert "images/scheme.png" not in theory.content
+    assert attachment.file.url in theory.content

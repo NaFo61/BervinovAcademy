@@ -24,6 +24,7 @@ const Routes = {
   CERTIFICATE: 'certificate',
   PLAYGROUND: 'playground',
   WHITEBOARD: 'whiteboard',
+  LESSONS: 'lessons',
 };
 
 const KNOWN_ROUTES = new Set(Object.values(Routes));
@@ -2073,6 +2074,7 @@ function UserMenu({
   initials,
   isMentor,
   isAdmin,
+  showLessons,
   onLogout,
 }) {
   const [open, setOpen] = React.useState(false);
@@ -2107,6 +2109,17 @@ function UserMenu({
     { id: 'profile', label: 'Профиль', icon: I.Users, action: () => go(Routes.PROFILE), active: route === Routes.PROFILE },
     { id: 'settings', label: 'Настройки', icon: I.Settings, action: () => go(Routes.PROFILE_EDIT), active: route === Routes.PROFILE_EDIT },
     { id: 'pro', label: 'Тариф Про', icon: I.Star, action: () => go(Routes.PRO), active: route === Routes.PRO },
+    ...(showLessons ? [{
+      id: 'lessons',
+      label: 'Занятия',
+      icon: I.Calendar,
+      action: () => {
+        setOpen(false);
+        if (isMentor) navigate(Routes.MENTOR, { tab: 'lessons' });
+        else navigate(Routes.LESSONS);
+      },
+      active: route === Routes.LESSONS,
+    }] : []),
     { id: 'conferences', label: 'Созвоны', icon: I.Video, action: () => go(Routes.CONFERENCES), active: route === Routes.CONFERENCES },
     ...(isMentor ? [{ id: 'mentor', label: 'Ментор', icon: I.Brain, action: () => go(Routes.MENTOR), active: route === Routes.MENTOR }] : []),
     ...(isAdmin ? [{ id: 'school', label: 'Школа', icon: I.Book, href: '/admin/' }] : []),
@@ -2191,6 +2204,7 @@ function TopNav({ route, navigate }) {
   const [chatUnread, setChatUnread] = React.useState(0);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
+  const [lessonsEnabled, setLessonsEnabled] = React.useState(false);
   const searchRef = React.useRef(null);
 
   const syncChatUnread = React.useCallback(async () => {
@@ -2225,6 +2239,18 @@ function TopNav({ route, navigate }) {
       clearInterval(timerId);
     };
   }, [session, syncChatUnread]);
+
+  React.useEffect(() => {
+    if (!session) {
+      setLessonsEnabled(false);
+      return undefined;
+    }
+    let cancel = false;
+    window.fetchApiJson('/api/tutoring/me/', { auth: true })
+      .then((data) => { if (!cancel) setLessonsEnabled(!!data?.lessons_enabled); })
+      .catch(() => { if (!cancel) setLessonsEnabled(false); });
+    return () => { cancel = true; };
+  }, [session]);
 
   React.useEffect(() => {
     const onKey = (e) => {
@@ -2388,6 +2414,7 @@ function TopNav({ route, navigate }) {
                 initials={initials}
                 isMentor={isMentor}
                 isAdmin={isAdmin}
+                showLessons={isMentor || lessonsEnabled}
                 onLogout={handleLogout}
               />
             </>
@@ -2482,6 +2509,19 @@ function TopNav({ route, navigate }) {
                     }`}
                   >
                     Ментор
+                  </button>
+                )}
+                {(isMentor || lessonsEnabled) && (
+                  <button
+                    type="button"
+                    onClick={() => (isMentor ? navigate(Routes.MENTOR, { tab: 'lessons' }) : go(Routes.LESSONS))}
+                    className={`h-11 rounded-xl text-sm font-semibold transition-colors ${
+                      route === Routes.LESSONS
+                        ? 'bg-sky-50 text-sky-800 ring-1 ring-sky-200'
+                        : 'bg-ink/[0.03] text-ink/75 hover:bg-ink/[0.06]'
+                    }`}
+                  >
+                    Занятия
                   </button>
                 )}
                 {isAdmin && (

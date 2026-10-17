@@ -547,8 +547,7 @@ def unlink_provider(user, provider: str) -> None:
                 {"detail": "Нельзя отвязать единственный способ входа."}
             )
         user.vk_id = None
-        user.vk_messages_allowed = False
-        user.save(update_fields=["vk_id", "vk_messages_allowed"])
+        user.save(update_fields=["vk_id"])
 
 
 def _attach_provider(user, provider: str, pid: str) -> None:

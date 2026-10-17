@@ -140,38 +140,27 @@ class TestHtmlSanitizeUnit:
 
 
 @pytest.mark.django_db
-class TestVkWebhookAuth:
-    def test_forbidden_without_matching_secrets(self, settings):
-        settings.VK_CALLBACK_SECRET = "super-secret-token"
-        client = APIClient()
-        resp = client.post(
-            "/api/vk/webhook/super-secret-token/",
-            data={"type": "message_new", "secret": "wrong"},
-            format="json",
-        )
-        assert resp.status_code == 403
-
+class TestTelegramWebhookAuth:
     def test_forbidden_bad_path_secret(self, settings):
-        settings.VK_CALLBACK_SECRET = "super-secret-token"
+        settings.TELEGRAM_WEBHOOK_SECRET = "super-secret-token"
         client = APIClient()
         resp = client.post(
-            "/api/vk/webhook/wrong/",
-            data={"type": "message_new", "secret": "super-secret-token"},
+            "/api/telegram/webhook/wrong/",
+            data={"update_id": 1},
             format="json",
         )
         assert resp.status_code == 403
 
-    def test_ok_confirmation(self, settings):
-        settings.VK_CALLBACK_SECRET = "super-secret-token"
-        settings.VK_CALLBACK_CONFIRMATION = "ok-confirm"
+    def test_ok_empty_update(self, settings):
+        settings.TELEGRAM_WEBHOOK_SECRET = "super-secret-token"
         client = APIClient()
         resp = client.post(
-            "/api/vk/webhook/super-secret-token/",
-            data={"type": "confirmation", "group_id": 1},
+            "/api/telegram/webhook/super-secret-token/",
+            data={"update_id": 1},
             format="json",
         )
         assert resp.status_code == 200
-        assert resp.content.decode() == "ok-confirm"
+        assert resp.json()["ok"] is True
 
 
 @pytest.mark.django_db

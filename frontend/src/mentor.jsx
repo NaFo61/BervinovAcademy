@@ -128,9 +128,10 @@ function ChallengeTestsPanel({ challenge, loading, onClose }) {
   );
 }
 
-function MentorPage({ navigate }) {
+function MentorPage({ navigate, hashParams }) {
+  const tabFromUrl = hashParams && hashParams.get ? hashParams.get('tab') : '';
   const [accessState, setAccessState] = React.useState('checking');
-  const [tab, setTab] = React.useState('courses');
+  const [tab, setTab] = React.useState(tabFromUrl === 'lessons' ? 'lessons' : 'courses');
   const [courses, setCourses] = React.useState([]);
   const [selectedCourse, setSelectedCourse] = React.useState(null);
   const [students, setStudents] = React.useState([]);
@@ -428,12 +429,13 @@ function MentorPage({ navigate }) {
         />
 
         <div className="flex flex-wrap gap-2">
-          {['courses', 'editor', 'students', 'code', 'quiz', 'exams', 'calls'].map((id) => (
+          {['courses', 'lessons', 'editor', 'students', 'code', 'quiz', 'exams', 'calls'].map((id) => (
             <button key={id} type="button" onClick={() => setTab(id)}
               className={`h-10 px-4 rounded-xl text-sm font-semibold transition-colors ${
                 tab === id ? 'grad-bg text-white shadow-soft' : 'bg-white ring-1 ring-black/[0.06] text-ink/70'
               }`}>
               {id === 'courses' && 'Курсы'}
+              {id === 'lessons' && 'Занятия'}
               {id === 'editor' && 'Редактор'}
               {id === 'students' && 'Ученики'}
               {id === 'code' && 'Код'}
@@ -448,7 +450,7 @@ function MentorPage({ navigate }) {
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-3 items-center">
+        <div className={`flex flex-wrap gap-3 items-center ${tab === 'lessons' ? 'hidden' : ''}`}>
           <label className="text-sm text-ink/55">Курс:</label>
           <select value={selectedCourse || ''} onChange={(e) => { setSelectedCourse(e.target.value); setSelectedStudent(null); }}
             className="h-10 px-3 rounded-xl bg-white ring-1 ring-black/[0.08] text-sm min-w-[220px]">
@@ -471,6 +473,8 @@ function MentorPage({ navigate }) {
 
         {loading ? (
           <div className="py-16 text-center text-ink/50 text-sm">Загрузка…</div>
+        ) : tab === 'lessons' ? (
+          <window.MentorLessonsPanel isAdmin={isAdmin} mentors={assignableMentors} />
         ) : tab === 'editor' ? (
           selectedCourse ? (
             <window.ContentEditorPanel

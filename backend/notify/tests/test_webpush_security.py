@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from notify.models import PushSubscription
 import pytest
 from rest_framework.test import APIClient
 
+from notify.models import PushSubscription
 from users.models import User
 
 
@@ -58,9 +58,9 @@ class TestWebPushAuth:
         )
         assert resp.status_code == 401
 
-    def test_vk_status_anonymous_401(self):
+    def test_telegram_status_anonymous_401(self):
         client = APIClient()
-        assert client.get("/api/vk/status/").status_code == 401
+        assert client.get("/api/telegram/status/").status_code == 401
 
     def test_vapid_authenticated_no_private_key(self, student, vapid_on):
         client = APIClient()

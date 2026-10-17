@@ -503,7 +503,7 @@ class UserPrivateProfileSerializer(UserPublicProfileSerializer):
     email_verified = serializers.BooleanField(read_only=True)
     subscription = serializers.SerializerMethodField()
     oauth = serializers.SerializerMethodField()
-    vk = serializers.SerializerMethodField()
+    telegram = serializers.SerializerMethodField()
     recovery = serializers.SerializerMethodField()
 
     def get_subscription(self, obj):
@@ -517,16 +517,14 @@ class UserPrivateProfileSerializer(UserPublicProfileSerializer):
             "vk": bool(obj.vk_id),
         }
 
-    def get_vk(self, obj):
-        from django.conf import settings
-        from notify.vk_api import community_write_url, is_configured
+    def get_telegram(self, obj):
+        from notify.telegram_api import bot_username, is_configured
 
         return {
-            "linked": bool(obj.vk_id),
-            "messages_allowed": bool(obj.vk_messages_allowed),
+            "linked": bool(obj.telegram_id),
+            "username": obj.telegram_username or "",
             "bot_configured": is_configured(),
-            "group_id": (getattr(settings, "VK_GROUP_ID", "") or "").strip(),
-            "write_url": community_write_url(),
+            "bot_username": bot_username(),
         }
 
     def get_recovery(self, obj):
@@ -539,7 +537,7 @@ class UserPrivateProfileSerializer(UserPublicProfileSerializer):
             "email_verified",
             "subscription",
             "oauth",
-            "vk",
+            "telegram",
             "recovery",
         )
         read_only_fields: tuple[str, ...] = (
@@ -555,6 +553,6 @@ class UserPrivateProfileSerializer(UserPublicProfileSerializer):
             "email_verified",
             "subscription",
             "oauth",
-            "vk",
+            "telegram",
             "recovery",
         )

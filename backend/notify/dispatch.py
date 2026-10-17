@@ -1,4 +1,4 @@
-"""Доставка уведомлений: in-app + VK + Web Push."""
+"""Доставка уведомлений: in-app и Web Push."""
 
 from __future__ import annotations
 
@@ -28,7 +28,6 @@ def create_and_deliver(
     conference=None,
     url: str = "",
     persist: bool = True,
-    skip_vk: bool = False,
 ) -> Any:
     """Создать in-app уведомление (опционально) и поставить доставку в очередь."""
     # UserNotification.title is varchar(255); baker/long names can exceed it.
@@ -56,7 +55,6 @@ def create_and_deliver(
             body=body,
             url=url or "",
             kind=kind,
-            skip_vk=skip_vk,
         )
     except Exception:
         logger.exception(

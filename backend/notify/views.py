@@ -1,45 +1,68 @@
-"""API: VK status/webhook, Web Push."""
+"""API: привязка Telegram и Web Push."""
 
 from __future__ import annotations
 
 import json
 import logging
+import secrets
 
 from django.conf import settings
-from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.http import HttpResponseForbidden, JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
-from notify.models import PushSubscription
-from notify.vk_api import community_write_url
-from notify.vk_api import is_configured as vk_configured
-from notify.webpush_api import is_configured as push_configured
-from notify.webpush_api import vapid_public_key
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from notify.models import PushSubscription
+from notify.telegram_api import bot_username, is_configured, start_url
+from notify.telegram_link import issue_link_token, unlink_telegram
+from notify.webpush_api import is_configured as push_configured
+from notify.webpush_api import vapid_public_key
+
 logger = logging.getLogger(__name__)
 
 
-class VkStatusView(APIView):
+def _secret_ok(got: str, expected: str) -> bool:
+    if not expected or not got or len(got) != len(expected):
+        return False
+    return secrets.compare_digest(got, expected)
+
+
+class TelegramStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        u = request.user
+        user = request.user
         return Response(
             {
-                "linked": bool(u.vk_id),
-                "vk_id": u.vk_id,
-                "messages_allowed": bool(u.vk_messages_allowed),
-                "bot_configured": vk_configured(),
-                "group_id": (
-                    getattr(settings, "VK_GROUP_ID", "") or ""
-                ).strip(),
-                "write_url": community_write_url(),
+                "linked": bool(user.telegram_id),
+                "username": user.telegram_username or "",
+                "bot_configured": is_configured(),
+                "bot_username": bot_username(),
             }
         )
+
+
+class TelegramLinkView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        link = issue_link_token(request.user)
+        return Response(
+            {
+                "token": link.token,
+                "expires_at": link.expires_at,
+                "start_url": start_url(link.token),
+                "bot_configured": is_configured(),
+            }
+        )
+
+    def delete(self, request):
+        unlink_telegram(request.user)
+        return Response({"ok": True})
 
 
 class WebPushVapidView(APIView):
@@ -96,34 +119,23 @@ class WebPushSubscribeView(APIView):
 
 
 @method_decorator(csrf_exempt, name="dispatch")
-class VkWebhookView(View):
+class TelegramWebhookView(View):
     def post(self, request, secret: str):
-        expected = (getattr(settings, "VK_CALLBACK_SECRET", "") or "").strip()
-        if not expected or secret != expected:
+        expected = (
+            getattr(settings, "TELEGRAM_WEBHOOK_SECRET", "") or ""
+        ).strip()
+        if not _secret_ok(secret, expected):
             return HttpResponseForbidden("forbidden")
         try:
-            event = json.loads(request.body.decode("utf-8"))
+            update = json.loads(request.body.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):
             return JsonResponse({"ok": False}, status=400)
-
-        etype = (event.get("type") or "").strip()
-        body_secret = (event.get("secret") or "").strip()
-        # confirmation от VK часто без secret в теле (только group_id);
-        # остальные события — требуем совпадение secret.
-        if etype != "confirmation":
-            if body_secret != expected:
-                return HttpResponseForbidden("forbidden")
-        elif body_secret and body_secret != expected:
-            return HttpResponseForbidden("forbidden")
-
+        if not isinstance(update, dict):
+            return JsonResponse({"ok": False}, status=400)
         try:
-            from notify.vk_handlers import handle_callback_event
+            from notify.telegram_link import handle_update
 
-            confirmation = handle_callback_event(event)
+            handle_update(update)
         except Exception:
-            logger.exception("VK webhook handler failed")
-            return HttpResponse("ok")
-
-        if confirmation is not None:
-            return HttpResponse(confirmation, content_type="text/plain")
-        return HttpResponse("ok")
+            logger.exception("Telegram webhook handler failed")
+        return JsonResponse({"ok": True})
