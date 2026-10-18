@@ -46,9 +46,10 @@ class TutoringLessonAdmin(ModelAdmin):
         "student",
         "mentor",
         "status",
+        "homework_status",
         "price_kop",
     )
-    list_filter = ("status",)
+    list_filter = ("status", "homework_status")
     raw_id_fields = ("student", "mentor")
 
 

@@ -156,6 +156,23 @@ class TutoringLesson(UUIDPublicIdMixin, models.Model):
         verbose_name=_("Статус"),
         db_index=True,
     )
+    homework_status = models.CharField(
+        max_length=16,
+        choices=[
+            ("", _("Не отмечено")),
+            ("done", _("Сдал")),
+            ("not_done", _("Не сдал")),
+        ],
+        default="",
+        blank=True,
+        verbose_name=_("Домашка"),
+        db_index=True,
+    )
+    learned_note = models.TextField(
+        blank=True,
+        default="",
+        verbose_name=_("Чему научился"),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

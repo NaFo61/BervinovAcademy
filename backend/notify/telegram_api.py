@@ -2,13 +2,41 @@
 
 from __future__ import annotations
 
+from http import client
 import json
 import logging
+import socket
 from urllib import error, request
 
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
+
+class _IPv4HTTPSConnection(client.HTTPSConnection):
+    """Сервер видит Telegram только по IPv4. IPv6 до него не доходит."""
+
+    def connect(self):
+        results = socket.getaddrinfo(
+            self.host,
+            self.port,
+            socket.AF_INET,
+            socket.SOCK_STREAM,
+        )
+        af, socktype, proto, _canon, address = results[0]
+        sock = socket.socket(af, socktype, proto)
+        if self.timeout is not None:
+            sock.settimeout(self.timeout)
+        sock.connect(address)
+        self.sock = self._context.wrap_socket(sock, server_hostname=self.host)
+
+
+class _IPv4HTTPSHandler(request.HTTPSHandler):
+    def https_open(self, req):
+        return self.do_open(_IPv4HTTPSConnection, req)
+
+
+_OPENER = request.build_opener(_IPv4HTTPSHandler)
 
 
 def is_configured() -> bool:
@@ -42,7 +70,7 @@ def send_message(chat_id, text: str) -> bool:
         method="POST",
     )
     try:
-        with request.urlopen(req, timeout=10) as resp:
+        with _OPENER.open(req, timeout=10) as resp:
             return 200 <= resp.status < 300
     except (error.URLError, TimeoutError, ValueError):
         logger.exception("Telegram send failed")

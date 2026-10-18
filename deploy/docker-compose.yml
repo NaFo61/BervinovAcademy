@@ -82,6 +82,8 @@ services:
     pull_policy: always
     restart: unless-stopped
     env_file: .env
+    extra_hosts:
+      - "api.telegram.org:149.154.167.220"
     volumes:
       - media_data:/app/backend/media
       - static_data:/app/backend/staticfiles
@@ -116,6 +118,8 @@ services:
     pull_policy: always
     restart: unless-stopped
     env_file: .env
+    extra_hosts:
+      - "api.telegram.org:149.154.167.220"
     environment:
       SKIP_MIGRATE: "1"
       SKIP_COLLECTSTATIC: "1"

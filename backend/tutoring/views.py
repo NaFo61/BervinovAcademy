@@ -24,6 +24,7 @@ from tutoring.services import (
     replace_availability,
     replace_tariffs,
     resolve_mentor_actor,
+    save_lesson_journal,
     tariffs_payload,
     visible_lessons,
 )
@@ -108,6 +109,13 @@ class LessonActionView(TutoringView):
             elif action == "missed":
                 lesson = mark_lesson(
                     actor=request.user, public_id=public_id, status="missed"
+                )
+            elif action == "notes":
+                lesson = save_lesson_journal(
+                    actor=request.user,
+                    public_id=public_id,
+                    homework_status=request.data.get("homework_status", ""),
+                    learned_note=request.data.get("learned_note", ""),
                 )
             else:
                 return Response(

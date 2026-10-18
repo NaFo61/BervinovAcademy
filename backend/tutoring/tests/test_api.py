@@ -272,3 +272,40 @@ def test_admin_grants_access_without_touching_pro(settings):
     from subscriptions.services import user_is_pro
 
     assert user_is_pro(student) is False
+
+
+@pytest.mark.django_db
+def test_mentor_records_homework_and_note():
+    mentor = _user("mentor-hw@example.com", role="mentor")
+    other = _user("mentor-other@example.com", role="mentor")
+    student = _user("student-hw@example.com")
+    _open_week(mentor)
+    _enable(student, mentor)
+    lesson = _book_first(student)
+    mentor_api = _client(mentor)
+    saved = mentor_api.post(
+        f"/api/tutoring/lessons/{lesson['public_id']}/notes/",
+        {
+            "homework_status": "not_done",
+            "learned_note": "Разобрали циклы, домашка не сдана.",
+        },
+        format="json",
+    )
+    assert saved.status_code == 200, saved.content
+    body = saved.json()
+    assert body["homework_status"] == "not_done"
+    assert "циклы" in body["learned_note"]
+    seen = _client(student).get("/api/tutoring/lessons/").json()["results"]
+    assert seen[0]["homework_status"] == "not_done"
+    denied = _client(student).post(
+        f"/api/tutoring/lessons/{lesson['public_id']}/notes/",
+        {"homework_status": "done", "learned_note": ""},
+        format="json",
+    )
+    assert denied.status_code == 403
+    foreign = _client(other).post(
+        f"/api/tutoring/lessons/{lesson['public_id']}/notes/",
+        {"homework_status": "done", "learned_note": ""},
+        format="json",
+    )
+    assert foreign.status_code == 403

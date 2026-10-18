@@ -325,6 +325,9 @@ function LessonList({ title, items, busy, onCancel, onMove, movingId }) {
             <p className="text-sm text-ink/55">{LESSON_STATUS[item.status] || item.status} · {rub(item.price_kop)}</p>
           </div>
           <p className="text-sm text-ink/60 mt-1">{item.duration_minutes} мин · {item.mentor?.name}</p>
+          {item.homework_status === 'done' && <p className="text-sm text-emerald-700 mt-2">Домашка сдана</p>}
+          {item.homework_status === 'not_done' && <p className="text-sm text-amber-700 mt-2">Домашка не сдана</p>}
+          {item.learned_note && <p className="text-sm text-ink/70 mt-1">Чему научился: {item.learned_note}</p>}
           {item.status === 'booked' && onCancel && (
             <div className="mt-3 flex gap-2">
               <button type="button" disabled={busy} onClick={() => onMove(movingId === item.public_id ? null : item.public_id)} className="h-9 px-3 rounded-lg text-sm font-semibold ring-1 ring-black/[0.08]">
@@ -354,6 +357,7 @@ function MentorLessonsPanel({ isAdmin, mentors }) {
   const [error, setError] = React.useState('');
   const [hint, setHint] = React.useState('');
   const [busy, setBusy] = React.useState(false);
+  const [journal, setJournal] = React.useState({});
 
   const load = React.useCallback(async () => {
     const [availability, price, rows, claims, month] = await Promise.all([
@@ -375,7 +379,12 @@ function MentorLessonsPanel({ isAdmin, mentors }) {
       rub: String(item.price_kop / 100),
     }));
     setTariffs(nextTariffs.length ? nextTariffs : [{ duration_minutes: 60, rub: '2000' }]);
-    setLessons(rows.results || []);
+    const loaded = rows.results || [];
+    setLessons(loaded);
+    setJournal(Object.fromEntries(loaded.map((item) => [item.public_id, {
+      homework_status: item.homework_status || '',
+      learned_note: item.learned_note || '',
+    }])));
     setMoney(claims || { pending: [], debtors: [] });
     setStats(month);
   }, []);
@@ -443,6 +452,28 @@ function MentorLessonsPanel({ isAdmin, mentors }) {
     }
   };
 
+  const saveJournal = async (publicId) => {
+    const draft = journal[publicId] || { homework_status: '', learned_note: '' };
+    setBusy(true);
+    setError('');
+    try {
+      await window.fetchApiJson(`/api/tutoring/lessons/${publicId}/notes/`, {
+        method: 'POST',
+        auth: true,
+        body: {
+          homework_status: draft.homework_status,
+          learned_note: draft.learned_note,
+        },
+      });
+      setHint('Заметка сохранена.');
+      await load();
+    } catch (err) {
+      setError(err.message || 'Не удалось сохранить заметку');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const grant = async (event) => {
     event.preventDefault();
     if (!email.trim() || !mentorId) {
@@ -474,6 +505,7 @@ function MentorLessonsPanel({ isAdmin, mentors }) {
     ['calendar', 'Окна'],
     ['prices', 'Цены'],
     ['list', 'Записи'],
+    ['study', 'Домашка'],
     ['money', 'Оплаты'],
     ['stats', 'Статистика'],
   ];
@@ -577,6 +609,38 @@ function MentorLessonsPanel({ isAdmin, mentors }) {
               )}
             </article>
           ))}
+        </div>
+      )}
+      {section === 'study' && (
+        <div className="space-y-3">
+          <p className="text-sm text-ink/60">После занятия отметьте, сдал ли ученик домашку, и коротко запишите, чему научился.</p>
+          {lessons.filter((item) => item.status === 'done' && item.homework_status !== 'done').length > 0 && (
+            <div className="p-4 rounded-2xl bg-amber-50 ring-1 ring-amber-200 text-sm">
+              <p className="font-semibold mb-1">Ещё не отметили «сдал»</p>
+              {lessons.filter((item) => item.status === 'done' && item.homework_status !== 'done').map((item) => (
+                <p key={item.public_id}>{item.student?.name} · {whenLabel(item.starts_at)}</p>
+              ))}
+            </div>
+          )}
+          {lessons.filter((item) => item.status !== 'cancelled').length === 0 && <p className="text-sm text-ink/50">Занятий пока нет.</p>}
+          {lessons.filter((item) => item.status !== 'cancelled').map((item) => {
+            const draft = journal[item.public_id] || { homework_status: '', learned_note: '' };
+            return (
+              <article key={item.public_id} className="p-4 rounded-2xl bg-white ring-1 ring-black/[0.06] space-y-3">
+                <p className="font-semibold">{item.student?.name} · {whenLabel(item.starts_at)}</p>
+                <p className="text-sm text-ink/55">{LESSON_STATUS[item.status]}</p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setJournal({ ...journal, [item.public_id]: { ...draft, homework_status: 'done' } })} className={`h-9 px-3 rounded-lg text-sm font-semibold ${draft.homework_status === 'done' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-800'}`}>Сдал</button>
+                  <button type="button" onClick={() => setJournal({ ...journal, [item.public_id]: { ...draft, homework_status: 'not_done' } })} className={`h-9 px-3 rounded-lg text-sm font-semibold ${draft.homework_status === 'not_done' ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-800'}`}>Не сдал</button>
+                </div>
+                <label className="block text-sm">
+                  <span className="text-ink/55">Чему научился</span>
+                  <textarea value={draft.learned_note} onChange={(event) => setJournal({ ...journal, [item.public_id]: { ...draft, learned_note: event.target.value } })} rows={3} maxLength={2000} className="mt-1 w-full px-3 py-2 rounded-xl ring-1 ring-black/[0.08] text-sm" placeholder="Например: циклы и условие в задаче 17" />
+                </label>
+                <button type="button" disabled={busy} onClick={() => saveJournal(item.public_id)} className="h-10 px-4 rounded-xl btn-grad text-white text-sm font-semibold">Сохранить</button>
+              </article>
+            );
+          })}
         </div>
       )}
       {section === 'money' && (

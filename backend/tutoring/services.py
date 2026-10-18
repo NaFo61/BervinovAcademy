@@ -60,6 +60,8 @@ def lesson_payload(lesson: TutoringLesson) -> dict:
         "duration_minutes": lesson.duration_minutes,
         "price_kop": lesson.price_kop,
         "status": lesson.status,
+        "homework_status": lesson.homework_status,
+        "learned_note": lesson.learned_note,
         "student": person(lesson.student),
         "mentor": person(lesson.mentor),
     }
@@ -261,6 +263,25 @@ def mark_lesson(*, actor, public_id, status: str) -> TutoringLesson:
                     kind=LedgerEntry.Kind.CHARGE,
                     amount_kop=-lesson.price_kop,
                 )
+    return lesson
+
+
+def save_lesson_journal(*, actor, public_id, homework_status, learned_note):
+    if actor.role == "student":
+        raise TutoringError("Домашку отмечает ментор.", 403)
+    status = "" if homework_status is None else str(homework_status).strip()
+    if status not in ("", "done", "not_done"):
+        raise TutoringError("Домашка: сдано, не сдано или пусто.")
+    note = "" if learned_note is None else str(learned_note).strip()
+    if len(note) > 2000:
+        raise TutoringError("Заметка длиннее 2000 символов.")
+    with transaction.atomic():
+        lesson = _lesson_for(actor, public_id)
+        if actor.role not in ("mentor", "admin"):
+            raise TutoringError("Домашку отмечает ментор.", 403)
+        lesson.homework_status = status
+        lesson.learned_note = note
+        lesson.save(update_fields=["homework_status", "learned_note"])
     return lesson
 
 
