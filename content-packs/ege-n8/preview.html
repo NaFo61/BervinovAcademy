@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Задание 8 ЕГЭ: перебор слов</title>
+<style>
+  :root { --ink:#1c1917; --muted:#57534e; --line:#e7e5e4; --paper:#f6f1e8; --yes:#166534; --yes-bg:#f0fdf4; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:Georgia,"Times New Roman",serif; line-height:1.55; }
+  .wrap { max-width:760px; margin:0 auto; padding:36px 18px 80px; }
+  header h1 { font-size:34px; line-height:1.2; margin:0 0 8px; }
+  header .lead, .tasks > .lead, .razbor > .lead { margin:0 0 16px; color:var(--muted); font-family:"Segoe UI",sans-serif; font-size:15px; }
+  .theory { background:#fffdf9; border:1px solid var(--line); border-radius:18px; padding:8px 28px 22px; }
+  .theory h2 { font-size:22px; margin:28px 0 10px; }
+  .theory p, .theory li { font-size:18px; }
+  .theory table { border-collapse:collapse; margin:14px 0 18px; font-size:16px; }
+  .theory th, .theory td { border:1px solid #d6d3d1; padding:7px 14px; text-align:center; }
+  .theory th { background:#f5f0e8; }
+  .shot { margin:16px 0; text-align:center; }
+  .shot img { max-width:min(100%, 640px); height:auto; background:#fff; border-radius:12px; border:1px solid var(--line); }
+  .tasks, .razbor { margin-top:36px; }
+  .tasks > h2, .razbor > h2 { font-size:28px; margin:0 0 6px; }
+  .task, .razbor article { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px 18px 14px; margin:0 0 12px; }
+  .task { font-family:"Segoe UI",sans-serif; }
+  .task h3, .razbor h3 { margin:0 0 8px; font-size:18px; }
+  .kicker { margin:0 0 4px; color:var(--muted); font-size:13px; }
+  .opts { margin:0 0 10px; padding-left:1.2em; }
+  .opts li.yes { color:var(--yes); font-weight:650; }
+  .answer { background:var(--yes-bg); color:var(--yes); border-radius:8px; padding:8px 12px; }
+  .razbor ol, .razbor p { font-size:17px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Задание 8 ЕГЭ: перебор слов</h1>
+  <p class="lead">Страница для проверки. Сверху теория со схемами, ниже задания. Разбор всех задач — внизу, по шагам.</p>
+</header>
+<section class="theory">
+<h2>Что дают в задании 8</h2>
+<p>Буквы складывают в слова одной длины и выписывают в алфавитном порядке. Слова нумеруют с 1. Нужно найти номер слова или последнее слово с заданным свойством.</p>
+<p>Слово здесь — любая цепочка букв, не обязательно из словаря.</p>
+
+<h2>Сначала порядок букв</h2>
+<p>Буквы ставят по алфавиту, даже если в условии они перечислены иначе. Для А, Б, В порядок уже алфавитный: А, потом Б, потом В.</p>
+<figure class="shot"><img src="images/01-word-list.png" alt="Девять слов из двух букв по порядку"></figure>
+<p>Слов из двух букв: 3 × 3 = 9. Первая буква меняется медленнее всего.</p>
+<p>Слово <strong>ВБ</strong> стоит под номером <strong>8</strong>.</p>
+
+<h2>Задача 1. Номер слова ТОК</h2>
+<p>Буквы К, О, Т. Слова из трёх букв. В алфавите: К, О, Т. Им дают номера цифр: К = 0, О = 1, Т = 2.</p>
+<figure class="shot"><img src="images/02-tok.png" alt="Слово ТОК как число в троичной системе"></figure>
+<p><strong>Решение.</strong> ТОК — это цифры 2, 1, 0. Всего слов на каждую следующую букву в три раза меньше: 9, 3 и 1.</p>
+<p>2 × 9 + 1 × 3 + 0 × 1 = 21. Это номер, если считать с нуля. В списке нумерация с 1, поэтому 21 + 1 = 22.</p>
+<p>Ответ: <strong>22</strong>.</p>
+
+<h2>Задача 2. Последнее слово с одной буквой О</h2>
+<p>Тот же алфавит К, О, Т и длина 3. Ищем последнее слово, где О встречается ровно один раз.</p>
+<p>Идём с конца списка. Последнее слово — ТТТ, буквы О нет. Перед ним ТТО: одна О. Оно подходит, и дальше по списку подходящих уже нет.</p>
+<p>Номер ТТО: Т=2, Т=2, О=1. 2 × 9 + 2 × 3 + 1 = 25, плюс 1, потому что список с единицы. Номер <strong>26</strong>.</p>
+
+<h2>Как решать на экзамене</h2>
+<ol>
+  <li>Упорядочить буквы по алфавиту и дать им цифры с нуля.</li>
+  <li>Короткое слово перевести в номер: как число в системе счисления, затем прибавить 1.</li>
+  <li>Если слов тысячи, тот же перебор делает короткая программа: буквы по порядку, номер с 1, проверка условия. Руками список не выписывают.</li>
+</ol>
+</section>
+<section class='tasks'><h2>Задания</h2><p class='lead'>Зелёным отмечен верный ответ. Разбор внизу.</p><article class="task"><p class="kicker">1. Несколько верных</p><h3>Порядок букв</h3><p>Что верно про список слов?</p><ul class='opts'><li class='yes'>Буквы сначала ставят по алфавиту</li><li class='yes'>Нумерация в списке начинается с 1</li><li class='yes'>Первая буква меняется медленнее остальных</li><li>Слово обязано быть из словаря</li></ul><div class='answer'>Ответ: Буквы сначала ставят по алфавиту; Нумерация в списке начинается с 1; Первая буква меняется медленнее остальных</div></article><article class="task"><p class="kicker">2. Несколько верных</p><h3>Как получить номер</h3><p>Слово ТОК, алфавит К О Т. Что верно?</p><ul class='opts'><li class='yes'>К = 0, О = 1, Т = 2</li><li class='yes'>ТОК — это цифры 2, 1, 0</li><li class='yes'>Номер в списке равен 22</li><li>Номер в списке равен 21</li></ul><div class='answer'>Ответ: К = 0, О = 1, Т = 2; ТОК — это цифры 2, 1, 0; Номер в списке равен 22</div></article><article class="task"><p class="kicker">3. Несколько верных</p><h3>Одна буква О</h3><p>Алфавит К, О, Т, длина 3. Что верно?</p><ul class='opts'><li class='yes'>Всего слов 27</li><li class='yes'>Последнее слово с одной О — это ТТО</li><li class='yes'>Номер ТТО равен 26</li><li>Слово ООО содержит одну О</li></ul><div class='answer'>Ответ: Всего слов 27; Последнее слово с одной О — это ТТО; Номер ТТО равен 26</div></article><article class="task"><p class="kicker">4. Несколько верных</p><h3>Две буквы А Б В</h3><p>Слова из двух букв. Что верно?</p><ul class='opts'><li class='yes'>Всего слов 9</li><li class='yes'>Первое слово — АА</li><li class='yes'>ВБ стоит под номером 8</li><li>ВБ стоит под номером 1</li></ul><div class='answer'>Ответ: Всего слов 9; Первое слово — АА; ВБ стоит под номером 8</div></article><article class="task"><p class="kicker">5. Несколько верных</p><h3>Длинный список</h3><p>Если слов несколько тысяч, как поступают?</p><ul class='opts'><li class='yes'>Тот же порядок букв и те же цифры</li><li class='yes'>Короткая программа перебирает слова по алфавиту</li><li class='yes'>Номер по-прежнему считают с 1</li><li>Берут любое слово из середины без счёта</li></ul><div class='answer'>Ответ: Тот же порядок букв и те же цифры; Короткая программа перебирает слова по алфавиту; Номер по-прежнему считают с 1</div></article><article class="task"><p class="kicker">6. Один верный</p><h3>Номер ВБ</h3><p>Под каким номером стоит слово ВБ?</p><ul class='opts'><li>6</li><li>7</li><li class='yes'>8</li><li>9</li></ul><div class='answer'>Ответ: 8</div></article><article class="task"><p class="kicker">7. Один верный</p><h3>Номер ТОК</h3><p>Под каким номером стоит слово ТОК?</p><ul class='opts'><li>18</li><li>21</li><li class='yes'>22</li><li>26</li></ul><div class='answer'>Ответ: 22</div></article><article class="task"><p class="kicker">8. Один верный</p><h3>Последняя одна О</h3><p>Какой номер у последнего слова с одной буквой О?</p><ul class='opts'><li>22</li><li>25</li><li class='yes'>26</li><li>27</li></ul><div class='answer'>Ответ: 26</div></article><article class="task"><p class="kicker">9. Один верный</p><h3>Сколько слов</h3><p>Сколько трёхбуквенных слов из К, О, Т?</p><ul class='opts'><li>9</li><li>18</li><li>26</li><li class='yes'>27</li></ul><div class='answer'>Ответ: 27</div></article><article class="task"><p class="kicker">10. Один верный</p><h3>Старшая буква</h3><p>Какая цифра у буквы Т в алфавите К, О, Т?</p><ul class='opts'><li>0</li><li>1</li><li class='yes'>2</li><li>3</li></ul><div class='answer'>Ответ: 2</div></article><article class="task"><p class="kicker">11. Вписать число</p><h3>Ответ: номер ВБ</h3><p>Слово ВБ из букв А, Б, В. Какой у него номер? Только число.</p><div class='answer'>Ответ: 8</div></article><article class="task"><p class="kicker">12. Вписать число</p><h3>Ответ: номер ТОК</h3><p>Слово ТОК из букв К, О, Т. Какой у него номер? Только число.</p><div class='answer'>Ответ: 22</div></article><article class="task"><p class="kicker">13. Вписать число</p><h3>Ответ: одна О</h3><p>Последнее трёхбуквенное слово с одной О. Какой номер? Только число.</p><div class='answer'>Ответ: 26</div></article><article class="task"><p class="kicker">14. Вписать число</p><h3>Ответ: всего слов</h3><p>Сколько всего слов длины 3 из трёх букв? Только число.</p><div class='answer'>Ответ: 27</div></article><article class="task"><p class="kicker">15. Вписать число</p><h3>Ответ: цифра Т</h3><p>Какую цифру получает Т, если алфавит К, О, Т и счёт с нуля? Только число.</p><div class='answer'>Ответ: 2</div></article></section><section class='razbor'><h2>Разбор заданий</h2><article><h3>1. Порядок букв</h3><ol><li><strong>Верно.</strong> Буквы сначала ставят по алфавиту — В условии они могут быть перечислены как попало.</li><li><strong>Верно.</strong> Нумерация в списке начинается с 1 — Поэтому к номеру с нуля прибавляют единицу.</li><li><strong>Верно.</strong> Первая буква меняется медленнее остальных — Как старший разряд.</li><li><strong>Неверно.</strong> Слово обязано быть из словаря — Годится любая цепочка букв.</li></ol><p>Ответ: <strong>Буквы сначала ставят по алфавиту; Нумерация в списке начинается с 1; Первая буква меняется медленнее остальных</strong>.</p></article><article><h3>2. Как получить номер</h3><ol><li><strong>Верно.</strong> К = 0, О = 1, Т = 2 — Цифры раздают с нуля по алфавиту.</li><li><strong>Верно.</strong> ТОК — это цифры 2, 1, 0 — Т, потом О, потом К.</li><li><strong>Верно.</strong> Номер в списке равен 22 — 21 с нуля, плюс 1.</li><li><strong>Неверно.</strong> Номер в списке равен 21 — 21 ещё не учитывает, что список начинается с 1.</li></ol><p>Ответ: <strong>К = 0, О = 1, Т = 2; ТОК — это цифры 2, 1, 0; Номер в списке равен 22</strong>.</p></article><article><h3>3. Одна буква О</h3><ol><li><strong>Верно.</strong> Всего слов 27 — 3 × 3 × 3.</li><li><strong>Верно.</strong> Последнее слово с одной О — это ТТО — Дальше по списку такой буквы О уже нет.</li><li><strong>Верно.</strong> Номер ТТО равен 26 — 2×9 + 2×3 + 1, затем плюс 1.</li><li><strong>Неверно.</strong> Слово ООО содержит одну О — Там три буквы О.</li></ol><p>Ответ: <strong>Всего слов 27; Последнее слово с одной О — это ТТО; Номер ТТО равен 26</strong>.</p></article><article><h3>4. Две буквы А Б В</h3><ol><li><strong>Верно.</strong> Всего слов 9 — 3 × 3.</li><li><strong>Верно.</strong> Первое слово — АА — Обе буквы самые ранние.</li><li><strong>Верно.</strong> ВБ стоит под номером 8 — Это видно в списке на рисунке.</li><li><strong>Неверно.</strong> ВБ стоит под номером 1 — Первым идёт АА.</li></ol><p>Ответ: <strong>Всего слов 9; Первое слово — АА; ВБ стоит под номером 8</strong>.</p></article><article><h3>5. Длинный список</h3><ol><li><strong>Верно.</strong> Тот же порядок букв и те же цифры — Меняется только длина перебора.</li><li><strong>Верно.</strong> Короткая программа перебирает слова по алфавиту — Руками тысячи строк не пишут.</li><li><strong>Верно.</strong> Номер по-прежнему считают с 1 — Условие списка не меняется.</li><li><strong>Неверно.</strong> Берут любое слово из середины без счёта — Номер без порядка не найти.</li></ol><p>Ответ: <strong>Тот же порядок букв и те же цифры; Короткая программа перебирает слова по алфавиту; Номер по-прежнему считают с 1</strong>.</p></article><article><h3>6. Номер ВБ</h3><ol><li>Список: АА, АБ, АВ, БА, ББ, БВ, ВА, ВБ, ВВ.</li><li>ВБ — восьмое.</li></ol><p>Ответ: <strong>8</strong>.</p></article><article><h3>7. Номер ТОК</h3><ol><li>Цифры 2, 1, 0.</li><li>2×9 + 1×3 + 0 = 21.</li><li>Список с единицы: 22.</li></ol><p>Ответ: <strong>22</strong>.</p></article><article><h3>8. Последняя одна О</h3><ol><li>Это слово ТТО.</li><li>2×9 + 2×3 + 1 = 25, плюс 1.</li></ol><p>Ответ: <strong>26</strong>.</p></article><article><h3>9. Сколько слов</h3><ol><li>На каждое место три варианта.</li><li>3³ = 27.</li></ol><p>Ответ: <strong>27</strong>.</p></article><article><h3>10. Старшая буква</h3><ol><li>К получает 0, О получает 1, Т получает 2.</li></ol><p>Ответ: <strong>2</strong>.</p></article><article><h3>11. Ответ: номер ВБ</h3><ol><li>Девять слов выписаны по алфавиту.</li><li>ВБ стоит на 8-м месте.</li></ol><p>Ответ: <strong>8</strong>.</p></article><article><h3>12. Ответ: номер ТОК</h3><ol><li>К=0, О=1, Т=2.</li><li>2×9 + 1×3 + 0 = 21.</li><li>Плюс 1, потому что нумерация с единицы.</li></ol><p>Ответ: <strong>22</strong>.</p></article><article><h3>13. Ответ: одна О</h3><ol><li>С конца списка первое подходящее — ТТО.</li><li>Его номер 26.</li></ol><p>Ответ: <strong>26</strong>.</p></article><article><h3>14. Ответ: всего слов</h3><ol><li>3 × 3 × 3 = 27.</li></ol><p>Ответ: <strong>27</strong>.</p></article><article><h3>15. Ответ: цифра Т</h3><ol><li>К = 0, О = 1, Т = 2.</li></ol><p>Ответ: <strong>2</strong>.</p></article></section></div><!-- python-lesson -->
+<h2>Номер слова как число</h2><p>Буквы ставят по алфавиту и нумеруют с нуля. Слово читают как число в системе с основанием «сколько букв в алфавите». К результату прибавляют 1, потому что список на экзамене начинается с первого слова, а не с нулевого.</p><p>Если нужно последнее слово с условием, перебирают слова в том же алфавитном порядке и запоминают номер. Тысячи строк руками не пишут: цикл делает то же, что список на рисунке.</p>
+<h3>Рабочие программы к этому уроку</h3><p>Каждый фрагмент запускается отдельно. В конце он печатает ответ. Комментарии на русском говорят, какая строка за что отвечает.</p>
+<h3>Номер слова как число в системе счисления, список с 1.</h3>
+<pre><code>alphabet = &quot;АБВ&quot;  # МЕНЯТЬ: буквы уже по алфавиту
+word = &quot;ВБ&quot;  # МЕНЯТЬ: какое слово ищем
+digit = {letter: i for i, letter in enumerate(alphabet)}
+base = len(alphabet)
+number = 0
+for letter in word:
+    number = number * base + digit[letter]
+print(number + 1)  # список нумеруют с 1, не с 0</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>alphabet = &quot;АБВ&quot;  # МЕНЯТЬ: буквы уже по алфавиту</li><li>word = &quot;ВБ&quot;  # МЕНЯТЬ: какое слово ищем</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>8</strong>.</p>
+<h3>Номер слова как число в системе счисления, список с 1.</h3>
+<pre><code>alphabet = &quot;КОТ&quot;  # МЕНЯТЬ: К=0, О=1, Т=2
+word = &quot;ТОК&quot;  # МЕНЯТЬ
+digit = {letter: i for i, letter in enumerate(alphabet)}
+base = len(alphabet)
+number = 0
+for letter in word:
+    number = number * base + digit[letter]
+print(number + 1)</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>alphabet = &quot;КОТ&quot;  # МЕНЯТЬ: К=0, О=1, Т=2</li><li>word = &quot;ТОК&quot;  # МЕНЯТЬ</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>22</strong>.</p>
+<h3>Перебор слов по алфавиту и последнее подходящее.</h3>
+<pre><code>from itertools import product
+
+alphabet = &quot;КОТ&quot;  # МЕНЯТЬ
+length = 3  # МЕНЯТЬ: длина слова
+last_number = None
+for index, letters in enumerate(product(alphabet, repeat=length), start=1):
+    word = &quot;&quot;.join(letters)
+    if word.count(&quot;О&quot;) == 1:  # МЕНЯТЬ: условие на слово
+        last_number = index
+print(last_number)</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>alphabet = &quot;КОТ&quot;  # МЕНЯТЬ</li><li>length = 3  # МЕНЯТЬ: длина слова</li><li>if word.count(&quot;О&quot;) == 1:  # МЕНЯТЬ: условие на слово</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>26</strong>.</p>
+<h3>Сколько слов: (число букв) в степени длины.</h3>
+<pre><code>letters = 3  # МЕНЯТЬ: мощность алфавита
+length = 3  # МЕНЯТЬ: длина слова
+print(letters ** length)</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>letters = 3  # МЕНЯТЬ: мощность алфавита</li><li>length = 3  # МЕНЯТЬ: длина слова</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>27</strong>.</p>
+<!-- /python-lesson -->
+</body></html>

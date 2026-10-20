@@ -15,36 +15,44 @@ class ExamShortSerializer(serializers.ModelSerializer):
     lessons_coding = serializers.SerializerMethodField()
 
     def get_lessons_theories(self, obj):
-        from content.serializers import LessonTheoryShortSerializer
-
-        queryset = obj.lessons_theories.filter(is_active=True).order_by(
-            "order_index"
+        from content.serializers import (
+            LessonTheoryShortSerializer,
+            active_lessons,
         )
-        return LessonTheoryShortSerializer(queryset, many=True).data
+
+        return LessonTheoryShortSerializer(
+            active_lessons(obj.lessons_theories), many=True
+        ).data
 
     def get_lessons_radio(self, obj):
-        from content.serializers import LessonRadioShortSerializer
-
-        queryset = obj.lessons_radio_questions.filter(is_active=True).order_by(
-            "order_index"
+        from content.serializers import (
+            LessonRadioShortSerializer,
+            active_lessons,
         )
-        return LessonRadioShortSerializer(queryset, many=True).data
+
+        return LessonRadioShortSerializer(
+            active_lessons(obj.lessons_radio_questions), many=True
+        ).data
 
     def get_lessons_checkbox(self, obj):
-        from content.serializers import LessonCheckBoxShortSerializer
+        from content.serializers import (
+            LessonCheckBoxShortSerializer,
+            active_lessons,
+        )
 
-        queryset = obj.lessons_checkbox_questions.filter(
-            is_active=True
-        ).order_by("order_index")
-        return LessonCheckBoxShortSerializer(queryset, many=True).data
+        return LessonCheckBoxShortSerializer(
+            active_lessons(obj.lessons_checkbox_questions), many=True
+        ).data
 
     def get_lessons_coding(self, obj):
-        from content.serializers import CodingChallengeShortSerializer
-
-        queryset = obj.challenges.filter(is_active=True).order_by(
-            "order_index"
+        from content.serializers import (
+            CodingChallengeShortSerializer,
+            active_lessons,
         )
-        return CodingChallengeShortSerializer(queryset, many=True).data
+
+        return CodingChallengeShortSerializer(
+            active_lessons(obj.challenges), many=True
+        ).data
 
     class Meta:
         model = Exam

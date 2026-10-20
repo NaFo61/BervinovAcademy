@@ -116,5 +116,80 @@
   <tr><td>1</td><td>финиш E, если B длится 3</td><td><strong>11</strong></td></tr>
   <tr><td>2</td><td>финиш F</td><td><strong>16</strong></td></tr>
 </table>
+<!-- python-lesson -->
+<h2>Старт — это максимум ожиданий</h2><p>Процесс без списка стартует в нуле. Процесс со списком стартует, когда закончился самый поздний из тех, кого он ждёт. Не самый ранний. Финиш равен старту плюс своя длительность.</p><p>В словаре минуты и список имён. Если спросили всю работу — печатают максимальный финиш. Если спросили один процесс — печатают его финиш.</p>
+<h3>Рабочие программы к этому уроку</h3><p>Каждый фрагмент запускается отдельно. В конце он печатает ответ. Комментарии на русском говорят, какая строка за что отвечает.</p>
+<h3>n22-all</h3>
+<pre><code># имя: (длительность, кого ждёт)
+jobs = {
+    &quot;A&quot;: (4, []),  # МЕНЯТЬ: минуты и список ожидания
+    &quot;B&quot;: (6, []),
+    &quot;C&quot;: (3, [&quot;A&quot;]),
+    &quot;D&quot;: (5, [&quot;A&quot;, &quot;B&quot;]),
+    &quot;E&quot;: (2, [&quot;C&quot;, &quot;D&quot;]),
+}
+finish = {}
+pending = dict(jobs)
+while pending:
+    ready = [
+        name
+        for name, (minutes, wait) in pending.items()
+        if all(other in finish for other in wait)
+    ]
+    name = ready[0]
+    minutes, wait = pending.pop(name)
+    start = 0 if not wait else max(finish[other] for other in wait)
+    finish[name] = start + minutes
+print(max(finish.values()))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>&quot;A&quot;: (4, []),  # МЕНЯТЬ: минуты и список ожидания</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>13</strong>.</p>
+<h3>n22-e</h3>
+<pre><code>jobs = {
+    &quot;A&quot;: (4, []),
+    &quot;B&quot;: (3, []),  # МЕНЯТЬ: B стал короче, было 6
+    &quot;C&quot;: (3, [&quot;A&quot;]),
+    &quot;D&quot;: (5, [&quot;A&quot;, &quot;B&quot;]),
+    &quot;E&quot;: (2, [&quot;C&quot;, &quot;D&quot;]),
+}
+finish = {}
+pending = dict(jobs)
+while pending:
+    ready = [
+        name
+        for name, (minutes, wait) in pending.items()
+        if all(other in finish for other in wait)
+    ]
+    name = ready[0]
+    minutes, wait = pending.pop(name)
+    start = 0 if not wait else max(finish[other] for other in wait)
+    finish[name] = start + minutes
+print(finish[&quot;E&quot;])  # МЕНЯТЬ: про какой процесс спросили</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>&quot;B&quot;: (3, []),  # МЕНЯТЬ: B стал короче, было 6</li><li>print(finish[&quot;E&quot;])  # МЕНЯТЬ: про какой процесс спросили</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>11</strong>.</p>
+<h3>n22-f</h3>
+<pre><code>jobs = {
+    &quot;A&quot;: (5, []),
+    &quot;B&quot;: (2, [&quot;A&quot;]),
+    &quot;C&quot;: (4, [&quot;A&quot;]),
+    &quot;D&quot;: (3, [&quot;B&quot;]),
+    &quot;E&quot;: (6, [&quot;C&quot;]),
+    &quot;F&quot;: (1, [&quot;D&quot;, &quot;E&quot;]),
+}
+finish = {}
+pending = dict(jobs)
+while pending:
+    ready = [
+        name
+        for name, (minutes, wait) in pending.items()
+        if all(other in finish for other in wait)
+    ]
+    name = ready[0]
+    minutes, wait = pending.pop(name)
+    start = 0 if not wait else max(finish[other] for other in wait)
+    finish[name] = start + minutes
+print(finish[&quot;F&quot;])</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>Числа в первых строках — это данные условия. Цикл и формулу вокруг них не переписывают.</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>16</strong>.</p>
+<!-- /python-lesson -->
 </body>
 </html>

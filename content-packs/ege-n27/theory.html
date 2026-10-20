@@ -120,5 +120,72 @@
   <tr><td>2</td><td>добавили точку (6; 1)</td><td><strong>19</strong></td></tr>
 </table>
 
+<!-- python-lesson -->
+<h2>Центр кучки — среднее</h2><p>Иксы кучки складывают и делят на число её точек. То же с игреками. Чужую кучку в это деление не подмешивают.</p><p>Точку между кучками отдают тому центру, до которого расстояние меньше. Сравнивать можно квадраты расстояний, корень не нужен. После этого центр пересчитывают. Целая часть положительного числа — это <code>int</code>: дробь отбрасывают, 8.5 становится 8.</p>
+<h3>Рабочие программы к этому уроку</h3><p>Каждый фрагмент запускается отдельно. В конце он печатает ответ. Комментарии на русском говорят, какая строка за что отвечает.</p>
+<h3>n27-20</h3>
+<pre><code>def center(points):
+    xs = [x for x, y in points]
+    ys = [y for x, y in points]
+    return sum(xs) / len(points), sum(ys) / len(points)
+
+def int_part(value):
+    # У положительного числа дробь отбрасывают, не округляют.
+    return int(value)
+
+left = [(1, 2), (2, 1), (2, 3), (3, 2)]  # МЕНЯТЬ: первая кучка
+right = [(8, 8), (9, 7), (7, 9), (10, 8)]  # МЕНЯТЬ: вторая кучка
+parts = []
+for bunch in (left, right):
+    cx, cy = center(bunch)
+    parts.append(int_part(cx))
+    parts.append(int_part(cy))
+print(sum(parts))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>left = [(1, 2), (2, 1), (2, 3), (3, 2)]  # МЕНЯТЬ: первая кучка</li><li>right = [(8, 8), (9, 7), (7, 9), (10, 8)]  # МЕНЯТЬ: вторая кучка</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>20</strong>.</p>
+<h3>n27-16</h3>
+<pre><code>def center(points):
+    return (
+        sum(x for x, y in points) / len(points),
+        sum(y for x, y in points) / len(points),
+    )
+
+left = [(0, 0), (0, 4), (3, 2)]
+right = [(10, 1), (11, 4), (12, 1)]
+total = 0
+for bunch in (left, right):
+    cx, cy = center(bunch)
+    total += int(cx) + int(cy)
+print(total)</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>Числа в первых строках — это данные условия. Цикл и формулу вокруг них не переписывают.</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>16</strong>.</p>
+<h3>n27-19</h3>
+<pre><code>def center(points):
+    return (
+        sum(x for x, y in points) / len(points),
+        sum(y for x, y in points) / len(points),
+    )
+
+left = [(1, 2), (2, 1), (2, 3), (3, 2)]
+right = [(8, 8), (9, 7), (7, 9), (10, 8)]
+extra = (6, 1)  # МЕНЯТЬ: точка между кучками
+c1 = center(left)
+c2 = center(right)
+
+def dist2(p, c):
+    return (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2
+
+if dist2(extra, c1) &lt;= dist2(extra, c2):
+    left = left + [extra]
+else:
+    right = right + [extra]
+total = 0
+for bunch in (left, right):
+    cx, cy = center(bunch)
+    total += int(cx) + int(cy)
+print(total)</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>extra = (6, 1)  # МЕНЯТЬ: точка между кучками</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>19</strong>.</p>
+<!-- /python-lesson -->
 </body>
 </html>

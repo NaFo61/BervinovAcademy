@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Задание 2 ЕГЭ: Логика</title>
+<style>
+body { font-family: "Times New Roman", Times, serif; max-width: 820px; margin: 24px auto; padding: 0 16px; line-height: 1.45; color: #1c1917; }
+img { max-width: 100%; height: auto; }
+table { border-collapse: collapse; margin: 12px 0; }
+th, td { border: 1px solid #d6d3d1; padding: 4px 8px; }
+pre { background: #0f172a; color: #e2e8f0; padding: 12px; overflow: auto; }
+</style>
+</head>
+<body>
+<h2>Что дают в задании 2</h2>
+<p>Дают логическое выражение. Буквы A, B и C принимают 0 или 1. Иногда на экзамене те же буквы называют x, y и z: считать нужно так же.</p>
+<p>Три действия и одна стрелка.</p>
+<ul><li><strong>И</strong>, знак ∧. Истина, только если оба условия да.</li><li><strong>ИЛИ</strong>, знак ∨. Истина, если хотя бы одно да.</li><li><strong>НЕ</strong>, знак ¬. Меняет 0 и 1 местами.</li><li><strong>Если A, то B</strong>, знак →. Ложь только в одном случае: A да, а B нет.</li></ul>
+<figure class="shot"><img src="images/n2-and.svg" alt="Таблица для И"></figure>
+<figure class="shot"><img src="images/n2-or.svg" alt="Таблица для ИЛИ"></figure>
+<figure class="shot"><img src="images/n2-not.svg" alt="Таблица для НЕ"></figure>
+<figure class="shot"><img src="images/n2-impl.svg" alt="Таблица для стрелки, ложная строка выделена"></figure>
+<p>Для двух букв строк четыре. Для трёх букв строк восемь: каждый новый разряд удваивает таблицу. Скобки считают первыми, потом НЕ, потом И, потом ИЛИ. Стрелку удобно сразу заменить: A → B это то же самое, что ¬A ∨ B.</p>
+<h2>Приём 1. Сколько единиц</h2>
+<p>Строят все восемь строк и считают, где результат равен 1. На картинке столбец F пустой: его заполняют сами.</p>
+<p><strong>Пример.</strong> (A ∨ B) ∧ ¬C.</p>
+<figure class="shot"><img src="images/n2-demo-a.svg" alt="Пустая таблица примера"></figure>
+<table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>0</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>3</strong>.</p>
+<p>Программа делает те же восемь строк. Кнопка «В интерпретатор» откроет её.</p>
+<pre><code>def F(A, B, C):
+    return 1 if ((A or B) and  not C) else 0
+
+count = 0
+for A in (0, 1):
+    for B in (0, 1):
+        for C in (0, 1):
+            if F(A, B, C):
+                count += 1
+print(count)</code></pre>
+<h2>Программа</h2><p>Нажмите «В интерпретатор» под кодом. Программу можно менять и запускать заново.</p><pre><code>def F(A, B, C):
+    return 1 if ((A or B) and  not C) else 0
+
+count = 0
+for A in (0, 1):
+    for B in (0, 1):
+        for C in (0, 1):
+            if F(A, B, C):
+                count += 1
+print(count)</code></pre>
+<h2>Приём 2. Есть стрелка</h2>
+<p>Сначала вспоминают единственную ложную строку стрелки: 1 и 0. Потом считают её вместе с остальным выражением, снова по восьми строкам.</p>
+<p><strong>Пример.</strong> (A → B) ∧ C.</p>
+<figure class="shot"><img src="images/n2-demo-b.svg" alt="Пустая таблица примера со стрелкой"></figure>
+<table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>3</strong>.</p>
+<pre><code>def F(A, B, C):
+    return 1 if ((((not A) or B)) and C) else 0
+
+count = 0
+for A in (0, 1):
+    for B in (0, 1):
+        for C in (0, 1):
+            if F(A, B, C):
+                count += 1
+print(count)</code></pre>
+<h2>Программа</h2><p>Нажмите «В интерпретатор» под кодом. Программу можно менять и запускать заново.</p><pre><code>def F(A, B, C):
+    return 1 if ((((not A) or B)) and C) else 0
+
+count = 0
+for A in (0, 1):
+    for B in (0, 1):
+        for C in (0, 1):
+            if F(A, B, C):
+                count += 1
+print(count)</code></pre>
+<h2>Приём 3. Буквы столбцов</h2>
+<p>Дают не всю таблицу, а несколько строк. Столбцы подписаны номерами, а не буквами. Нужно понять, где A, где B и где C. В ответе три буквы подряд, слева направо. Подходит только тот порядок, при котором выражение даёт написанную F в каждой строке фрагмента.</p>
+<p><strong>Пример.</strong> (A ∧ ¬B) ∨ C. Столбцы на рисунке.</p>
+<figure class="shot"><img src="images/n2-demo-c.svg" alt="Фрагмент с неизвестными буквами"></figure>
+<ol><li>Подставляем буквы A, C, B в столбцы 1, 2 и 3.</li><li>В каждой строке фрагмента выражение даёт ту же F, что написана справа.</li><li>Порядок abc не подходит: в строке 0 0 1 получается 1, а в фрагменте стоит 0.</li><li>Подходит один порядок. Ответ: acb.</li></ol>
+<p>Ответ: <strong>acb</strong>.</p>
+<pre><code>import itertools
+
+def F(A, B, C):
+    return 1 if ((A and  not B) or C) else 0
+
+fragment = [
+    ((0, 0, 0), 0),
+    ((0, 0, 1), 0),
+    ((0, 1, 1), 1)
+]
+good = []
+for perm in itertools.permutations("ABC"):
+    ok = True
+    for shown, value in fragment:
+        env = dict(zip(perm, shown))
+        if F(env["A"], env["B"], env["C"]) != value:
+            ok = False
+            break
+    if ok:
+        good.append("".join(perm).lower())
+print(good[0])</code></pre>
+<p>Дальше в заданиях картинка над вопросом, разбор открывается после ответа.</p>
+<h2>Программа</h2><p>Нажмите «В интерпретатор» под кодом. Программу можно менять и запускать заново.</p><pre><code>import itertools
+
+def F(A, B, C):
+    return 1 if ((A and  not B) or C) else 0
+
+fragment = [
+    ((0, 0, 0), 0),
+    ((0, 0, 1), 0),
+    ((0, 1, 1), 1)
+]
+good = []
+for perm in itertools.permutations("ABC"):
+    ok = True
+    for shown, value in fragment:
+        env = dict(zip(perm, shown))
+        if F(env["A"], env["B"], env["C"]) != value:
+            ok = False
+            break
+    if ok:
+        good.append("".join(perm).lower())
+print(good[0])</code></pre>
+</body>
+</html>

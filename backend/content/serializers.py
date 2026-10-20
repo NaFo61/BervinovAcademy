@@ -176,6 +176,13 @@ class CodingChallengeShortSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+def active_lessons(related):
+    """Уроки из prefetch, без повторного запроса и без текста урока."""
+    rows = [row for row in related.all() if row.is_active]
+    rows.sort(key=lambda row: (row.order_index or 0,))
+    return rows
+
+
 class ModuleShortSerializer(serializers.ModelSerializer):
     lessons_theories = serializers.SerializerMethodField()
     lessons_radio = serializers.SerializerMethodField()
@@ -184,34 +191,29 @@ class ModuleShortSerializer(serializers.ModelSerializer):
     lessons_coding = serializers.SerializerMethodField()
 
     def get_lessons_theories(self, obj):
-        queryset = obj.lessons_theories.filter(is_active=True).order_by(
-            "order_index"
-        )
-        return LessonTheoryShortSerializer(queryset, many=True).data
+        return LessonTheoryShortSerializer(
+            active_lessons(obj.lessons_theories), many=True
+        ).data
 
     def get_lessons_radio(self, obj):
-        queryset = obj.lessons_radio_questions.filter(is_active=True).order_by(
-            "order_index"
-        )
-        return LessonRadioShortSerializer(queryset, many=True).data
+        return LessonRadioShortSerializer(
+            active_lessons(obj.lessons_radio_questions), many=True
+        ).data
 
     def get_lessons_checkbox(self, obj):
-        queryset = obj.lessons_checkbox_questions.filter(
-            is_active=True
-        ).order_by("order_index")
-        return LessonCheckBoxShortSerializer(queryset, many=True).data
+        return LessonCheckBoxShortSerializer(
+            active_lessons(obj.lessons_checkbox_questions), many=True
+        ).data
 
     def get_lessons_short_answer(self, obj):
-        queryset = obj.lessons_short_answers.filter(is_active=True).order_by(
-            "order_index"
-        )
-        return LessonShortAnswerShortSerializer(queryset, many=True).data
+        return LessonShortAnswerShortSerializer(
+            active_lessons(obj.lessons_short_answers), many=True
+        ).data
 
     def get_lessons_coding(self, obj):
-        queryset = obj.challenges.filter(is_active=True).order_by(
-            "order_index"
-        )
-        return CodingChallengeShortSerializer(queryset, many=True).data
+        return CodingChallengeShortSerializer(
+            active_lessons(obj.challenges), many=True
+        ).data
 
     class Meta:
         model = Module

@@ -94,6 +94,9 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+    environment:
+      CACHE_BACKEND: django.core.cache.backends.redis.RedisCache
+      CACHE_LOCATION: redis://redis:6379/2
     entrypoint: ["/app/backend/docker-entrypoint.prod.sh"]
     command:
       [

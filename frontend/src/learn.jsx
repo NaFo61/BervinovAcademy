@@ -49,6 +49,41 @@ function buildModuleLessonItems(mod) {
   return items;
 }
 
+function lessonUnitKey(title) {
+  const match = String(title || '').match(/^(\d+\.\d+)\b/);
+  return match ? match[1] : '';
+}
+
+function groupLessonsByUnit(lessons) {
+  const groups = [];
+  const index = new Map();
+  const rest = [];
+  for (const lesson of lessons || []) {
+    const key = lessonUnitKey(lesson.title);
+    if (!key) {
+      rest.push(lesson);
+      continue;
+    }
+    if (!index.has(key)) {
+      const group = { key, lessons: [] };
+      index.set(key, group);
+      groups.push(group);
+    }
+    index.get(key).lessons.push(lesson);
+  }
+  if (groups.length < 2) return null;
+  if (rest.length) groups.push({ key: 'ещё', lessons: rest });
+  return groups;
+}
+
+function unitChipLabel(group) {
+  if (group.key === 'ещё') return 'Ещё';
+  const theory = (group.lessons || []).find((lesson) => /Теория/.test(lesson.title || ''));
+  if (!theory) return `Урок ${group.key}`;
+  const rest = String(theory.title).replace(/^\d+\.\d+\s+Теория\.?\s*/, '').trim();
+  return rest ? `${group.key} ${rest}` : `Урок ${group.key}`;
+}
+
 function buildExamLessonItems(exam) {
   const items = [];
   const push = (type, row) => {
@@ -248,6 +283,16 @@ function LearnPage({ navigate, hashParams }) {
     return (courseData.modules || []).find(m => m.public_id === id) || null;
   }, [courseData, moduleParam, currentLesson]);
   const hasModuleStub = !!currentModule && moduleLessons.length === 0;
+  const lessonUnits = React.useMemo(
+    () => groupLessonsByUnit(moduleLessons),
+    [moduleLessons],
+  );
+  const activeUnit = React.useMemo(() => {
+    if (!lessonUnits) return null;
+    const key = lessonUnitKey(currentLesson?.title || '');
+    return lessonUnits.find((group) => group.key === key) || lessonUnits[0];
+  }, [lessonUnits, currentLesson]);
+  const tiles = activeUnit ? activeUnit.lessons : moduleLessons;
 
   // ── keep module param consistent with current lesson ──
   React.useEffect(() => {
@@ -716,12 +761,30 @@ function LearnPage({ navigate, hashParams }) {
                     <div className="text-[11px] font-semibold uppercase tracking-widest text-ink/40">Модуль</div>
                     <div className="text-[18px] font-extrabold text-ink truncate">{currentModule.title}</div>
                   </div>
-                  {moduleLessons.length > 0 && (
+                  {tiles.length > 0 && (
                     <div className="text-[11px] text-ink/45 shrink-0">
-                      {moduleLessons.filter(l => completed.has(lessonKey(l.type, l.id))).length}/{moduleLessons.length} в модуле
+                      {tiles.filter(l => completed.has(lessonKey(l.type, l.id))).length}/{tiles.length} {activeUnit ? 'в уроке' : 'в модуле'}
                     </div>
                   )}
                 </div>
+
+                {activeUnit && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {lessonUnits.map((group) => {
+                      const on = group.key === activeUnit.key;
+                      return (
+                        <button
+                          key={group.key}
+                          type="button"
+                          onClick={() => goTo(group.lessons[0])}
+                          className={`h-9 px-3 rounded-lg text-xs font-semibold ring-1 ${on ? 'bg-violet-600 text-white ring-violet-600' : 'bg-white text-ink/70 ring-black/[0.08] hover:bg-violet-50'}`}
+                        >
+                          {unitChipLabel(group)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {hasModuleStub ? (
                   <div className="rounded-2xl bg-black/[0.02] ring-1 ring-black/[0.06] p-6 text-center text-ink/45">
@@ -731,7 +794,7 @@ function LearnPage({ navigate, hashParams }) {
                   </div>
                 ) : (
                   <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-1.5">
-                    {moduleLessons.map((l, idx) => {
+                    {tiles.map((l, idx) => {
                       const active = currentLesson?.type === l.type && currentLesson?.id === l.id;
                       const done = completed.has(lessonKey(l.type, l.id));
                       const icon = (

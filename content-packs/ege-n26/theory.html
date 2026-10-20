@@ -125,5 +125,67 @@
   <tr><td>2</td><td>20</td><td><strong>3 файла, крупнейший 9</strong></td></tr>
 </table>
 
+<!-- python-lesson -->
+<h2>Сначала мелкие файлы</h2><p>Максимум штук набирается с самых маленьких размеров. Список сортируют по возрастанию и берут, пока сумма не вылезет за диск.</p><p>Второй вопрос: в наборе с тем же количеством сделать наибольший файл как можно крупнее. Снимают последний взятый — он самый большой в жадном наборе — и смотрят, какое более крупное число ещё входит в освободившееся место. Количество файлов при замене не меняется.</p>
+<h3>Рабочие программы к этому уроку</h3><p>Каждый фрагмент запускается отдельно. В конце он печатает ответ. Комментарии на русском говорят, какая строка за что отвечает.</p>
+<h3>n26-toy</h3>
+<pre><code>disk = 10  # МЕНЯТЬ: объём диска
+files = [3, 6, 2, 4]  # МЕНЯТЬ: размеры
+files = sorted(files)
+taken = []
+used = 0
+for size in files:
+    if used + size &lt;= disk:
+        taken.append(size)
+        used += size
+# Снимаем самый большой из взятых и ищем, кого можно положить вместо него.
+without = used - taken[-1]
+biggest = taken[-1]
+for size in reversed(files):
+    if without + size &lt;= disk and size &gt; biggest:
+        biggest = size
+        break
+print(len(taken), biggest)</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>disk = 10  # МЕНЯТЬ: объём диска</li><li>files = [3, 6, 2, 4]  # МЕНЯТЬ: размеры</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>3 4</strong>.</p>
+<h3>n26-100</h3>
+<pre><code>disk = 100
+files = [15, 8, 22, 7, 30, 11, 9, 18, 6, 25]
+files = sorted(files)
+taken = []
+used = 0
+for size in files:
+    if used + size &lt;= disk:
+        taken.append(size)
+        used += size
+without = used - taken[-1]
+biggest = taken[-1]
+for size in reversed(files):
+    if without + size &lt;= disk and size &gt;= biggest:
+        biggest = size
+        break
+print(len(taken), biggest)</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>Числа в первых строках — это данные условия. Цикл и формулу вокруг них не переписывают.</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>8 25</strong>.</p>
+<h3>n26-20</h3>
+<pre><code>disk = 20
+files = [9, 6, 5, 14, 4]
+files = sorted(files)
+taken = []
+used = 0
+for size in files:
+    if used + size &lt;= disk:
+        taken.append(size)
+        used += size
+without = used - taken[-1]
+biggest = taken[-1]
+for size in reversed(files):
+    if without + size &lt;= disk and size &gt;= biggest:
+        biggest = size
+        break
+print(len(taken), biggest)</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>Числа в первых строках — это данные условия. Цикл и формулу вокруг них не переписывают.</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>3 9</strong>.</p>
+<!-- /python-lesson -->
 </body>
 </html>

@@ -41,6 +41,7 @@ class ImportStats:
     created: int = 0
     updated: int = 0
     skipped: int = 0
+    retired: int = 0
     errors: list[str] = field(default_factory=list)
 
 
@@ -445,6 +446,49 @@ def _lesson_images(lesson: dict) -> list[str]:
     return names
 
 
+def _lesson_kinds():
+    return (
+        ("theory", LessonTheory),
+        ("radio", LessonRadioQuestion),
+        ("checkbox", LessonCheckBoxQuestion),
+        ("short_answer", LessonShortAnswer),
+        ("coding", CodingChallenge),
+    )
+
+
+def _retire_missing_lessons(
+    module, kept: set[tuple[str, str]], *, apply: bool
+) -> int:
+    retired = 0
+    for kind, model in _lesson_kinds():
+        rows = model.objects.filter(module=module, is_active=True)
+        for row in rows.iterator():
+            if (kind, row.title) in kept:
+                continue
+            retired += 1
+            if apply:
+                row.is_active = False
+                row.save(update_fields=["is_active"])
+    return retired
+
+
+def _lesson_pack_files(lesson: dict) -> list[str]:
+    names = _lesson_images(lesson)
+    for item in lesson.get("files") or []:
+        names.append(str(item))
+    return names
+
+
+def _find_pack_file(root: Path, images_dir: str, name: str) -> Path:
+    rel = Path(name)
+    folder = root / images_dir.rstrip("/")
+    candidates = [folder / rel.name, root / "files" / rel.name]
+    for src in candidates:
+        if src.is_file():
+            return src
+    raise ContentPackError(f"Файл не найден: {name}")
+
+
 def _attach_images(
     *, lesson_obj, kind: str, root: Path, images_dir: str, names: list[str]
 ):
@@ -452,13 +496,9 @@ def _attach_images(
         return
 
     lesson_obj.attachments.all().delete()
-    folder = root / images_dir.rstrip("/")
 
     for name in names:
-        rel = Path(name)
-        src = folder / rel.name if not rel.is_absolute() else folder / rel
-        if not src.is_file():
-            raise ContentPackError(f"Картинка не найдена: {name}")
+        src = _find_pack_file(root, images_dir, name)
 
         attachment = LessonAttachment(
             original_name=src.name,
@@ -499,6 +539,7 @@ def _guess_content_type(suffix: str) -> str:
         ".gif": "image/gif",
         ".webp": "image/webp",
         ".svg": "image/svg+xml",
+        ".txt": "text/plain",
     }
     return mapping.get(suffix.lower(), "application/octet-stream")
 
@@ -571,6 +612,8 @@ def import_result_to_dict(result: ImportResult) -> dict:
     )
     if stats.skipped:
         message += f" Пропущено: {stats.skipped}."
+    if stats.retired:
+        message += f" Скрыто старых: {stats.retired}."
     return {
         "pack_id": result.pack_id,
         "course_slug": result.course_slug,
@@ -580,6 +623,7 @@ def import_result_to_dict(result: ImportResult) -> dict:
         "created": stats.created,
         "updated": stats.updated,
         "skipped": stats.skipped,
+        "retired": stats.retired,
         "errors": stats.errors,
         "message": message,
     }
@@ -618,6 +662,8 @@ def import_content_pack(
             )
 
         stats = ImportStats()
+        replace_missing = bool(manifest.get("replace_missing"))
+        kept = {(lesson["type"], lesson["title"]) for lesson in lessons}
         if dry_run:
             module = resolve_module(
                 course=course, manifest=manifest, dry_run=True
@@ -627,6 +673,10 @@ def import_content_pack(
                     stats.updated += 1
                 else:
                     stats.created += 1
+            if replace_missing and module is not None:
+                stats.retired = _retire_missing_lessons(
+                    module, kept, apply=False
+                )
             return ImportResult(
                 pack_id=manifest["pack_id"],
                 course_slug=manifest["course_slug"],
@@ -640,8 +690,10 @@ def import_content_pack(
             module = resolve_module(course=course, manifest=manifest)
             start_order = manifest.get("start_order_index")
             if start_order is None:
-                start_order = next_order_in_container(
-                    CONTAINER_MODULE, module.id
+                start_order = (
+                    1
+                    if replace_missing
+                    else next_order_in_container(CONTAINER_MODULE, module.id)
                 )
 
             for offset, lesson in enumerate(lessons):
@@ -687,7 +739,7 @@ def import_content_pack(
                     stats.skipped += 1
                     continue
 
-                image_names = _lesson_images(lesson)
+                image_names = _lesson_pack_files(lesson)
                 if image_names:
                     _attach_images(
                         lesson_obj=obj,
@@ -696,6 +748,11 @@ def import_content_pack(
                         images_dir=images_dir,
                         names=image_names,
                     )
+
+            if replace_missing:
+                stats.retired = _retire_missing_lessons(
+                    module, kept, apply=True
+                )
 
         return ImportResult(
             pack_id=manifest["pack_id"],

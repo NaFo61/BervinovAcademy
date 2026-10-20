@@ -1,5 +1,7 @@
 {
   "pack_id": "ege-n7-questions",
   "course_slug": "ege-informatika",
-  "module_title": "4-й урок ЕГЭ: Кодирование изображений"
+  "module_title": "4-й урок ЕГЭ: Кодирование изображений",
+  "create_module": true,
+  "module_description": "Растровая картинка и звук: палитра, битовая глубина, размер файла. 1 Кбайт = 1024 байт."
 }

@@ -2,6 +2,7 @@ from pathlib import Path
 import tempfile
 
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 from fixture.content_pack import (
@@ -360,6 +361,25 @@ class LessonEditorView(APIView):
         denied = _check_lesson_access(request, instance)
         if denied:
             return denied
+        permanent = request.query_params.get("permanent") in (
+            "1",
+            "true",
+            "yes",
+        )
+        if permanent:
+            try:
+                instance.delete()
+            except ProtectedError:
+                return Response(
+                    {
+                        "detail": (
+                            "Этот урок связан с другими данными. "
+                            "Его можно только скрыть."
+                        )
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+            return Response(status=status.HTTP_204_NO_CONTENT)
         instance.is_active = False
         instance.save(update_fields=["is_active"])
         return Response(status=status.HTTP_204_NO_CONTENT)

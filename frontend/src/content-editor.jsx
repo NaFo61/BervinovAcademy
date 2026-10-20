@@ -265,6 +265,7 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
   const [success, setSuccess] = React.useState('');
   const [videoFile, setVideoFile] = React.useState(null);
   const [confirmHide, setConfirmHide] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   React.useEffect(() => {
     setLoading(true);
@@ -273,6 +274,7 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
     setVideoFile(null);
     setTab('main');
     setConfirmHide(false);
+    setConfirmDelete(false);
     window.fetchApiJson(
       `/api/mentoring/editor/lessons/${encodeURIComponent(kind)}/${encodeURIComponent(lesson.public_id)}/`,
       { auth: true },
@@ -346,6 +348,20 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
     }
   };
 
+  const confirmDeleteLesson = async () => {
+    if (!form) return;
+    setConfirmDelete(false);
+    try {
+      await window.fetchApiJson(
+        `/api/mentoring/editor/lessons/${encodeURIComponent(kind)}/${encodeURIComponent(form.public_id)}/?permanent=1`,
+        { method: 'DELETE', auth: true },
+      );
+      onDeleted?.();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
   const preview = () => {
     const q = window.buildLearnQuery(courseId, moduleId, kind, form?.public_id);
     if (q) navigate(Routes.LEARN, q);
@@ -363,16 +379,28 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
   return (
     <div className="flex flex-col h-full min-h-0">
       {window.ConfirmDialog && (
+        <>
         <window.ConfirmDialog
           open={confirmHide}
           title="Скрыть урок?"
-          body="Ученики перестанут его видеть. Сам урок останется в редакторе."
+          body="Ученики перестанут его видеть. Сам урок останется в редакторе, его можно вернуть."
           confirmLabel="Скрыть"
           cancelLabel="Отмена"
           danger
           onConfirm={confirmHideLesson}
           onCancel={() => setConfirmHide(false)}
         />
+        <window.ConfirmDialog
+          open={confirmDelete}
+          title="Удалить навсегда?"
+          body="Квадратик пропадёт из курса. Вернуть его нельзя."
+          confirmLabel="Удалить"
+          cancelLabel="Отмена"
+          danger
+          onConfirm={confirmDeleteLesson}
+          onCancel={() => setConfirmDelete(false)}
+        />
+        </>
       )}
       <div className="flex flex-wrap items-start gap-3 mb-5 shrink-0">
         <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${meta.color}`}>{meta.emoji} {meta.label}</span>
@@ -385,6 +413,10 @@ function LessonEditorForm({ lesson, courseId, moduleId, onSaved, onDeleted, navi
           <button type="button" onClick={handleDelete}
             className="h-9 px-3 rounded-lg text-xs font-semibold text-red-600 ring-1 ring-red-100 hover:bg-red-50">
             Скрыть
+          </button>
+          <button type="button" onClick={() => setConfirmDelete(true)}
+            className="h-9 px-3 rounded-lg text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-50">
+            Удалить
           </button>
           <button type="button" onClick={handleSave} disabled={saving}
             className="h-9 px-5 rounded-lg btn-grad text-white text-xs font-semibold disabled:opacity-50">
@@ -786,7 +818,7 @@ function ContentPackImportPanel({ courseId, onImported }) {
               <li><code className="text-[11px]">questions.json</code> — теория и вопросы</li>
               <li><code className="text-[11px]">images/</code> — картинки (если есть в вопросах)</li>
             </ul>
-            <p>Повторный импорт с тем же pack_id обновляет вопросы по названию, не дублирует.</p>
+            <p>Урок с тем же названием обновляется, второй копии не будет. Лишние квадратики можно скрыть или удалить кнопками справа. Если в пакете включена замена, после обновления сайта старые лишние квадратики этого модуля скрываются сами.</p>
           </div>
 
           <div
@@ -911,6 +943,33 @@ function ModulePromptEditor({ mod, onSaved }) {
   );
 }
 
+function lessonUnitKey(title) {
+  const match = String(title || '').match(/^(\d+\.\d+)\b/);
+  return match ? match[1] : '';
+}
+
+function groupEditorLessons(lessons) {
+  const groups = [];
+  const index = new Map();
+  const rest = [];
+  for (const lesson of lessons || []) {
+    const key = lessonUnitKey(lesson.title);
+    if (!key) {
+      rest.push(lesson);
+      continue;
+    }
+    if (!index.has(key)) {
+      const group = { key, lessons: [] };
+      index.set(key, group);
+      groups.push(group);
+    }
+    index.get(key).lessons.push(lesson);
+  }
+  if (groups.length < 2) return null;
+  if (rest.length) groups.push({ key: 'ещё', lessons: rest });
+  return groups;
+}
+
 function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefresh }) {
   const [, navigate] = window.useHashRoute();
   const [outline, setOutline] = React.useState(null);
@@ -921,6 +980,8 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
   const [creating, setCreating] = React.useState(null);
   const [newCourseTitle, setNewCourseTitle] = React.useState('');
   const [creatingCourse, setCreatingCourse] = React.useState(false);
+  const [showHidden, setShowHidden] = React.useState(false);
+  const [rowBusy, setRowBusy] = React.useState('');
 
   const loadOutline = React.useCallback(() => {
     if (!courseId) return;
@@ -1002,6 +1063,84 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
     }
   };
 
+  const lessonApi = (ls) => (
+    `/api/mentoring/editor/lessons/${encodeURIComponent(ls.kind)}/${encodeURIComponent(ls.public_id)}/`
+  );
+
+  const runRow = async (ls, job, close) => {
+    setRowBusy(ls.public_id);
+    setError('');
+    try {
+      await job();
+      if (close && selected?.public_id === ls.public_id) setSelected(null);
+      loadOutline();
+    } catch (e) {
+      setError(e.message || 'Не получилось');
+    } finally {
+      setRowBusy('');
+    }
+  };
+
+  const toggleHidden = (ls, event) => {
+    event.stopPropagation();
+    if (rowBusy) return;
+    runRow(ls, () => window.fetchApiJson(lessonApi(ls), {
+      method: 'PATCH',
+      body: { is_active: !ls.is_active },
+      auth: true,
+    }), selected?.public_id === ls.public_id);
+  };
+
+  const removeForever = (ls, event) => {
+    event.stopPropagation();
+    if (rowBusy) return;
+    const name = ls.title || 'квадратик';
+    if (!window.confirm(`Удалить навсегда «${name}»? Вернуть нельзя.`)) return;
+    runRow(ls, () => window.fetchApiJson(`${lessonApi(ls)}?permanent=1`, { method: 'DELETE', auth: true }), true);
+  };
+
+  const hideMany = async (lessons, hide) => {
+    const list = (lessons || []).filter((ls) => !!ls.is_active === hide);
+    if (!list.length || rowBusy) return;
+    const verb = hide ? 'Скрыть' : 'Вернуть';
+    if (!window.confirm(`${verb} ${list.length} квадратиков?`)) return;
+    setRowBusy('many');
+    setError('');
+    try {
+      for (const ls of list) {
+        await window.fetchApiJson(lessonApi(ls), {
+          method: 'PATCH',
+          body: { is_active: !hide },
+          auth: true,
+        });
+      }
+      loadOutline();
+    } catch (e) {
+      setError(e.message || 'Не получилось');
+    } finally {
+      setRowBusy('');
+    }
+  };
+
+  const deleteMany = async (lessons) => {
+    const list = lessons || [];
+    if (!list.length || rowBusy) return;
+    if (!window.confirm(`Удалить навсегда ${list.length} квадратиков? Вернуть нельзя.`)) return;
+    setRowBusy('many');
+    setError('');
+    try {
+      for (const ls of list) {
+        await window.fetchApiJson(`${lessonApi(ls)}?permanent=1`, { method: 'DELETE', auth: true });
+        if (selected?.public_id === ls.public_id) setSelected(null);
+      }
+      loadOutline();
+    } catch (e) {
+      setError(e.message || 'Не получилось');
+    } finally {
+      setRowBusy('');
+    }
+  };
+
   const createLesson = async (moduleId, kind) => {
     setCreating(`${moduleId}-${kind}`);
     try {
@@ -1052,6 +1191,10 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
               className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-black/[0.04] hover:bg-amber-100 hover:text-amber-800 disabled:opacity-40">
               + КР
             </button>
+            <button type="button" onClick={() => setShowHidden((value) => !value)}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-black/[0.04] hover:bg-violet-100 hover:text-violet-700">
+              {showHidden ? 'Спрятать скрытые' : 'Показать скрытые'}
+            </button>
           </div>
         </div>
 
@@ -1074,20 +1217,77 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
                     {expandedModules[mod.public_id] && (
                       <div className="ml-2 pl-2 border-l border-black/[0.06] space-y-1">
                         <ModulePromptEditor mod={mod} onSaved={loadOutline} />
-                        {(mod.lessons || []).map((ls) => {
-                          const m = KIND_META[ls.kind] || KIND_META.theory;
-                          const active = selected?.public_id === ls.public_id;
+                        {(() => {
+                          const hidden = (mod.lessons || []).filter((ls) => !ls.is_active);
+                          const visible = showHidden
+                            ? (mod.lessons || [])
+                            : (mod.lessons || []).filter((ls) => ls.is_active);
+                          const groups = groupEditorLessons(visible);
+                          const renderRow = (ls) => {
+                            const m = KIND_META[ls.kind] || KIND_META.theory;
+                            const active = selected?.public_id === ls.public_id;
+                            return (
+                              <div key={`${ls.kind}-${ls.public_id}`}
+                                className={`flex items-center gap-1 px-1 py-1 rounded-xl
+                                  ${active ? 'bg-violet-50 ring-1 ring-violet-200' : 'hover:bg-black/[0.025]'}
+                                  ${!ls.is_active ? 'opacity-45' : ''}`}>
+                                <button type="button"
+                                  onClick={() => setSelected({ ...ls, module_public_id: mod.public_id })}
+                                  className={`min-w-0 flex-1 flex items-center gap-2 px-2 py-1 rounded-lg text-left text-sm
+                                    ${active ? 'text-violet-900' : 'text-ink/75'}`}>
+                                  <span>{m.emoji}</span>
+                                  <span className="truncate flex-1">{ls.title}</span>
+                                </button>
+                                <button type="button" disabled={!!rowBusy}
+                                  onClick={(event) => toggleHidden(ls, event)}
+                                  className="shrink-0 text-[10px] font-semibold px-1.5 py-1 rounded-md bg-black/[0.04] hover:bg-violet-100 hover:text-violet-700 disabled:opacity-40">
+                                  {ls.is_active ? 'Скрыть' : 'Вернуть'}
+                                </button>
+                                <button type="button" disabled={!!rowBusy}
+                                  onClick={(event) => removeForever(ls, event)}
+                                  className="shrink-0 text-[10px] font-semibold px-1.5 py-1 rounded-md text-red-700 hover:bg-red-50 disabled:opacity-40">
+                                  Удалить
+                                </button>
+                              </div>
+                            );
+                          };
                           return (
-                            <button key={`${ls.kind}-${ls.public_id}`} type="button"
-                              onClick={() => setSelected({ ...ls, module_public_id: mod.public_id })}
-                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left text-sm transition-colors
-                                ${active ? 'bg-violet-50 ring-1 ring-violet-200 text-violet-900' : 'hover:bg-black/[0.025] text-ink/75'}
-                                ${!ls.is_active ? 'opacity-45' : ''}`}>
-                              <span>{m.emoji}</span>
-                              <span className="truncate flex-1">{ls.title}</span>
-                            </button>
+                            <>
+                              {hidden.length > 0 && (
+                                <button type="button" disabled={!!rowBusy}
+                                  onClick={() => deleteMany(hidden)}
+                                  className="text-[10px] font-semibold px-2 py-1 rounded-md text-red-700 bg-red-50 hover:bg-red-100 disabled:opacity-40">
+                                  Удалить скрытые ({hidden.length})
+                                </button>
+                              )}
+                              {groups
+                                ? groups.map((group) => {
+                                  const all = group.key === 'ещё'
+                                    ? (mod.lessons || []).filter((ls) => !lessonUnitKey(ls.title))
+                                    : (mod.lessons || []).filter((ls) => lessonUnitKey(ls.title) === group.key);
+                                  return (
+                                    <div key={group.key} className="pt-1">
+                                      <div className="flex flex-wrap items-center gap-1 px-1 pb-1">
+                                        <span className="text-[11px] font-bold text-ink/55">{group.key === 'ещё' ? 'Без номера' : `Урок ${group.key}`}</span>
+                                        <button type="button" disabled={!!rowBusy}
+                                          onClick={() => hideMany(all, true)}
+                                          className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-black/[0.04] hover:bg-violet-100 disabled:opacity-40">
+                                          Скрыть урок
+                                        </button>
+                                        <button type="button" disabled={!!rowBusy}
+                                          onClick={() => deleteMany(all)}
+                                          className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md text-red-700 hover:bg-red-50 disabled:opacity-40">
+                                          Удалить урок
+                                        </button>
+                                      </div>
+                                      <div className="space-y-1">{group.lessons.map(renderRow)}</div>
+                                    </div>
+                                  );
+                                })
+                                : visible.map(renderRow)}
+                            </>
                           );
-                        })}
+                        })()}
                         <div className="pt-2 flex flex-wrap gap-1">
                           {Object.entries(KIND_META).map(([k, m]) => (
                             <button key={k} type="button" disabled={creating === `${mod.public_id}-${k}`}

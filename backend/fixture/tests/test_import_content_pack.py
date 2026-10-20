@@ -257,3 +257,44 @@ def test_import_rewrites_theory_image_src(tmp_path, ege_course):
     attachment = theory.attachments.get()
     assert "images/scheme.png" not in theory.content
     assert attachment.file.url in theory.content
+
+
+@pytest.mark.django_db
+def test_import_hides_lessons_missing_from_pack(tmp_path, ege_course):
+    course, module = ege_course
+    manifest = {
+        "pack_id": "ege-n1-practice",
+        "course_slug": course.slug,
+        "module_title": module.title,
+        "replace_missing": True,
+    }
+    archive = _build_zip(
+        tmp_path, manifest=manifest, questions=_sample_questions()
+    )
+    import_content_pack(archive=archive, dry_run=False)
+
+    short = _sample_questions()
+    short["lessons"] = [short["lessons"][2]]
+    archive2 = _build_zip(
+        tmp_path / "second", manifest=manifest, questions=short
+    )
+    result = import_content_pack(archive=archive2, dry_run=False)
+
+    assert result.stats.retired == 2
+    assert result.stats.updated == 1
+    assert (
+        LessonShortAnswer.objects.filter(module=module, is_active=True).count()
+        == 1
+    )
+    assert (
+        LessonRadioQuestion.objects.filter(
+            module=module, is_active=True
+        ).count()
+        == 0
+    )
+    assert (
+        LessonCheckBoxQuestion.objects.filter(
+            module=module, is_active=True
+        ).count()
+        == 0
+    )

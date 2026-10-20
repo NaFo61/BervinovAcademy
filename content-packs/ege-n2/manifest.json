@@ -1,0 +1,8 @@
+{
+  "pack_id": "ege-n2-questions",
+  "course_slug": "ege-informatika",
+  "module_title": "Задание 2 ЕГЭ: Логика",
+  "create_module": true,
+  "replace_missing": true,
+  "module_description": "Три урока: 2.1 сколько единиц, 2.2 стрелка, 2.3 буквы столбцов."
+}

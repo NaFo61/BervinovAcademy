@@ -1,0 +1,7 @@
+{
+  "pack_id": "ege-n6-questions",
+  "course_slug": "ege-informatika",
+  "module_title": "Задание 6 ЕГЭ: Черепаха",
+  "create_module": true,
+  "module_description": "Черепаха рисует фигуру. Считаем целые точки внутри и на границе."
+}

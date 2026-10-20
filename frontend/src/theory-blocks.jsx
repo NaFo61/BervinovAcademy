@@ -104,11 +104,17 @@ function TheoryBlockRead({ block, navigate, lessonTitle }) {
 }
 
 function TheoryBlocksView({ lesson, navigate }) {
+  const hostRef = React.useRef(null);
   const blocks = Array.isArray(lesson?.blocks) ? lesson.blocks : [];
   const attachments = lesson?.attachments || [];
+  React.useEffect(() => {
+    if (hostRef.current && window.enhancePythonBlocks) {
+      window.enhancePythonBlocks(hostRef.current, navigate);
+    }
+  }, [lesson?.content, lesson?.public_id, blocks.length, navigate]);
   if (blocks.length) {
     return (
-      <>
+      <div ref={hostRef}>
         <div className="mt-6 space-y-5">
           {blocks.map((block) => (
             <TheoryBlockRead
@@ -127,11 +133,11 @@ function TheoryBlocksView({ lesson, navigate }) {
             lessonTitle={lesson.title}
           />
         )}
-      </>
+      </div>
     );
   }
   return (
-    <>
+    <div ref={hostRef}>
       {window.LessonAttachments && (
         <window.LessonAttachments items={attachments} navigate={navigate} lessonTitle={lesson.title} />
       )}
@@ -141,7 +147,7 @@ function TheoryBlocksView({ lesson, navigate }) {
           __html: window.sanitizeHtml(lesson?.content || '<p>Содержимое урока ещё добавляется.</p>'),
         }}
       />
-    </>
+    </div>
   );
 }
 

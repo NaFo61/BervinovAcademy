@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "topic": "Контрольная 3. Задания 19–27",
+    "images_dir": "images/",
+    "scheme": {
+      "theory": 1,
+      "checkbox": 0,
+      "radio": 0,
+      "short_answer": 9,
+      "total": 10
+    }
+  },
+  "lessons": [
+    {
+      "type": "theory",
+      "title": "Контрольная 3. Задания 19–27",
+      "content": "<h1>Контрольная 3. Задания 19–27</h1><p>Контрольная по пройденным номерам. Решайте по порядку. В ответ пишите число, без единиц измерения и без пробелов. Там, где просят два числа подряд, пишите их слитно по возрастанию.</p><p>Проверка номеров с 19 по 27.</p>",
+      "comment": "Проверка номеров с 19 по 27.",
+      "images": []
+    },
+    {
+      "type": "short_answer",
+      "title": "КР3. Победа за один ход",
+      "question_text": "Ходы +1 и ×2, цель 10 камней. С какого наименьшего числа побеждают первым ходом? Только число.",
+      "correct_answer": "5",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>Пятёрка умножается на 2 и даёт 10.</li><li>Четвёрка так не умеет.</li></ol><p>Ответ: <strong>5</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР3. Проигрышное число",
+      "question_text": "Те же ходы и цель 10. Какое наименьшее число проигрышно при любом ходе? Только число.",
+      "correct_answer": "4",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>Из 4 оба хода ведут в выигрышные за один ход позиции.</li><li>Ответ 4.</li></ol><p>Ответ: <strong>4</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР3. Два числа вторым ходом",
+      "question_text": "Те же ходы и цель 10. Два наименьших числа для победы вторым ходом, запишите подряд. Только число.",
+      "correct_answer": "23",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>Это 2 и 3.</li><li>Слитно: 23.</li></ol><p>Ответ: <strong>23</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР3. Финиш E",
+      "question_text": "A=3, B=5, C=2 после A, D=4 после A и B, E=6 после C и D. Когда кончает E? Только число.",
+      "correct_answer": "15",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>E стартует после D, а D кончает в 9.</li><li>9+6=15.</li></ol><p>Ответ: <strong>15</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР3. Сколько программ",
+      "question_text": "Команды +1 и ×2, старт 1. Сколько программ получают 6? Только число.",
+      "correct_answer": "6",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>Все шесть программ из урока.</li><li>Ответ 6.</li></ol><p>Ответ: <strong>6</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР3. Серия",
+      "question_text": "Длина самой длинной серии в строке AAABBC? Только число.",
+      "correct_answer": "3",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>Три буквы A подряд.</li><li>Длиннее серии нет.</li></ol><p>Ответ: <strong>3</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР3. Сумма маски",
+      "question_text": "Сумма чисел вида 3?6, делящихся на 9. Только число.",
+      "correct_answer": "702",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>Подходят 306 и 396.</li><li>Сумма 702.</li></ol><p>Ответ: <strong>702</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР3. Файл на диске 20",
+      "question_text": "Диск 20, файлы 9, 6, 5, 14, 4. Какой самый большой файл можно положить в набор с максимальным числом файлов? Только число.",
+      "correct_answer": "9",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>В набор входят три файла.</li><li>Самый большой среди таких наборов — 9.</li></ol><p>Ответ: <strong>9</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР3. Центры двух троек",
+      "question_text": "Кучки (0;0), (0;4), (3;2) и (10;1), (11;4), (12;1). Сумма целых частей координат центров? Только число.",
+      "correct_answer": "16",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>Центры (1; 2) и (11; 2).</li><li>Сумма 16.</li></ol><p>Ответ: <strong>16</strong>.</p>"
+    }
+  ]
+}

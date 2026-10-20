@@ -1,0 +1,8 @@
+{
+  "pack_id": "ege-n3-questions",
+  "course_slug": "ege-informatika",
+  "module_title": "Задание 3 ЕГЭ: Базы данных",
+  "create_module": true,
+  "replace_missing": true,
+  "module_description": "Три урока: 3.1 сколько строк, 3.2 сумма оценок, 3.3 одна оценка."
+}

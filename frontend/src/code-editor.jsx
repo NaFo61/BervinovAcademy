@@ -193,6 +193,34 @@ function openPlaygroundWithCode(navigate, code, stdin) {
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
+function enhancePythonBlocks(root, navigate) {
+  if (!root || !root.querySelectorAll) return;
+  root.querySelectorAll('pre').forEach((pre) => {
+    if (pre.dataset.playgroundReady === '1') return;
+    const code = String(pre.innerText || '').replace(/\u00a0/g, ' ').replace(/\s+$/g, '');
+    if (!code.trim()) return;
+    pre.dataset.playgroundReady = '1';
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'margin:14px 0;border-radius:12px;overflow:hidden;border:1px solid rgba(15,23,42,.12);';
+    const bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;background:#0f172a;padding:6px 10px;';
+    const label = document.createElement('span');
+    label.textContent = 'Python';
+    label.style.cssText = 'color:#94a3b8;font-size:11px;font-weight:700;letter-spacing:.06em;font-style:normal;font-family:sans-serif;';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'В интерпретатор';
+    btn.style.cssText = 'background:#164e63;color:#cffafe;border:0;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:sans-serif;font-style:normal;';
+    btn.addEventListener('click', () => openPlaygroundWithCode(navigate, code));
+    bar.appendChild(label);
+    bar.appendChild(btn);
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(bar);
+    pre.style.cssText = 'margin:0;padding:12px 14px;background:#0f172a;color:#e2e8f0;font-family:Consolas,monospace;font-style:normal;white-space:pre-wrap;font-size:13px;line-height:1.5;overflow-x:auto;';
+    wrap.appendChild(pre);
+  });
+}
+
 function PythonCodeEditor({
   value,
   onChange,
@@ -359,6 +387,7 @@ Object.assign(window, {
   ensureMonaco,
   PythonCodeEditor,
   openPlaygroundWithCode,
+  enhancePythonBlocks,
   stashPlaygroundCode,
   takePlaygroundStash,
   PLAYGROUND_CODE_KEY,

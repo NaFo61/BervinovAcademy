@@ -115,5 +115,109 @@
   <tr><td>2</td><td>до 30, +1, +4, ×3</td><td><strong>9</strong></td></tr>
 </table>
 
+<!-- python-lesson -->
+<h2>Любой ход Пети отдаёт победу Ване</h2><p>Петя сам первым ходом не побеждает. Но куда бы он ни пошёл, Ваня следующим ходом уже побеждает. Ищут наименьшее такое S.</p><p>Команды и граница те же, что в задании 19 этого курса. Меняют <code>limit</code>, <code>adds</code> и <code>mults</code>, вызов оставляют <code>task20</code>.</p>
+<h3>Рабочие программы к этому уроку</h3><p>Каждый фрагмент запускается отдельно. В конце он печатает ответ. Комментарии на русском говорят, какая строка за что отвечает.</p>
+<h3>n20-25</h3>
+<pre><code>def moves_of(s, adds, mults):
+    result = [s + step for step in adds]
+    result += [s * factor for factor in mults]
+    return result
+
+def win_now(s, limit, adds, mults):
+    return any(nxt &gt;= limit for nxt in moves_of(s, adds, mults))
+
+def task19(limit, adds, mults):
+    # Наименьшее S, откуда первый ход сразу побеждает.
+    s = 1
+    while True:
+        if s &lt; limit and win_now(s, limit, adds, mults):
+            return s
+        s += 1
+
+def task20(limit, adds, mults):
+    # Петя сразу не побеждает, но любой его ход отдаёт победу Ване.
+    s = 1
+    while s &lt; limit:
+        if not win_now(s, limit, adds, mults):
+            nxt = [x for x in moves_of(s, adds, mults) if x &lt; limit]
+            if nxt and all(win_now(x, limit, adds, mults) for x in nxt):
+                return s
+        s += 1
+    return None
+
+def task21(limit, adds, mults):
+    # Два наименьших S, откуда Петя побеждает своим вторым ходом.
+    found = []
+    s = 1
+    while len(found) &lt; 2 and s &lt; limit:
+        if not win_now(s, limit, adds, mults):
+            for t in moves_of(s, adds, mults):
+                if t &gt;= limit:
+                    continue
+                vanya = [u for u in moves_of(t, adds, mults)]
+                # Любой ход Вани ещё не победа, но после него Петя побеждает сразу.
+                if vanya and all(
+                    u &lt; limit and win_now(u, limit, adds, mults) for u in vanya
+                ):
+                    found.append(s)
+                    break
+        s += 1
+    return int(&quot;&quot;.join(str(x) for x in found))
+
+print(task20(25, [1, 2], [2]))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>Числа в первых строках — это данные условия. Цикл и формулу вокруг них не переписывают.</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>12</strong>.</p>
+<h3>n20-30</h3>
+<pre><code>def moves_of(s, adds, mults):
+    result = [s + step for step in adds]
+    result += [s * factor for factor in mults]
+    return result
+
+def win_now(s, limit, adds, mults):
+    return any(nxt &gt;= limit for nxt in moves_of(s, adds, mults))
+
+def task19(limit, adds, mults):
+    # Наименьшее S, откуда первый ход сразу побеждает.
+    s = 1
+    while True:
+        if s &lt; limit and win_now(s, limit, adds, mults):
+            return s
+        s += 1
+
+def task20(limit, adds, mults):
+    # Петя сразу не побеждает, но любой его ход отдаёт победу Ване.
+    s = 1
+    while s &lt; limit:
+        if not win_now(s, limit, adds, mults):
+            nxt = [x for x in moves_of(s, adds, mults) if x &lt; limit]
+            if nxt and all(win_now(x, limit, adds, mults) for x in nxt):
+                return s
+        s += 1
+    return None
+
+def task21(limit, adds, mults):
+    # Два наименьших S, откуда Петя побеждает своим вторым ходом.
+    found = []
+    s = 1
+    while len(found) &lt; 2 and s &lt; limit:
+        if not win_now(s, limit, adds, mults):
+            for t in moves_of(s, adds, mults):
+                if t &gt;= limit:
+                    continue
+                vanya = [u for u in moves_of(t, adds, mults)]
+                # Любой ход Вани ещё не победа, но после него Петя побеждает сразу.
+                if vanya and all(
+                    u &lt; limit and win_now(u, limit, adds, mults) for u in vanya
+                ):
+                    found.append(s)
+                    break
+        s += 1
+    return int(&quot;&quot;.join(str(x) for x in found))
+
+print(task20(30, [1, 4], [3]))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>Числа в первых строках — это данные условия. Цикл и формулу вокруг них не переписывают.</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>9</strong>.</p>
+<!-- /python-lesson -->
 </body>
 </html>

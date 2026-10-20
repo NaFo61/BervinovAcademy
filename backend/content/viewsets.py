@@ -66,6 +66,44 @@ class AutoEnrollOnRetrieveMixin:
         return obj
 
 
+def _outline_fields(*extra: str) -> tuple[str, ...]:
+    return (
+        "id",
+        "public_id",
+        "title",
+        "order_index",
+        "is_active",
+        "module_id",
+        "exam_id",
+        "course_id",
+        *extra,
+    )
+
+
+def _outline_prefetches():
+    """В структуру курса нужны только названия, не текст уроков."""
+    from django.db.models import Prefetch
+
+    def pack(path, model, *extra):
+        return Prefetch(
+            path,
+            queryset=model.objects.only(*_outline_fields(*extra)),
+        )
+
+    lesson_models = (
+        ("lessons_theories", LessonTheory, ()),
+        ("lessons_radio_questions", LessonRadioQuestion, ()),
+        ("lessons_checkbox_questions", LessonCheckBoxQuestion, ()),
+        ("lessons_short_answers", LessonShortAnswer, ()),
+        ("challenges", CodingChallenge, ("difficulty", "points")),
+    )
+    prefetches = ["modules", "exams"]
+    for prefix in ("modules", "exams"):
+        for related, model, extra in lesson_models:
+            prefetches.append(pack(f"{prefix}__{related}", model, *extra))
+    return prefetches
+
+
 class CourseViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -106,37 +144,34 @@ class CourseViewSet(
 
     def get_queryset(self):
         """
-        Возвращает queryset активных курсов с оптимизацией запросов.
-        Предварительно загружаются технологии, модули и уроки модулей.
+        Активные курсы.
 
-        Фильтр list: ``?technology=Python`` — по названию технологии (без учёта регистра).
+        Список каталога не тащит уроки. Карточка курса берёт только
+        названия квадратиков, без текста теории.
         """
-        qs = (
-            Course.objects.filter(is_active=True)
-            .prefetch_related(
-                "technology",
-                "modules",
-                "exams",
-                "modules__lessons_theories",
-                "modules__lessons_radio_questions",
-                "modules__lessons_radio_questions__answers",
-                "modules__lessons_checkbox_questions",
-                "modules__lessons_checkbox_questions__answers",
-                "modules__lessons_short_answers",
-                "modules__challenges",
-                "exams__lessons_theories",
-                "exams__lessons_radio_questions",
-                "exams__lessons_checkbox_questions",
-                "exams__lessons_short_answers",
-                "exams__challenges",
-            )
-            .order_by("-created_at")
-        )
+        qs = Course.objects.filter(is_active=True).order_by("-created_at")
         if self.action == "list":
+            qs = qs.prefetch_related("technology")
             tech = (self.request.query_params.get("technology") or "").strip()
             if tech:
                 qs = qs.filter(technology__name__iexact=tech).distinct()
-        return qs
+            return qs
+        return qs.select_related("mentor").prefetch_related(
+            "technology",
+            *_outline_prefetches(),
+        )
+
+    def list(self, request, *args, **kwargs):
+        from django.core.cache import cache
+
+        tech = (request.query_params.get("technology") or "").strip()
+        key = f"course-list:{request.get_host()}:{tech}"
+        cached = cache.get(key)
+        if cached is not None:
+            return Response(cached)
+        response = super().list(request, *args, **kwargs)
+        cache.set(key, response.data, 60)
+        return response
 
     def get_serializer_class(self):
         """

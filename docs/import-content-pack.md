@@ -20,27 +20,11 @@
 
 Ошибки показываются по-русски: нет manifest, не тот курс, модуль не найден и т.д.
 
-Готовые архивы лежат в `content-packs/` (простая инструкция: `content-packs/КАК-ИМПОРТИРОВАТЬ.md`):
+Готовые архивы для загрузки — папка `content-packs/к-импорту/` (инструкция для владельца: `content-packs/КАК-ИМПОРТИРОВАТЬ.md`).
 
-| Архив | Задание |
-|-------|---------|
-| `ege-n1-import.zip` | ЕГЭ №1 — графы |
-| `ege-n2-import.zip` | ЕГЭ №2 — логика |
-| `ege-n3-import.zip` | ЕГЭ №3 — базы данных |
-| `ege-n4-import.zip` | ЕГЭ №4 — условие Фано |
-| `ege-n5-import.zip` | ЕГЭ №5 — простой алгоритм |
-| `ege-n6-import.zip` | ЕГЭ №6 — черепаха |
-| `ege-n7-import.zip` | ЕГЭ №7 — картинки и звук |
-| `ege-n8-import.zip` | ЕГЭ №8 — перебор слов |
-| `ege-n9-import.zip` | ЕГЭ №9 — электронные таблицы |
-| `ege-n10-import.zip` | ЕГЭ №10 — поиск в тексте |
-| `ege-n11-import.zip` | ЕГЭ №11 — пароли |
-| `ege-n12-import.zip` | ЕГЭ №12 — лента |
-| `ege-n13-import.zip` | ЕГЭ №13 — IP-адреса |
-| `ege-n14-import.zip` | ЕГЭ №14 — системы счисления |
-| `ege-n15-import.zip` | ЕГЭ №15 — отрезки |
+Файлы пронумерованы `01-ege-n1-import.zip` … `27-ege-n27-import.zip`. Сайт принимает **один** ZIP за раз. №1–№15 — теория и вопросы. №16–№27 — только теория (в проверке будет один урок). Текст теории лежит в `questions.json`, не в отдельном `theory.html`.
 
-Копии также копируются в `Desktop/BervinovVideos/import-packs/` при сборке (если папка есть). Пересборка: `python content-packs/assemble_ege_packs.py`.
+Полная пересборка заново кладёт текст из `theory.html` в `questions.json` и обновляет ZIP, в том числе папку `к-импорту/`: `python content-packs/assemble_ege_packs.py`. Упаковать уже готовые папки, не трогая `questions.json`: из каталога `content-packs` вызвать `zip_existing_packs()`.
 
 ## Структура ZIP
 
@@ -202,7 +186,7 @@ python manage.py ensure_ege_course
 }
 ```
 
-ZIP из Desktop или из `content-packs/`: положите `questions.json`, добавьте `manifest.json`, при необходимости папку `images/`, заархивируйте. Или запустите `python content-packs/assemble_ege_packs.py` — соберёт архивы №1–№15, кроме №16 и дальше. В 2026 году структура номеров та же; файлы заданий 3 и 9 приходят как `.ods`, задание 10 — как `.odt`.
+ZIP из `content-packs/к-импорту/`: внутри `manifest.json`, `questions.json` (теория в поле `content`) и при необходимости `images/`. `python content-packs/assemble_ege_packs.py` собирает №1–№27. В 2026 году структура номеров та же; файлы заданий 3 и 9 приходят как `.ods`, задание 10 — как `.odt`.
 
 ## Идемпотентность
 

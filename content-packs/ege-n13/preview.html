@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Задание 13 ЕГЭ: IP-адреса</title>
+<style>
+  :root { --ink:#1c1917; --muted:#57534e; --line:#e7e5e4; --paper:#f6f1e8; --yes:#166534; --yes-bg:#f0fdf4; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:Georgia,"Times New Roman",serif; line-height:1.55; }
+  .wrap { max-width:760px; margin:0 auto; padding:36px 18px 80px; }
+  header h1 { font-size:34px; line-height:1.2; margin:0 0 8px; }
+  header .lead, .tasks > .lead, .razbor > .lead { margin:0 0 16px; color:var(--muted); font-family:"Segoe UI",sans-serif; font-size:15px; }
+  .theory { background:#fffdf9; border:1px solid var(--line); border-radius:18px; padding:8px 28px 22px; }
+  .theory h2 { font-size:22px; margin:28px 0 10px; }
+  .theory p, .theory li { font-size:18px; }
+  .theory table { border-collapse:collapse; margin:14px 0 18px; font-size:16px; }
+  .theory th, .theory td { border:1px solid #d6d3d1; padding:7px 14px; text-align:center; }
+  .theory th { background:#f5f0e8; }
+  .shot { margin:16px 0; text-align:center; }
+  .shot img { max-width:min(100%, 640px); height:auto; background:#fff; border-radius:12px; border:1px solid var(--line); }
+  .tasks, .razbor { margin-top:36px; }
+  .tasks > h2, .razbor > h2 { font-size:28px; margin:0 0 6px; }
+  .task, .razbor article { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px 18px 14px; margin:0 0 12px; }
+  .task { font-family:"Segoe UI",sans-serif; }
+  .task h3, .razbor h3 { margin:0 0 8px; font-size:18px; }
+  .kicker { margin:0 0 4px; color:var(--muted); font-size:13px; }
+  .opts { margin:0 0 10px; padding-left:1.2em; }
+  .opts li.yes { color:var(--yes); font-weight:650; }
+  .answer { background:var(--yes-bg); color:var(--yes); border-radius:8px; padding:8px 12px; }
+  .razbor ol, .razbor p { font-size:17px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Задание 13 ЕГЭ: IP-адреса</h1>
+  <p class="lead">Страница для проверки. Сверху теория со схемами, ниже задания. Разбор всех задач — внизу, по шагам.</p>
+</header>
+<section class="theory">
+<h2>Что дают в задании 13</h2>
+<p>Дают IP-адрес компьютера и маску сети. Нужно найти адрес сети, самый большой адрес компьютера или число адресов.</p>
+<p>Маска показывает, какая часть адреса — это сеть, а какая — номер компьютера внутри сети. Где в маске стоят единицы, бит относится к сети. Где нули — к компьютеру.</p>
+
+<h2>Три адреса, которые нельзя путать</h2>
+<ul>
+  <li><strong>Адрес сети</strong> — адрес узла, у которого в маске единицы оставили биты как есть, а нули маски заменили нулями. Это поразрядное И.</li>
+  <li><strong>Широковещательный</strong> — тот же адрес, но на месте нулей маски стоят единицы. Его компьютеру не дают.</li>
+  <li><strong>Наибольший адрес компьютера</strong> — широковещательный минус 1.</li>
+</ul>
+
+<h2>Задача 1. Маска на последний байт</h2>
+<p>Узел 192.168.1.15, маска 255.255.255.0.</p>
+<figure class="shot"><img src="images/01-mask.png" alt="Адрес и маска: последний байт обнуляется"></figure>
+<p>Сеть: 192.168.1.0. Широковещательный: 192.168.1.255. Самый большой адрес компьютера: 192.168.1.254.</p>
+<p>В ответе без точек: <strong>1921681254</strong>.</p>
+
+<h2>Задача 2. Как в демоверсии 2026</h2>
+<p>Узел 191.128.66.83, маска 255.192.0.0.</p>
+<figure class="shot"><img src="images/02-hosts.png" alt="Сеть, широковещательный адрес и наибольший адрес компьютера"></figure>
+<ol>
+  <li>Маска 255.192.0.0 в двоичном виде начинается с десяти единиц. Остальные 22 бита — номер узла.</li>
+  <li>Адрес сети: 191.128.0.0.</li>
+  <li>Широковещательный: 191.191.255.255.</li>
+  <li>Компьютеру можно отдать на единицу меньше: 191.191.255.254.</li>
+</ol>
+<p>Ответ без точек: <strong>191191255254</strong>.</p>
+
+<h2>Как решать</h2>
+<ol>
+  <li>Записать маску и понять, сколько последних бит относятся к компьютеру.</li>
+  <li>Обнулить эти биты — получится сеть.</li>
+  <li>Поставить их в единицы — получится широковещательный адрес.</li>
+  <li>Вычесть 1, убрать точки, если так просят в ответе.</li>
+</ol>
+</section>
+<section class='tasks'><h2>Задания</h2><p class='lead'>Зелёным отмечен верный ответ. Разбор внизу.</p><article class="task"><p class="kicker">1. Несколько верных</p><h3>Три адреса</h3><p>Что верно про маску?</p><ul class='opts'><li class='yes'>Единицы маски — это часть сети</li><li class='yes'>Нули маски — это номер компьютера</li><li class='yes'>Широковещательный адрес компьютеру не дают</li><li>Наибольший адрес компьютера равен широковещательному</li></ul><div class='answer'>Ответ: Единицы маски — это часть сети; Нули маски — это номер компьютера; Широковещательный адрес компьютеру не дают</div></article><article class="task"><p class="kicker">2. Несколько верных</p><h3>Маска 255.255.255.0</h3><p>Узел 192.168.1.15. Что верно?</p><ul class='opts'><li class='yes'>Адрес сети 192.168.1.0</li><li class='yes'>Широковещательный адрес 192.168.1.255</li><li class='yes'>Наибольший адрес компьютера 192.168.1.254</li><li>В сети только один компьютер</li></ul><div class='answer'>Ответ: Адрес сети 192.168.1.0; Широковещательный адрес 192.168.1.255; Наибольший адрес компьютера 192.168.1.254</div></article><article class="task"><p class="kicker">3. Несколько верных</p><h3>Демоверсия</h3><p>Узел 191.128.66.83, маска 255.192.0.0. Что верно?</p><ul class='opts'><li class='yes'>Адрес сети 191.128.0.0</li><li class='yes'>Наибольший адрес компьютера 191.191.255.254</li><li class='yes'>В ответе точки убирают</li><li>Адрес сети можно назначить компьютеру</li></ul><div class='answer'>Ответ: Адрес сети 191.128.0.0; Наибольший адрес компьютера 191.191.255.254; В ответе точки убирают</div></article><article class="task"><p class="kicker">4. Несколько верных</p><h3>Как считать</h3><p>Какой порядок верный?</p><ul class='opts'><li class='yes'>Сначала обнулить биты компьютера — это сеть</li><li class='yes'>Потом поставить эти биты в единицы</li><li class='yes'>Потом вычесть 1</li><li>Сначала прибавить маску к адресу</li></ul><div class='answer'>Ответ: Сначала обнулить биты компьютера — это сеть; Потом поставить эти биты в единицы; Потом вычесть 1</div></article><article class="task"><p class="kicker">5. Несколько верных</p><h3>Ответ без точек</h3><p>Что верно про запись ответа?</p><ul class='opts'><li class='yes'>192.168.1.254 записывают как 1921681254</li><li class='yes'>10.20.255.254 записывают как 1020255254</li><li class='yes'>Нули внутри байта не выкидывают</li><li>Вместо точек ставят пробелы</li></ul><div class='answer'>Ответ: 192.168.1.254 записывают как 1921681254; 10.20.255.254 записывают как 1020255254; Нули внутри байта не выкидывают</div></article><article class="task"><p class="kicker">6. Один верный</p><h3>Последний байт</h3><p>Наибольший адрес при маске 255.255.255.0 заканчивается на:</p><ul class='opts'><li>0</li><li>1</li><li class='yes'>254</li><li>255</li></ul><div class='answer'>Ответ: 254</div></article><article class="task"><p class="kicker">7. Один верный</p><h3>Сеть демо</h3><p>Какой адрес сети у узла 191.128.66.83 с маской 255.192.0.0?</p><ul class='opts'><li class='yes'>191.128.0.0</li><li>191.128.66.0</li><li>191.191.255.254</li><li>255.192.0.0</li></ul><div class='answer'>Ответ: 191.128.0.0</div></article><article class="task"><p class="kicker">8. Один верный</p><h3>Сколько бит узла</h3><p>Сколько бит в маске 255.255.255.0 относятся к компьютеру?</p><ul class='opts'><li>0</li><li class='yes'>8</li><li>16</li><li>24</li></ul><div class='answer'>Ответ: 8</div></article><article class="task"><p class="kicker">9. Один верный</p><h3>10.20</h3><p>Узел 10.20.30.40, маска 255.255.0.0. Наибольший адрес компьютера?</p><ul class='opts'><li class='yes'>10.20.255.254</li><li>10.20.30.254</li><li>10.20.0.0</li><li>10.20.255.255</li></ul><div class='answer'>Ответ: 10.20.255.254</div></article><article class="task"><p class="kicker">10. Один верный</p><h3>Запись демо</h3><p>Как записать 191.191.255.254 без точек?</p><ul class='opts'><li class='yes'>191191255254</li><li>191.191.255.254</li><li>191191255255</li><li>191128000</li></ul><div class='answer'>Ответ: 191191255254</div></article><article class="task"><p class="kicker">11. Вписать число</p><h3>Ответ: 192.168</h3><p>Наибольший адрес для 192.168.1.15 и маски 255.255.255.0, без точек. Только число.</p><div class='answer'>Ответ: 1921681254</div></article><article class="task"><p class="kicker">12. Вписать число</p><h3>Ответ: 10.20</h3><p>Наибольший адрес для 10.20.30.40 и маски 255.255.0.0, без точек. Только число.</p><div class='answer'>Ответ: 1020255254</div></article><article class="task"><p class="kicker">13. Вписать число</p><h3>Ответ: демо</h3><p>Наибольший адрес для 191.128.66.83 и маски 255.192.0.0, без точек. Только число.</p><div class='answer'>Ответ: 191191255254</div></article><article class="task"><p class="kicker">14. Вписать число</p><h3>Ответ: биты</h3><p>Сколько бит маски 255.255.255.0 относятся к компьютеру? Только число.</p><div class='answer'>Ответ: 8</div></article><article class="task"><p class="kicker">15. Вписать число</p><h3>Ответ: конец</h3><p>На какое число заканчивается наибольший адрес компьютера при маске 255.255.255.0? Только число.</p><div class='answer'>Ответ: 254</div></article></section><section class='razbor'><h2>Разбор заданий</h2><article><h3>1. Три адреса</h3><ol><li><strong>Верно.</strong> Единицы маски — это часть сети — Эти биты у всех компьютеров сети одинаковые.</li><li><strong>Верно.</strong> Нули маски — это номер компьютера — Их можно менять.</li><li><strong>Верно.</strong> Широковещательный адрес компьютеру не дают — Как и сам адрес сети.</li><li><strong>Неверно.</strong> Наибольший адрес компьютера равен широковещательному — Он на единицу меньше.</li></ol><p>Ответ: <strong>Единицы маски — это часть сети; Нули маски — это номер компьютера; Широковещательный адрес компьютеру не дают</strong>.</p></article><article><h3>2. Маска 255.255.255.0</h3><ol><li><strong>Верно.</strong> Адрес сети 192.168.1.0 — Последний байт обнулили.</li><li><strong>Верно.</strong> Широковещательный адрес 192.168.1.255 — Последний байт из единиц.</li><li><strong>Верно.</strong> Наибольший адрес компьютера 192.168.1.254 — 255 минус 1.</li><li><strong>Неверно.</strong> В сети только один компьютер — Свободны адреса с 1 по 254.</li></ol><p>Ответ: <strong>Адрес сети 192.168.1.0; Широковещательный адрес 192.168.1.255; Наибольший адрес компьютера 192.168.1.254</strong>.</p></article><article><h3>3. Демоверсия</h3><ol><li><strong>Верно.</strong> Адрес сети 191.128.0.0 — В маске после десяти единиц идут нули.</li><li><strong>Верно.</strong> Наибольший адрес компьютера 191.191.255.254 — Широковещательный минус 1.</li><li><strong>Верно.</strong> В ответе точки убирают — Получается 191191255254.</li><li><strong>Неверно.</strong> Адрес сети можно назначить компьютеру — Его в условии прямо запрещают.</li></ol><p>Ответ: <strong>Адрес сети 191.128.0.0; Наибольший адрес компьютера 191.191.255.254; В ответе точки убирают</strong>.</p></article><article><h3>4. Как считать</h3><ol><li><strong>Верно.</strong> Сначала обнулить биты компьютера — это сеть — Поразрядное И с маской.</li><li><strong>Верно.</strong> Потом поставить эти биты в единицы — Так получают широковещательный адрес.</li><li><strong>Верно.</strong> Потом вычесть 1 — Это наибольший адрес компьютера.</li><li><strong>Неверно.</strong> Сначала прибавить маску к адресу — Маску не прибавляют, с ней делают И.</li></ol><p>Ответ: <strong>Сначала обнулить биты компьютера — это сеть; Потом поставить эти биты в единицы; Потом вычесть 1</strong>.</p></article><article><h3>5. Ответ без точек</h3><ol><li><strong>Верно.</strong> 192.168.1.254 записывают как 1921681254 — Точки просто убирают.</li><li><strong>Верно.</strong> 10.20.255.254 записывают как 1020255254 — Для маски 255.255.0.0 и узла 10.20.30.40.</li><li><strong>Верно.</strong> Нули внутри байта не выкидывают — 20 так и остаётся 20.</li><li><strong>Неверно.</strong> Вместо точек ставят пробелы — Пробелов в ответе нет.</li></ol><p>Ответ: <strong>192.168.1.254 записывают как 1921681254; 10.20.255.254 записывают как 1020255254; Нули внутри байта не выкидывают</strong>.</p></article><article><h3>6. Последний байт</h3><ol><li>255 — широковещательный.</li><li>Компьютеру отдают 254.</li></ol><p>Ответ: <strong>254</strong>.</p></article><article><h3>7. Сеть демо</h3><ol><li>Маска обнуляет всё после первых десяти бит.</li><li>66 и 83 пропадают.</li></ol><p>Ответ: <strong>191.128.0.0</strong>.</p></article><article><h3>8. Сколько бит узла</h3><ol><li>255.255.255 — это 24 единицы.</li><li>Последний байт 0 — это 8 нулей.</li></ol><p>Ответ: <strong>8</strong>.</p></article><article><h3>9. 10.20</h3><ol><li>Сеть 10.20.0.0.</li><li>Широковещательный 10.20.255.255.</li><li>Минус 1: 10.20.255.254.</li></ol><p>Ответ: <strong>10.20.255.254</strong>.</p></article><article><h3>10. Запись демо</h3><ol><li>Точки убирают, числа байтов не меняют.</li></ol><p>Ответ: <strong>191191255254</strong>.</p></article><article><h3>11. Ответ: 192.168</h3><ol><li>Сеть 192.168.1.0.</li><li>Компьютеру 192.168.1.254.</li><li>Без точек: 1921681254.</li></ol><p>Ответ: <strong>1921681254</strong>.</p></article><article><h3>12. Ответ: 10.20</h3><ol><li>Это 10.20.255.254.</li></ol><p>Ответ: <strong>1020255254</strong>.</p></article><article><h3>13. Ответ: демо</h3><ol><li>Сеть 191.128.0.0.</li><li>Компьютеру 191.191.255.254.</li></ol><p>Ответ: <strong>191191255254</strong>.</p></article><article><h3>14. Ответ: биты</h3><ol><li>Один нулевой байт — 8 бит.</li></ol><p>Ответ: <strong>8</strong>.</p></article><article><h3>15. Ответ: конец</h3><ol><li>255 минус 1.</li></ol><p>Ответ: <strong>254</strong>.</p></article></section></div><!-- python-lesson -->
+<h2>Маска по битам</h2><p>Адрес сети — поразрядное И адреса и маски. Широковещательный адрес — там, где в маске были нули, ставят единицы. Наибольший адрес компьютера — широковещательный минус один. В ответ точки убирают, нули внутри байта оставляют.</p><p>В программе байты — список из четырёх чисел. Меняют строку адреса и строку маски.</p>
+<h3>Рабочие программы к этому уроку</h3><p>Каждый фрагмент запускается отдельно. В конце он печатает ответ. Комментарии на русском говорят, какая строка за что отвечает.</p>
+<h3>IP: наибольший адрес компьютера, записать без точек.</h3>
+<pre><code>def max_host(ip, mask):
+    ip_b = [int(part) for part in ip.split(&quot;.&quot;)]
+    mask_b = [int(part) for part in mask.split(&quot;.&quot;)]
+    network = [a &amp; b for a, b in zip(ip_b, mask_b)]
+    broadcast = [n | (255 - m) for n, m in zip(network, mask_b)]
+    # Минус 1 у широковещательного: это наибольший адрес компьютера.
+    broadcast[3] -= 1
+    for i in range(3, 0, -1):
+        if broadcast[i] &lt; 0:
+            broadcast[i] += 256
+            broadcast[i - 1] -= 1
+    return &quot;&quot;.join(str(part) for part in broadcast)
+
+ip = &quot;192.168.1.15&quot;  # МЕНЯТЬ: адрес узла
+mask = &quot;255.255.255.0&quot;  # МЕНЯТЬ: маска
+print(max_host(ip, mask))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>ip = &quot;192.168.1.15&quot;  # МЕНЯТЬ: адрес узла</li><li>mask = &quot;255.255.255.0&quot;  # МЕНЯТЬ: маска</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>1921681254</strong>.</p>
+<h3>IP: наибольший адрес компьютера, записать без точек.</h3>
+<pre><code>def max_host(ip, mask):
+    ip_b = [int(part) for part in ip.split(&quot;.&quot;)]
+    mask_b = [int(part) for part in mask.split(&quot;.&quot;)]
+    network = [a &amp; b for a, b in zip(ip_b, mask_b)]
+    broadcast = [n | (255 - m) for n, m in zip(network, mask_b)]
+    broadcast[3] -= 1
+    for i in range(3, 0, -1):
+        if broadcast[i] &lt; 0:
+            broadcast[i] += 256
+            broadcast[i - 1] -= 1
+    return &quot;&quot;.join(str(part) for part in broadcast)
+
+print(max_host(&quot;191.128.66.83&quot;, &quot;255.192.0.0&quot;))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>Числа в первых строках — это данные условия. Цикл и формулу вокруг них не переписывают.</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>191191255254</strong>.</p>
+<h3>Сколько нулей в маске — столько бит у номера компьютера.</h3>
+<pre><code>mask = &quot;255.255.255.0&quot;  # МЕНЯТЬ
+bits = &quot;&quot;.join(f&quot;{int(part):08b}&quot; for part in mask.split(&quot;.&quot;))
+print(bits.count(&quot;0&quot;))  # нули маски — номер компьютера</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>mask = &quot;255.255.255.0&quot;  # МЕНЯТЬ</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>8</strong>.</p>
+<!-- /python-lesson -->
+</body></html>

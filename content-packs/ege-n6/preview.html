@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Задание 6 ЕГЭ: черепаха</title>
+<style>
+  :root { --ink:#1c1917; --muted:#57534e; --line:#e7e5e4; --paper:#f6f1e8; --yes:#166534; --yes-bg:#f0fdf4; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:Georgia,"Times New Roman",serif; line-height:1.55; }
+  .wrap { max-width:760px; margin:0 auto; padding:36px 18px 80px; }
+  header h1 { font-size:34px; line-height:1.2; margin:0 0 8px; }
+  header .lead, .tasks > .lead, .razbor > .lead { margin:0 0 16px; color:var(--muted); font-family:"Segoe UI",sans-serif; font-size:15px; }
+  .theory { background:#fffdf9; border:1px solid var(--line); border-radius:18px; padding:8px 28px 22px; }
+  .theory h2 { font-size:22px; margin:28px 0 10px; }
+  .theory h3 { font-size:19px; margin:22px 0 8px; }
+  .theory p, .theory li { font-size:18px; }
+  .theory table { border-collapse:collapse; margin:14px 0 18px; font-size:16px; }
+  .theory th, .theory td { border:1px solid #d6d3d1; padding:7px 14px; text-align:center; }
+  .theory th { background:#f5f0e8; }
+  .theory mark { background:#fde68a; padding:0 3px; }
+  .theory code { font-family:Consolas,monospace; background:#f5f0e8; padding:1px 6px; border-radius:4px; }
+  .shot { margin:16px 0; text-align:center; }
+  .shot img { max-width:min(100%, 640px); height:auto; background:#fff; border-radius:12px; border:1px solid var(--line); }
+  .tasks, .razbor { margin-top:36px; }
+  .tasks > h2, .razbor > h2 { font-size:28px; margin:0 0 6px; }
+  .task, .razbor article { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px 18px 14px; margin:0 0 12px; }
+  .task { font-family:"Segoe UI",sans-serif; }
+  .task h3, .razbor h3 { margin:0 0 8px; font-size:18px; }
+  .kicker { margin:0 0 4px; color:var(--muted); font-size:13px; }
+  .opts { margin:0 0 10px; padding-left:1.2em; }
+  .opts li.yes { color:var(--yes); font-weight:650; }
+  .answer { background:var(--yes-bg); color:var(--yes); border-radius:8px; padding:8px 12px; }
+  .razbor ol, .razbor p { font-size:17px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Задание 6 ЕГЭ: черепаха</h1>
+  <p class="lead">Страница для проверки. Сверху теория со схемами, ниже задания. Разбор всех задач — внизу, по шагам.</p>
+</header>
+<section class="theory">
+<h2>Что дают в задании 6</h2>
+<p>Черепаха рисует фигуру командами. Нужно посчитать точки с целыми координатами: строго внутри фигуры или на границе. Это разные вопросы, ответы не совпадают.</p>
+<ul>
+  <li>Старт в точке (0, 0). В начале черепаха смотрит вверх.</li>
+  <li><strong>Вперёд k</strong> — пройти k клеток в ту сторону, куда смотрит.</li>
+  <li><strong>Направо 90</strong> — повернуться по часовой стрелке, не сходя с места.</li>
+  <li><strong>Повтори n [ ... ]</strong> — выполнить команды в скобках n раз.</li>
+</ul>
+
+<h2>Квадрат со стороной 5</h2>
+<p>Команды: <code>Повтори 4 [ Вперёд 5 Направо 90 ]</code>.</p>
+<figure class="shot"><img src="images/01-square-5.png" alt="Квадрат 5 на 5: внутри 16 точек"></figure>
+<p>Сторона 5. Точки строго внутри — это сетка 4 на 4.</p>
+<p>Ответ: <strong>16</strong>.</p>
+<p>На самой линии квадрата точек больше: по каждой стороне 5 шагов, четыре стороны, 4 × 5 = <strong>20</strong>. Углы при таком счёте не дублируются. Внутрь их не включают.</p>
+
+<h2>Прямоугольник 8 на 4</h2>
+<p>Команды: <code>Повтори 2 [ Вперёд 8 Направо 90 Вперёд 4 Направо 90 ]</code>.</p>
+<figure class="shot"><img src="images/02-rect.png" alt="Прямоугольник 8 на 4: внутри 21 точка"></figure>
+<p>Сначала черепаха идёт вверх на 8, потом направо на 4. Внутри по ширине 3 точки, по высоте 7. 3 × 7 = 21.</p>
+<p>Ответ: <strong>21</strong>.</p>
+
+<h2>Не перепутать границу и внутренность</h2>
+<p>Квадрат со стороной 6: <code>Повтори 4 [ Вперёд 6 Направо 90 ]</code>.</p>
+<figure class="shot"><img src="images/03-square-6.png" alt="Квадрат со стороной 6: внутри зелёные точки, на границе синие"></figure>
+<ul>
+  <li>Строго внутри: 5 × 5 = <strong>25</strong>.</li>
+  <li>Только граница: 4 × 6 = <strong>24</strong>.</li>
+  <li>Внутри вместе с границей: 7 × 7 = <strong>49</strong>.</li>
+</ul>
+<p>Если в вопросе сказано «внутри», границу не прибавляют. 25 и 49 — разные ответы.</p>
+
+<h2>Демоверсия 2026</h2>
+<p>Черепаха умеет поднять хвост и пройти без линии, потом опустить хвост и нарисовать вторую фигуру. Спросить могут точки внутри объединения, включая границу. Каждую фигуру считают отдельно, общую точку берут один раз. Формулы одного прямоугольника остаются теми же.</p>
+
+<h2>Как считать без рисунка</h2>
+<p>Для прямоугольника со сторонами a и b, стороны которого идут по клеткам:</p>
+<ul>
+  <li>строго внутри: (a − 1) × (b − 1);</li>
+  <li>на границе: 2 × (a + b);</li>
+  <li>внутри и на границе: (a + 1) × (b + 1).</li>
+</ul>
+<p>Для квадрата b = a. Сторона 5: внутри 4 × 4 = 16. Это та же формула.</p>
+</section>
+<section class='tasks'><h2>Задания</h2><p class='lead'>Зелёным отмечен верный ответ. Короткого пояснения под ответом нет: разбор внизу.</p><article class="task"><p class="kicker">1. Несколько верных</p><h3>Команды черепахи</h3><p>Что верно про команды?</p><ul class='opts'><li class='yes'>Старт в точке (0, 0), черепаха смотрит вверх</li><li class='yes'>Вперёд 5 проходит 5 клеток</li><li class='yes'>Направо 90 только поворачивает</li><li>Направо 90 проходит 90 клеток вправо</li></ul><div class='answer'>Ответ: Старт в точке (0, 0), черепаха смотрит вверх; Вперёд 5 проходит 5 клеток; Направо 90 только поворачивает</div></article><article class="task"><p class="kicker">2. Несколько верных</p><h3>Внутри и граница</h3><p>Квадрат со стороной 5. Что верно?</p><ul class='opts'><li class='yes'>Вопрос «внутри» и вопрос «на границе» дают разные ответы</li><li class='yes'>Строго внутри 16 точек</li><li class='yes'>На границе 20 точек</li><li>Строго внутри 25 точек</li></ul><div class='answer'>Ответ: Вопрос «внутри» и вопрос «на границе» дают разные ответы; Строго внутри 16 точек; На границе 20 точек</div></article><article class="task"><p class="kicker">3. Несколько верных</p><h3>Формулы</h3><p>Прямоугольник со сторонами a и b идёт по клеткам. Что верно?</p><ul class='opts'><li class='yes'>Строго внутри: (a − 1) × (b − 1)</li><li class='yes'>На границе: 2 × (a + b)</li><li class='yes'>Внутри вместе с границей: (a + 1) × (b + 1)</li><li>Строго внутри всегда a × b</li></ul><div class='answer'>Ответ: Строго внутри: (a − 1) × (b − 1); На границе: 2 × (a + b); Внутри вместе с границей: (a + 1) × (b + 1)</div></article><article class="task"><p class="kicker">4. Несколько верных</p><h3>Прямоугольник 8 на 4</h3><p>Команды: повторить 2 раза [вперёд 8, направо 90, вперёд 4, направо 90]. Что верно?</p><ul class='opts'><li class='yes'>Сначала черепаха идёт вверх на 8</li><li class='yes'>Потом она идёт вправо на 4</li><li class='yes'>Строго внутри 21 точка</li><li>Строго внутри 32 точки</li></ul><div class='answer'>Ответ: Сначала черепаха идёт вверх на 8; Потом она идёт вправо на 4; Строго внутри 21 точка</div></article><article class="task"><p class="kicker">5. Несколько верных</p><h3>Квадрат со стороной 6</h3><p>Квадрат, сторона 6. Что верно?</p><ul class='opts'><li class='yes'>Строго внутри 25 точек</li><li class='yes'>На границе 24 точки</li><li class='yes'>Внутри вместе с границей 49 точек</li><li>Строго внутри 36 точек</li></ul><div class='answer'>Ответ: Строго внутри 25 точек; На границе 24 точки; Внутри вместе с границей 49 точек</div></article><article class="task"><p class="kicker">6. Один верный</p><h3>Внутри квадрата 5</h3><p>Сколько целых точек строго внутри квадрата со стороной 5?</p><ul class='opts'><li>15</li><li class='yes'>16</li><li>20</li><li>25</li></ul><div class='answer'>Ответ: 16</div></article><article class="task"><p class="kicker">7. Один верный</p><h3>Граница квадрата 5</h3><p>Сколько целых точек на границе квадрата со стороной 5?</p><ul class='opts'><li>16</li><li class='yes'>20</li><li>24</li><li>25</li></ul><div class='answer'>Ответ: 20</div></article><article class="task"><p class="kicker">8. Один верный</p><h3>Внутри прямоугольника</h3><p>Прямоугольник: вверх 8, вправо 4. Сколько точек строго внутри?</p><ul class='opts'><li>12</li><li>20</li><li class='yes'>21</li><li>32</li></ul><div class='answer'>Ответ: 21</div></article><article class="task"><p class="kicker">9. Один верный</p><h3>Внутри квадрата 6</h3><p>Сколько точек строго внутри квадрата со стороной 6?</p><ul class='opts'><li>16</li><li>24</li><li class='yes'>25</li><li>36</li></ul><div class='answer'>Ответ: 25</div></article><article class="task"><p class="kicker">10. Один верный</p><h3>Квадрат 6 целиком</h3><p>Сколько целых точек у квадрата со стороной 6, если считать и внутренность, и границу?</p><ul class='opts'><li>24</li><li>25</li><li>36</li><li class='yes'>49</li></ul><div class='answer'>Ответ: 49</div></article><article class="task"><p class="kicker">11. Вписать число</p><h3>Ответ: внутри квадрата 5</h3><p>Квадрат, сторона 5. Сколько целых точек строго внутри? Только число.</p><div class='answer'>Ответ: 16</div></article><article class="task"><p class="kicker">12. Вписать число</p><h3>Ответ: граница квадрата 5</h3><p>Квадрат, сторона 5. Сколько целых точек на границе? Только число.</p><div class='answer'>Ответ: 20</div></article><article class="task"><p class="kicker">13. Вписать число</p><h3>Ответ: прямоугольник</h3><p>Вверх 8, вправо 4, и так же обратно. Сколько точек строго внутри? Только число.</p><div class='answer'>Ответ: 21</div></article><article class="task"><p class="kicker">14. Вписать число</p><h3>Ответ: внутри квадрата 6</h3><p>Квадрат, сторона 6. Сколько точек строго внутри? Только число.</p><div class='answer'>Ответ: 25</div></article><article class="task"><p class="kicker">15. Вписать число</p><h3>Ответ: граница квадрата 6</h3><p>Квадрат, сторона 6. Сколько точек на границе? Только число.</p><div class='answer'>Ответ: 24</div></article></section><section class='razbor'><h2>Разбор заданий</h2><p class='lead'>Так разбор выглядит после верного ответа или трёх ошибок.</p><article><h3>1. Команды черепахи</h3><ol><li><strong>Верно.</strong> Старт в точке (0, 0), черепаха смотрит вверх — Так задано в этой теории.</li><li><strong>Верно.</strong> Вперёд 5 проходит 5 клеток — Число после «вперёд» — длина шага.</li><li><strong>Верно.</strong> Направо 90 только поворачивает — С места черепаха при этом не сходит.</li><li><strong>Неверно.</strong> Направо 90 проходит 90 клеток вправо — 90 — это угол поворота, не длина.</li></ol><p>Ответ: <strong>Старт в точке (0, 0), черепаха смотрит вверх; Вперёд 5 проходит 5 клеток; Направо 90 только поворачивает</strong>.</p></article><article><h3>2. Внутри и граница</h3><ol><li><strong>Верно.</strong> Вопрос «внутри» и вопрос «на границе» дают разные ответы — Их нельзя подменять.</li><li><strong>Верно.</strong> Строго внутри 16 точек — Сетка 4 на 4.</li><li><strong>Верно.</strong> На границе 20 точек — 4 стороны по 5 точек, углы не дублируются.</li><li><strong>Неверно.</strong> Строго внутри 25 точек — 25 — это внутренность квадрата со стороной 6.</li></ol><p>Ответ: <strong>Вопрос «внутри» и вопрос «на границе» дают разные ответы; Строго внутри 16 точек; На границе 20 точек</strong>.</p></article><article><h3>3. Формулы</h3><ol><li><strong>Верно.</strong> Строго внутри: (a − 1) × (b − 1) — По каждой стороне отступаем на одну точку.</li><li><strong>Верно.</strong> На границе: 2 × (a + b) — Для квадрата 5 это 20.</li><li><strong>Верно.</strong> Внутри вместе с границей: (a + 1) × (b + 1) — Для квадрата 6 это 49.</li><li><strong>Неверно.</strong> Строго внутри всегда a × b — a × b считает клетки, не внутренние точки.</li></ol><p>Ответ: <strong>Строго внутри: (a − 1) × (b − 1); На границе: 2 × (a + b); Внутри вместе с границей: (a + 1) × (b + 1)</strong>.</p></article><article><h3>4. Прямоугольник 8 на 4</h3><ol><li><strong>Верно.</strong> Сначала черепаха идёт вверх на 8 — В начале она смотрит вверх.</li><li><strong>Верно.</strong> Потом она идёт вправо на 4 — После поворота направо.</li><li><strong>Верно.</strong> Строго внутри 21 точка — 3 по ширине и 7 по высоте.</li><li><strong>Неверно.</strong> Строго внутри 32 точки — 32 было бы 8 × 4, это площадь в клетках.</li></ol><p>Ответ: <strong>Сначала черепаха идёт вверх на 8; Потом она идёт вправо на 4; Строго внутри 21 точка</strong>.</p></article><article><h3>5. Квадрат со стороной 6</h3><ol><li><strong>Верно.</strong> Строго внутри 25 точек — 5 × 5.</li><li><strong>Верно.</strong> На границе 24 точки — 4 × 6.</li><li><strong>Верно.</strong> Внутри вместе с границей 49 точек — 7 × 7.</li><li><strong>Неверно.</strong> Строго внутри 36 точек — 36 — это все точки квадрата со стороной 5, включая границу.</li></ol><p>Ответ: <strong>Строго внутри 25 точек; На границе 24 точки; Внутри вместе с границей 49 точек</strong>.</p></article><article><h3>6. Внутри квадрата 5</h3><ol><li>Внутри сетка 4 на 4.</li><li>4 × 4 = 16.</li><li>20 — это граница, 25 — внутренность стороны 6.</li></ol><p>Ответ: <strong>16</strong>.</p></article><article><h3>7. Граница квадрата 5</h3><ol><li>Формула границы: 2 × (5 + 5) = 20.</li><li>Точки внутри сюда не входят.</li></ol><p>Ответ: <strong>20</strong>.</p></article><article><h3>8. Внутри прямоугольника</h3><ol><li>Ширина 4, высота 8.</li><li>Внутри (4 − 1) × (8 − 1) = 3 × 7.</li><li>3 × 7 = 21.</li></ol><p>Ответ: <strong>21</strong>.</p></article><article><h3>9. Внутри квадрата 6</h3><ol><li>(6 − 1) × (6 − 1) = 5 × 5.</li><li>5 × 5 = 25.</li><li>24 — граница, 36 сюда не относится.</li></ol><p>Ответ: <strong>25</strong>.</p></article><article><h3>10. Квадрат 6 целиком</h3><ol><li>Точек по стороне вместе с концами: 7.</li><li>7 × 7 = 49.</li><li>25 — только внутри, 24 — только граница.</li></ol><p>Ответ: <strong>49</strong>.</p></article><article><h3>11. Ответ: внутри квадрата 5</h3><ol><li>По формуле (5 − 1) × (5 − 1).</li><li>4 × 4 = 16.</li></ol><p>Ответ: <strong>16</strong>.</p></article><article><h3>12. Ответ: граница квадрата 5</h3><ol><li>2 × (5 + 5) = 20.</li><li>Углы считаются один раз.</li></ol><p>Ответ: <strong>20</strong>.</p></article><article><h3>13. Ответ: прямоугольник</h3><ol><li>Ширина 4, высота 8.</li><li>(4 − 1) × (8 − 1) = 21.</li></ol><p>Ответ: <strong>21</strong>.</p></article><article><h3>14. Ответ: внутри квадрата 6</h3><ol><li>(6 − 1) × (6 − 1) = 25.</li></ol><p>Ответ: <strong>25</strong>.</p></article><article><h3>15. Ответ: граница квадрата 6</h3><ol><li>2 × (6 + 6) = 24.</li><li>Внутренние 25 сюда не входят.</li></ol><p>Ответ: <strong>24</strong>.</p></article></section></div><!-- python-lesson -->
+<h2>Черепаха: рисунок и счёт точек</h2><p>Ниже два слоя. Первый — тот код, который копируют в среду с черепахой: окно, масштаб, команды и сетка точек. Второй — подсчёт без окна. На экзамене фигура чаще прямоугольник по клеткам, и число можно напечатать формулой. Формулу сверяют с рисунком на маленьких сторонах.</p><ul><li>строго внутри: (a − 1) × (b − 1);</li><li>только граница: 2 × (a + b);</li><li>внутри вместе с границей: (a + 1) × (b + 1).</li></ul><p>Код рисунка для прямоугольника 8 на 4. Его не запускают в этой проверке урока: окно может не открыться. Счётчики ниже запускаются и печатают ответы задач.</p><pre><code>from turtle import *
+
+tracer(0)
+left(90)
+screensize(2000, 3000)  # размер окна
+k = 22  # масштаб: чем больше k, тем крупнее рисунок
+
+for i in range(2):
+    forward(8 * k)  # МЕНЯТЬ: первая сторона, здесь высота 8
+    right(90)
+    forward(4 * k)  # МЕНЯТЬ: вторая сторона, здесь ширина 4
+    right(90)
+
+up()
+for x in range(-5, 15):  # ширина сетки: откуда и докуда ставить точки
+    for y in range(-5, 20):  # высота сетки
+        goto(x * k, y * k)
+        dot(3, &quot;red&quot;)
+update()
+done()
+</code></pre><p><strong>Что менять в рисунке.</strong> Числа 8 и 4 — стороны из условия. <code>k = 22</code> — масштаб, на ответ не влияет, только на размер картинки. Границы циклов <code>x</code> и <code>y</code> — ширина и высота сетки: их расширяют, если фигура уехала из кадра. <code>screensize</code> — размер окна.</p>
+<h3>Счётчики к задачам урока</h3><p>Каждая программа печатает одно число. Оно совпадает с ответом в разборе выше.</p>
+<h3>Черепаха, прямоугольник по клеткам: точки строго внутри.</h3>
+<pre><code>def inside(a, b):
+    # Строго внутри прямоугольника, стороны по клеткам.
+    # Точки на линии не входят.
+    return (a - 1) * (b - 1)
+
+a = 5  # МЕНЯТЬ: первая сторона
+b = 5  # МЕНЯТЬ: вторая сторона. У квадрата a и b равны
+print(inside(a, b))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>a = 5  # МЕНЯТЬ: первая сторона</li><li>b = 5  # МЕНЯТЬ: вторая сторона. У квадрата a и b равны</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>16</strong>.</p>
+<h3>Черепаха: точки только на границе.</h3>
+<pre><code>def border(a, b):
+    # Только линия. Углы считаются один раз.
+    return 2 * (a + b)
+
+a = 5  # МЕНЯТЬ: стороны фигуры
+b = 5
+print(border(a, b))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>a = 5  # МЕНЯТЬ: стороны фигуры</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>20</strong>.</p>
+<h3>Черепаха: проследить команды и посчитать внутренние точки.</h3>
+<pre><code>def trace(commands):
+    # Старт (0, 0), смотрит вверх. Команды — пары (&quot;forward&quot;, n) или (&quot;right&quot;, 90).
+    x = y = 0
+    dx, dy = 0, 1
+    points = [(x, y)]
+    for kind, arg in commands:
+        if kind == &quot;forward&quot;:
+            x += dx * arg
+            y += dy * arg
+            points.append((x, y))
+        elif kind == &quot;right&quot;:
+            turns = (arg // 90) % 4
+            for _ in range(turns):
+                dx, dy = dy, -dx  # поворот по часовой
+    return points
+
+def strictly_inside(width, height):
+    # Для прямоугольника от (0,0) до (width, height).
+    count = 0
+    for x in range(width + 1):
+        for y in range(height + 1):
+            if 0 &lt; x &lt; width and 0 &lt; y &lt; height:
+                count += 1
+    return count
+
+# МЕНЯТЬ: числа после forward — это длины из условия.
+path = [
+    (&quot;forward&quot;, 8),
+    (&quot;right&quot;, 90),
+    (&quot;forward&quot;, 4),
+    (&quot;right&quot;, 90),
+    (&quot;forward&quot;, 8),
+    (&quot;right&quot;, 90),
+    (&quot;forward&quot;, 4),
+]
+corners = trace(path)
+width = max(x for x, y in corners) - min(x for x, y in corners)
+height = max(y for x, y in corners) - min(y for x, y in corners)
+print(strictly_inside(width, height))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li># МЕНЯТЬ: числа после forward — это длины из условия.</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>21</strong>.</p>
+<h3>Черепаха, прямоугольник по клеткам: точки строго внутри.</h3>
+<pre><code>def inside(a, b):
+    return (a - 1) * (b - 1)
+
+a = 6  # МЕНЯТЬ: сторона
+b = 6
+print(inside(a, b))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>a = 6  # МЕНЯТЬ: сторона</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>25</strong>.</p>
+<h3>Черепаха: точки только на границе.</h3>
+<pre><code>def border(a, b):
+    return 2 * (a + b)
+
+print(border(6, 6))  # МЕНЯТЬ: обе шестёрки — стороны квадрата</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>print(border(6, 6))  # МЕНЯТЬ: обе шестёрки — стороны квадрата</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>24</strong>.</p>
+<h3>Черепаха: внутренность вместе с границей.</h3>
+<pre><code>def with_border(a, b):
+    # Внутри и граница вместе: по стороне a точек на одну больше.
+    return (a + 1) * (b + 1)
+
+print(with_border(6, 6))  # МЕНЯТЬ: стороны</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>print(with_border(6, 6))  # МЕНЯТЬ: стороны</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>49</strong>.</p>
+<!-- /python-lesson -->
+</body></html>

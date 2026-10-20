@@ -1,0 +1,319 @@
+{
+  "meta": {
+    "topic": "Задание 2 ЕГЭ: Логика",
+    "images_dir": "images/",
+    "scheme": {
+      "theory": 6,
+      "checkbox": 0,
+      "radio": 0,
+      "short_answer": 21,
+      "total": 27
+    }
+  },
+  "lessons": [
+    {
+      "type": "theory",
+      "title": "2.1 Теория. Сколько единиц",
+      "content": "<h2>Что дают в задании 2</h2>\n<p>Дают логическое выражение. Буквы A, B и C принимают 0 или 1. Иногда на экзамене те же буквы называют x, y и z: считать нужно так же.</p>\n<p>Три действия и одна стрелка.</p>\n<ul><li><strong>И</strong>, знак ∧. Истина, только если оба условия да.</li><li><strong>ИЛИ</strong>, знак ∨. Истина, если хотя бы одно да.</li><li><strong>НЕ</strong>, знак ¬. Меняет 0 и 1 местами.</li><li><strong>Если A, то B</strong>, знак →. Ложь только в одном случае: A да, а B нет.</li></ul>\n<figure class=\"shot\"><img src=\"images/n2-and.svg\" alt=\"Таблица для И\"></figure>\n<figure class=\"shot\"><img src=\"images/n2-or.svg\" alt=\"Таблица для ИЛИ\"></figure>\n<figure class=\"shot\"><img src=\"images/n2-not.svg\" alt=\"Таблица для НЕ\"></figure>\n<figure class=\"shot\"><img src=\"images/n2-impl.svg\" alt=\"Таблица для стрелки, ложная строка выделена\"></figure>\n<p>Для двух букв строк четыре. Для трёх букв строк восемь: каждый новый разряд удваивает таблицу. Скобки считают первыми, потом НЕ, потом И, потом ИЛИ. Стрелку удобно сразу заменить: A → B это то же самое, что ¬A ∨ B.</p>\n<h2>Приём 1. Сколько единиц</h2>\n<p>Строят все восемь строк и считают, где результат равен 1. На картинке столбец F пустой: его заполняют сами.</p>\n<p><strong>Пример.</strong> (A ∨ B) ∧ ¬C.</p>\n<figure class=\"shot\"><img src=\"images/n2-demo-a.svg\" alt=\"Пустая таблица примера\"></figure>\n<table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>0</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>3</strong>.</p>\n<p>Программа делает те же восемь строк. Кнопка «В интерпретатор» откроет её.</p>\n<pre><code>def F(A, B, C):\n    return 1 if ((A or B) and  not C) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "comment": "2.1 Теория. Сколько единиц",
+      "images": [
+        "n2-and.svg",
+        "n2-or.svg",
+        "n2-not.svg",
+        "n2-impl.svg",
+        "n2-demo-a.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.1 Вопрос 1",
+      "question_text": "Таблица всех комбинаций стоит над вопросом, столбец F пустой. Выражение: ¬A ∧ (B ∨ C). Сколько строк, где F равно 1? Только число.",
+      "correct_answer": "3",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: ¬A ∧ (B ∨ C).</p><table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>0</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>3</strong>.</p><p>Та же программа печатает ответ. Её можно открыть в интерпретаторе.</p><pre><code>def F(A, B, C):\n    return 1 if ( not A and (B or C)) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "images": [
+        "n2-a-2.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.1 Вопрос 2",
+      "question_text": "Таблица всех комбинаций стоит над вопросом, столбец F пустой. Выражение: (A ∧ ¬B) ∨ C. Сколько строк, где F равно 1? Только число.",
+      "correct_answer": "5",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: (A ∧ ¬B) ∨ C.</p><table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>5</strong>.</p><p>Та же программа печатает ответ. Её можно открыть в интерпретаторе.</p><pre><code>def F(A, B, C):\n    return 1 if ((A and  not B) or C) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "images": [
+        "n2-a-3.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.1 Вопрос 3",
+      "question_text": "Таблица всех комбинаций стоит над вопросом, столбец F пустой. Выражение: ¬(A ∧ B) ∧ C. Сколько строк, где F равно 1? Только число.",
+      "correct_answer": "3",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: ¬(A ∧ B) ∧ C.</p><table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>0</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>3</strong>.</p><p>Та же программа печатает ответ. Её можно открыть в интерпретаторе.</p><pre><code>def F(A, B, C):\n    return 1 if ( not (A and B) and C) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "images": [
+        "n2-a-4.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.1 Вопрос 4",
+      "question_text": "Таблица всех комбинаций стоит над вопросом, столбец F пустой. Выражение: (A ∨ C) ∧ (¬B ∨ C). Сколько строк, где F равно 1? Только число.",
+      "correct_answer": "5",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: (A ∨ C) ∧ (¬B ∨ C).</p><table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>5</strong>.</p><p>Та же программа печатает ответ. Её можно открыть в интерпретаторе.</p><pre><code>def F(A, B, C):\n    return 1 if ((A or C) and ( not B or C)) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "images": [
+        "n2-a-5.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.1 Вопрос 5",
+      "question_text": "Таблица всех комбинаций стоит над вопросом, столбец F пустой. Выражение: (¬A ∨ B) ∧ ¬C. Сколько строк, где F равно 1? Только число.",
+      "correct_answer": "3",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: (¬A ∨ B) ∧ ¬C.</p><table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>0</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>3</strong>.</p><p>Та же программа печатает ответ. Её можно открыть в интерпретаторе.</p><pre><code>def F(A, B, C):\n    return 1 if (( not A or B) and  not C) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "images": [
+        "n2-a-6.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.1 Вопрос 6",
+      "question_text": "Таблица всех комбинаций стоит над вопросом, столбец F пустой. Выражение: A ∧ (B ∨ ¬C). Сколько строк, где F равно 1? Только число.",
+      "correct_answer": "3",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: A ∧ (B ∨ ¬C).</p><table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>3</strong>.</p><p>Та же программа печатает ответ. Её можно открыть в интерпретаторе.</p><pre><code>def F(A, B, C):\n    return 1 if (A and (B or  not C)) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "images": [
+        "n2-a-7.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.1 Вопрос 7",
+      "question_text": "Таблица всех комбинаций стоит над вопросом, столбец F пустой. Выражение: ¬A ∨ ¬B ∨ C. Сколько строк, где F равно 1? Только число.",
+      "correct_answer": "7",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: ¬A ∨ ¬B ∨ C.</p><table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>7</strong>.</p><p>Та же программа печатает ответ. Её можно открыть в интерпретаторе.</p><pre><code>def F(A, B, C):\n    return 1 if ( not A or  not B or C) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "images": [
+        "n2-a-8.svg"
+      ]
+    },
+    {
+      "type": "theory",
+      "title": "2.1 Код",
+      "content": "<h2>Программа</h2><p>Нажмите «В интерпретатор» под кодом. Программу можно менять и запускать заново.</p><pre><code>def F(A, B, C):\n    return 1 if ((A or B) and  not C) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "comment": "2.1 Код",
+      "images": []
+    },
+    {
+      "type": "theory",
+      "title": "2.2 Теория. Стрелка «если, то»",
+      "content": "<h2>Приём 2. Есть стрелка</h2>\n<p>Сначала вспоминают единственную ложную строку стрелки: 1 и 0. Потом считают её вместе с остальным выражением, снова по восьми строкам.</p>\n<p><strong>Пример.</strong> (A → B) ∧ C.</p>\n<figure class=\"shot\"><img src=\"images/n2-demo-b.svg\" alt=\"Пустая таблица примера со стрелкой\"></figure>\n<table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>3</strong>.</p>\n<pre><code>def F(A, B, C):\n    return 1 if ((((not A) or B)) and C) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "comment": "2.2 Теория. Стрелка «если, то»",
+      "images": [
+        "n2-demo-b.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.2 Вопрос 1",
+      "question_text": "Таблица всех комбинаций стоит над вопросом, столбец F пустой. Выражение: A → (B ∧ C). Сколько строк, где F равно 1? Только число.",
+      "correct_answer": "5",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: A → (B ∧ C).</p><table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>5</strong>.</p><p>Та же программа печатает ответ. Её можно открыть в интерпретаторе.</p><pre><code>def F(A, B, C):\n    return 1 if (((not A) or (B and C))) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "images": [
+        "n2-b-2.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.2 Вопрос 2",
+      "question_text": "Таблица всех комбинаций стоит над вопросом, столбец F пустой. Выражение: ¬(A → B). Сколько строк, где F равно 1? Только число.",
+      "correct_answer": "2",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: ¬(A → B).</p><table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>0</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>2</strong>.</p><p>Та же программа печатает ответ. Её можно открыть в интерпретаторе.</p><pre><code>def F(A, B, C):\n    return 1 if ( not (((not A) or B))) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "images": [
+        "n2-b-3.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.2 Вопрос 3",
+      "question_text": "Таблица всех комбинаций стоит над вопросом, столбец F пустой. Выражение: (A → B) ∨ ¬C. Сколько строк, где F равно 1? Только число.",
+      "correct_answer": "7",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: (A → B) ∨ ¬C.</p><table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>7</strong>.</p><p>Та же программа печатает ответ. Её можно открыть в интерпретаторе.</p><pre><code>def F(A, B, C):\n    return 1 if ((((not A) or B)) or  not C) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "images": [
+        "n2-b-4.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.2 Вопрос 4",
+      "question_text": "Таблица всех комбинаций стоит над вопросом, столбец F пустой. Выражение: (A → ¬B) ∧ (B → C). Сколько строк, где F равно 1? Только число.",
+      "correct_answer": "5",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: (A → ¬B) ∧ (B → C).</p><table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>0</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>5</strong>.</p><p>Та же программа печатает ответ. Её можно открыть в интерпретаторе.</p><pre><code>def F(A, B, C):\n    return 1 if ((((not A) or  not B)) and (((not B) or C))) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "images": [
+        "n2-b-5.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.2 Вопрос 5",
+      "question_text": "Таблица всех комбинаций стоит над вопросом, столбец F пустой. Выражение: ¬A → (B ∨ C). Сколько строк, где F равно 1? Только число.",
+      "correct_answer": "7",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: ¬A → (B ∨ C).</p><table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>7</strong>.</p><p>Та же программа печатает ответ. Её можно открыть в интерпретаторе.</p><pre><code>def F(A, B, C):\n    return 1 if (((not  not A) or (B or C))) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "images": [
+        "n2-b-6.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.2 Вопрос 6",
+      "question_text": "Таблица всех комбинаций стоит над вопросом, столбец F пустой. Выражение: (A ∧ B) → C. Сколько строк, где F равно 1? Только число.",
+      "correct_answer": "7",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: (A ∧ B) → C.</p><table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>1</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>7</strong>.</p><p>Та же программа печатает ответ. Её можно открыть в интерпретаторе.</p><pre><code>def F(A, B, C):\n    return 1 if (((not (A and B)) or C)) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "images": [
+        "n2-b-7.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.2 Вопрос 7",
+      "question_text": "Таблица всех комбинаций стоит над вопросом, столбец F пустой. Выражение: (A → B) ∧ (C → A). Сколько строк, где F равно 1? Только число.",
+      "correct_answer": "4",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: (A → B) ∧ (C → A).</p><table><thead><tr><th>A</th><th>B</th><th>C</th><th>F</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>0</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>0</td><td>1</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>0</td><td>0</td><td><strong>0</strong></td></tr><tr><td>1</td><td>0</td><td>1</td><td><strong>0</strong></td></tr><tr><td>1</td><td>1</td><td>0</td><td><strong>1</strong></td></tr><tr><td>1</td><td>1</td><td>1</td><td><strong>1</strong></td></tr></tbody></table><p>Единиц в столбце F: <strong>4</strong>.</p><p>Та же программа печатает ответ. Её можно открыть в интерпретаторе.</p><pre><code>def F(A, B, C):\n    return 1 if ((((not A) or B)) and (((not C) or A))) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "images": [
+        "n2-b-8.svg"
+      ]
+    },
+    {
+      "type": "theory",
+      "title": "2.2 Код",
+      "content": "<h2>Программа</h2><p>Нажмите «В интерпретатор» под кодом. Программу можно менять и запускать заново.</p><pre><code>def F(A, B, C):\n    return 1 if ((((not A) or B)) and C) else 0\n\ncount = 0\nfor A in (0, 1):\n    for B in (0, 1):\n        for C in (0, 1):\n            if F(A, B, C):\n                count += 1\nprint(count)</code></pre>",
+      "comment": "2.2 Код",
+      "images": []
+    },
+    {
+      "type": "theory",
+      "title": "2.3 Теория. Буквы столбцов",
+      "content": "<h2>Приём 3. Буквы столбцов</h2>\n<p>Дают не всю таблицу, а несколько строк. Столбцы подписаны номерами, а не буквами. Нужно понять, где A, где B и где C. В ответе три буквы подряд, слева направо. Подходит только тот порядок, при котором выражение даёт написанную F в каждой строке фрагмента.</p>\n<p><strong>Пример.</strong> (A ∧ ¬B) ∨ C. Столбцы на рисунке.</p>\n<figure class=\"shot\"><img src=\"images/n2-demo-c.svg\" alt=\"Фрагмент с неизвестными буквами\"></figure>\n<ol><li>Подставляем буквы A, C, B в столбцы 1, 2 и 3.</li><li>В каждой строке фрагмента выражение даёт ту же F, что написана справа.</li><li>Порядок abc не подходит: в строке 0 0 1 получается 1, а в фрагменте стоит 0.</li><li>Подходит один порядок. Ответ: acb.</li></ol>\n<p>Ответ: <strong>acb</strong>.</p>\n<pre><code>import itertools\n\ndef F(A, B, C):\n    return 1 if ((A and  not B) or C) else 0\n\nfragment = [\n    ((0, 0, 0), 0),\n    ((0, 0, 1), 0),\n    ((0, 1, 1), 1)\n]\ngood = []\nfor perm in itertools.permutations(\"ABC\"):\n    ok = True\n    for shown, value in fragment:\n        env = dict(zip(perm, shown))\n        if F(env[\"A\"], env[\"B\"], env[\"C\"]) != value:\n            ok = False\n            break\n    if ok:\n        good.append(\"\".join(perm).lower())\nprint(good[0])</code></pre>\n<p>Дальше в заданиях картинка над вопросом, разбор открывается после ответа.</p>",
+      "comment": "2.3 Теория. Буквы столбцов",
+      "images": [
+        "n2-demo-c.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.3 Вопрос 1",
+      "question_text": "Над вопросом фрагмент таблицы. Столбцы 1, 2 и 3 — это буквы A, B и C в неизвестном порядке. Выражение: (A ∨ C) ∧ (¬B ∨ C). Запишите три буквы подряд в порядке столбцов, например abc.",
+      "correct_answer": "acb",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: (A ∨ C) ∧ (¬B ∨ C).</p><ol><li>Подставляем буквы A, C, B в столбцы 1, 2 и 3.</li><li>В каждой строке фрагмента выражение даёт ту же F, что написана справа.</li><li>Порядок abc не подходит: в строке 0 0 1 получается 1, а в фрагменте стоит 0.</li><li>Подходит один порядок. Ответ: acb.</li></ol><p>Программа перебирает шесть перестановок и печатает подходящую.</p><pre><code>import itertools\n\ndef F(A, B, C):\n    return 1 if ((A or C) and ( not B or C)) else 0\n\nfragment = [\n    ((0, 0, 0), 0),\n    ((0, 0, 1), 0),\n    ((0, 1, 1), 1)\n]\ngood = []\nfor perm in itertools.permutations(\"ABC\"):\n    ok = True\n    for shown, value in fragment:\n        env = dict(zip(perm, shown))\n        if F(env[\"A\"], env[\"B\"], env[\"C\"]) != value:\n            ok = False\n            break\n    if ok:\n        good.append(\"\".join(perm).lower())\nprint(good[0])</code></pre>",
+      "images": [
+        "n2-c-2.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.3 Вопрос 2",
+      "question_text": "Над вопросом фрагмент таблицы. Столбцы 1, 2 и 3 — это буквы A, B и C в неизвестном порядке. Выражение: (¬A ∨ B) ∧ ¬C. Запишите три буквы подряд в порядке столбцов, например abc.",
+      "correct_answer": "bac",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: (¬A ∨ B) ∧ ¬C.</p><ol><li>Подставляем буквы B, A, C в столбцы 1, 2 и 3.</li><li>В каждой строке фрагмента выражение даёт ту же F, что написана справа.</li><li>Порядок abc не подходит: в строке 1 0 0 получается 0, а в фрагменте стоит 1.</li><li>Подходит один порядок. Ответ: bac.</li></ol><p>Программа перебирает шесть перестановок и печатает подходящую.</p><pre><code>import itertools\n\ndef F(A, B, C):\n    return 1 if (( not A or B) and  not C) else 0\n\nfragment = [\n    ((0, 0, 0), 1),\n    ((1, 0, 0), 1),\n    ((1, 0, 1), 0)\n]\ngood = []\nfor perm in itertools.permutations(\"ABC\"):\n    ok = True\n    for shown, value in fragment:\n        env = dict(zip(perm, shown))\n        if F(env[\"A\"], env[\"B\"], env[\"C\"]) != value:\n            ok = False\n            break\n    if ok:\n        good.append(\"\".join(perm).lower())\nprint(good[0])</code></pre>",
+      "images": [
+        "n2-c-3.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.3 Вопрос 3",
+      "question_text": "Над вопросом фрагмент таблицы. Столбцы 1, 2 и 3 — это буквы A, B и C в неизвестном порядке. Выражение: A ∧ (B ∨ ¬C). Запишите три буквы подряд в порядке столбцов, например abc.",
+      "correct_answer": "bac",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: A ∧ (B ∨ ¬C).</p><ol><li>Подставляем буквы B, A, C в столбцы 1, 2 и 3.</li><li>В каждой строке фрагмента выражение даёт ту же F, что написана справа.</li><li>Порядок abc не подходит: в строке 1 0 0 получается 1, а в фрагменте стоит 0.</li><li>Подходит один порядок. Ответ: bac.</li></ol><p>Программа перебирает шесть перестановок и печатает подходящую.</p><pre><code>import itertools\n\ndef F(A, B, C):\n    return 1 if (A and (B or  not C)) else 0\n\nfragment = [\n    ((0, 0, 0), 0),\n    ((1, 0, 0), 0),\n    ((1, 1, 0), 1)\n]\ngood = []\nfor perm in itertools.permutations(\"ABC\"):\n    ok = True\n    for shown, value in fragment:\n        env = dict(zip(perm, shown))\n        if F(env[\"A\"], env[\"B\"], env[\"C\"]) != value:\n            ok = False\n            break\n    if ok:\n        good.append(\"\".join(perm).lower())\nprint(good[0])</code></pre>",
+      "images": [
+        "n2-c-4.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.3 Вопрос 4",
+      "question_text": "Над вопросом фрагмент таблицы. Столбцы 1, 2 и 3 — это буквы A, B и C в неизвестном порядке. Выражение: (A → B) ∧ C. Запишите три буквы подряд в порядке столбцов, например abc.",
+      "correct_answer": "bca",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: (A → B) ∧ C.</p><ol><li>Подставляем буквы B, C, A в столбцы 1, 2 и 3.</li><li>В каждой строке фрагмента выражение даёт ту же F, что написана справа.</li><li>Порядок abc не подходит: в строке 0 1 0 получается 0, а в фрагменте стоит 1.</li><li>Подходит один порядок. Ответ: bca.</li></ol><p>Программа перебирает шесть перестановок и печатает подходящую.</p><pre><code>import itertools\n\ndef F(A, B, C):\n    return 1 if ((((not A) or B)) and C) else 0\n\nfragment = [\n    ((0, 0, 0), 0),\n    ((0, 1, 0), 1),\n    ((1, 1, 0), 1)\n]\ngood = []\nfor perm in itertools.permutations(\"ABC\"):\n    ok = True\n    for shown, value in fragment:\n        env = dict(zip(perm, shown))\n        if F(env[\"A\"], env[\"B\"], env[\"C\"]) != value:\n            ok = False\n            break\n    if ok:\n        good.append(\"\".join(perm).lower())\nprint(good[0])</code></pre>",
+      "images": [
+        "n2-c-5.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.3 Вопрос 5",
+      "question_text": "Над вопросом фрагмент таблицы. Столбцы 1, 2 и 3 — это буквы A, B и C в неизвестном порядке. Выражение: ¬(A → B). Запишите три буквы подряд в порядке столбцов, например abc.",
+      "correct_answer": "bca",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: ¬(A → B).</p><ol><li>Подставляем буквы B, C, A в столбцы 1, 2 и 3.</li><li>В каждой строке фрагмента выражение даёт ту же F, что написана справа.</li><li>Порядок abc не подходит: в строке 0 1 1 получается 0, а в фрагменте стоит 1.</li><li>Подходит один порядок. Ответ: bca.</li></ol><p>Программа перебирает шесть перестановок и печатает подходящую.</p><pre><code>import itertools\n\ndef F(A, B, C):\n    return 1 if ( not (((not A) or B))) else 0\n\nfragment = [\n    ((0, 0, 0), 0),\n    ((0, 1, 0), 0),\n    ((0, 1, 1), 1)\n]\ngood = []\nfor perm in itertools.permutations(\"ABC\"):\n    ok = True\n    for shown, value in fragment:\n        env = dict(zip(perm, shown))\n        if F(env[\"A\"], env[\"B\"], env[\"C\"]) != value:\n            ok = False\n            break\n    if ok:\n        good.append(\"\".join(perm).lower())\nprint(good[0])</code></pre>",
+      "images": [
+        "n2-c-6.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.3 Вопрос 6",
+      "question_text": "Над вопросом фрагмент таблицы. Столбцы 1, 2 и 3 — это буквы A, B и C в неизвестном порядке. Выражение: (A → ¬B) ∧ (B → C). Запишите три буквы подряд в порядке столбцов, например abc.",
+      "correct_answer": "cab",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: (A → ¬B) ∧ (B → C).</p><ol><li>Подставляем буквы C, A, B в столбцы 1, 2 и 3.</li><li>В каждой строке фрагмента выражение даёт ту же F, что написана справа.</li><li>Порядок abc не подходит: в строке 0 0 1 получается 1, а в фрагменте стоит 0.</li><li>Подходит один порядок. Ответ: cab.</li></ol><p>Программа перебирает шесть перестановок и печатает подходящую.</p><pre><code>import itertools\n\ndef F(A, B, C):\n    return 1 if ((((not A) or  not B)) and (((not B) or C))) else 0\n\nfragment = [\n    ((0, 0, 0), 1),\n    ((0, 0, 1), 0),\n    ((1, 0, 1), 1)\n]\ngood = []\nfor perm in itertools.permutations(\"ABC\"):\n    ok = True\n    for shown, value in fragment:\n        env = dict(zip(perm, shown))\n        if F(env[\"A\"], env[\"B\"], env[\"C\"]) != value:\n            ok = False\n            break\n    if ok:\n        good.append(\"\".join(perm).lower())\nprint(good[0])</code></pre>",
+      "images": [
+        "n2-c-7.svg"
+      ]
+    },
+    {
+      "type": "short_answer",
+      "title": "2.3 Вопрос 7",
+      "question_text": "Над вопросом фрагмент таблицы. Столбцы 1, 2 и 3 — это буквы A, B и C в неизвестном порядке. Выражение: (A → B) ∧ (C → A). Запишите три буквы подряд в порядке столбцов, например abc.",
+      "correct_answer": "cab",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<p>Выражение: (A → B) ∧ (C → A).</p><ol><li>Подставляем буквы C, A, B в столбцы 1, 2 и 3.</li><li>В каждой строке фрагмента выражение даёт ту же F, что написана справа.</li><li>Порядок abc не подходит: в строке 0 0 1 получается 0, а в фрагменте стоит 1.</li><li>Подходит один порядок. Ответ: cab.</li></ol><p>Программа перебирает шесть перестановок и печатает подходящую.</p><pre><code>import itertools\n\ndef F(A, B, C):\n    return 1 if ((((not A) or B)) and (((not C) or A))) else 0\n\nfragment = [\n    ((0, 0, 0), 1),\n    ((0, 0, 1), 1),\n    ((1, 0, 1), 0)\n]\ngood = []\nfor perm in itertools.permutations(\"ABC\"):\n    ok = True\n    for shown, value in fragment:\n        env = dict(zip(perm, shown))\n        if F(env[\"A\"], env[\"B\"], env[\"C\"]) != value:\n            ok = False\n            break\n    if ok:\n        good.append(\"\".join(perm).lower())\nprint(good[0])</code></pre>",
+      "images": [
+        "n2-c-8.svg"
+      ]
+    },
+    {
+      "type": "theory",
+      "title": "2.3 Код",
+      "content": "<h2>Программа</h2><p>Нажмите «В интерпретатор» под кодом. Программу можно менять и запускать заново.</p><pre><code>import itertools\n\ndef F(A, B, C):\n    return 1 if ((A and  not B) or C) else 0\n\nfragment = [\n    ((0, 0, 0), 0),\n    ((0, 0, 1), 0),\n    ((0, 1, 1), 1)\n]\ngood = []\nfor perm in itertools.permutations(\"ABC\"):\n    ok = True\n    for shown, value in fragment:\n        env = dict(zip(perm, shown))\n        if F(env[\"A\"], env[\"B\"], env[\"C\"]) != value:\n            ok = False\n            break\n    if ok:\n        good.append(\"\".join(perm).lower())\nprint(good[0])</code></pre>",
+      "comment": "2.3 Код",
+      "images": []
+    }
+  ]
+}

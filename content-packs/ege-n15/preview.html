@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Задание 15 ЕГЭ: отрезки</title>
+<style>
+  :root { --ink:#1c1917; --muted:#57534e; --line:#e7e5e4; --paper:#f6f1e8; --yes:#166534; --yes-bg:#f0fdf4; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:Georgia,"Times New Roman",serif; line-height:1.55; }
+  .wrap { max-width:760px; margin:0 auto; padding:36px 18px 80px; }
+  header h1 { font-size:34px; line-height:1.2; margin:0 0 8px; }
+  header .lead, .tasks > .lead, .razbor > .lead { margin:0 0 16px; color:var(--muted); font-family:"Segoe UI",sans-serif; font-size:15px; }
+  .theory { background:#fffdf9; border:1px solid var(--line); border-radius:18px; padding:8px 28px 22px; }
+  .theory h2 { font-size:22px; margin:28px 0 10px; }
+  .theory p, .theory li { font-size:18px; }
+  .theory table { border-collapse:collapse; margin:14px 0 18px; font-size:16px; }
+  .theory th, .theory td { border:1px solid #d6d3d1; padding:7px 14px; text-align:center; }
+  .theory th { background:#f5f0e8; }
+  .shot { margin:16px 0; text-align:center; }
+  .shot img { max-width:min(100%, 640px); height:auto; background:#fff; border-radius:12px; border:1px solid var(--line); }
+  .tasks, .razbor { margin-top:36px; }
+  .tasks > h2, .razbor > h2 { font-size:28px; margin:0 0 6px; }
+  .task, .razbor article { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px 18px 14px; margin:0 0 12px; }
+  .task { font-family:"Segoe UI",sans-serif; }
+  .task h3, .razbor h3 { margin:0 0 8px; font-size:18px; }
+  .kicker { margin:0 0 4px; color:var(--muted); font-size:13px; }
+  .opts { margin:0 0 10px; padding-left:1.2em; }
+  .opts li.yes { color:var(--yes); font-weight:650; }
+  .answer { background:var(--yes-bg); color:var(--yes); border-radius:8px; padding:8px 12px; }
+  .razbor ol, .razbor p { font-size:17px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Задание 15 ЕГЭ: отрезки</h1>
+  <p class="lead">Страница для проверки. Сверху теория со схемами, ниже задания. Разбор всех задач — внизу, по шагам.</p>
+</header>
+<section class="theory">
+<h2>Что дают в задании 15</h2>
+<p>На прямой даны отрезки. Нужен отрезок A такой длины, чтобы логическое выражение было истинно при любом x. Обычно просят наименьшую возможную длину.</p>
+<p>Длина отрезка от 6 до 10 равна 10 − 6 = 4. Это не количество целых точек.</p>
+
+<h2>Где выражение ломается</h2>
+<p>Выражение из демоверсии:</p>
+<p><code>(x ∈ P) → (((x ∈ Q) ∧ ¬(x ∈ A)) → ¬(x ∈ P))</code></p>
+<p>Оно ложно только в одном случае: x лежит и в P, и в Q, и при этом не лежит в A. Значит A обязан накрыть всё пересечение P и Q. Короче этого пересечения A быть не может.</p>
+
+<h2>Задача 1. Маленькие отрезки</h2>
+<p>P = [2; 10], Q = [6; 14].</p>
+<figure class="shot"><img src="images/01-line.png" alt="Отрезки P и Q на прямой"></figure>
+<p>Пересечение — от 6 до 10. Наименьшая длина A равна 10 − 6 = <strong>4</strong>.</p>
+<figure class="shot"><img src="images/02-cover.png" alt="Отрезок A закрывает пересечение"></figure>
+
+<h2>Задача 2. Ещё одна пара</h2>
+<p>P = [1; 8], Q = [5; 12]. Пересечение от 5 до 8. Длина 8 − 5 = <strong>3</strong>.</p>
+
+<h2>Задача 3. Числа из демоверсии 2026</h2>
+<p>P = [25; 64], Q = [40; 115]. Пересечение от 40 до 64. Длина 64 − 40 = <strong>24</strong>.</p>
+<p>Проверка: если A короче и не закрывает, например, точку 40, то x = 40 лежит в P и в Q, но не в A. Выражение в этой точке ложно. Значит 24 — действительно минимум.</p>
+
+<h2>Как решать</h2>
+<ol>
+  <li>Найти, при каких x выражение становится ложным, если x не входит в A.</li>
+  <li>Эти x должны попасть в A. Для формулы выше это пересечение P и Q.</li>
+  <li>Длина = правый конец минус левый. Концы включены, но из длины их не вычитают дважды: 64 − 40, а не 64 − 40 + 1.</li>
+</ol>
+</section>
+<section class='tasks'><h2>Задания</h2><p class='lead'>Зелёным отмечен верный ответ. Разбор внизу.</p><article class="task"><p class="kicker">1. Несколько верных</p><h3>Где ложь</h3><p>Для формулы из теории выражение ложно, когда:</p><ul class='opts'><li class='yes'>x лежит в P и в Q</li><li class='yes'>x при этом не лежит в A</li><li class='yes'>A короче пересечения уже не спасает</li><li>A должно закрыть всю прямую</li></ul><div class='answer'>Ответ: x лежит в P и в Q; x при этом не лежит в A; A короче пересечения уже не спасает</div></article><article class="task"><p class="kicker">2. Несколько верных</p><h3>Длина</h3><p>Что верно про длину отрезка?</p><ul class='opts'><li class='yes'>Отрезок от 6 до 10 имеет длину 4</li><li class='yes'>Отрезок от 40 до 64 имеет длину 24</li><li class='yes'>Длина — это не количество целых точек</li><li>Длину считают как 10 − 6 + 1</li></ul><div class='answer'>Ответ: Отрезок от 6 до 10 имеет длину 4; Отрезок от 40 до 64 имеет длину 24; Длина — это не количество целых точек</div></article><article class="task"><p class="kicker">3. Несколько верных</p><h3>Маленькая пара</h3><p>P от 2 до 10, Q от 6 до 14. Что верно?</p><ul class='opts'><li class='yes'>Пересечение от 6 до 10</li><li class='yes'>Наименьшая длина A равна 4</li><li class='yes'>Точка 6 обязана попасть в A</li><li>Пересечение начинается в 2</li></ul><div class='answer'>Ответ: Пересечение от 6 до 10; Наименьшая длина A равна 4; Точка 6 обязана попасть в A</div></article><article class="task"><p class="kicker">4. Несколько верных</p><h3>Вторая пара</h3><p>P от 1 до 8, Q от 5 до 12. Что верно?</p><ul class='opts'><li class='yes'>Пересечение от 5 до 8</li><li class='yes'>Длина равна 3</li><li class='yes'>Точка 12 в пересечение не входит</li><li>Длина равна 12</li></ul><div class='answer'>Ответ: Пересечение от 5 до 8; Длина равна 3; Точка 12 в пересечение не входит</div></article><article class="task"><p class="kicker">5. Несколько верных</p><h3>Демоверсия</h3><p>P от 25 до 64, Q от 40 до 115. Что верно?</p><ul class='opts'><li class='yes'>Пересечение от 40 до 64</li><li class='yes'>Наименьшая длина A равна 24</li><li class='yes'>Если A не содержит 40, выражение уже не всегда истинно</li><li>Длина равна 115 − 25</li></ul><div class='answer'>Ответ: Пересечение от 40 до 64; Наименьшая длина A равна 24; Если A не содержит 40, выражение уже не всегда истинно</div></article><article class="task"><p class="kicker">6. Один верный</p><h3>Длина первой</h3><p>Наименьшая длина A для P[2;10] и Q[6;14]?</p><ul class='opts'><li class='yes'>4</li><li>6</li><li>8</li><li>10</li></ul><div class='answer'>Ответ: 4</div></article><article class="task"><p class="kicker">7. Один верный</p><h3>Длина второй</h3><p>Наименьшая длина A для P[1;8] и Q[5;12]?</p><ul class='opts'><li class='yes'>3</li><li>4</li><li>7</li><li>8</li></ul><div class='answer'>Ответ: 3</div></article><article class="task"><p class="kicker">8. Один верный</p><h3>Длина демо</h3><p>Наименьшая длина A для P[25;64] и Q[40;115]?</p><ul class='opts'><li class='yes'>24</li><li>25</li><li>39</li><li>64</li></ul><div class='answer'>Ответ: 24</div></article><article class="task"><p class="kicker">9. Один верный</p><h3>Левый конец</h3><p>С какого числа начинается пересечение P[25;64] и Q[40;115]?</p><ul class='opts'><li>25</li><li class='yes'>40</li><li>64</li><li>115</li></ul><div class='answer'>Ответ: 40</div></article><article class="task"><p class="kicker">10. Один верный</p><h3>Правый конец</h3><p>Каким числом заканчивается это пересечение?</p><ul class='opts'><li>40</li><li class='yes'>64</li><li>90</li><li>115</li></ul><div class='answer'>Ответ: 64</div></article><article class="task"><p class="kicker">11. Вписать число</p><h3>Ответ: первая длина</h3><p>P от 2 до 10, Q от 6 до 14. Наименьшая длина A? Только число.</p><div class='answer'>Ответ: 4</div></article><article class="task"><p class="kicker">12. Вписать число</p><h3>Ответ: вторая длина</h3><p>P от 1 до 8, Q от 5 до 12. Наименьшая длина A? Только число.</p><div class='answer'>Ответ: 3</div></article><article class="task"><p class="kicker">13. Вписать число</p><h3>Ответ: демо</h3><p>P от 25 до 64, Q от 40 до 115. Наименьшая длина A? Только число.</p><div class='answer'>Ответ: 24</div></article><article class="task"><p class="kicker">14. Вписать число</p><h3>Ответ: левый конец</h3><p>С какого числа начинается пересечение 25…64 и 40…115? Только число.</p><div class='answer'>Ответ: 40</div></article><article class="task"><p class="kicker">15. Вписать число</p><h3>Ответ: правый конец</h3><p>Каким числом оно заканчивается? Только число.</p><div class='answer'>Ответ: 64</div></article></section><section class='razbor'><h2>Разбор заданий</h2><article><h3>1. Где ложь</h3><ol><li><strong>Верно.</strong> x лежит в P и в Q — Это пересечение.</li><li><strong>Верно.</strong> x при этом не лежит в A — Если A его закрывает, ложь пропадает.</li><li><strong>Верно.</strong> A короче пересечения уже не спасает — Какая-то точка останется снаружи.</li><li><strong>Неверно.</strong> A должно закрыть всю прямую — Хватает пересечения.</li></ol><p>Ответ: <strong>x лежит в P и в Q; x при этом не лежит в A; A короче пересечения уже не спасает</strong>.</p></article><article><h3>2. Длина</h3><ol><li><strong>Верно.</strong> Отрезок от 6 до 10 имеет длину 4 — 10 − 6.</li><li><strong>Верно.</strong> Отрезок от 40 до 64 имеет длину 24 — Это числа демоверсии.</li><li><strong>Верно.</strong> Длина — это не количество целых точек — Точек на единицу больше, чем длина.</li><li><strong>Неверно.</strong> Длину считают как 10 − 6 + 1 — Так считают точки, не длину.</li></ol><p>Ответ: <strong>Отрезок от 6 до 10 имеет длину 4; Отрезок от 40 до 64 имеет длину 24; Длина — это не количество целых точек</strong>.</p></article><article><h3>3. Маленькая пара</h3><ol><li><strong>Верно.</strong> Пересечение от 6 до 10 — Общая часть.</li><li><strong>Верно.</strong> Наименьшая длина A равна 4 — 10 − 6.</li><li><strong>Верно.</strong> Точка 6 обязана попасть в A — Иначе выражение в ней ложно.</li><li><strong>Неверно.</strong> Пересечение начинается в 2 — Двойка есть в P, но её нет в Q.</li></ol><p>Ответ: <strong>Пересечение от 6 до 10; Наименьшая длина A равна 4; Точка 6 обязана попасть в A</strong>.</p></article><article><h3>4. Вторая пара</h3><ol><li><strong>Верно.</strong> Пересечение от 5 до 8 — Левый конец берётся больший, правый — меньший.</li><li><strong>Верно.</strong> Длина равна 3 — 8 − 5.</li><li><strong>Верно.</strong> Точка 12 в пересечение не входит — В P её нет.</li><li><strong>Неверно.</strong> Длина равна 12 — 12 — это правый конец Q, не длина.</li></ol><p>Ответ: <strong>Пересечение от 5 до 8; Длина равна 3; Точка 12 в пересечение не входит</strong>.</p></article><article><h3>5. Демоверсия</h3><ol><li><strong>Верно.</strong> Пересечение от 40 до 64 — 40 больше 25, 64 меньше 115.</li><li><strong>Верно.</strong> Наименьшая длина A равна 24 — 64 − 40.</li><li><strong>Верно.</strong> Если A не содержит 40, выражение уже не всегда истинно — 40 лежит в обоих отрезках.</li><li><strong>Неверно.</strong> Длина равна 115 − 25 — Это не пересечение.</li></ol><p>Ответ: <strong>Пересечение от 40 до 64; Наименьшая длина A равна 24; Если A не содержит 40, выражение уже не всегда истинно</strong>.</p></article><article><h3>6. Длина первой</h3><ol><li>Пересечение от 6 до 10.</li><li>10 − 6 = 4.</li></ol><p>Ответ: <strong>4</strong>.</p></article><article><h3>7. Длина второй</h3><ol><li>Пересечение от 5 до 8.</li><li>8 − 5 = 3.</li></ol><p>Ответ: <strong>3</strong>.</p></article><article><h3>8. Длина демо</h3><ol><li>Пересечение от 40 до 64.</li><li>64 − 40 = 24.</li></ol><p>Ответ: <strong>24</strong>.</p></article><article><h3>9. Левый конец</h3><ol><li>Берут более правый из левых концов.</li><li>40 правее 25.</li></ol><p>Ответ: <strong>40</strong>.</p></article><article><h3>10. Правый конец</h3><ol><li>Берут более левый из правых концов.</li><li>64 левее 115.</li></ol><p>Ответ: <strong>64</strong>.</p></article><article><h3>11. Ответ: первая длина</h3><ol><li>10 − 6 = 4.</li></ol><p>Ответ: <strong>4</strong>.</p></article><article><h3>12. Ответ: вторая длина</h3><ol><li>8 − 5 = 3.</li></ol><p>Ответ: <strong>3</strong>.</p></article><article><h3>13. Ответ: демо</h3><ol><li>64 − 40 = 24.</li></ol><p>Ответ: <strong>24</strong>.</p></article><article><h3>14. Ответ: левый конец</h3><ol><li>40 правее 25.</li></ol><p>Ответ: <strong>40</strong>.</p></article><article><h3>15. Ответ: правый конец</h3><ol><li>64 левее 115.</li></ol><p>Ответ: <strong>64</strong>.</p></article></section></div><!-- python-lesson -->
+<h2>Пересечение отрезков</h2><p>Для формулы из теории выражение ломается ровно на пересечении P и Q, если точка не попала в A. Значит кратчайший A совпадает с пересечением. Левый конец — больший из двух левых. Правый — меньший из двух правых. Длина — разность, без прибавления единицы.</p><p>Программа не заменяет рисунок на прямой: на рисунке видно, почему точка 40 обязана войти в A. Число длины она печатает сразу.</p>
+<h3>Рабочие программы к этому уроку</h3><p>Каждый фрагмент запускается отдельно. В конце он печатает ответ. Комментарии на русском говорят, какая строка за что отвечает.</p>
+<h3>Отрезок A закрывает пересечение, длина = разность концов.</h3>
+<pre><code>def cover(p_left, p_right, q_left, q_right):
+    # A обязан закрыть пересечение P и Q.
+    left = max(p_left, q_left)
+    right = min(p_right, q_right)
+    return right - left  # длина, не число целых точек
+
+print(cover(2, 10, 6, 14))  # МЕНЯТЬ: концы P и Q</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>print(cover(2, 10, 6, 14))  # МЕНЯТЬ: концы P и Q</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>4</strong>.</p>
+<h3>Отрезок A закрывает пересечение, длина = разность концов.</h3>
+<pre><code>def cover(p_left, p_right, q_left, q_right):
+    left = max(p_left, q_left)
+    right = min(p_right, q_right)
+    return right - left
+
+print(cover(25, 64, 40, 115))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>Числа в первых строках — это данные условия. Цикл и формулу вокруг них не переписывают.</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>24</strong>.</p>
+<h3>Левый конец пересечения — больший из левых концов.</h3>
+<pre><code>p_left, p_right = 25, 64  # МЕНЯТЬ
+q_left, q_right = 40, 115
+print(max(p_left, q_left))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>p_left, p_right = 25, 64  # МЕНЯТЬ</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>40</strong>.</p>
+<!-- /python-lesson -->
+</body></html>

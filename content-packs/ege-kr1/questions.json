@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "topic": "Контрольная 1. Задания 1–9",
+    "images_dir": "images/",
+    "scheme": {
+      "theory": 1,
+      "checkbox": 0,
+      "radio": 0,
+      "short_answer": 9,
+      "total": 10
+    }
+  },
+  "lessons": [
+    {
+      "type": "theory",
+      "title": "Контрольная 1. Задания 1–9",
+      "content": "<h1>Контрольная 1. Задания 1–9</h1><p>Контрольная по пройденным номерам. Решайте по порядку. В ответ пишите число, без единиц измерения и без пробелов. Там, где просят два числа подряд, пишите их слитно по возрастанию.</p><p>Короткая проверка после первых девяти номеров.</p>",
+      "comment": "Короткая проверка после первых девяти номеров.",
+      "images": []
+    },
+    {
+      "type": "short_answer",
+      "title": "КР1. Номер пункта D",
+      "question_text": "У букв дороги: A — 3, B — 2, C — 2, D — 1. В таблице одна дорога только у пункта 2. Какой номер у D? Только число.",
+      "correct_answer": "2",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>Одна дорога только у D и только у пункта 2.</li><li>D = 2.</li></ol><p>Ответ: <strong>2</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР1. Значение формулы",
+      "question_text": "A=1, B=0, C=1. Чему равно (A и B) или C? Истина — 1, ложь — 0. Только число.",
+      "correct_answer": "1",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>A и B даёт 0.</li><li>0 или C даёт 1.</li></ol><p>Ответ: <strong>1</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР1. Сколько пятёрок",
+      "question_text": "Оценки: 5, 4, 5, 3, 5, 4. Сколько оценок «5»? Только число.",
+      "correct_answer": "3",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>Пятёрки на первом, третьем и пятом месте.</li><li>Их три.</li></ol><p>Ответ: <strong>3</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР1. Равная длина кода",
+      "question_text": "Пять разных букв кодируют двоичными словами одной длины. Какая наименьшая длина слова? Только число.",
+      "correct_answer": "3",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>Двух бит хватает только на 4 буквы.</li><li>Нужны 3 бита.</li></ol><p>Ответ: <strong>3</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР1. Алгоритм с чётностью",
+      "question_text": "Число 14 переводят в двоичную запись. Если оно чётное, справа дописывают 00, иначе 11. Полученную запись переводят обратно в десятичную. Какое число вышло? Только число.",
+      "correct_answer": "56",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>14 в двоичной системе — 1110.</li><li>Дописали 00: 111000, это 56.</li></ol><p>Ответ: <strong>56</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР1. Точки внутри квадрата",
+      "question_text": "Квадрат со стороной 5 клеток. Сколько целых точек строго внутри? Только число.",
+      "correct_answer": "16",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>(5−1)×(5−1).</li><li>4×4=16.</li></ol><p>Ответ: <strong>16</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР1. Размер картинки",
+      "question_text": "Картинка 8 на 8 точек, в палитре 16 цветов. Сколько байт занимает картинка без сжатия? Только число.",
+      "correct_answer": "32",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>16 цветов — это 4 бита на точку.</li><li>64×4=256 бит, это 32 байта.</li></ol><p>Ответ: <strong>32</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР1. Слова из двух букв",
+      "question_text": "Алфавит из букв A и B. Сколько слов длины 3 можно составить? Буквы можно повторять. Только число.",
+      "correct_answer": "8",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>На каждое место 2 варианта.</li><li>2×2×2=8.</li></ol><p>Ответ: <strong>8</strong>.</p>"
+    },
+    {
+      "type": "short_answer",
+      "title": "КР1. Числа больше 10",
+      "question_text": "В столбце числа 10, 12, 7, 15, 10. Сколько из них строго больше 10? Только число.",
+      "correct_answer": "2",
+      "answer_normalize": "strip_casefold",
+      "points": 3,
+      "solution_text": "<ol><li>Подходят 12 и 15.</li><li>Десятки не больше десяти. Ответ 2.</li></ol><p>Ответ: <strong>2</strong>.</p>"
+    }
+  ]
+}

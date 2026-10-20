@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 180" width="520" height="180">
+<rect width="520" height="180" fill="#ffffff"/>
+<text x="260" y="28" text-anchor="middle" font-size="18" font-weight="700" fill="#1e1b4b" font-family="Segoe UI, Arial, sans-serif">Как считать дороги</text>
+<circle cx="90" cy="100" r="24" fill="#eef2ff" stroke="#3730a3" stroke-width="2.5"/>
+<text x="90" y="106" text-anchor="middle" font-size="18" font-weight="700" fill="#1e1b4b" font-family="Segoe UI, Arial, sans-serif">A</text>
+<line x1="112" y1="88" x2="180" y2="60" stroke="#334155" stroke-width="2.5"/>
+<line x1="114" y1="100" x2="190" y2="100" stroke="#334155" stroke-width="2.5"/>
+<line x1="112" y1="112" x2="180" y2="140" stroke="#334155" stroke-width="2.5"/>
+<circle cx="180" cy="60" r="8" fill="#3730a3"/>
+<circle cx="190" cy="100" r="8" fill="#3730a3"/>
+<circle cx="180" cy="140" r="8" fill="#3730a3"/>
+<text x="220" y="96" font-size="16" fill="#1e1b4b" font-family="Segoe UI, Arial, sans-serif">Из A выходят три линии. Значит у A три дороги.</text>
+<text x="220" y="122" font-size="16" fill="#1e1b4b" font-family="Segoe UI, Arial, sans-serif">Линии просто пересеклись, а буквы нет — это не город.</text>
+</svg>

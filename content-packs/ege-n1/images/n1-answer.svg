@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 120" width="520" height="120">
+<rect width="520" height="120" fill="#ffffff"/>
+<text x="20" y="36" font-size="16" fill="#1e1b4b" font-family="Segoe UI, Arial, sans-serif">Спросили два номера, 2 и 5. Пишем по возрастанию:</text>
+<rect x="20" y="52" width="90" height="44" rx="8" fill="#ecfdf5" stroke="#059669"/>
+<text x="65" y="81" text-anchor="middle" font-size="22" font-weight="700" fill="#065f46" font-family="Segoe UI, Arial, sans-serif">25</text>
+<text x="130" y="80" font-size="16" fill="#1e1b4b" font-family="Segoe UI, Arial, sans-serif">Не 52 и не «2 5».</text>
+</svg>

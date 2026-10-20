@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 210" width="240" height="210">
+<rect width="240" height="210" fill="#ffffff"/>
+<text x="12" y="22" font-size="15" font-weight="700" fill="#1e1b4b" font-family="Segoe UI, Arial, sans-serif">Вопрос 2, с конца</text>
+<circle cx="120.0" cy="40" r="12" fill="#ffffff" stroke="#6366f1"/>
+<line x1="120.0" y1="52" x2="66.0" y2="86" stroke="#cbd5e1" stroke-width="2"/>
+<circle cx="66.0" cy="98" r="12" fill="#ffffff" stroke="#6366f1"/>
+<text x="66.0" y="126" text-anchor="middle" font-size="11" fill="#78716c" font-family="Segoe UI, Arial, sans-serif">0</text>
+<line x1="120.0" y1="52" x2="174.0" y2="86" stroke="#cbd5e1" stroke-width="2"/>
+<circle cx="174.0" cy="98" r="12" fill="#ffffff" stroke="#6366f1"/>
+<text x="174.0" y="126" text-anchor="middle" font-size="11" fill="#78716c" font-family="Segoe UI, Arial, sans-serif">1</text>
+<line x1="66.0" y1="110" x2="39.0" y2="144" stroke="#cbd5e1" stroke-width="2"/>
+<circle cx="39.0" cy="156" r="12" fill="#ddd6fe" stroke="#6366f1"/>
+<text x="39.0" y="160" text-anchor="middle" font-size="11" font-weight="700" fill="#1e1b4b" font-family="Segoe UI, Arial, sans-serif">А</text>
+<line x1="66.0" y1="110" x2="93.0" y2="144" stroke="#cbd5e1" stroke-width="2"/>
+<circle cx="93.0" cy="156" r="12" fill="#ffffff" stroke="#6366f1"/>
+<text x="93.0" y="184" text-anchor="middle" font-size="11" fill="#78716c" font-family="Segoe UI, Arial, sans-serif">1</text>
+<line x1="174.0" y1="110" x2="147.0" y2="144" stroke="#cbd5e1" stroke-width="2"/>
+<circle cx="147.0" cy="156" r="12" fill="#ffffff" stroke="#6366f1"/>
+<text x="147.0" y="184" text-anchor="middle" font-size="11" fill="#78716c" font-family="Segoe UI, Arial, sans-serif">0</text>
+<line x1="174.0" y1="110" x2="201.0" y2="144" stroke="#cbd5e1" stroke-width="2"/>
+<circle cx="201.0" cy="156" r="12" fill="#ddd6fe" stroke="#6366f1"/>
+<text x="201.0" y="160" text-anchor="middle" font-size="11" font-weight="700" fill="#1e1b4b" font-family="Segoe UI, Arial, sans-serif">Б</text>
+</svg>

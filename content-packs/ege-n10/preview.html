@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Задание 10 ЕГЭ: поиск в тексте</title>
+<style>
+  :root { --ink:#1c1917; --muted:#57534e; --line:#e7e5e4; --paper:#f6f1e8; --yes:#166534; --yes-bg:#f0fdf4; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:Georgia,"Times New Roman",serif; line-height:1.55; }
+  .wrap { max-width:760px; margin:0 auto; padding:36px 18px 80px; }
+  header h1 { font-size:34px; line-height:1.2; margin:0 0 8px; }
+  header .lead, .tasks > .lead, .razbor > .lead { margin:0 0 16px; color:var(--muted); font-family:"Segoe UI",sans-serif; font-size:15px; }
+  .theory { background:#fffdf9; border:1px solid var(--line); border-radius:18px; padding:8px 28px 22px; }
+  .theory h2 { font-size:22px; margin:28px 0 10px; }
+  .theory p, .theory li { font-size:18px; }
+  .theory table { border-collapse:collapse; margin:14px 0 18px; font-size:16px; }
+  .theory th, .theory td { border:1px solid #d6d3d1; padding:7px 14px; text-align:center; }
+  .theory th { background:#f5f0e8; }
+  .shot { margin:16px 0; text-align:center; }
+  .shot img { max-width:min(100%, 640px); height:auto; background:#fff; border-radius:12px; border:1px solid var(--line); }
+  .tasks, .razbor { margin-top:36px; }
+  .tasks > h2, .razbor > h2 { font-size:28px; margin:0 0 6px; }
+  .task, .razbor article { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px 18px 14px; margin:0 0 12px; }
+  .task { font-family:"Segoe UI",sans-serif; }
+  .task h3, .razbor h3 { margin:0 0 8px; font-size:18px; }
+  .kicker { margin:0 0 4px; color:var(--muted); font-size:13px; }
+  .opts { margin:0 0 10px; padding-left:1.2em; }
+  .opts li.yes { color:var(--yes); font-weight:650; }
+  .answer { background:var(--yes-bg); color:var(--yes); border-radius:8px; padding:8px 12px; }
+  .razbor ol, .razbor p { font-size:17px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Задание 10 ЕГЭ: поиск в тексте</h1>
+  <p class="lead">Страница для проверки. Сверху теория со схемами, ниже задания. Разбор всех задач — внизу, по шагам.</p>
+</header>
+<section class="theory">
+<h2>Что дают в задании 10</h2>
+<p>Дают текст и просят посчитать сочетание букв. Часто нужно сочетание внутри других слов, а отдельное слово не считают.</p>
+<p>В 2026 году файл — это <strong>.odt</strong>. Его открывают в LibreOffice Writer. Поиск: Ctrl+F. Если нужны только несколько глав, их сначала копируют в новый документ и ищут уже там.</p>
+
+<h2>Задача 1. «кот» внутри слова</h2>
+<p>Текст: «котик видит кота, а кот сидит у котика».</p>
+<p>Считаем сочетание «кот» и «Кот», но не отдельное слово «кот».</p>
+<figure class="shot"><img src="images/01-text.png" alt="Три вхождения внутри слов и одно отдельное слово"></figure>
+<ol>
+  <li>«котик» — буквы кот стоят в начале более длинного слова. Считаем.</li>
+  <li>«кота» — после кот есть ещё буква. Это не отдельное слово. Считаем.</li>
+  <li>«кот» между пробелами — это как раз отдельное слово. Не считаем.</li>
+  <li>«котика» — снова внутри слова. Считаем.</li>
+</ol>
+<p>Ответ: <strong>3</strong>.</p>
+
+<h2>Как не сбиться в редакторе</h2>
+<figure class="shot"><img src="images/02-find.png" alt="Поиск в Writer без галочки только слово целиком"></figure>
+<ul>
+  <li>Галочку «только слово целиком» не ставят, если нужны вхождения внутри слов.</li>
+  <li>Потом отдельно считают целые слова «кот» и вычитают их.</li>
+  <li>Регистр в этой задаче не важен: «Кот» и «кот» — одно сочетание.</li>
+</ul>
+</section>
+<section class='tasks'><h2>Задания</h2><p class='lead'>Зелёным отмечен верный ответ. Разбор внизу.</p><article class="task"><p class="kicker">1. Несколько верных</p><h3>Файл 2026</h3><p>Что верно про задание 10 в 2026 году?</p><ul class='opts'><li class='yes'>Файл текста — это .odt</li><li class='yes'>Поиск вызывают через Ctrl+F</li><li class='yes'>Нужные главы сначала копируют в новый документ</li><li>Файл приходит как .xlsx</li></ul><div class='answer'>Ответ: Файл текста — это .odt; Поиск вызывают через Ctrl+F; Нужные главы сначала копируют в новый документ</div></article><article class="task"><p class="kicker">2. Несколько верных</p><h3>Как считать кот</h3><p>Текст из теории. Что считаем?</p><ul class='opts'><li class='yes'>котик — да, это внутри слова</li><li class='yes'>кота — да, это не отдельное слово кот</li><li class='yes'>котика — да</li><li>Отдельное слово кот тоже считаем</li></ul><div class='answer'>Ответ: котик — да, это внутри слова; кота — да, это не отдельное слово кот; котика — да</div></article><article class="task"><p class="kicker">3. Несколько верных</p><h3>Поиск в Writer</h3><p>Как настроить поиск?</p><ul class='opts'><li class='yes'>Регистр в этой задаче не важен</li><li class='yes'>Галочку «только слово целиком» не включают, если нужны куски слов</li><li class='yes'>Целые слова потом вычитают</li><li>Ищут сразу весь роман, даже если просят три главы</li></ul><div class='answer'>Ответ: Регистр в этой задаче не важен; Галочку «только слово целиком» не включают, если нужны куски слов; Целые слова потом вычитают</div></article><article class="task"><p class="kicker">4. Несколько верных</p><h3>Числа по тексту</h3><p>Что верно про наш текст?</p><ul class='opts'><li class='yes'>Внутри слов сочетание встречается 3 раза</li><li class='yes'>Отдельное слово кот встречается 1 раз</li><li class='yes'>Всего вхождений букв кот — 4</li><li>Ответ задачи равен 4</li></ul><div class='answer'>Ответ: Внутри слов сочетание встречается 3 раза; Отдельное слово кот встречается 1 раз; Всего вхождений букв кот — 4</div></article><article class="task"><p class="kicker">5. Несколько верных</p><h3>Что не путать</h3><p>Какие файлы у соседних заданий?</p><ul class='opts'><li class='yes'>Задание 9 — таблица .ods</li><li class='yes'>Задание 10 — текст .odt</li><li class='yes'>Оба файла открывают не в браузере, а в LibreOffice</li><li>Задание 10 тоже считают формулой СЧЁТЕСЛИ</li></ul><div class='answer'>Ответ: Задание 9 — таблица .ods; Задание 10 — текст .odt; Оба файла открывают не в браузере, а в LibreOffice</div></article><article class="task"><p class="kicker">6. Один верный</p><h3>Ответ по тексту</h3><p>Сколько раз кот стоит внутри других слов?</p><ul class='opts'><li>1</li><li>2</li><li class='yes'>3</li><li>4</li></ul><div class='answer'>Ответ: 3</div></article><article class="task"><p class="kicker">7. Один верный</p><h3>Целое слово</h3><p>Сколько раз кот стоит отдельным словом?</p><ul class='opts'><li>0</li><li class='yes'>1</li><li>3</li><li>4</li></ul><div class='answer'>Ответ: 1</div></article><article class="task"><p class="kicker">8. Один верный</p><h3>Все вхождения</h3><p>Сколько раз буквы кот встречаются вообще, без фильтра?</p><ul class='opts'><li>1</li><li>3</li><li class='yes'>4</li><li>5</li></ul><div class='answer'>Ответ: 4</div></article><article class="task"><p class="kicker">9. Один верный</p><h3>Формат</h3><p>Какое расширение у файла задания 10 в 2026 году?</p><ul class='opts'><li>.ods</li><li class='yes'>.odt</li><li>.txt</li><li>.docx</li></ul><div class='answer'>Ответ: .odt</div></article><article class="task"><p class="kicker">10. Один верный</p><h3>Главы</h3><p>Просят посчитать только в трёх главах. Что сделать сначала?</p><ul class='opts'><li class='yes'>Скопировать эти главы в новый документ</li><li>Искать по всему файлу и умножить на 3</li><li>Удалить все буквы кроме кот</li><li>Открыть файл в Calc</li></ul><div class='answer'>Ответ: Скопировать эти главы в новый документ</div></article><article class="task"><p class="kicker">11. Вписать число</p><h3>Ответ: внутри слов</h3><p>Сколько раз кот внутри других слов? Только число.</p><div class='answer'>Ответ: 3</div></article><article class="task"><p class="kicker">12. Вписать число</p><h3>Ответ: отдельное слово</h3><p>Сколько раз кот — отдельное слово? Только число.</p><div class='answer'>Ответ: 1</div></article><article class="task"><p class="kicker">13. Вписать число</p><h3>Ответ: всего букв</h3><p>Сколько всего вхождений кот без фильтра? Только число.</p><div class='answer'>Ответ: 4</div></article><article class="task"><p class="kicker">14. Вписать число</p><h3>Ответ: вычитание</h3><p>Из 4 вхождений убрали отдельные слова. Сколько осталось? Только число.</p><div class='answer'>Ответ: 3</div></article><article class="task"><p class="kicker">15. Вписать число</p><h3>Ответ: котик</h3><p>Сколько раз сочетание входит в слово котик в начале текста? Только число.</p><div class='answer'>Ответ: 1</div></article></section><section class='razbor'><h2>Разбор заданий</h2><article><h3>1. Файл 2026</h3><ol><li><strong>Верно.</strong> Файл текста — это .odt — Его открывают в LibreOffice Writer.</li><li><strong>Верно.</strong> Поиск вызывают через Ctrl+F — Так же, как найти в текстовом редакторе.</li><li><strong>Верно.</strong> Нужные главы сначала копируют в новый документ — Иначе поиск идёт по всему роману.</li><li><strong>Неверно.</strong> Файл приходит как .xlsx — Таблица — это другое задание.</li></ol><p>Ответ: <strong>Файл текста — это .odt; Поиск вызывают через Ctrl+F; Нужные главы сначала копируют в новый документ</strong>.</p></article><article><h3>2. Как считать кот</h3><ol><li><strong>Верно.</strong> котик — да, это внутри слова — После кот есть ещё буквы.</li><li><strong>Верно.</strong> кота — да, это не отдельное слово кот — Дальше стоит буква а.</li><li><strong>Верно.</strong> котика — да — Снова более длинное слово.</li><li><strong>Неверно.</strong> Отдельное слово кот тоже считаем — Условие просит его не брать.</li></ol><p>Ответ: <strong>котик — да, это внутри слова; кота — да, это не отдельное слово кот; котика — да</strong>.</p></article><article><h3>3. Поиск в Writer</h3><ol><li><strong>Верно.</strong> Регистр в этой задаче не важен — Кот и кот — одно сочетание.</li><li><strong>Верно.</strong> Галочку «только слово целиком» не включают, если нужны куски слов — Иначе котик не найдётся.</li><li><strong>Верно.</strong> Целые слова потом вычитают — Их нашли отдельно и убрали из ответа.</li><li><strong>Неверно.</strong> Ищут сразу весь роман, даже если просят три главы — Лишние главы дадут лишние вхождения.</li></ol><p>Ответ: <strong>Регистр в этой задаче не важен; Галочку «только слово целиком» не включают, если нужны куски слов; Целые слова потом вычитают</strong>.</p></article><article><h3>4. Числа по тексту</h3><ol><li><strong>Верно.</strong> Внутри слов сочетание встречается 3 раза — котик, кота, котика.</li><li><strong>Верно.</strong> Отдельное слово кот встречается 1 раз — Оно между пробелами.</li><li><strong>Верно.</strong> Всего вхождений букв кот — 4 — 3 внутри и 1 отдельное.</li><li><strong>Неверно.</strong> Ответ задачи равен 4 — Отдельное слово в ответ не входит.</li></ol><p>Ответ: <strong>Внутри слов сочетание встречается 3 раза; Отдельное слово кот встречается 1 раз; Всего вхождений букв кот — 4</strong>.</p></article><article><h3>5. Что не путать</h3><ol><li><strong>Верно.</strong> Задание 9 — таблица .ods — Там числа по строкам.</li><li><strong>Верно.</strong> Задание 10 — текст .odt — Там поиск букв.</li><li><strong>Верно.</strong> Оба файла открывают не в браузере, а в LibreOffice — Calc для таблицы, Writer для текста.</li><li><strong>Неверно.</strong> Задание 10 тоже считают формулой СЧЁТЕСЛИ — Там поиск по тексту.</li></ol><p>Ответ: <strong>Задание 9 — таблица .ods; Задание 10 — текст .odt; Оба файла открывают не в браузере, а в LibreOffice</strong>.</p></article><article><h3>6. Ответ по тексту</h3><ol><li>котик, кота и котика.</li><li>Отдельное кот не берём.</li></ol><p>Ответ: <strong>3</strong>.</p></article><article><h3>7. Целое слово</h3><ol><li>В тексте одна фраза «а кот сидит».</li><li>Остальные вхождения длиннее.</li></ol><p>Ответ: <strong>1</strong>.</p></article><article><h3>8. Все вхождения</h3><ol><li>Три раза внутри слов и один раз отдельно.</li></ol><p>Ответ: <strong>4</strong>.</p></article><article><h3>9. Формат</h3><ol><li>Текст — .odt.</li><li>.docx на экзамене не дают.</li></ol><p>Ответ: <strong>.odt</strong>.</p></article><article><h3>10. Главы</h3><ol><li>Поиск должен видеть только нужный кусок.</li><li>Копия глав это и делает.</li></ol><p>Ответ: <strong>Скопировать эти главы в новый документ</strong>.</p></article><article><h3>11. Ответ: внутри слов</h3><ol><li>котик, кота, котика.</li></ol><p>Ответ: <strong>3</strong>.</p></article><article><h3>12. Ответ: отдельное слово</h3><ol><li>Между пробелами оно одно.</li></ol><p>Ответ: <strong>1</strong>.</p></article><article><h3>13. Ответ: всего букв</h3><ol><li>3 внутри слов и 1 отдельное.</li></ol><p>Ответ: <strong>4</strong>.</p></article><article><h3>14. Ответ: вычитание</h3><ol><li>4 − 1 = 3.</li></ol><p>Ответ: <strong>3</strong>.</p></article><article><h3>15. Ответ: котик</h3><ol><li>В слове котик буквы кот стоят один раз.</li></ol><p>Ответ: <strong>1</strong>.</p></article></section></div><!-- python-lesson -->
+<h2>Поиск сочетания в строке</h2><p>Сочетание внутри слова и отдельное слово — разные вопросы. Сначала считают все вхождения букв подряд. Потом отдельно считают целые слова и вычитают. Регистр перед этим приводят к одному: нижнему.</p><p>На экзамене текст в файле .odt и его ищут через Ctrl+F. Программа ниже считает тот же учебный текст, чтобы было видно, откуда берутся 3, 1 и 4.</p>
+<h3>Рабочие программы к этому уроку</h3><p>Каждый фрагмент запускается отдельно. В конце он печатает ответ. Комментарии на русском говорят, какая строка за что отвечает.</p>
+<h3>Поиск сочетания: все вхождения минус целые слова.</h3>
+<pre><code>import re
+
+text = &quot;котик видит кота, а кот сидит у котика&quot;  # МЕНЯТЬ: текст
+text = text.lower()
+needle = &quot;кот&quot;  # МЕНЯТЬ: сочетание
+all_hits = len(re.findall(needle, text))
+whole = len(re.findall(r&quot;&quot; + needle + r&quot;&quot;, text))
+print(all_hits - whole)  # внутри других слов</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>text = &quot;котик видит кота, а кот сидит у котика&quot;  # МЕНЯТЬ: текст</li><li>needle = &quot;кот&quot;  # МЕНЯТЬ: сочетание</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>3</strong>.</p>
+<h3>Поиск отдельного слова.</h3>
+<pre><code>import re
+
+text = &quot;котик видит кота, а кот сидит у котика&quot;.lower()
+needle = &quot;кот&quot;
+print(len(re.findall(r&quot;&quot; + needle + r&quot;&quot;, text)))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>Числа в первых строках — это данные условия. Цикл и формулу вокруг них не переписывают.</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>1</strong>.</p>
+<h3>Сколько раз сочетание встречается вообще.</h3>
+<pre><code>text = &quot;котик видит кота, а кот сидит у котика&quot;.lower()
+needle = &quot;кот&quot;  # МЕНЯТЬ
+print(text.count(needle))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>needle = &quot;кот&quot;  # МЕНЯТЬ</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>4</strong>.</p>
+<!-- /python-lesson -->
+</body></html>

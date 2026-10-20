@@ -449,27 +449,40 @@ def write_pack(number: int) -> None:
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    practice = []
+    questions_path = folder / "questions.json"
+    if questions_path.is_file():
+        old = json.loads(questions_path.read_text(encoding="utf-8"))
+        practice = [
+            item
+            for item in old.get("lessons", [])
+            if item.get("type") != "theory"
+        ]
+    lessons = [
+        {
+            "type": "theory",
+            "title": title,
+            "content": body,
+            "comment": comment,
+            "images": [],
+        },
+        *practice,
+    ]
     questions = {
         "meta": {
             "topic": f"ЕГЭ информатика, задание {number}",
             "images_dir": "images/",
             "scheme": {
                 "theory": 1,
-                "checkbox": 0,
-                "radio": 0,
-                "short_answer": 0,
-                "total": 1,
+                "checkbox": sum(1 for item in lessons if item["type"] == "checkbox"),
+                "radio": sum(1 for item in lessons if item["type"] == "radio"),
+                "short_answer": sum(
+                    1 for item in lessons if item["type"] == "short_answer"
+                ),
+                "total": len(lessons),
             },
         },
-        "lessons": [
-            {
-                "type": "theory",
-                "title": title,
-                "content": body,
-                "comment": comment,
-                "images": [],
-            }
-        ],
+        "lessons": lessons,
     }
     (folder / "questions.json").write_text(
         json.dumps(questions, ensure_ascii=False, indent=2) + "\n",

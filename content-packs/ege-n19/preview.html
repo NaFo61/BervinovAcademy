@@ -122,5 +122,115 @@
   <tr><td>1</td><td>до 25, команды +1, +2, ×2</td><td><strong>13</strong></td></tr>
   <tr><td>2</td><td>до 30, команды +1, +4, ×3</td><td><strong>10</strong></td></tr>
 </table>
+<!-- python-lesson -->
+<h2>Победа первым ходом</h2><p>Задания 19, 20 и 21 — одна игра. Здесь нужен только первый вопрос: наименьшее S, из которого хотя бы одна команда сразу перешагивает границу.</p><p>В списке <code>adds</code> — что прибавляют, в <code>mults</code> — на что умножают, <code>limit</code> — граница. Функции <code>task20</code> и <code>task21</code> оставлены в том же файле, чтобы на следующих уроках менять только вызов, не правила.</p>
+<h3>Рабочие программы к этому уроку</h3><p>Каждый фрагмент запускается отдельно. В конце он печатает ответ. Комментарии на русском говорят, какая строка за что отвечает.</p>
+<h3>n19-25</h3>
+<pre><code>def moves_of(s, adds, mults):
+    result = [s + step for step in adds]
+    result += [s * factor for factor in mults]
+    return result
+
+def win_now(s, limit, adds, mults):
+    return any(nxt &gt;= limit for nxt in moves_of(s, adds, mults))
+
+def task19(limit, adds, mults):
+    # Наименьшее S, откуда первый ход сразу побеждает.
+    s = 1
+    while True:
+        if s &lt; limit and win_now(s, limit, adds, mults):
+            return s
+        s += 1
+
+def task20(limit, adds, mults):
+    # Петя сразу не побеждает, но любой его ход отдаёт победу Ване.
+    s = 1
+    while s &lt; limit:
+        if not win_now(s, limit, adds, mults):
+            nxt = [x for x in moves_of(s, adds, mults) if x &lt; limit]
+            if nxt and all(win_now(x, limit, adds, mults) for x in nxt):
+                return s
+        s += 1
+    return None
+
+def task21(limit, adds, mults):
+    # Два наименьших S, откуда Петя побеждает своим вторым ходом.
+    found = []
+    s = 1
+    while len(found) &lt; 2 and s &lt; limit:
+        if not win_now(s, limit, adds, mults):
+            for t in moves_of(s, adds, mults):
+                if t &gt;= limit:
+                    continue
+                vanya = [u for u in moves_of(t, adds, mults)]
+                # Любой ход Вани ещё не победа, но после него Петя побеждает сразу.
+                if vanya and all(
+                    u &lt; limit and win_now(u, limit, adds, mults) for u in vanya
+                ):
+                    found.append(s)
+                    break
+        s += 1
+    return int(&quot;&quot;.join(str(x) for x in found))
+
+limit = 25  # МЕНЯТЬ: граница
+adds = [1, 2]  # МЕНЯТЬ: что прибавляют
+mults = [2]  # МЕНЯТЬ: на что умножают
+print(task19(limit, adds, mults))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>limit = 25  # МЕНЯТЬ: граница</li><li>adds = [1, 2]  # МЕНЯТЬ: что прибавляют</li><li>mults = [2]  # МЕНЯТЬ: на что умножают</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>13</strong>.</p>
+<h3>n19-30</h3>
+<pre><code>def moves_of(s, adds, mults):
+    result = [s + step for step in adds]
+    result += [s * factor for factor in mults]
+    return result
+
+def win_now(s, limit, adds, mults):
+    return any(nxt &gt;= limit for nxt in moves_of(s, adds, mults))
+
+def task19(limit, adds, mults):
+    # Наименьшее S, откуда первый ход сразу побеждает.
+    s = 1
+    while True:
+        if s &lt; limit and win_now(s, limit, adds, mults):
+            return s
+        s += 1
+
+def task20(limit, adds, mults):
+    # Петя сразу не побеждает, но любой его ход отдаёт победу Ване.
+    s = 1
+    while s &lt; limit:
+        if not win_now(s, limit, adds, mults):
+            nxt = [x for x in moves_of(s, adds, mults) if x &lt; limit]
+            if nxt and all(win_now(x, limit, adds, mults) for x in nxt):
+                return s
+        s += 1
+    return None
+
+def task21(limit, adds, mults):
+    # Два наименьших S, откуда Петя побеждает своим вторым ходом.
+    found = []
+    s = 1
+    while len(found) &lt; 2 and s &lt; limit:
+        if not win_now(s, limit, adds, mults):
+            for t in moves_of(s, adds, mults):
+                if t &gt;= limit:
+                    continue
+                vanya = [u for u in moves_of(t, adds, mults)]
+                # Любой ход Вани ещё не победа, но после него Петя побеждает сразу.
+                if vanya and all(
+                    u &lt; limit and win_now(u, limit, adds, mults) for u in vanya
+                ):
+                    found.append(s)
+                    break
+        s += 1
+    return int(&quot;&quot;.join(str(x) for x in found))
+
+limit = 30
+adds = [1, 4]
+mults = [3]
+print(task19(limit, adds, mults))</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>Числа в первых строках — это данные условия. Цикл и формулу вокруг них не переписывают.</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>10</strong>.</p>
+<!-- /python-lesson -->
 </body>
 </html>

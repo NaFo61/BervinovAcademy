@@ -1,5 +1,8 @@
 {
   "pack_id": "ege-n1-questions",
   "course_slug": "ege-informatika",
-  "module_title": "1-й урок ЕГЭ: Графы"
+  "module_title": "1-й урок ЕГЭ: Графы",
+  "create_module": true,
+  "replace_missing": true,
+  "module_description": "Три урока: 1.1 два номера, 1.2 сумма длин, 1.3 сосед тупика."
 }

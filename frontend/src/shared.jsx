@@ -1033,6 +1033,27 @@ function openLessonImagesOnBoard(navigate, { urls, title } = {}) {
   navigate(Routes.WHITEBOARD);
 }
 
+async function openAttachmentInPlayground(row, navigate) {
+  try {
+    const href = mediaUrl(row?.url) || row?.url || '';
+    if (!href || !window.openPlaygroundWithCode) return;
+    const response = await fetch(href);
+    if (!response.ok) return;
+    const text = (await response.text()).replace(/\s+$/g, '');
+    const code = [
+      `s = ${JSON.stringify(text)}`,
+      '# На экзамене эту строку заменяют на:',
+      '# s = open("24.txt").read().strip()',
+      '',
+      '# Дальше пишите решение и в конце печатайте ответ.',
+      'print(len(s))',
+    ].join('\n');
+    window.openPlaygroundWithCode(navigate, code);
+  } catch (err) {
+    return;
+  }
+}
+
 function LessonAttachments({ items, navigate, lessonTitle, hideImages }) {
   const list = Array.isArray(items) ? items : [];
   const images = hideImages ? [] : list.filter(isLessonImageAttachment);
@@ -1111,6 +1132,15 @@ function LessonAttachments({ items, navigate, lessonTitle, hideImages }) {
                     </span>
                     <span className="text-[12px] font-semibold text-violet-700 shrink-0">Скачать</span>
                   </a>
+                  {/\.txt$/i.test(row.name || '') && (
+                    <button
+                      type="button"
+                      onClick={() => openAttachmentInPlayground(row, navigate)}
+                      className="mt-1 min-h-10 w-full rounded-xl text-[12px] font-semibold text-cyan-800 bg-cyan-50 ring-1 ring-cyan-200 hover:bg-cyan-100"
+                    >
+                      Открыть строку из файла в интерпретаторе
+                    </button>
+                  )}
                 </li>
               );
             })}
@@ -1330,6 +1360,12 @@ function scrollToLessonReferenceSolution() {
 }
 
 function ReferenceSolutionContent({ referenceSolution }) {
+  const hostRef = React.useRef(null);
+  React.useEffect(() => {
+    if (hostRef.current && window.enhancePythonBlocks) {
+      window.enhancePythonBlocks(hostRef.current);
+    }
+  }, [referenceSolution?.text]);
   const hasText = !!(referenceSolution && referenceSolution.text);
   const hasVideoContent = !!(referenceSolution && (referenceSolution.video || referenceSolution.has_video || referenceSolution.video_requires_pro));
   if (!referenceSolution || (!hasText && !hasVideoContent)) {
@@ -1358,6 +1394,7 @@ function ReferenceSolutionContent({ referenceSolution }) {
       ) : null}
       {hasText && (
         <div
+          ref={hostRef}
           className={`theory-content text-[15px] text-ink/85 leading-relaxed ${referenceSolution.video || referenceSolution.video_requires_pro ? 'mt-6' : ''}`}
           dangerouslySetInnerHTML={{ __html: sanitizeHtml(referenceSolution.text) }}
         />

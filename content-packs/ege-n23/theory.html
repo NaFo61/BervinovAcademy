@@ -130,5 +130,79 @@
   <tr><td>2</td><td>+1 и +2, из 1 в 8</td><td><strong>21</strong></td></tr>
 </table>
 
+<!-- python-lesson -->
+<h2>Сколько программ, не какое число получится</h2><p>В клетке n лежит число способов до неё добраться. Старт равен 1. Дальше каждая команда прибавляет способы текущей клетки к клетке, куда она ведёт. Запрещённое число обнуляют и из него не ходят.</p><p>Второй прототип — рекурсия с ветками +1, ×2 и ×3, как в коротких задачах «из a в b». Условие отсечения <code>a == 14</code> выкидывает маршруты через запретное число. Кэш не меняет ответ, он не даёт считать одну и ту же пару дважды.</p>
+<h3>Рабочие программы к этому уроку</h3><p>Каждый фрагмент запускается отдельно. В конце он печатает ответ. Комментарии на русском говорят, какая строка за что отвечает.</p>
+<h3>n23-to6</h3>
+<pre><code>start = 1  # МЕНЯТЬ: старт
+goal = 6  # МЕНЯТЬ: цель
+ways = [0] * (goal + 1)
+ways[start] = 1
+for n in range(start, goal + 1):
+    if ways[n] == 0:
+        continue
+    if n + 1 &lt;= goal:  # МЕНЯТЬ: команда +1
+        ways[n + 1] += ways[n]
+    if n * 2 &lt;= goal:  # МЕНЯТЬ: команда ×2
+        ways[n * 2] += ways[n]
+print(ways[goal])</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>start = 1  # МЕНЯТЬ: старт</li><li>goal = 6  # МЕНЯТЬ: цель</li><li>if n + 1 &lt;= goal:  # МЕНЯТЬ: команда +1</li><li>if n * 2 &lt;= goal:  # МЕНЯТЬ: команда ×2</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>6</strong>.</p>
+<h3>n23-to10</h3>
+<pre><code>start, goal = 1, 10
+ways = [0] * (goal + 1)
+ways[start] = 1
+for n in range(start, goal + 1):
+    if n + 1 &lt;= goal:
+        ways[n + 1] += ways[n]
+    if n * 2 &lt;= goal:
+        ways[n * 2] += ways[n]
+print(ways[goal])</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>Числа в первых строках — это данные условия. Цикл и формулу вокруг них не переписывают.</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>14</strong>.</p>
+<h3>n23-ban7</h3>
+<pre><code>start, goal = 1, 10
+banned = {7}  # МЕНЯТЬ: запрещённые числа
+ways = [0] * (goal + 1)
+ways[start] = 1
+for n in range(start, goal + 1):
+    if n in banned:
+        ways[n] = 0  # через запрет не ходим
+        continue
+    if n + 1 &lt;= goal and (n + 1) not in banned:
+        ways[n + 1] += ways[n]
+    if n * 2 &lt;= goal and (n * 2) not in banned:
+        ways[n * 2] += ways[n]
+print(ways[goal])</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>banned = {7}  # МЕНЯТЬ: запрещённые числа</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>8</strong>.</p>
+<h3>n23-plus</h3>
+<pre><code>start, goal = 1, 8  # МЕНЯТЬ
+ways = [0] * (goal + 1)
+ways[start] = 1
+for n in range(start, goal + 1):
+    if n + 1 &lt;= goal:
+        ways[n + 1] += ways[n]
+    if n + 2 &lt;= goal:  # МЕНЯТЬ: вторая команда +2, не ×2
+        ways[n + 2] += ways[n]
+print(ways[goal])</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>start, goal = 1, 8  # МЕНЯТЬ</li><li>if n + 2 &lt;= goal:  # МЕНЯТЬ: вторая команда +2, не ×2</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>21</strong>.</p>
+<h3>n23-cut</h3>
+<pre><code>from functools import lru_cache
+
+@lru_cache(None)
+def f(a, b):
+    # Сколько программ из a в b. Ветки +1, *2, *3.
+    if a == b:
+        return 1
+    if a &gt; b or a == 14:  # МЕНЯТЬ: 14 — число, через которое нельзя
+        return 0
+    return f(a + 1, b) + f(a * 2, b) + f(a * 3, b)
+
+print(f(2, 39))  # МЕНЯТЬ: старт и цель</code></pre>
+<p><strong>Что менять, если условие другое.</strong></p><ul><li>if a &gt; b or a == 14:  # МЕНЯТЬ: 14 — число, через которое нельзя</li><li>print(f(2, 39))  # МЕНЯТЬ: старт и цель</li><li>Печать в конце оставляют: это и есть ответ.</li></ul>
+<p>Программа печатает <strong>188</strong>.</p>
+<!-- /python-lesson -->
 </body>
 </html>
