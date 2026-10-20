@@ -318,7 +318,10 @@ CACHES = {
             "CACHE_BACKEND",
             default="django.core.cache.backends.locmem.LocMemCache",
         ),
-        "LOCATION": "school-platform-cache",
+        "LOCATION": config(
+            "CACHE_LOCATION",
+            default="school-platform-cache",
+        ),
     }
 }
 

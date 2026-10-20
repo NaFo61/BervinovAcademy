@@ -1,10 +1,19 @@
 from unittest.mock import patch
 
+from django.core.cache import cache
 from django.db.models.signals import post_save
 import pytest
 
 from translations.models import TranslationMemory
 from translations.signals import apply_translation_to_model
+
+
+@pytest.fixture(autouse=True)
+def clear_cache_between_tests():
+    """Каталог курсов кэшируется. Между тестами память не должна протекать."""
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture(autouse=True, scope="session")
