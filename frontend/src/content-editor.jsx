@@ -970,6 +970,47 @@ function groupEditorLessons(lessons) {
   return groups;
 }
 
+function editorUnitLabel(group) {
+  if (group.key === 'ещё') return 'Без номера';
+  const theory = (group.lessons || []).find((ls) => /Теория/.test(ls.title || ''));
+  if (!theory) return group.key;
+  const rest = String(theory.title).replace(/^\d+\.\d+\s+Теория\.?\s*/, '').trim();
+  return rest ? `${group.key}  ${rest}` : group.key;
+}
+
+function moduleTaskNumber(mod) {
+  const nums = new Set();
+  for (const ls of mod.lessons || []) {
+    const key = lessonUnitKey(ls.title);
+    if (key) nums.add(key.split('.')[0]);
+  }
+  if (nums.size === 1) return [...nums][0];
+  const title = String(mod.title || '');
+  const named = title.match(/задание\s*№?\s*(\d+)/i) || title.match(/^(\d+)\.(\d+)\b/);
+  if (named && nums.size === 0) return named[1];
+  return '';
+}
+
+function groupModulesByTask(modules) {
+  const groups = [];
+  const index = new Map();
+  for (const mod of modules || []) {
+    const key = moduleTaskNumber(mod) || 'другое';
+    if (!index.has(key)) {
+      const group = { key, modules: [] };
+      index.set(key, group);
+      groups.push(group);
+    }
+    index.get(key).modules.push(mod);
+  }
+  groups.sort((a, b) => {
+    if (a.key === 'другое') return 1;
+    if (b.key === 'другое') return -1;
+    return Number(a.key) - Number(b.key);
+  });
+  return groups;
+}
+
 function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefresh }) {
   const [, navigate] = window.useHashRoute();
   const [outline, setOutline] = React.useState(null);
@@ -982,6 +1023,7 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
   const [creatingCourse, setCreatingCourse] = React.useState(false);
   const [showHidden, setShowHidden] = React.useState(false);
   const [rowBusy, setRowBusy] = React.useState('');
+  const [dialog, setDialog] = React.useState(null);
 
   const loadOutline = React.useCallback(() => {
     if (!courseId) return;
@@ -1090,15 +1132,31 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
     event.stopPropagation();
     if (rowBusy) return;
     const name = ls.title || 'квадратик';
-    if (!window.confirm(`Удалить навсегда «${name}»? Вернуть нельзя.`)) return;
-    runRow(ls, () => window.fetchApiJson(`${lessonApi(ls)}?permanent=1`, { method: 'DELETE', auth: true }), true);
+    setDialog({
+      title: 'Удалить квадратик?',
+      body: `«${name}» исчезнет навсегда. Вернуть его нельзя.`,
+      confirmLabel: 'Удалить',
+      danger: true,
+      run: () => runRow(ls, () => window.fetchApiJson(`${lessonApi(ls)}?permanent=1`, { method: 'DELETE', auth: true }), true),
+    });
   };
 
   const hideMany = async (lessons, hide) => {
     const list = (lessons || []).filter((ls) => !!ls.is_active === hide);
     if (!list.length || rowBusy) return;
     const verb = hide ? 'Скрыть' : 'Вернуть';
-    if (!window.confirm(`${verb} ${list.length} квадратиков?`)) return;
+    setDialog({
+      title: hide ? 'Скрыть урок?' : 'Вернуть урок?',
+      body: hide
+        ? `${list.length} квадратиков скроются от учеников. В редакторе их можно вернуть.`
+        : `${list.length} квадратиков снова увидят ученики.`,
+      confirmLabel: verb,
+      danger: false,
+      run: () => hideManyNow(list, hide),
+    });
+  };
+
+  const hideManyNow = async (list, hide) => {
     setRowBusy('many');
     setError('');
     try {
@@ -1120,7 +1178,16 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
   const deleteMany = async (lessons) => {
     const list = lessons || [];
     if (!list.length || rowBusy) return;
-    if (!window.confirm(`Удалить навсегда ${list.length} квадратиков? Вернуть нельзя.`)) return;
+    setDialog({
+      title: 'Удалить урок?',
+      body: `${list.length} квадратиков исчезнут навсегда. Вернуть их нельзя.`,
+      confirmLabel: 'Удалить',
+      danger: true,
+      run: () => deleteManyNow(list),
+    });
+  };
+
+  const deleteManyNow = async (list) => {
     setRowBusy('many');
     setError('');
     try {
@@ -1140,7 +1207,16 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
     event.stopPropagation();
     if (rowBusy) return;
     const name = mod.title || 'модуль';
-    if (!window.confirm(`Удалить модуль «${name}» целиком? Всё внутри пропадёт. Вернуть нельзя.`)) return;
+    setDialog({
+      title: 'Удалить модуль?',
+      body: `«${name}» и всё внутри исчезнут навсегда. Вернуть нельзя.`,
+      confirmLabel: 'Удалить модуль',
+      danger: true,
+      run: () => removeModuleNow(mod),
+    });
+  };
+
+  const removeModuleNow = async (mod) => {
     setRowBusy(mod.public_id);
     setError('');
     try {
@@ -1176,6 +1252,21 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
 
   return (
     <div className="space-y-4">
+      {window.ConfirmDialog && (
+        <window.ConfirmDialog
+          open={!!dialog}
+          title={dialog?.title || ''}
+          body={dialog?.body || ''}
+          confirmLabel={dialog?.confirmLabel || 'Продолжить'}
+          danger={!!dialog?.danger}
+          onCancel={() => setDialog(null)}
+          onConfirm={() => {
+            const run = dialog?.run;
+            setDialog(null);
+            if (run) run();
+          }}
+        />
+      )}
       <GlobalAssistantPromptPanel />
       <CoursePromptEditor courseId={courseId} outline={outline} onSaved={loadOutline} />
       <ContentPackImportPanel courseId={courseId} onImported={loadOutline} />
@@ -1222,8 +1313,13 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
               {(outline?.modules || []).length === 0 ? (
                 <p className="text-sm text-ink/45 p-4">Нет модулей — нажмите «+ Модуль».</p>
               ) : (
-                outline.modules.map((mod) => (
-                  <div key={mod.public_id} className="mb-3">
+                groupModulesByTask(outline.modules).map((task) => (
+                <div key={task.key} className="mb-4">
+                  <div className="px-2 pt-1 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-ink/40">
+                    {task.key === 'другое' ? 'Без номера' : `Задание ${task.key}`}
+                  </div>
+                  {task.modules.map((mod) => (
+                  <div key={mod.public_id} className="mb-2 ml-2 border-l border-black/[0.06] pl-2">
                     <div className="flex items-center gap-1 px-1 py-1 rounded-lg hover:bg-black/[0.03]">
                       <button type="button" onClick={() => setExpandedModules((p) => ({ ...p, [mod.public_id]: !p[mod.public_id] }))}
                         className="min-w-0 flex-1 flex items-center gap-2 px-1 py-1 rounded-lg text-left">
@@ -1291,7 +1387,7 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
                                   return (
                                     <div key={group.key} className="pt-1">
                                       <div className="flex flex-wrap items-center gap-1 px-1 pb-1">
-                                        <span className="text-[11px] font-bold text-ink/55">{group.key === 'ещё' ? 'Без номера' : `Урок ${group.key}`}</span>
+                                        <span className="text-[11px] font-bold text-ink/55">{editorUnitLabel(group)}</span>
                                         <button type="button" disabled={!!rowBusy}
                                           onClick={() => hideMany(all, true)}
                                           className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-black/[0.04] hover:bg-violet-100 disabled:opacity-40">
@@ -1323,6 +1419,8 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
                       </div>
                     )}
                   </div>
+                  ))}
+                </div>
                 ))
               )}
               {(outline?.exams || []).length > 0 && (

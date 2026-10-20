@@ -76,6 +76,36 @@ function groupLessonsByUnit(lessons) {
   return groups;
 }
 
+function moduleTaskNumber(mod) {
+  const nums = new Set();
+  for (const row of buildModuleLessonItems(mod)) {
+    const key = lessonUnitKey(row.lesson && row.lesson.title);
+    if (key) nums.add(key.split('.')[0]);
+  }
+  if (nums.size === 1) return [...nums][0];
+  return '';
+}
+
+function groupModulesByTask(modules) {
+  const groups = [];
+  const index = new Map();
+  for (const mod of modules || []) {
+    const key = moduleTaskNumber(mod) || 'другое';
+    if (!index.has(key)) {
+      const group = { key, modules: [] };
+      index.set(key, group);
+      groups.push(group);
+    }
+    index.get(key).modules.push(mod);
+  }
+  groups.sort((a, b) => {
+    if (a.key === 'другое') return 1;
+    if (b.key === 'другое') return -1;
+    return Number(a.key) - Number(b.key);
+  });
+  return groups;
+}
+
 function unitChipLabel(group) {
   if (group.key === 'ещё') return 'Ещё';
   const theory = (group.lessons || []).find((lesson) => /Теория/.test(lesson.title || ''));
@@ -596,57 +626,87 @@ function LearnPage({ navigate, hashParams }) {
 
         {/* modules + exams */}
         <div className="flex-1 overflow-y-auto scrollbar-thin py-2">
-          {contentOutline.map((item, oi) => {
-            if (item.kind === 'module') {
-              const mod = item.data;
-              const items = buildModuleLessonItems(mod);
-              const total = items.length;
-              const doneInModule = items.filter(
-                ({ type, lesson }) => completed.has(lessonKey(type, lesson.public_id)),
-              ).length;
-              const active = !inExamMode && (moduleParam ? mod.public_id === moduleParam : currentLesson?.modId === mod.public_id);
-
-              return (
-                <button
-                  key={`mod-${mod.public_id}`}
-                  type="button"
-                  onClick={() => {
-                    const first = items[0] || null;
-                    if (first) {
-                      goTo({
-                        type: first.type,
-                        id: first.lesson.public_id,
-                        title: first.lesson.title,
-                        modId: mod.public_id,
-                        modTitle: mod.title,
-                      });
-                    } else {
-                      navigate(Routes.LEARN, { course: courseId, module: mod.public_id });
-                      setSidebarOpen(false);
-                    }
-                  }}
-                  className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors
-                    ${active ? 'bg-violet-500/[0.07]' : 'hover:bg-black/[0.025]'}`}
-                >
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0
-                    ${active ? 'grad-bg text-white' : 'bg-black/[0.04] text-ink/55'}`}>
-                    {oi + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-[13px] leading-snug truncate ${active ? 'font-semibold text-violet-700' : 'font-semibold text-ink'}`}>
-                      {mod.title}
-                    </div>
-                    {total > 0 ? (
-                      <div className="text-[10px] text-ink/40 mt-0.5">{doneInModule}/{total} завершено</div>
-                    ) : (
-                      <div className="text-[10px] text-ink/30 mt-0.5 italic">Пока нет материалов</div>
+          {groupModulesByTask((courseData && courseData.modules) || []).map((task) => (
+            <div key={`task-${task.key}`} className="mb-1">
+              <div className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-ink/35">
+                {task.key === 'другое' ? 'Другое' : `Задание ${task.key}`}
+              </div>
+              {task.modules.map((mod) => {
+                const items = buildModuleLessonItems(mod);
+                const groups = groupLessonsByUnit(items.map(({ type, lesson }) => ({
+                  type,
+                  id: lesson.public_id,
+                  title: lesson.title,
+                  lesson,
+                })));
+                if (!groups) {
+                  const active = !inExamMode && currentLesson?.modId === mod.public_id;
+                  const first = items[0] || null;
+                  return (
+                    <button
+                      key={`mod-${mod.public_id}`}
+                      type="button"
+                      onClick={() => {
+                        if (first) {
+                          goTo({
+                            type: first.type,
+                            id: first.lesson.public_id,
+                            title: first.lesson.title,
+                            modId: mod.public_id,
+                            modTitle: mod.title,
+                          });
+                        } else {
+                          navigate(Routes.LEARN, { course: courseId, module: mod.public_id });
+                          setSidebarOpen(false);
+                        }
+                      }}
+                      className={`w-full pl-6 pr-4 py-2.5 flex items-center gap-2 text-left transition-colors
+                        ${active ? 'bg-violet-500/[0.07]' : 'hover:bg-black/[0.025]'}`}
+                    >
+                      <span className={`text-[13px] leading-snug truncate ${active ? 'font-semibold text-violet-700' : 'font-semibold text-ink'}`}>
+                        {mod.title}
+                      </span>
+                    </button>
+                  );
+                }
+                return (
+                  <div key={`mod-${mod.public_id}`}>
+                    {task.modules.length > 1 && (
+                      <div className="px-6 pt-1 text-[10px] text-ink/40 truncate">{mod.title}</div>
                     )}
+                    {groups.map((group) => {
+                      const first = group.lessons[0];
+                      const active = !inExamMode && currentLesson
+                        && currentLesson.modId === mod.public_id
+                        && lessonUnitKey(currentLesson.title) === group.key;
+                      return (
+                        <button
+                          key={`${mod.public_id}-${group.key}`}
+                          type="button"
+                          onClick={() => goTo({
+                            type: first.type,
+                            id: first.id,
+                            title: first.title,
+                            modId: mod.public_id,
+                            modTitle: mod.title,
+                          })}
+                          className={`w-full pl-5 pr-4 py-2 flex items-center gap-2 text-left transition-colors
+                            ${active ? 'bg-violet-500/[0.07]' : 'hover:bg-black/[0.025]'}`}
+                        >
+                          <span className={`w-8 shrink-0 text-[11px] font-bold ${active ? 'text-violet-700' : 'text-ink/40'}`}>{group.key}</span>
+                          <span className={`min-w-0 flex-1 text-[13px] leading-snug truncate ${active ? 'font-semibold text-violet-700' : 'text-ink'}`}>
+                            {unitChipLabel(group).replace(/^\d+\.\d+\s*/, '')}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
-                  {active && <div className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0"/>}
-                </button>
-              );
-            }
-
+                );
+              })}
+            </div>
+          ))}
+          {contentOutline.map((item) => {
+            if (item.kind !== 'exam') return null;
             const ex = item.data;
             const examItems = buildExamLessonItems(ex);
             const active = inExamMode && examParam === ex.public_id;
@@ -741,7 +801,7 @@ function LearnPage({ navigate, hashParams }) {
               embedded
             />
           ) : (
-          <div className="max-w-3xl mx-auto px-4 sm:px-10 py-8 sm:py-10">
+          <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 sm:py-10">
 
             {progressPct === 100 && certificateId && (
               <button type="button"

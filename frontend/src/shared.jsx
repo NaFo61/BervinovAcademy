@@ -892,30 +892,44 @@ function ConfirmDialog({
   onExtra,
   onCancel,
 }) {
+  const cancelRef = React.useRef(null);
   React.useEffect(() => {
     if (!open) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const onKey = (event) => {
       if (event.key === 'Escape') onCancel?.();
     };
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onCancel]);
+    const focusTimer = window.setTimeout(() => {
+      (danger ? cancelRef.current : null)?.focus();
+    }, 0);
+    return () => {
+      document.body.style.overflow = prev;
+      window.clearTimeout(focusTimer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open, onCancel, danger]);
 
   if (!open) return null;
-  return (
+  const tree = (
     <div
-      className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-0 sm:p-6"
+      className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="ba-confirm-title"
     >
-      <button type="button" className="absolute inset-0 bg-ink/50" aria-label="Закрыть" onClick={onCancel} />
-      <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-5 shadow-glow ring-1 ring-black/[0.08]">
+      <button type="button" className="absolute inset-0 bg-ink/45 backdrop-blur-[2px]" aria-label="Закрыть" onClick={onCancel} />
+      <div className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-white p-6 shadow-glow ring-1 ring-black/[0.08]">
+        {danger ? (
+          <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-rose-50 text-rose-600 text-lg font-bold" aria-hidden="true">!</div>
+        ) : null}
         <div id="ba-confirm-title" className="text-lg font-bold text-ink">{title}</div>
-        {body ? <p className="mt-2 text-sm text-ink/65 whitespace-pre-wrap">{body}</p> : null}
-        <div className="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+        {body ? <p className="mt-2 text-sm leading-relaxed text-ink/65 whitespace-pre-wrap">{body}</p> : null}
+        <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
           {!hideCancel ? (
             <button
+              ref={cancelRef}
               type="button"
               onClick={onCancel}
               className="h-11 px-4 rounded-xl text-sm font-semibold ring-1 ring-black/[0.08] bg-white"
@@ -945,6 +959,10 @@ function ConfirmDialog({
       </div>
     </div>
   );
+  if (typeof ReactDOM !== 'undefined' && ReactDOM.createPortal) {
+    return ReactDOM.createPortal(tree, document.body);
+  }
+  return tree;
 }
 
 function AppNoticeHost() {
@@ -1054,7 +1072,35 @@ async function openAttachmentInPlayground(row, navigate) {
   }
 }
 
+function LessonImageZoom({ src, alt, onClose }) {
+  React.useEffect(() => {
+    if (!src) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (event) => {
+      if (event.key === 'Escape') onClose?.();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [src, onClose]);
+  if (!src) return null;
+  const tree = (
+    <div className="fixed inset-0 z-[130] flex items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Схема крупно">
+      <button type="button" className="absolute inset-0 bg-ink/75" aria-label="Закрыть" onClick={onClose} />
+      <img src={src} alt={alt || 'Схема'} className="relative max-w-[96vw] max-h-[92vh] w-auto h-auto object-contain rounded-xl bg-white shadow-glow" />
+    </div>
+  );
+  if (typeof ReactDOM !== 'undefined' && ReactDOM.createPortal) {
+    return ReactDOM.createPortal(tree, document.body);
+  }
+  return tree;
+}
+
 function LessonAttachments({ items, navigate, lessonTitle, hideImages }) {
+  const [zoom, setZoom] = React.useState(null);
   const list = Array.isArray(items) ? items : [];
   const images = hideImages ? [] : list.filter(isLessonImageAttachment);
   const files = list.filter((row) => !isLessonImageAttachment(row));
@@ -1074,11 +1120,13 @@ function LessonAttachments({ items, navigate, lessonTitle, hideImages }) {
               const href = mediaUrl(row.url) || row.url || '';
               return (
                 <figure key={row.public_id || row.name} className="overflow-hidden rounded-xl ring-1 ring-black/[0.06] bg-[#fafafa]">
-                  <img
-                    src={href}
-                    alt={row.name || 'Схема задания'}
-                    className="w-full max-h-[min(72vh,720px)] object-contain bg-white"
-                  />
+                  <button type="button" className="block w-full" onClick={() => href && setZoom({ src: href, alt: row.name || 'Схема задания' })}>
+                    <img
+                      src={href}
+                      alt={row.name || 'Схема задания'}
+                      className="w-full h-auto object-contain bg-white cursor-zoom-in"
+                    />
+                  </button>
                 </figure>
               );
             })}
@@ -1107,6 +1155,7 @@ function LessonAttachments({ items, navigate, lessonTitle, hideImages }) {
           )}
         </div>
       )}
+      {zoom ? <LessonImageZoom src={zoom.src} alt={zoom.alt} onClose={() => setZoom(null)} /> : null}
       {files.length > 0 && (
         <div className="rounded-2xl ring-1 ring-black/[0.06] bg-white p-4">
           <div className="text-xs font-semibold uppercase tracking-widest text-ink/50 mb-3">
@@ -2972,6 +3021,7 @@ Object.assign(window, {
   formatFileSize,
   ConfirmDialog,
   AppNoticeHost,
+  LessonImageZoom,
   LessonAttachments,
   isLessonImageAttachment,
   openLessonImagesOnBoard,

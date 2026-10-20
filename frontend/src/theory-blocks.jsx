@@ -105,6 +105,7 @@ function TheoryBlockRead({ block, navigate, lessonTitle }) {
 
 function TheoryBlocksView({ lesson, navigate }) {
   const hostRef = React.useRef(null);
+  const [zoom, setZoom] = React.useState(null);
   const blocks = Array.isArray(lesson?.blocks) ? lesson.blocks : [];
   const attachments = lesson?.attachments || [];
   React.useEffect(() => {
@@ -112,6 +113,20 @@ function TheoryBlocksView({ lesson, navigate }) {
       window.enhancePythonBlocks(hostRef.current, navigate);
     }
   }, [lesson?.content, lesson?.public_id, blocks.length, navigate]);
+  React.useEffect(() => {
+    const root = hostRef.current;
+    if (!root) return undefined;
+    const onClick = (event) => {
+      const img = event.target.closest && event.target.closest('img');
+      if (!img || !root.contains(img)) return;
+      setZoom({ src: img.currentSrc || img.src, alt: img.alt || 'Схема' });
+    };
+    root.addEventListener('click', onClick);
+    return () => root.removeEventListener('click', onClick);
+  }, [lesson?.content, lesson?.public_id, blocks.length]);
+  const zoomNode = zoom && window.LessonImageZoom
+    ? <window.LessonImageZoom src={zoom.src} alt={zoom.alt} onClose={() => setZoom(null)} />
+    : null;
   if (blocks.length) {
     return (
       <div ref={hostRef}>
@@ -133,6 +148,7 @@ function TheoryBlocksView({ lesson, navigate }) {
             lessonTitle={lesson.title}
           />
         )}
+        {zoomNode}
       </div>
     );
   }
@@ -147,6 +163,7 @@ function TheoryBlocksView({ lesson, navigate }) {
           __html: window.sanitizeHtml(lesson?.content || '<p>Содержимое урока ещё добавляется.</p>'),
         }}
       />
+      {zoomNode}
     </div>
   );
 }
@@ -452,7 +469,7 @@ function TheoryBlocksEditor({ kind, publicId, blocks, onBlocks, onAttachments })
                       <img
                         src={imageSrc(block)}
                         alt={block.caption || block.name || ''}
-                        className="w-full max-h-[min(56vh,560px)] object-contain rounded-xl bg-[#fafafa] ring-1 ring-black/[0.06]"
+                        className="w-full h-auto object-contain rounded-xl bg-white ring-1 ring-black/[0.06] cursor-zoom-in"
                       />
                     ) : (
                       <p className="text-sm text-red-600">Файл картинки не найден. Загрузите заново.</p>

@@ -853,7 +853,7 @@ function ExamActiveSession({
           </button>
         </div>
         <div className="flex-1 overflow-y-auto scrollbar-thin">
-          <div className="max-w-3xl mx-auto px-5 sm:px-10 py-10">
+          <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10">
             {lessonPanels}
           </div>
         </div>
@@ -933,7 +933,7 @@ function ExamActiveSession({
         </div>
 
         <div className="flex-1 overflow-y-auto scrollbar-thin">
-          <div className="max-w-3xl mx-auto px-5 sm:px-10 py-10">
+          <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10">
             {lessonPanels}
           </div>
         </div>
