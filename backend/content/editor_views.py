@@ -204,6 +204,25 @@ class ModuleEditorDetailView(APIView):
         denied = _check_course_access(request, module.course)
         if denied:
             return denied
+        permanent = request.query_params.get("permanent") in (
+            "1",
+            "true",
+            "yes",
+        )
+        if permanent:
+            try:
+                module.delete()
+            except ProtectedError:
+                return Response(
+                    {
+                        "detail": (
+                            "Этот модуль связан с другими данными. "
+                            "Его можно только скрыть."
+                        )
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+            return Response(status=status.HTTP_204_NO_CONTENT)
         module.is_active = False
         module.save(update_fields=["is_active"])
         return Response(status=status.HTTP_204_NO_CONTENT)

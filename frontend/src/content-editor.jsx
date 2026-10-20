@@ -990,11 +990,6 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
     window.fetchApiJson(`/api/mentoring/editor/courses/${encodeURIComponent(courseId)}/`, { auth: true })
       .then((d) => {
         setOutline(d);
-        setExpandedModules((prev) => {
-          const next = { ...prev };
-          (d.modules || []).forEach((m) => { if (next[m.public_id] === undefined) next[m.public_id] = true; });
-          return next;
-        });
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -1141,6 +1136,27 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
     }
   };
 
+  const removeModule = async (mod, event) => {
+    event.stopPropagation();
+    if (rowBusy) return;
+    const name = mod.title || 'модуль';
+    if (!window.confirm(`Удалить модуль «${name}» целиком? Всё внутри пропадёт. Вернуть нельзя.`)) return;
+    setRowBusy(mod.public_id);
+    setError('');
+    try {
+      await window.fetchApiJson(
+        `/api/mentoring/editor/modules/${encodeURIComponent(mod.public_id)}/?permanent=1`,
+        { method: 'DELETE', auth: true },
+      );
+      if (selected?.module_public_id === mod.public_id) setSelected(null);
+      loadOutline();
+    } catch (e) {
+      setError(e.message || 'Не получилось');
+    } finally {
+      setRowBusy('');
+    }
+  };
+
   const createLesson = async (moduleId, kind) => {
     setCreating(`${moduleId}-${kind}`);
     try {
@@ -1208,12 +1224,19 @@ function ContentEditorPanel({ courseId, courses, onCourseChange, onCoursesRefres
               ) : (
                 outline.modules.map((mod) => (
                   <div key={mod.public_id} className="mb-3">
-                    <button type="button" onClick={() => setExpandedModules((p) => ({ ...p, [mod.public_id]: !p[mod.public_id] }))}
-                      className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-black/[0.03] text-left">
-                      <span className="text-ink/35 text-xs">{expandedModules[mod.public_id] ? '▼' : '▶'}</span>
-                      <span className="font-semibold text-sm text-ink truncate">{mod.title}</span>
-                      <span className="text-[10px] text-ink/35 ml-auto">{mod.lessons?.length || 0}</span>
-                    </button>
+                    <div className="flex items-center gap-1 px-1 py-1 rounded-lg hover:bg-black/[0.03]">
+                      <button type="button" onClick={() => setExpandedModules((p) => ({ ...p, [mod.public_id]: !p[mod.public_id] }))}
+                        className="min-w-0 flex-1 flex items-center gap-2 px-1 py-1 rounded-lg text-left">
+                        <span className="text-ink/35 text-xs">{expandedModules[mod.public_id] ? '▼' : '▶'}</span>
+                        <span className="font-semibold text-sm text-ink truncate">{mod.title}</span>
+                        <span className="text-[10px] text-ink/35 ml-auto">{mod.lessons?.length || 0}</span>
+                      </button>
+                      <button type="button" disabled={!!rowBusy}
+                        onClick={(event) => removeModule(mod, event)}
+                        className="shrink-0 text-[10px] font-semibold px-1.5 py-1 rounded-md text-red-700 hover:bg-red-50 disabled:opacity-40">
+                        Удалить
+                      </button>
+                    </div>
                     {expandedModules[mod.public_id] && (
                       <div className="ml-2 pl-2 border-l border-black/[0.06] space-y-1">
                         <ModulePromptEditor mod={mod} onSaved={loadOutline} />

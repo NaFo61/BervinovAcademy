@@ -110,6 +110,31 @@ class TestContentEditorApi:
         assert gone.status_code == status.HTTP_204_NO_CONTENT
         assert not LessonTheory.objects.filter(public_id=pid).exists()
 
+    def test_permanent_delete_module(self, mentor_client, course):
+        from content.models import LessonTheory, Module
+
+        create_mod = mentor_client.post(
+            f"/api/mentoring/editor/courses/{course.public_id}/modules/",
+            {"title": "Модуль целиком"},
+            format="json",
+        )
+        assert create_mod.status_code == status.HTTP_201_CREATED
+        mid = create_mod.data["public_id"]
+        create = mentor_client.post(
+            f"/api/mentoring/editor/modules/{mid}/lessons/",
+            {"kind": "theory", "title": "Внутри"},
+            format="json",
+        )
+        assert create.status_code == status.HTTP_201_CREATED
+        pid = create.data["public_id"]
+
+        gone = mentor_client.delete(
+            f"/api/mentoring/editor/modules/{mid}/?permanent=1"
+        )
+        assert gone.status_code == status.HTTP_204_NO_CONTENT
+        assert not Module.objects.filter(public_id=mid).exists()
+        assert not LessonTheory.objects.filter(public_id=pid).exists()
+
     def test_create_course_assigns_mentor(self, mentor_client, mentor_user):
         resp = mentor_client.post(
             "/api/mentoring/editor/courses/",
