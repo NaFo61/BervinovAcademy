@@ -217,6 +217,8 @@ function LearnPage({ navigate, hashParams }) {
 
   // ── sidebar toggle (mobile) ──
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [openTasks, setOpenTasks] = React.useState(() => new Set());
+  const [mapOpen, setMapOpen] = React.useState(false);
 
   // ── load course ──
   React.useEffect(() => {
@@ -323,6 +325,18 @@ function LearnPage({ navigate, hashParams }) {
     return lessonUnits.find((group) => group.key === key) || lessonUnits[0];
   }, [lessonUnits, currentLesson]);
   const tiles = activeUnit ? activeUnit.lessons : moduleLessons;
+
+  React.useEffect(() => {
+    if (!currentModule) return undefined;
+    const key = moduleTaskNumber(currentModule) || 'другое';
+    setOpenTasks((prev) => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+    return undefined;
+  }, [currentModule]);
 
   // ── keep module param consistent with current lesson ──
   React.useEffect(() => {
@@ -626,12 +640,27 @@ function LearnPage({ navigate, hashParams }) {
 
         {/* modules + exams */}
         <div className="flex-1 overflow-y-auto scrollbar-thin py-2">
-          {groupModulesByTask((courseData && courseData.modules) || []).map((task) => (
+          {groupModulesByTask((courseData && courseData.modules) || []).map((task) => {
+            const taskOpen = openTasks.has(task.key);
+            return (
             <div key={`task-${task.key}`} className="mb-1">
-              <div className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-ink/35">
-                {task.key === 'другое' ? 'Другое' : `Задание ${task.key}`}
-              </div>
-              {task.modules.map((mod) => {
+              <button
+                type="button"
+                onClick={() => setOpenTasks((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(task.key)) next.delete(task.key);
+                  else next.add(task.key);
+                  return next;
+                })}
+                className="w-full px-4 pt-3 pb-1 flex items-center justify-between gap-2 text-left"
+                aria-expanded={taskOpen}
+              >
+                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink/35">
+                  {task.key === 'другое' ? 'Другое' : `Задание ${task.key}`}
+                </span>
+                <I.ChevronRight className={`w-3 h-3 text-ink/30 transition-transform ${taskOpen ? 'rotate-90' : ''}`} />
+              </button>
+              {taskOpen && task.modules.map((mod) => {
                 const items = buildModuleLessonItems(mod);
                 const groups = groupLessonsByUnit(items.map(({ type, lesson }) => ({
                   type,
@@ -704,7 +733,8 @@ function LearnPage({ navigate, hashParams }) {
                 );
               })}
             </div>
-          ))}
+            );
+          })}
           {contentOutline.map((item) => {
             if (item.kind !== 'exam') return null;
             const ex = item.data;
@@ -801,7 +831,7 @@ function LearnPage({ navigate, hashParams }) {
               embedded
             />
           ) : (
-          <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 sm:py-10">
+          <div className="max-w-3xl mx-auto px-4 sm:px-8 py-6 sm:py-8">
 
             {progressPct === 100 && certificateId && (
               <button type="button"
@@ -815,21 +845,36 @@ function LearnPage({ navigate, hashParams }) {
 
             {/* module tiles */}
             {currentModule && (
-              <div className="mb-8">
-                <div className="flex items-center justify-between gap-3 mb-4">
-                  <div className="min-w-0">
-                    <div className="text-[11px] font-semibold uppercase tracking-widest text-ink/40">Модуль</div>
-                    <div className="text-[18px] font-extrabold text-ink truncate">{currentModule.title}</div>
+              <div className="mb-6 rounded-2xl bg-white ring-1 ring-black/[0.06] px-3 py-3 sm:px-4">
+                <button
+                  type="button"
+                  onClick={() => setMapOpen((open) => !open)}
+                  className="w-full flex items-center gap-3 text-left"
+                  aria-expanded={mapOpen}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-semibold uppercase tracking-widest text-ink/40">Модуль</div>
+                    <div className="text-[15px] font-bold text-ink truncate">{currentModule.title}</div>
+                    {!mapOpen && (
+                      <div className="mt-0.5 text-[12px] text-ink/50 truncate">
+                        {activeUnit ? unitChipLabel(activeUnit) : 'Уроки модуля'}
+                        {tiles.length > 0 ? ` · ${tiles.filter(l => completed.has(lessonKey(l.type, l.id))).length}/${tiles.length}` : ''}
+                      </div>
+                    )}
                   </div>
-                  {tiles.length > 0 && (
-                    <div className="text-[11px] text-ink/45 shrink-0">
-                      {tiles.filter(l => completed.has(lessonKey(l.type, l.id))).length}/{tiles.length} {activeUnit ? 'в уроке' : 'в модуле'}
-                    </div>
-                  )}
-                </div>
+                  <span className="shrink-0 text-[12px] font-semibold text-violet-700">
+                    {mapOpen ? 'Свернуть' : 'Развернуть'}
+                  </span>
+                </button>
 
-                {activeUnit && (
-                  <div className="flex flex-wrap gap-2 mb-4">
+                {mapOpen && tiles.length > 0 && (
+                  <div className="mt-3 text-right text-[11px] text-ink/45">
+                    {tiles.filter(l => completed.has(lessonKey(l.type, l.id))).length}/{tiles.length} {activeUnit ? 'в уроке' : 'в модуле'}
+                  </div>
+                )}
+
+                {mapOpen && activeUnit && (
+                  <div className="flex flex-wrap gap-2 mt-3 mb-3">
                     {lessonUnits.map((group) => {
                       const on = group.key === activeUnit.key;
                       return (
@@ -846,14 +891,14 @@ function LearnPage({ navigate, hashParams }) {
                   </div>
                 )}
 
-                {hasModuleStub ? (
+                {mapOpen && hasModuleStub ? (
                   <div className="rounded-2xl bg-black/[0.02] ring-1 ring-black/[0.06] p-6 text-center text-ink/45">
                     <div className="text-3xl mb-2">📦</div>
                     <div className="text-sm font-semibold text-ink/60">В этом модуле пока нет материалов</div>
                     <div className="text-xs mt-1">Выберите другой модуль слева</div>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-1.5">
+                ) : mapOpen ? (
+                  <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-1.5">
                     {tiles.map((l, idx) => {
                       const active = currentLesson?.type === l.type && currentLesson?.id === l.id;
                       const done = completed.has(lessonKey(l.type, l.id));
@@ -890,7 +935,7 @@ function LearnPage({ navigate, hashParams }) {
                       );
                     })}
                   </div>
-                )}
+                ) : null}
               </div>
             )}
 
@@ -1179,7 +1224,7 @@ function RadioLesson({ lesson, selected, setSelected, submitted, result, loading
       )}
 
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
-        <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
+        <p className="text-[14px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
       </div>
 
       <window.LessonInstructorNote text={lesson.comment} />
@@ -1316,7 +1361,7 @@ function CheckboxLesson({ lesson, selected, setSelected, submitted, result, load
       )}
 
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
-        <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
+        <p className="text-[14px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
       </div>
 
       <window.LessonInstructorNote text={lesson.comment} />
@@ -1441,7 +1486,7 @@ function ShortAnswerLesson({
       )}
 
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
-        <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
+        <p className="text-[14px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
       </div>
 
       <window.LessonInstructorNote text={lesson.comment} />
@@ -1521,13 +1566,13 @@ function LessonHeader({ type, title, label, badge, points }) {
     coding: 'bg-purple-50',
   };
   return (
-    <div className="flex items-start gap-4">
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0 ${tints[type] || 'bg-paper'}`}>
+    <div className="flex items-start gap-3">
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 ${tints[type] || 'bg-paper'}`}>
         {icons[type] || '📄'}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-[11px] font-semibold uppercase tracking-widest text-ink/40 mb-1">{label}</div>
-        <h1 className="text-[22px] font-extrabold text-ink leading-tight">{title}</h1>
+        <div className="text-[10px] font-semibold uppercase tracking-widest text-ink/40 mb-0.5">{label}</div>
+        <h1 className="text-[17px] font-bold text-ink leading-snug">{title}</h1>
         {(badge || points != null) && (
           <div className="mt-2 flex flex-wrap gap-2">
             {badge && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-600">{badge}</span>}

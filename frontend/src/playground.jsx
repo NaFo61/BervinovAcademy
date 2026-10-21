@@ -60,9 +60,19 @@ function ensurePyodide(onStatus) {
   return window.__pyodideLoading;
 }
 
-async function runPythonInBrowser(code, stdinText) {
+function playgroundFileName(name) {
+  const base = String(name || 'data.txt').split(/[/\\]/).pop() || 'data.txt';
+  return base.replace(/[^\w.\- ()а-яА-ЯёЁ]/g, '_') || 'data.txt';
+}
+
+async function runPythonInBrowser(code, stdinText, files) {
   const pyodide = await ensurePyodide();
   const stdin = String(stdinText ?? '');
+  const attached = Array.isArray(files) ? files : [];
+  for (const file of attached) {
+    if (!file?.name) continue;
+    pyodide.FS.writeFile(playgroundFileName(file.name), String(file.text || ''));
+  }
   const stdoutChunks = [];
   const stderrChunks = [];
   const decoder = new TextDecoder('utf-8');
@@ -127,9 +137,11 @@ sys.stdin = StringIO(${JSON.stringify(stdin)})
 }
 
 function PlaygroundPage({ navigate }) {
-  const stash = React.useMemo(() => window.takePlaygroundStash?.() || { code: '', stdin: '' }, []);
+  const stash = React.useMemo(() => window.takePlaygroundStash?.() || { code: '', stdin: '', file: null }, []);
   const [code, setCode] = React.useState(stash.code || DEFAULT_PLAYGROUND_CODE);
   const [stdin, setStdin] = React.useState(stash.stdin || '');
+  const [files, setFiles] = React.useState(stash.file?.name ? [stash.file] : []);
+  const fileInputRef = React.useRef(null);
   const [stdout, setStdout] = React.useState('');
   const [stderr, setStderr] = React.useState('');
   const [runError, setRunError] = React.useState('');
@@ -159,7 +171,7 @@ function PlaygroundPage({ navigate }) {
     setRunError('');
     setStatus('Выполнение…');
     try {
-      const result = await runPythonInBrowser(code, stdin);
+      const result = await runPythonInBrowser(code, stdin, files);
       setStdout(result.stdout || '');
       setStderr(result.stderr || '');
       setRunError(result.error || '');
@@ -199,7 +211,7 @@ function PlaygroundPage({ navigate }) {
               Python<span className="text-cyan-400">‑интерпретатор</span>
             </h1>
             <p className="mt-2 text-sm text-white/50 max-w-xl">
-              Код выполняется в браузере (Pyodide). Без тестов и очереди — просто вход, код и вывод.
+              Код выполняется в браузере. Текстовый файл задания можно открыть через open("имя.txt").
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -226,6 +238,56 @@ function PlaygroundPage({ navigate }) {
         </div>
 
         <p className="mb-4 text-xs text-white/40">{readyHint}{status ? ` · ${status}` : ''}</p>
+
+        <div className="mb-4 rounded-2xl ring-1 ring-white/10 bg-[#0d1117] px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-widest text-sky-300/90">Текстовые файлы</div>
+              <p className="mt-1 text-[12px] text-white/45">
+                {files.length
+                  ? 'Файл уже рядом с программой. Читайте его через open("имя").'
+                  : 'Добавьте txt, если в задании есть файл.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="h-9 px-3 rounded-lg text-[12px] font-semibold text-cyan-100 bg-cyan-400/10 ring-1 ring-cyan-300/30 hover:bg-cyan-400/20"
+            >
+              Добавить txt
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.csv,.md,text/plain"
+              className="hidden"
+              onChange={async (event) => {
+                const picked = event.target.files?.[0];
+                event.target.value = '';
+                if (!picked) return;
+                const text = await picked.text();
+                const name = playgroundFileName(picked.name);
+                setFiles((prev) => [...prev.filter((row) => row.name !== name), { name, text }]);
+              }}
+            />
+          </div>
+          {files.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {files.map((file) => (
+                <li key={file.name} className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2">
+                  <span className="min-w-0 truncate font-mono text-[12px] text-white/80">{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setFiles((prev) => prev.filter((row) => row.name !== file.name))}
+                    className="shrink-0 text-[11px] font-semibold text-white/45 hover:text-white"
+                  >
+                    Убрать
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         <div className="grid lg:grid-cols-[1.4fr_1fr] gap-4">
           <window.PythonCodeEditor

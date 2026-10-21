@@ -469,7 +469,7 @@ function TheoryBlocksEditor({ kind, publicId, blocks, onBlocks, onAttachments })
                       <img
                         src={imageSrc(block)}
                         alt={block.caption || block.name || ''}
-                        className="w-full h-auto object-contain rounded-xl bg-white ring-1 ring-black/[0.06] cursor-zoom-in"
+                        className="max-w-full w-auto h-auto max-h-[min(40vh,360px)] object-contain rounded-xl bg-white ring-1 ring-black/[0.06]"
                       />
                     ) : (
                       <p className="text-sm text-red-600">Файл картинки не найден. Загрузите заново.</p>

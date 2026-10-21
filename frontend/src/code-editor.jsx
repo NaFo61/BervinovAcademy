@@ -9,6 +9,7 @@ const MONACO_CDN_BASES = [
 const MONACO_LOAD_TIMEOUT_MS = 15000;
 const PLAYGROUND_CODE_KEY = 'ba_playground_code';
 const PLAYGROUND_STDIN_KEY = 'ba_playground_stdin';
+const PLAYGROUND_FILE_KEY = 'ba_playground_file';
 
 function loadScriptOnce(src, timeoutMs) {
   return new Promise((resolve, reject) => {
@@ -163,27 +164,47 @@ function ensureMonaco(onStatus) {
   return window.__monacoLoading;
 }
 
-function stashPlaygroundCode(code, stdin) {
+function stashPlaygroundCode(code, stdin, file) {
   try {
     sessionStorage.setItem(PLAYGROUND_CODE_KEY, code || '');
     sessionStorage.setItem(PLAYGROUND_STDIN_KEY, stdin || '');
   } catch (_) { /* private mode / quota */ }
+  if (file && file.name) {
+    window.__playgroundFile = { name: String(file.name), text: String(file.text || '') };
+    try {
+      sessionStorage.setItem(PLAYGROUND_FILE_KEY, JSON.stringify(window.__playgroundFile));
+    } catch (_) { /* file is large: the in-memory copy is enough until refresh */ }
+  } else {
+    window.__playgroundFile = null;
+    try { sessionStorage.removeItem(PLAYGROUND_FILE_KEY); } catch (_) { /* ignore */ }
+  }
 }
 
 function takePlaygroundStash() {
   let code = '';
   let stdin = '';
+  let file = null;
   try {
     code = sessionStorage.getItem(PLAYGROUND_CODE_KEY) || '';
     stdin = sessionStorage.getItem(PLAYGROUND_STDIN_KEY) || '';
     sessionStorage.removeItem(PLAYGROUND_CODE_KEY);
     sessionStorage.removeItem(PLAYGROUND_STDIN_KEY);
   } catch (_) { /* ignore */ }
-  return { code, stdin };
+  if (window.__playgroundFile && window.__playgroundFile.name) {
+    file = window.__playgroundFile;
+  } else {
+    try {
+      const raw = sessionStorage.getItem(PLAYGROUND_FILE_KEY);
+      if (raw) file = JSON.parse(raw);
+    } catch (_) { /* ignore */ }
+  }
+  window.__playgroundFile = null;
+  try { sessionStorage.removeItem(PLAYGROUND_FILE_KEY); } catch (_) { /* ignore */ }
+  return { code, stdin, file };
 }
 
-function openPlaygroundWithCode(navigate, code, stdin) {
-  stashPlaygroundCode(code, stdin);
+function openPlaygroundWithCode(navigate, code, stdin, file) {
+  stashPlaygroundCode(code, stdin, file);
   if (typeof navigate === 'function') {
     navigate(window.Routes.PLAYGROUND);
     return;
@@ -392,4 +413,5 @@ Object.assign(window, {
   takePlaygroundStash,
   PLAYGROUND_CODE_KEY,
   PLAYGROUND_STDIN_KEY,
+  PLAYGROUND_FILE_KEY,
 });

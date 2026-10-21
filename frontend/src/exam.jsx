@@ -314,13 +314,13 @@ function ExamTheoryPanel({ lesson, marked, onMark, navigate }) {
 function ExamLessonHeader({ kind, title, label }) {
   const icons = { theory: '📖', radio: '🔘', checkbox: '☑️', coding: '💻' };
   return (
-    <div className="flex items-start gap-4">
-      <div className="w-11 h-11 rounded-xl bg-violet-500/10 flex items-center justify-center text-2xl shrink-0">
+    <div className="flex items-start gap-3">
+      <div className="w-9 h-9 rounded-xl bg-violet-500/10 flex items-center justify-center text-lg shrink-0">
         {icons[kind] || '📄'}
       </div>
       <div>
-        <div className="text-[11px] font-semibold uppercase tracking-widest text-ink/40">{label}</div>
-        <h1 className="text-[22px] font-extrabold text-ink leading-tight mt-1">{title}</h1>
+        <div className="text-[10px] font-semibold uppercase tracking-widest text-ink/40">{label}</div>
+        <h1 className="text-[17px] font-bold text-ink leading-snug mt-0.5">{title}</h1>
       </div>
     </div>
   );
@@ -360,7 +360,7 @@ function ExamRadioPanel({ lesson, step, attemptId, onUpdated, navigate }) {
         <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
       )}
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
-        <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
+        <p className="text-[14px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
       </div>
       <div className="mt-5 space-y-3">
         {(lesson.answer_options || []).map((opt) => {
@@ -455,7 +455,7 @@ function ExamCheckboxPanel({ lesson, step, attemptId, onUpdated, navigate }) {
         <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
       )}
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
-        <p className="text-[15px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
+        <p className="text-[14px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
       </div>
       <div className="mt-5 space-y-3">
         {(lesson.answer_options || []).map((opt) => {
@@ -853,7 +853,7 @@ function ExamActiveSession({
           </button>
         </div>
         <div className="flex-1 overflow-y-auto scrollbar-thin">
-          <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10">
+          <div className="max-w-3xl mx-auto px-5 sm:px-8 py-8">
             {lessonPanels}
           </div>
         </div>
@@ -933,7 +933,7 @@ function ExamActiveSession({
         </div>
 
         <div className="flex-1 overflow-y-auto scrollbar-thin">
-          <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10">
+          <div className="max-w-3xl mx-auto px-5 sm:px-8 py-8">
             {lessonPanels}
           </div>
         </div>

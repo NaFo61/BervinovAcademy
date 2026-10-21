@@ -1051,24 +1051,61 @@ function openLessonImagesOnBoard(navigate, { urls, title } = {}) {
   navigate(Routes.WHITEBOARD);
 }
 
-async function openAttachmentInPlayground(row, navigate) {
+function safeFileName(name) {
+  const base = String(name || 'data.txt').split(/[/\\]/).pop() || 'data.txt';
+  return base.replace(/[^\w.\- ()а-яА-ЯёЁ]/g, '_') || 'data.txt';
+}
+
+async function readAttachmentText(row) {
+  const href = mediaUrl(row?.url) || row?.url || '';
+  if (!href) throw new Error('У файла нет адреса');
+  const response = await fetch(href);
+  if (!response.ok) throw new Error('Файл не открылся');
+  return response.text();
+}
+
+async function downloadLessonFile(row) {
+  const href = mediaUrl(row?.url) || row?.url || '';
+  const name = safeFileName(row?.name || 'файл');
+  if (!href) {
+    notifyUser('Скачать не получилось', 'У файла нет адреса.');
+    return;
+  }
   try {
-    const href = mediaUrl(row?.url) || row?.url || '';
-    if (!href || !window.openPlaygroundWithCode) return;
     const response = await fetch(href);
-    if (!response.ok) return;
-    const text = (await response.text()).replace(/\s+$/g, '');
+    if (!response.ok) throw new Error('bad');
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (_) {
+    notifyUser('Скачать не получилось', 'Файл не открылся. Обновите страницу и попробуйте ещё раз.');
+  }
+}
+
+async function openAttachmentInPlayground(row, navigate) {
+  if (!window.openPlaygroundWithCode) {
+    notifyUser('Интерпретатор не открылся', 'Обновите страницу и попробуйте ещё раз.');
+    return;
+  }
+  try {
+    const text = await readAttachmentText(row);
+    const name = safeFileName(row?.name || 'data.txt');
     const code = [
-      `s = ${JSON.stringify(text)}`,
-      '# На экзамене эту строку заменяют на:',
-      '# s = open("24.txt").read().strip()',
+      `# Файл «${name}» уже лежит рядом с программой.`,
+      `s = open(${JSON.stringify(name)}, encoding="utf-8").read().strip()`,
       '',
-      '# Дальше пишите решение и в конце печатайте ответ.',
+      '# Дальше пишите решение. В конце печатайте ответ.',
       'print(len(s))',
     ].join('\n');
-    window.openPlaygroundWithCode(navigate, code);
-  } catch (err) {
-    return;
+    window.openPlaygroundWithCode(navigate, code, '', { name, text });
+  } catch (_) {
+    notifyUser('Файл не открылся', 'Не удалось прочитать текст. Скачайте файл и добавьте его в интерпретаторе кнопкой «Добавить txt».');
   }
 }
 
@@ -1101,6 +1138,7 @@ function LessonImageZoom({ src, alt, onClose }) {
 
 function LessonAttachments({ items, navigate, lessonTitle, hideImages }) {
   const [zoom, setZoom] = React.useState(null);
+  const [fileBusy, setFileBusy] = React.useState('');
   const list = Array.isArray(items) ? items : [];
   const images = hideImages ? [] : list.filter(isLessonImageAttachment);
   const files = list.filter((row) => !isLessonImageAttachment(row));
@@ -1119,12 +1157,12 @@ function LessonAttachments({ items, navigate, lessonTitle, hideImages }) {
             {images.map((row) => {
               const href = mediaUrl(row.url) || row.url || '';
               return (
-                <figure key={row.public_id || row.name} className="overflow-hidden rounded-xl ring-1 ring-black/[0.06] bg-[#fafafa]">
-                  <button type="button" className="block w-full" onClick={() => href && setZoom({ src: href, alt: row.name || 'Схема задания' })}>
+                <figure key={row.public_id || row.name} className="flex justify-center overflow-hidden rounded-xl ring-1 ring-black/[0.06] bg-[#fafafa] p-2">
+                  <button type="button" className="block max-w-full" onClick={() => href && setZoom({ src: href, alt: row.name || 'Схема задания' })}>
                     <img
                       src={href}
                       alt={row.name || 'Схема задания'}
-                      className="w-full h-auto object-contain bg-white cursor-zoom-in"
+                      className="max-w-full w-auto h-auto max-h-[min(46vh,420px)] object-contain bg-white cursor-zoom-in rounded-lg"
                     />
                   </button>
                 </figure>
@@ -1157,39 +1195,53 @@ function LessonAttachments({ items, navigate, lessonTitle, hideImages }) {
       )}
       {zoom ? <LessonImageZoom src={zoom.src} alt={zoom.alt} onClose={() => setZoom(null)} /> : null}
       {files.length > 0 && (
-        <div className="rounded-2xl ring-1 ring-black/[0.06] bg-white p-4">
-          <div className="text-xs font-semibold uppercase tracking-widest text-ink/50 mb-3">
-            Материалы к заданию
+        <div className="rounded-2xl ring-1 ring-black/[0.06] bg-white p-3 sm:p-4">
+          <div className="text-[11px] font-semibold uppercase tracking-widest text-ink/45 mb-2">
+            Файлы к заданию
           </div>
           <ul className="space-y-2">
             {files.map((row) => {
-              const href = mediaUrl(row.url) || row.url || '';
+              const name = row.name || 'Файл';
+              const ext = (name.split('.').pop() || 'файл').slice(0, 4).toUpperCase();
+              const isText = /\.(txt|csv|md)$/i.test(name);
+              const busy = fileBusy === (row.public_id || name);
               return (
-                <li key={row.public_id || row.name}>
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 min-h-11 px-3 py-2 rounded-xl ring-1 ring-black/[0.06] hover:bg-violet-50/70 hover:ring-violet-200 transition-colors"
-                  >
-                    <span className="w-9 h-9 rounded-lg bg-violet-50 text-violet-700 flex items-center justify-center text-[11px] font-bold shrink-0">
-                      {(row.name || 'файл').split('.').pop()?.slice(0, 4).toUpperCase()}
+                <li key={row.public_id || name} className="flex flex-col gap-2 rounded-xl bg-[#f6f7fb] px-3 py-2.5 sm:flex-row sm:items-center">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-[10px] font-bold text-ink/55 ring-1 ring-black/[0.06]">
+                      {ext}
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-ink truncate">{row.name || 'Файл'}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-[13px] font-semibold text-ink">{name}</span>
                       <span className="block text-[11px] text-ink/45">{formatFileSize(row.size)}</span>
                     </span>
-                    <span className="text-[12px] font-semibold text-violet-700 shrink-0">Скачать</span>
-                  </a>
-                  {/\.txt$/i.test(row.name || '') && (
+                  </div>
+                  <div className="flex shrink-0 gap-2">
                     <button
                       type="button"
-                      onClick={() => openAttachmentInPlayground(row, navigate)}
-                      className="mt-1 min-h-10 w-full rounded-xl text-[12px] font-semibold text-cyan-800 bg-cyan-50 ring-1 ring-cyan-200 hover:bg-cyan-100"
+                      onClick={() => downloadLessonFile(row)}
+                      className="h-9 px-3 rounded-lg text-[12px] font-semibold text-ink bg-white ring-1 ring-black/[0.08] hover:bg-violet-50"
                     >
-                      Открыть строку из файла в интерпретаторе
+                      Скачать
                     </button>
-                  )}
+                    {isText && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={async () => {
+                          setFileBusy(row.public_id || name);
+                          try {
+                            await openAttachmentInPlayground(row, navigate);
+                          } finally {
+                            setFileBusy('');
+                          }
+                        }}
+                        className="h-9 px-3 rounded-lg text-[12px] font-semibold text-cyan-900 bg-cyan-50 ring-1 ring-cyan-200 hover:bg-cyan-100 disabled:opacity-50"
+                      >
+                        {busy ? 'Открываем…' : 'В интерпретатор'}
+                      </button>
+                    )}
+                  </div>
                 </li>
               );
             })}
@@ -1444,7 +1496,7 @@ function ReferenceSolutionContent({ referenceSolution }) {
       {hasText && (
         <div
           ref={hostRef}
-          className={`theory-content text-[15px] text-ink/85 leading-relaxed ${referenceSolution.video || referenceSolution.video_requires_pro ? 'mt-6' : ''}`}
+          className={`theory-content text-ink/85 ${referenceSolution.video || referenceSolution.video_requires_pro ? 'mt-6' : ''}`}
           dangerouslySetInnerHTML={{ __html: sanitizeHtml(referenceSolution.text) }}
         />
       )}

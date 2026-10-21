@@ -382,12 +382,12 @@
   .no-scrollbar { scrollbar-width: none; }
 
   /* ── Theory lesson prose ── */
-  .theory-content { font-size: 15px; line-height: 1.8; color: rgba(11,18,38,0.82); }
-  .theory-content h1 { font-size: 1.65rem; font-weight: 800; margin: 0 0 0.75rem; color: #0B1226; }
-  .theory-content h2 { font-size: 1.3rem;  font-weight: 700; margin: 1.75rem 0 0.6rem; color: #0B1226; }
-  .theory-content h3 { font-size: 1.1rem;  font-weight: 600; margin: 1.25rem 0 0.5rem; color: #0B1226; }
-  .theory-content h4 { font-size: 1rem;    font-weight: 600; margin: 1rem 0 0.4rem; }
-  .theory-content p  { margin-bottom: 1rem; }
+  .theory-content { font-size: 14.5px; line-height: 1.65; color: rgba(11,18,38,0.82); }
+  .theory-content h1 { font-size: 1.25rem; font-weight: 800; margin: 0 0 0.55rem; color: #0B1226; letter-spacing: -0.01em; }
+  .theory-content h2 { font-size: 1.05rem; font-weight: 700; margin: 1.25rem 0 0.4rem; color: #0B1226; }
+  .theory-content h3 { font-size: 0.98rem; font-weight: 600; margin: 1rem 0 0.35rem; color: #0B1226; }
+  .theory-content h4 { font-size: 0.92rem; font-weight: 600; margin: 0.85rem 0 0.3rem; }
+  .theory-content p  { margin-bottom: 0.75rem; }
   .theory-content ul, .theory-content ol { padding-left: 1.5rem; margin-bottom: 1rem; }
   .theory-content li { margin-bottom: 0.3rem; }
   .theory-content ul { list-style-type: disc; }
@@ -441,12 +441,15 @@
   .theory-content img,
   .theory-figure img {
     display: block;
-    width: 100%;
-    max-width: 100%;
+    width: auto;
+    max-width: min(100%, 640px);
     height: auto;
+    max-height: min(46vh, 420px);
+    margin-left: auto;
+    margin-right: auto;
     object-fit: contain;
     background: #fff;
-    border-radius: 16px;
+    border-radius: 14px;
     box-shadow: 0 0 0 1px rgba(11,18,38,0.06);
     cursor: zoom-in;
   }
