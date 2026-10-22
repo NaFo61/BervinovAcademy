@@ -41,6 +41,7 @@ class Migration(migrations.Migration):
                         default=uuid.uuid4,
                         editable=False,
                         unique=True,
+                        verbose_name="Публичный идентификатор",
                     ),
                 ),
                 (

@@ -32,8 +32,9 @@ class TestLessonSummaryApi:
             summary.error_message = ""
             summary.save()
 
+        # Celery в CI без broker — вызываем обработку синхронно.
         monkeypatch.setattr(
-            "communication.tasks.process_summary_record",
+            "communication.tasks.process_lesson_summary_task.delay",
             fake_process,
         )
 
