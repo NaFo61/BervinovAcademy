@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .chat_viewsets import ChatMessageViewSet, ChatThreadViewSet
 from .viewsets import (
     AdminCallStatsView,
+    BoardAssetUploadView,
     ConferenceViewSet,
     LiveKitWebhookView,
     MentorUserSearchView,
@@ -31,6 +32,10 @@ urlpatterns = [
     path(
         "communication/whiteboard/studio/token/",
         WhiteboardStudioTokenView.as_view(),
+    ),
+    path(
+        "communication/board-assets/",
+        BoardAssetUploadView.as_view(),
     ),
     path("communication/", include(router.urls)),
 ]

@@ -4,9 +4,11 @@ from rest_framework import serializers
 from users.models import User
 
 from .models import (
+    BoardAsset,
     ChatMessage,
     ChatMessageAttachment,
     Conference,
+    ConferenceLessonSummary,
     ConferenceWhiteboard,
     DirectThread,
     UserNotification,
@@ -43,6 +45,8 @@ class ConferenceSerializer(serializers.ModelSerializer):
     duration_seconds = serializers.SerializerMethodField()
     has_whiteboard = serializers.SerializerMethodField()
     whiteboard_exported_at = serializers.SerializerMethodField()
+    has_lesson_summary = serializers.SerializerMethodField()
+    lesson_summary_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Conference
@@ -60,6 +64,8 @@ class ConferenceSerializer(serializers.ModelSerializer):
             "duration_seconds",
             "has_whiteboard",
             "whiteboard_exported_at",
+            "has_lesson_summary",
+            "lesson_summary_status",
         )
 
     def get_duration_seconds(self, obj):
@@ -84,6 +90,20 @@ class ConferenceSerializer(serializers.ModelSerializer):
         if not board or not board.image:
             return None
         return board.exported_at
+
+    def get_has_lesson_summary(self, obj):
+        summary = getattr(obj, "lesson_summary", None)
+        return bool(
+            summary
+            and summary.status == ConferenceLessonSummary.Status.READY
+            and (summary.summary_md or "").strip()
+        )
+
+    def get_lesson_summary_status(self, obj):
+        summary = getattr(obj, "lesson_summary", None)
+        if not summary:
+            return None
+        return summary.status
 
 
 class ConferenceCreateSerializer(serializers.Serializer):
@@ -159,6 +179,51 @@ class ConferenceWhiteboardSerializer(serializers.ModelSerializer):
         return str(obj.exported_by.public_id)
 
 
+class ConferenceLessonSummarySerializer(serializers.ModelSerializer):
+    created_by = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ConferenceLessonSummary
+        fields = (
+            "status",
+            "summary_md",
+            "error_message",
+            "created_by",
+            "created_at",
+            "updated_at",
+        )
+
+    def get_created_by(self, obj):
+        if not obj.created_by_id:
+            return None
+        return str(obj.created_by.public_id)
+
+
+class BoardAssetSerializer(serializers.ModelSerializer):
+    public_id = serializers.UUIDField(read_only=True)
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BoardAsset
+        fields = (
+            "public_id",
+            "url",
+            "original_name",
+            "content_type",
+            "size",
+            "created_at",
+        )
+
+    def get_url(self, obj):
+        request = self.context.get("request")
+        if not obj.file:
+            return None
+        url = obj.file.url
+        if request is not None:
+            return request.build_absolute_uri(url)
+        return url
+
+
 class UserNotificationSerializer(serializers.ModelSerializer):
     public_id = serializers.UUIDField(read_only=True)
     conference = ConferenceSerializer(read_only=True)
@@ -189,6 +254,8 @@ class ChatConferenceBriefSerializer(serializers.ModelSerializer):
     public_id = serializers.UUIDField(read_only=True)
     duration_seconds = serializers.SerializerMethodField()
     has_whiteboard = serializers.SerializerMethodField()
+    has_lesson_summary = serializers.SerializerMethodField()
+    lesson_summary_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Conference
@@ -197,6 +264,8 @@ class ChatConferenceBriefSerializer(serializers.ModelSerializer):
             "status",
             "duration_seconds",
             "has_whiteboard",
+            "has_lesson_summary",
+            "lesson_summary_status",
         )
 
     def get_duration_seconds(self, obj):
@@ -213,6 +282,20 @@ class ChatConferenceBriefSerializer(serializers.ModelSerializer):
             return False
         board = getattr(obj, "whiteboard", None)
         return bool(board and board.image)
+
+    def get_has_lesson_summary(self, obj):
+        summary = getattr(obj, "lesson_summary", None)
+        return bool(
+            summary
+            and summary.status == ConferenceLessonSummary.Status.READY
+            and (summary.summary_md or "").strip()
+        )
+
+    def get_lesson_summary_status(self, obj):
+        summary = getattr(obj, "lesson_summary", None)
+        if not summary:
+            return None
+        return summary.status
 
 
 class ChatMessageRefSerializer(serializers.ModelSerializer):

@@ -35,6 +35,9 @@ def build_manifest_from_payload(incoming: dict[str, Any]) -> dict[str, Any]:
 
     time_limit_ms = int(limits.get("time_limit_ms") or 2000)
     memory_limit_mb = int(limits.get("memory_limit_mb") or 256)
+    # Жёсткий потолок: даже если в CMS задали экстремум.
+    time_limit_ms = min(max(time_limit_ms, 1), 10_000)
+    memory_limit_mb = min(max(memory_limit_mb, 32), 512)
 
     raw_cases = incoming.get("test_cases") or []
     if not isinstance(raw_cases, list):
@@ -62,8 +65,8 @@ def build_manifest_from_payload(incoming: dict[str, Any]) -> dict[str, Any]:
         "version": 1,
         "code": code,
         "test_cases": cases,
-        "time_limit_ms": max(time_limit_ms, 1),
-        "memory_limit_mb": max(memory_limit_mb, 32),
+        "time_limit_ms": time_limit_ms,
+        "memory_limit_mb": memory_limit_mb,
     }
 
 
@@ -165,7 +168,6 @@ def run_submission_in_docker(
     """
     import docker
     from docker.errors import APIError, DockerException
-    from docker.types import Mount
     from requests.exceptions import ReadTimeout
 
     submission_id = str(incoming.get("submission_public_id") or "")
@@ -181,10 +183,13 @@ def run_submission_in_docker(
     outer_timeout = max(outer_timeout, 5)
 
     client = docker.from_env()
+    from docker.types import Mount, Ulimit
+
     run_kw: dict[str, Any] = {
         "network_mode": "none",
         "read_only": True,
-        # Writable /work for put_archive while rootfs stays read-only.
+        # Volume нужен для put_archive до start (tmpfs на /work
+        # при start перекрыл бы manifest). Квоту файлов держит judge.
         "mounts": [Mount("/work", None, type="volume")],
         "tmpfs": {
             "/tmp": "rw,nosuid,nodev,size=64m",
@@ -196,6 +201,9 @@ def run_submission_in_docker(
         "cap_drop": ["ALL"],
         "security_opt": ["no-new-privileges:true"],
         "pids_limit": int(settings.sandbox_pids_limit),
+        "ulimits": [
+            Ulimit(name="nofile", soft=64, hard=64),
+        ],
         "user": "1000:1000",
     }
     container = None

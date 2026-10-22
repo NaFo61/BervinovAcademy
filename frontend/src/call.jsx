@@ -29,6 +29,63 @@ function participantName(p) {
   return [p.first_name, p.last_name].filter(Boolean).join(' ').trim() || 'Участник';
 }
 
+/** Собрать смешанный MediaStream из локальных и удалённых аудио LiveKit. */
+function collectCallAudioStream(room) {
+  if (!room || typeof MediaStream === 'undefined') return null;
+  const tracks = [];
+  try {
+    const local = room.localParticipant;
+    if (local) {
+      const pubs = local.audioTrackPublications || local.trackPublications;
+      if (pubs) {
+        pubs.forEach((pub) => {
+          const track = pub?.track;
+          if (track?.mediaStreamTrack && pub.kind !== 'video') {
+            tracks.push(track.mediaStreamTrack);
+          } else if (track?.mediaStreamTrack && track.kind === 'audio') {
+            tracks.push(track.mediaStreamTrack);
+          }
+        });
+      }
+      if (typeof local.getTrackPublication === 'function' || local.audioTrackPublications) {
+        const map = local.audioTrackPublications;
+        if (map && typeof map.forEach === 'function') {
+          map.forEach((pub) => {
+            const mst = pub?.track?.mediaStreamTrack;
+            if (mst && mst.kind === 'audio') tracks.push(mst);
+          });
+        }
+      }
+    }
+    room.remoteParticipants?.forEach((p) => {
+      const map = p.audioTrackPublications;
+      if (map && typeof map.forEach === 'function') {
+        map.forEach((pub) => {
+          const mst = pub?.track?.mediaStreamTrack;
+          if (mst && mst.kind === 'audio') tracks.push(mst);
+        });
+      }
+    });
+  } catch (_) { /* ignore */ }
+  const unique = [...new Set(tracks.filter(Boolean))];
+  if (!unique.length) return null;
+  return new MediaStream(unique);
+}
+
+function pickRecorderMime() {
+  if (typeof MediaRecorder === 'undefined') return '';
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/mp4',
+  ];
+  for (const type of candidates) {
+    if (MediaRecorder.isTypeSupported?.(type)) return type;
+  }
+  return '';
+}
+
 function trackId(pub, participant, suffix) {
   return [
     participant?.identity || (participant?.isLocal ? 'local' : 'unknown'),
@@ -163,12 +220,13 @@ function AudioTrack({ publication }) {
 
 function CallPage({ navigate, hashParams }) {
   const WhiteboardPreviewModal = window.WhiteboardPreviewModal;
+  const LessonSummaryModal = window.LessonSummaryModal;
   const confId = hashParams?.get('conf') || null;
   const [phase, setPhase] = React.useState('loading');
   const [error, setError] = React.useState('');
   const [conference, setConference] = React.useState(null);
   const [muted, setMuted] = React.useState(false);
-  const [videoOff, setVideoOff] = React.useState(false);
+  const [videoOff, setVideoOff] = React.useState(true);
   const [sharing, setSharing] = React.useState(false);
   const [whiteboardEnabled, setWhiteboardEnabled] = React.useState(WHITEBOARD_FEATURE_ENABLED);
   const [mediaWarning, setMediaWarning] = React.useState('');
@@ -178,17 +236,22 @@ function CallPage({ navigate, hashParams }) {
   const [displayMode, setDisplayMode] = React.useState('focus');
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const [whiteboardSyncToken, setWhiteboardSyncToken] = React.useState('');
+  const [whiteboardRoomId, setWhiteboardRoomId] = React.useState('');
   const [whiteboardLicenseKey, setWhiteboardLicenseKey] = React.useState('');
   const [whiteboardNotice, setWhiteboardNotice] = React.useState('');
   const [whiteboardSaving, setWhiteboardSaving] = React.useState(false);
   const [whiteboardSaved, setWhiteboardSaved] = React.useState(false);
+  const [summaryBusy, setSummaryBusy] = React.useState(false);
   const [endedWhiteboard, setEndedWhiteboard] = React.useState(null);
+  const [endedSummary, setEndedSummary] = React.useState(null);
   const [showEndedPreview, setShowEndedPreview] = React.useState(false);
+  const [showEndedSummary, setShowEndedSummary] = React.useState(false);
   const [chatOpen, setChatOpen] = React.useState(true);
   const [chatThread, setChatThread] = React.useState(null);
   const [chatLoadError, setChatLoadError] = React.useState('');
   const [callChatUnread, setCallChatUnread] = React.useState(0);
   const [callWhiteboardPreview, setCallWhiteboardPreview] = React.useState(null);
+  const [callSummaryPreview, setCallSummaryPreview] = React.useState(null);
   const [confirmMode, setConfirmMode] = React.useState(null);
   const [endKind, setEndKind] = React.useState(null);
 
@@ -200,6 +263,8 @@ function CallPage({ navigate, hashParams }) {
   const leaveKindRef = React.useRef(null);
   const joinedAtRef = React.useRef(null);
   const whiteboardEnabledRef = React.useRef(true);
+  const audioRecorderRef = React.useRef(null);
+  const audioChunksRef = React.useRef([]);
   const LK = window.LivekitClient || window.LiveKit;
 
   const bumpLayout = React.useCallback(() => {
@@ -263,6 +328,7 @@ function CallPage({ navigate, hashParams }) {
   React.useEffect(() => {
     if (!WHITEBOARD_FEATURE_ENABLED || !confId || phase !== 'in_call') {
       setWhiteboardSyncToken('');
+      setWhiteboardRoomId('');
       setWhiteboardLicenseKey('');
       return undefined;
     }
@@ -278,11 +344,13 @@ function CallPage({ navigate, hashParams }) {
         );
         if (!cancelled) {
           setWhiteboardSyncToken(data.token || '');
+          setWhiteboardRoomId(data.room_id || '');
           setWhiteboardLicenseKey(data.license_key || '');
         }
       } catch (_) {
         if (!cancelled) {
           setWhiteboardSyncToken('');
+          setWhiteboardRoomId('');
           setWhiteboardLicenseKey('');
         }
       }
@@ -296,6 +364,59 @@ function CallPage({ navigate, hashParams }) {
       if (timerId) clearInterval(timerId);
     };
   }, [confId, phase]);
+
+  // Тихая запись аудио у ментора для AI-конспекта.
+  React.useEffect(() => {
+    if (!isMentor || phase !== 'in_call' || typeof MediaRecorder === 'undefined') {
+      return undefined;
+    }
+    let stopped = false;
+    let retryId = null;
+
+    const stopRecorder = () => {
+      const rec = audioRecorderRef.current;
+      audioRecorderRef.current = null;
+      if (rec && rec.state !== 'inactive') {
+        try { rec.stop(); } catch (_) { /* ignore */ }
+      }
+    };
+
+    const startRecorder = () => {
+      if (stopped || audioRecorderRef.current) return;
+      const stream = collectCallAudioStream(roomRef.current);
+      if (!stream) {
+        retryId = setTimeout(startRecorder, 2500);
+        return;
+      }
+      const mime = pickRecorderMime();
+      let recorder;
+      try {
+        recorder = mime
+          ? new MediaRecorder(stream, { mimeType: mime })
+          : new MediaRecorder(stream);
+      } catch (_) {
+        retryId = setTimeout(startRecorder, 2500);
+        return;
+      }
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (ev) => {
+        if (ev.data && ev.data.size > 0) audioChunksRef.current.push(ev.data);
+      };
+      try {
+        recorder.start(4000);
+        audioRecorderRef.current = recorder;
+      } catch (_) {
+        retryId = setTimeout(startRecorder, 2500);
+      }
+    };
+
+    startRecorder();
+    return () => {
+      stopped = true;
+      if (retryId) clearTimeout(retryId);
+      stopRecorder();
+    };
+  }, [isMentor, phase, layoutTick]);
 
   React.useEffect(() => {
     if (!whiteboardNotice) return undefined;
@@ -327,18 +448,70 @@ function CallPage({ navigate, hashParams }) {
         { method: 'POST', auth: true },
       );
       setWhiteboardSaved(true);
-      setWhiteboardNotice('Конспект сохранён');
+      setWhiteboardNotice('Снимок доски сохранён');
     } catch (err) {
-      setWhiteboardNotice(err?.message || 'Не удалось сохранить доску');
+      setWhiteboardNotice(err?.message || 'Не удалось сохранить снимок');
     } finally {
       setWhiteboardSaving(false);
     }
   }, [confId, whiteboardSaving]);
 
+  const requestLessonSummary = React.useCallback(async () => {
+    if (!confId || summaryBusy || !isMentor) return;
+    setSummaryBusy(true);
+    setWhiteboardNotice('Готовим конспект…');
+    try {
+      const rec = audioRecorderRef.current;
+      if (rec && rec.state === 'recording') {
+        await new Promise((resolve) => {
+          rec.onstop = () => resolve();
+          try { rec.stop(); } catch (_) { resolve(); }
+        });
+        audioRecorderRef.current = null;
+      }
+      const chunks = audioChunksRef.current || [];
+      if (!chunks.length) {
+        setWhiteboardNotice('Нет аудио для конспекта — говорите в микрофон и попробуйте снова');
+        return;
+      }
+      const blob = new Blob(chunks, { type: chunks[0]?.type || 'audio/webm' });
+      const form = new FormData();
+      form.append('audio', blob, 'lesson.webm');
+      await window.fetchApiForm(
+        `/api/communication/conferences/${encodeURIComponent(confId)}/lesson-summary/`,
+        form,
+        { method: 'POST', auth: true },
+      );
+      setWhiteboardNotice('Конспект в обработке — откроется после готовности');
+      // Перезапуск записи на случай продолжения звонка.
+      audioChunksRef.current = [];
+      const stream = collectCallAudioStream(roomRef.current);
+      if (stream && typeof MediaRecorder !== 'undefined') {
+        try {
+          const mime = pickRecorderMime();
+          const next = mime
+            ? new MediaRecorder(stream, { mimeType: mime })
+            : new MediaRecorder(stream);
+          next.ondataavailable = (ev) => {
+            if (ev.data && ev.data.size > 0) audioChunksRef.current.push(ev.data);
+          };
+          next.start(4000);
+          audioRecorderRef.current = next;
+        } catch (_) { /* ignore */ }
+      }
+    } catch (err) {
+      setWhiteboardNotice(err?.message || 'Не удалось создать конспект');
+    } finally {
+      setSummaryBusy(false);
+    }
+  }, [confId, summaryBusy, isMentor]);
+
   React.useEffect(() => {
     if (phase !== 'ended' || !confId) {
       setEndedWhiteboard(null);
+      setEndedSummary(null);
       setShowEndedPreview(false);
+      setShowEndedSummary(false);
       return undefined;
     }
     let cancelled = false;
@@ -348,6 +521,12 @@ function CallPage({ navigate, hashParams }) {
         if (!cancelled) setEndedWhiteboard(data);
       } catch (_) {
         if (!cancelled) setEndedWhiteboard(null);
+      }
+      try {
+        const summary = await window.fetchConferenceLessonSummary?.(confId);
+        if (!cancelled) setEndedSummary(summary);
+      } catch (_) {
+        if (!cancelled) setEndedSummary(null);
       }
     })();
     return () => { cancelled = true; };
@@ -477,11 +656,11 @@ function CallPage({ navigate, hashParams }) {
           warnings.push('Микрофон недоступен');
           setMuted(true);
         }
+        // Входим без камеры; включить можно кнопкой в панели.
         try {
-          await room.localParticipant.setCameraEnabled(true);
-          setVideoOff(false);
+          await room.localParticipant.setCameraEnabled(false);
+          setVideoOff(true);
         } catch (_) {
-          warnings.push('Камера недоступна — можно участвовать без своего видео');
           setVideoOff(true);
         }
         if (warnings.length) setMediaWarning(warnings.join(' · '));
@@ -648,6 +827,14 @@ function CallPage({ navigate, hashParams }) {
             onClose={() => setShowEndedPreview(false)}
           />
         )}
+        {showEndedSummary && LessonSummaryModal && (
+          <LessonSummaryModal
+            conferenceId={confId}
+            title={endedTitle}
+            initial={endedSummary}
+            onClose={() => setShowEndedSummary(false)}
+          />
+        )}
         <div className="text-2xl font-bold">{heading}</div>
         <p className="text-sm text-ink/60 mt-2">
           {kind === 'host_end' ? 'Ведущий завершил встречу для всех.' : kind === 'self' ? 'Остальные могут продолжать, если ведущий не завершил звонок.' : 'Встреча закрыта.'}
@@ -665,19 +852,33 @@ function CallPage({ navigate, hashParams }) {
             </ul>
           </div>
         </div>
+        {endedSummary?.status === 'ready' && endedSummary?.summary_md && (
+          <div className="mt-6 text-left">
+            <div className="text-xs font-semibold uppercase tracking-widest text-ink/45 mb-2">
+              Конспект урока
+            </div>
+            <div className="rounded-2xl bg-white ring-1 ring-black/[0.06] p-4 text-sm text-ink/80 whitespace-pre-wrap max-h-48 overflow-auto">
+              {endedSummary.summary_md}
+            </div>
+            <button type="button" onClick={() => setShowEndedSummary(true)}
+              className="mt-3 h-11 px-4 rounded-xl bg-white ring-1 ring-black/[0.08] text-sm font-semibold">
+              Открыть конспект
+            </button>
+          </div>
+        )}
         {endedWhiteboard?.image_url && (
           <div className="mt-6 text-left">
             <div className="text-xs font-semibold uppercase tracking-widest text-ink/45 mb-2">
-              Конспект доски
+              Снимок доски
             </div>
             <button type="button" onClick={() => setShowEndedPreview(true)}
               className="block w-full rounded-2xl overflow-hidden ring-1 ring-black/[0.08] bg-white hover:ring-violet-300 transition-shadow">
-              <img src={endedWhiteboard.image_url} alt="Конспект доски"
+              <img src={endedWhiteboard.image_url} alt="Снимок доски"
                 className="w-full h-auto max-h-56 object-contain bg-slate-50"/>
             </button>
             <button type="button" onClick={() => setShowEndedPreview(true)}
               className="mt-3 h-11 px-4 rounded-xl bg-white ring-1 ring-black/[0.08] text-sm font-semibold">
-              Открыть конспект
+              Открыть снимок
             </button>
           </div>
         )}
@@ -709,10 +910,11 @@ function CallPage({ navigate, hashParams }) {
   }
 
   const { tiles: mediaTiles, audioPubs } = buildTiles(roomRef.current, LK);
+  const boardRoomId = whiteboardRoomId || confId;
   const whiteboardTile = whiteboardEnabled ? {
     key: WHITEBOARD_TILE_KEY,
     type: 'whiteboard',
-    label: 'Общая доска',
+    label: 'Доска ученика',
     isLocal: false,
     isScreen: false,
     placeholder: false,
@@ -748,7 +950,7 @@ function CallPage({ navigate, hashParams }) {
           title="Завершить для всех?"
           body="Созвон закроется у всех участников. Вернуться в этот же звонок уже не получится."
           confirmLabel="Завершить"
-          extraLabel={whiteboardEnabled && !whiteboardSaved ? 'Сохранить доску и завершить' : undefined}
+          extraLabel={whiteboardEnabled && !whiteboardSaved ? 'Снимок доски и завершить' : undefined}
           cancelLabel="Отмена"
           danger
           onConfirm={() => finishCall({ saveBoard: false })}
@@ -760,6 +962,12 @@ function CallPage({ navigate, hashParams }) {
         <WhiteboardPreviewModal
           conferenceId={callWhiteboardPreview}
           onClose={() => setCallWhiteboardPreview(null)}
+        />
+      )}
+      {callSummaryPreview && LessonSummaryModal && (
+        <LessonSummaryModal
+          conferenceId={callSummaryPreview}
+          onClose={() => setCallSummaryPreview(null)}
         />
       )}
       {chatThread && ChatThreadView && phase === 'in_call' && (
@@ -775,6 +983,7 @@ function CallPage({ navigate, hashParams }) {
             markReadOnView={chatOpen}
             onBack={() => setChatOpen(false)}
             onOpenWhiteboard={(id) => setCallWhiteboardPreview(id)}
+            onOpenLessonSummary={(id) => setCallSummaryPreview(id)}
             onUnreadMessage={() => setCallChatUnread((n) => n + 1)}
             onMarkedRead={() => {
               setCallChatUnread(0);
@@ -834,7 +1043,7 @@ function CallPage({ navigate, hashParams }) {
                 tile={tile}
                 main
                 fit="contain"
-                roomId={confId}
+                roomId={boardRoomId}
                 syncToken={whiteboardSyncToken}
                 licenseKey={whiteboardLicenseKey}
                 selected={tile.key === selectedTileKey}
@@ -850,7 +1059,7 @@ function CallPage({ navigate, hashParams }) {
               main
               clean={isCleanMode}
               fit="contain"
-              roomId={confId}
+              roomId={boardRoomId}
               syncToken={whiteboardSyncToken}
               licenseKey={whiteboardLicenseKey}
               isGridMode={false}
@@ -868,7 +1077,7 @@ function CallPage({ navigate, hashParams }) {
                     compact={isCleanMode}
                     clean={isCleanMode}
                     fit="contain"
-                    roomId={confId}
+                    roomId={boardRoomId}
                     syncToken={whiteboardSyncToken}
                 licenseKey={whiteboardLicenseKey}
                     isGridMode={false}
@@ -903,11 +1112,20 @@ function CallPage({ navigate, hashParams }) {
         </CallControl>
         {WHITEBOARD_FEATURE_ENABLED && isMentor && whiteboardEnabled && (
           <CallControl
-            label={whiteboardSaving ? 'Сохранение…' : 'Сохранить доску'}
+            label={whiteboardSaving ? 'Сохранение…' : 'Снимок доски'}
             active={whiteboardSaving}
             onClick={saveWhiteboard}
           >
             <I.Check className="w-5 h-5" />
+          </CallControl>
+        )}
+        {isMentor && (
+          <CallControl
+            label={summaryBusy ? 'Конспект…' : 'Конспект'}
+            active={summaryBusy}
+            onClick={requestLessonSummary}
+          >
+            <I.Book className="w-5 h-5" />
           </CallControl>
         )}
         {WHITEBOARD_FEATURE_ENABLED && isMentor && (
@@ -967,7 +1185,7 @@ function VideoTile({ tile, main = false, compact = false, clean = false, fit = '
           <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
             <I.Layers className="w-5 h-5" />
           </div>
-          <div className="text-xs font-semibold">Общая доска</div>
+          <div className="text-xs font-semibold">Доска ученика</div>
           <div className="text-[10px] text-slate-500">Нажмите, чтобы открыть</div>
         </div>
         {!clean && (

@@ -75,6 +75,15 @@ def _build_payload(
         board = None
     if board and board.image:
         payload["has_whiteboard"] = True
+    summary = None
+    try:
+        summary = conference.lesson_summary
+    except Exception:
+        summary = None
+    if summary is not None:
+        payload["lesson_summary_status"] = summary.status
+        if summary.status == "ready" and (summary.summary_md or "").strip():
+            payload["has_lesson_summary"] = True
     return payload
 
 

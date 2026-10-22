@@ -465,6 +465,14 @@ WHITEBOARD_TOKEN_TTL_SECONDS = config(
 WHITEBOARD_MAX_EXPORT_BYTES = config(
     "WHITEBOARD_MAX_EXPORT_BYTES", default=10 * 1024 * 1024, cast=int
 )
+LESSON_SUMMARY_MAX_AUDIO_BYTES = config(
+    "LESSON_SUMMARY_MAX_AUDIO_BYTES",
+    default=80 * 1024 * 1024,
+    cast=int,
+)
+LESSON_SUMMARY_SYSTEM_PROMPT = config(
+    "LESSON_SUMMARY_SYSTEM_PROMPT", default=""
+).strip()
 TLDRAW_LICENSE_KEY = config("TLDRAW_LICENSE_KEY", default="").strip()
 
 FRONTEND_URL = config("FRONTEND_URL", default="").strip()
@@ -648,6 +656,7 @@ OPENAI_BASE_URL = config(
     "OPENAI_BASE_URL", default="https://api.openai.com/v1"
 )
 OPENAI_MODEL = config("OPENAI_MODEL", default="gpt-4o-mini")
+OPENAI_STT_MODEL = config("OPENAI_STT_MODEL", default="whisper-1")
 
 try:
     from school_platform.local_settings import *  # noqa: F403, F401

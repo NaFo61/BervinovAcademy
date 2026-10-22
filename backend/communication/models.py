@@ -87,7 +87,7 @@ class Conference(UUIDPublicIdMixin, models.Model):
 
 
 class ConferenceWhiteboard(models.Model):
-    """Экспортированный конспект с доски созвона."""
+    """Снимок доски после созвона (PNG), не путать с AI-конспектом."""
 
     conference = models.OneToOneField(
         Conference,
@@ -116,11 +116,135 @@ class ConferenceWhiteboard(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = _("Доска конференции")
-        verbose_name_plural = _("Доски конференций")
+        verbose_name = _("Снимок доски конференции")
+        verbose_name_plural = _("Снимки досок конференций")
 
     def __str__(self):
         return f"Whiteboard {self.conference_id}"
+
+
+def lesson_summary_audio_upload_to(instance, filename):
+    from pathlib import Path
+    import uuid
+
+    from django.utils import timezone
+
+    ext = Path(filename).suffix.lower()
+    if ext not in {".webm", ".ogg", ".mp3", ".wav", ".m4a", ".mp4"}:
+        ext = ".webm"
+    return f"lesson_summaries/{timezone.now():%Y/%m}/{uuid.uuid4().hex}{ext}"
+
+
+class ConferenceLessonSummary(models.Model):
+    """AI-конспект урока: аудио → расшифровка → короткий текст."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", _("Готовится")
+        READY = "ready", _("Готов")
+        FAILED = "failed", _("Ошибка")
+
+    conference = models.OneToOneField(
+        Conference,
+        on_delete=models.CASCADE,
+        related_name="lesson_summary",
+        verbose_name=_("Конференция"),
+    )
+    audio = models.FileField(
+        upload_to=lesson_summary_audio_upload_to,
+        blank=True,
+        null=True,
+        verbose_name=_("Аудио"),
+    )
+    transcript = models.TextField(
+        blank=True,
+        default="",
+        verbose_name=_("Расшифровка"),
+    )
+    summary_md = models.TextField(
+        blank=True,
+        default="",
+        verbose_name=_("Конспект"),
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+        verbose_name=_("Статус"),
+    )
+    error_message = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        verbose_name=_("Ошибка"),
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_lesson_summaries",
+        verbose_name=_("Запросил"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Конспект урока")
+        verbose_name_plural = _("Конспекты уроков")
+
+    def __str__(self):
+        return f"LessonSummary {self.conference_id} ({self.status})"
+
+
+def board_asset_upload_to(instance, filename):
+    from pathlib import Path
+    import uuid
+
+    from django.utils import timezone
+
+    ext = Path(filename).suffix.lower() or ".bin"
+    return f"board_assets/{timezone.now():%Y/%m}/{uuid.uuid4().hex}{ext}"
+
+
+class BoardAsset(UUIDPublicIdMixin, models.Model):
+    """Файл для доски: хранится в академии, на доске — URL/превью."""
+
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="board_assets",
+        verbose_name=_("Загрузил"),
+    )
+    file = models.FileField(
+        upload_to=board_asset_upload_to,
+        verbose_name=_("Файл"),
+    )
+    original_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name=_("Имя файла"),
+    )
+    content_type = models.CharField(
+        max_length=128,
+        blank=True,
+        default="",
+        verbose_name=_("MIME"),
+    )
+    size = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Размер"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Ассет доски")
+        verbose_name_plural = _("Ассеты доски")
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return self.original_name or str(self.public_id)
 
 
 class UserNotification(UUIDPublicIdMixin, models.Model):

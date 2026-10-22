@@ -55,16 +55,48 @@ function buildConnectUri(wsBase, roomId, syncToken) {
   return `${wsBase}/connect/${encodeURIComponent(roomId)}${qs ? `?${qs}` : ''}`;
 }
 
+const SYNC_ASSET_MAX_BYTES = 2 * 1024 * 1024;
+
+async function uploadViaAcademyStorage(file) {
+  if (typeof window.uploadBoardAsset === 'function') {
+    const data = await window.uploadBoardAsset(file);
+    if (!data?.url) throw new Error('Board asset upload failed');
+    return { src: data.url };
+  }
+  if (typeof window.fetchApiForm === 'function') {
+    const form = new FormData();
+    form.append('file', file);
+    const data = await window.fetchApiForm(
+      '/api/communication/board-assets/',
+      form,
+      { method: 'POST', auth: true },
+    );
+    if (!data?.url) throw new Error('Board asset upload failed');
+    return { src: data.url };
+  }
+  throw new Error('Нет API для загрузки файла на доску');
+}
+
 function createAssetStore(httpBase) {
   return {
     async upload(_asset, file) {
+      const isImage = String(file?.type || '').startsWith('image/');
+      const tooLarge = Number(file?.size || 0) > SYNC_ASSET_MAX_BYTES;
+      // Крупные и не-картинки — в хранилище академии (на доске только URL).
+      if (!isImage || tooLarge) {
+        return uploadViaAcademyStorage(file);
+      }
       const id = uniqueId();
       const objectName = `${id}-${file.name}`;
       const uploadUrl = `${httpBase}/uploads/${encodeURIComponent(objectName)}`;
       const response = await fetch(uploadUrl, {
         method: 'PUT',
         body: file,
+        headers: file.type ? { 'Content-Type': file.type } : undefined,
       });
+      if (response.status === 413 || response.status === 415) {
+        return uploadViaAcademyStorage(file);
+      }
       if (!response.ok) {
         throw new Error(`Upload failed: ${response.statusText}`);
       }

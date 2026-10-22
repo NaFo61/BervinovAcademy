@@ -75,17 +75,23 @@ class TestWhiteboardApi:
         )
         conf_id = create.data["public_id"]
 
+        expected_room = f"u-{student_user.public_id}"
         mentor_token = mentor_client.post(
             f"/api/communication/conferences/{conf_id}/whiteboard/token/",
         )
         assert mentor_token.status_code == status.HTTP_200_OK
         assert mentor_token.data["token"]
-        assert mentor_token.data["room_id"] == conf_id
+        assert mentor_token.data["room_id"] == expected_room
+        payload = verify_whiteboard_sync_token(
+            mentor_token.data["token"], expected_room
+        )
+        assert payload is not None
 
         student_token = student_client.post(
             f"/api/communication/conferences/{conf_id}/whiteboard/token/",
         )
         assert student_token.status_code == status.HTTP_200_OK
+        assert student_token.data["room_id"] == expected_room
 
     @override_settings(
         WHITEBOARD_SYNC_SECRET="test-whiteboard-secret",

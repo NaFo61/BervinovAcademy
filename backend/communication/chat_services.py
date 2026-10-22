@@ -601,6 +601,7 @@ def create_message(
             "forwarded_from__sender",
             "conference",
             "conference__whiteboard",
+            "conference__lesson_summary",
         )
         .prefetch_related("attachments")
         .get(pk=message.pk)
@@ -755,6 +756,7 @@ def list_thread_messages(
             "sender",
             "conference",
             "conference__whiteboard",
+            "conference__lesson_summary",
             "reply_to",
             "reply_to__sender",
             "forwarded_from",

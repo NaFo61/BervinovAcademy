@@ -68,6 +68,21 @@ def test_build_manifest_defaults_and_skips_bad_cases() -> None:
     assert len(m["test_cases"]) == 2
 
 
+def test_build_manifest_clamps_extreme_limits() -> None:
+    m = build_manifest_from_payload(
+        {
+            "code": "print(1)",
+            "limits": {
+                "time_limit_ms": 999_999,
+                "memory_limit_mb": 4096,
+            },
+            "test_cases": [],
+        }
+    )
+    assert m["time_limit_ms"] == 10_000
+    assert m["memory_limit_mb"] == 512
+
+
 def test_parse_judge_stdout_last_line_json() -> None:
     stdout = (
         "stderr-like line ignored\n"

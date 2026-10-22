@@ -1,8 +1,10 @@
 from django.contrib import admin
 
 from .models import (
+    BoardAsset,
     ChatMessage,
     Conference,
+    ConferenceLessonSummary,
     ConferenceWhiteboard,
     DirectThread,
     UserNotification,
@@ -17,6 +19,32 @@ class ConferenceWhiteboardAdmin(admin.ModelAdmin):
         "exported_by__email",
     )
     readonly_fields = ("exported_at", "created_at")
+
+
+@admin.register(ConferenceLessonSummary)
+class ConferenceLessonSummaryAdmin(admin.ModelAdmin):
+    list_display = (
+        "conference",
+        "status",
+        "created_by",
+        "created_at",
+        "updated_at",
+    )
+    list_filter = ("status",)
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(BoardAsset)
+class BoardAssetAdmin(admin.ModelAdmin):
+    list_display = (
+        "public_id",
+        "original_name",
+        "size",
+        "uploaded_by",
+        "created_at",
+    )
+    search_fields = ("original_name", "uploaded_by__email")
+    readonly_fields = ("public_id", "created_at")
 
 
 @admin.register(Conference)

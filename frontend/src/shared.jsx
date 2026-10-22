@@ -1259,6 +1259,125 @@ async function fetchConferenceWhiteboard(conferencePublicId) {
   );
 }
 
+async function fetchConferenceLessonSummary(conferencePublicId) {
+  return fetchApiJson(
+    `/api/communication/conferences/${encodeURIComponent(conferencePublicId)}/lesson-summary/`,
+    { auth: true },
+  );
+}
+
+async function uploadBoardAsset(file) {
+  const form = new FormData();
+  form.append('file', file);
+  return fetchApiForm('/api/communication/board-assets/', form, {
+    method: 'POST',
+    auth: true,
+  });
+}
+
+function LessonSummaryModal({ conferenceId, title, initial, onClose }) {
+  const [loading, setLoading] = React.useState(!initial);
+  const [error, setError] = React.useState('');
+  const [summary, setSummary] = React.useState(initial || null);
+
+  React.useEffect(() => {
+    if (!conferenceId) return undefined;
+    if (initial?.status === 'ready' && initial?.summary_md) {
+      setSummary(initial);
+      setLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    let tries = 0;
+    const poll = async () => {
+      try {
+        const data = await fetchConferenceLessonSummary(conferenceId);
+        if (cancelled) return;
+        setSummary(data);
+        setError('');
+        if (data.status === 'pending' && tries < 40) {
+          tries += 1;
+          setTimeout(poll, 3000);
+          return;
+        }
+        setLoading(false);
+      } catch (e) {
+        if (!cancelled) {
+          setError(e.message || 'Конспект ещё не готов');
+          setLoading(false);
+        }
+      }
+    };
+    setLoading(true);
+    poll();
+    return () => { cancelled = true; };
+  }, [conferenceId, initial]);
+
+  React.useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === 'Escape') onClose?.();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const text = summary?.summary_md || '';
+  const pending = summary?.status === 'pending';
+  const failed = summary?.status === 'failed';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
+      role="dialog" aria-modal="true" aria-label="Конспект урока">
+      <button type="button" aria-label="Закрыть" onClick={onClose}
+        className="absolute inset-0 bg-ink/55 backdrop-blur-sm"/>
+      <div className="relative w-full max-w-2xl max-h-[90vh] bg-white rounded-2xl shadow-glow ring-1 ring-black/[0.08] overflow-hidden flex flex-col">
+        <div className="px-5 py-4 border-b border-black/[0.06] flex items-center justify-between gap-3">
+          <div>
+            <div className="font-bold text-lg">Конспект урока</div>
+            {title && <div className="text-sm text-ink/55 mt-0.5">{title}</div>}
+          </div>
+          <button type="button" onClick={onClose}
+            className="w-10 h-10 rounded-xl ring-1 ring-black/[0.08] hover:bg-black/[0.03] flex items-center justify-center">
+            <I.X className="w-5 h-5"/>
+          </button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-auto p-5 sm:p-6 text-sm text-ink/85 whitespace-pre-wrap">
+          {loading && <div className="py-12 text-center text-ink/50">Готовим конспект…</div>}
+          {!loading && error && (
+            <div className="py-12 text-center text-red-600">{error}</div>
+          )}
+          {!loading && !error && pending && (
+            <div className="py-12 text-center text-ink/50">Ещё обрабатываем аудио…</div>
+          )}
+          {!loading && !error && failed && (
+            <div className="py-12 text-center text-red-600">
+              {summary?.error_message || 'Не удалось сделать конспект'}
+            </div>
+          )}
+          {!loading && !error && text && (
+            <div>{text}</div>
+          )}
+        </div>
+        {!loading && text && (
+          <div className="px-5 py-4 border-t border-black/[0.06] flex justify-end">
+            <button
+              type="button"
+              className="h-10 px-4 rounded-xl btn-grad text-white text-sm font-semibold"
+              onClick={() => {
+                try {
+                  navigator.clipboard?.writeText(text);
+                } catch (_) { /* ignore */ }
+              }}
+            >
+              Скопировать
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function WhiteboardPreviewModal({ conferenceId, title, onClose }) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
@@ -1279,7 +1398,7 @@ function WhiteboardPreviewModal({ conferenceId, title, onClose }) {
           setViewMode(data?.has_snapshot ? 'board' : 'image');
         }
       } catch (e) {
-        if (!cancelled) setError(e.message || 'Не удалось загрузить конспект');
+        if (!cancelled) setError(e.message || 'Не удалось загрузить снимок');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -1322,13 +1441,13 @@ function WhiteboardPreviewModal({ conferenceId, title, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
-      role="dialog" aria-modal="true" aria-label="Конспект доски">
+      role="dialog" aria-modal="true" aria-label="Снимок доски">
       <button type="button" aria-label="Закрыть" onClick={onClose}
         className="absolute inset-0 bg-ink/55 backdrop-blur-sm"/>
       <div className="relative w-full max-w-5xl max-h-[90vh] bg-white rounded-2xl shadow-glow ring-1 ring-black/[0.08] overflow-hidden flex flex-col">
         <div className="px-5 py-4 border-b border-black/[0.06] flex items-center justify-between gap-3">
           <div>
-            <div className="font-bold text-lg">Конспект доски</div>
+            <div className="font-bold text-lg">Снимок доски</div>
             {title && <div className="text-sm text-ink/55 mt-0.5">{title}</div>}
           </div>
           <div className="flex items-center gap-2">
@@ -1356,13 +1475,13 @@ function WhiteboardPreviewModal({ conferenceId, title, onClose }) {
             <div className="py-16 text-center text-sm text-red-600">{error}</div>
           )}
           {!loading && !error && !board?.has_snapshot && !board?.image_url && (
-            <div className="py-16 text-center text-sm text-ink/50">Конспект ещё не сохранён</div>
+            <div className="py-16 text-center text-sm text-ink/50">Снимок ещё не сохранён</div>
           )}
           {showBoard && (
             <div ref={viewerRef} className="relative w-full min-h-[min(60vh,520px)] rounded-xl ring-1 ring-black/[0.06] bg-white overflow-hidden"/>
           )}
           {showImage && (
-            <img src={board.image_url} alt="Конспект доски"
+            <img src={board.image_url} alt="Снимок доски"
               className="w-full h-auto rounded-xl ring-1 ring-black/[0.06] bg-white"/>
           )}
         </div>
@@ -3081,8 +3200,11 @@ Object.assign(window, {
   whiteboardFeatureEnabled,
   enableWebPushNotifications,
   fetchConferenceWhiteboard,
+  fetchConferenceLessonSummary,
+  uploadBoardAsset,
   fetchNotifications,
   WhiteboardPreviewModal,
+  LessonSummaryModal,
   VideoExplanation,
   LessonInstructorNote,
   LessonUserComments,

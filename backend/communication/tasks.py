@@ -1,6 +1,7 @@
 from celery import shared_task
 from django.conf import settings
 
+from .lesson_summary import process_summary_record
 from .services import (
     close_conferences_without_mentor,
     expire_stale_conferences,
@@ -17,3 +18,9 @@ def expire_stale_conferences_task():
 def close_conferences_without_mentor_task():
     minutes = getattr(settings, "CONFERENCE_MENTOR_ABSENCE_MINUTES", 5)
     return close_conferences_without_mentor(absence_minutes=minutes)
+
+
+@shared_task(name="communication.process_lesson_summary")
+def process_lesson_summary_task(summary_id: int):
+    process_summary_record(summary_id)
+    return {"summary_id": summary_id}

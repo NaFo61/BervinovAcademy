@@ -115,10 +115,12 @@ function StartCallPanel({ navigate, onCreated }) {
 
 function ConferencesPage({ navigate }) {
   const WhiteboardPreviewModal = window.WhiteboardPreviewModal;
+  const LessonSummaryModal = window.LessonSummaryModal;
   const [rows, setRows] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [previewConf, setPreviewConf] = React.useState(null);
+  const [summaryConf, setSummaryConf] = React.useState(null);
   const token = window.getAccessToken();
   const payload = token ? window.parseJwtPayload(token) : {};
   const isMentor = payload.role === 'mentor' || payload.role === 'admin';
@@ -173,6 +175,13 @@ function ConferencesPage({ navigate }) {
           onClose={() => setPreviewConf(null)}
         />
       )}
+      {summaryConf && LessonSummaryModal && (
+        <LessonSummaryModal
+          conferenceId={summaryConf.public_id}
+          title={participantName(otherParty(summaryConf))}
+          onClose={() => setSummaryConf(null)}
+        />
+      )}
       <section className="mesh-bg border-b border-black/[0.04] py-10">
         <div className="max-w-4xl mx-auto px-5 sm:px-8">
           <h1 className="text-3xl font-extrabold tracking-tight">Созвоны</h1>
@@ -208,11 +217,18 @@ function ConferencesPage({ navigate }) {
                     {STATUS_LABELS[row.status] || row.status}
                   </span>
                   <div className="flex gap-2">
+                    {(row.has_lesson_summary || row.lesson_summary_status === 'pending') && (
+                      <button type="button"
+                        onClick={() => setSummaryConf(row)}
+                        className="h-11 px-4 rounded-lg bg-white ring-1 ring-black/[0.08] text-xs font-semibold">
+                        {row.lesson_summary_status === 'pending' ? 'Конспект…' : 'Конспект'}
+                      </button>
+                    )}
                     {row.has_whiteboard && (
                       <button type="button"
                         onClick={() => setPreviewConf(row)}
                         className="h-11 px-4 rounded-lg bg-white ring-1 ring-black/[0.08] text-xs font-semibold">
-                        Конспект
+                        Снимок доски
                       </button>
                     )}
                     {canRejoin(row) && (

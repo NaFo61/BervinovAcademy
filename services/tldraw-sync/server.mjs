@@ -2,11 +2,19 @@ import cors from '@fastify/cors';
 import websocketPlugin from '@fastify/websocket';
 import fastify from 'fastify';
 import { verifyWhiteboardToken } from './auth.mjs';
-import { loadAsset, storeAsset } from './assets.mjs';
+import { AssetTooLargeError, loadAsset, storeAsset } from './assets.mjs';
 import { makeOrLoadRoom } from './rooms.mjs';
 import { unfurl } from 'unfurl.js';
 
 const PORT = Number(process.env.PORT || 5858);
+const ALLOWED_UPLOAD_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+]);
 
 const app = fastify({ logger: true });
 app.register(websocketPlugin);
@@ -46,8 +54,28 @@ app.register(async (scopedApp) => {
 
   scopedApp.put('/uploads/:id', async (req, res) => {
     const id = req.params.id;
-    await storeAsset(id, req.raw);
-    res.send({ ok: true });
+    const ctype = String(req.headers['content-type'] || '')
+      .split(';')[0]
+      .trim()
+      .toLowerCase();
+    if (ctype && !ALLOWED_UPLOAD_TYPES.has(ctype)) {
+      res.code(415).send({
+        detail: 'Only image uploads are allowed on the board sync.',
+      });
+      return;
+    }
+    try {
+      await storeAsset(id, req.raw);
+      res.send({ ok: true });
+    } catch (error) {
+      if (error instanceof AssetTooLargeError) {
+        res.code(413).send({
+          detail: 'Asset too large (max 2MB). Use board-assets API.',
+        });
+        return;
+      }
+      throw error;
+    }
   });
 
   scopedApp.get('/uploads/:id', async (req, res) => {

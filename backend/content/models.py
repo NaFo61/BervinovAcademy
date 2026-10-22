@@ -877,13 +877,20 @@ class CodingChallenge(UUIDPublicIdMixin, models.Model):
     )
     time_limit_ms = models.PositiveIntegerField(
         default=2000,
+        validators=[MinValueValidator(1), MaxValueValidator(10_000)],
         verbose_name=_("Лимит времени (мс)"),
-        help_text=_("Максимальное время выполнения решения в миллисекундах"),
+        help_text=_(
+            "Максимальное время выполнения решения в миллисекундах "
+            "(не больше 10000)"
+        ),
     )
     memory_limit_mb = models.PositiveIntegerField(
         default=256,
+        validators=[MinValueValidator(32), MaxValueValidator(512)],
         verbose_name=_("Лимит памяти (МБ)"),
-        help_text=_("Максимальное использование памяти в мегабайтах"),
+        help_text=_(
+            "Максимальное использование памяти в мегабайтах " "(не больше 512)"
+        ),
     )
 
     # Связи с существующими моделями

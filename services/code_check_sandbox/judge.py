@@ -11,14 +11,54 @@ from pathlib import Path
 
 MANIFEST = Path(os.environ.get("MANIFEST_PATH", "/work/manifest.json"))
 SOLUTION = Path("/tmp/solution.py")
+WORK_DIR = Path("/work")
 # Максимум символов вывода в JSON для API (stdout/stderr/ожидаемый ответ).
 _MAX_FEEDBACK_CHARS = 8000
+# Лимит сырого stdout+stderr одного прогона (байты в utf-8).
+_MAX_OUTPUT_BYTES = 256 * 1024
+_MAX_WORK_FILES = 32
+_MAX_WORK_FILE_BYTES = 1 * 1024 * 1024
 
 
 def _clip(s: str, limit: int = _MAX_FEEDBACK_CHARS) -> str:
     if len(s) <= limit:
         return s
     return s[: max(0, limit - 3)] + "..."
+
+
+def _output_too_large(stdout: str, stderr: str) -> bool:
+    size = len((stdout or "").encode("utf-8", errors="replace")) + len(
+        (stderr or "").encode("utf-8", errors="replace")
+    )
+    return size > _MAX_OUTPUT_BYTES
+
+
+def _work_tree_violation() -> str | None:
+    """Проверка файлов в /work после прогона (кроме manifest)."""
+    if not WORK_DIR.is_dir():
+        return None
+    count = 0
+    try:
+        for path in WORK_DIR.rglob("*"):
+            if not path.is_file():
+                continue
+            count += 1
+            if count > _MAX_WORK_FILES:
+                return (
+                    f"Слишком много файлов в рабочей папке "
+                    f"(>{_MAX_WORK_FILES})."
+                )
+            try:
+                if path.stat().st_size > _MAX_WORK_FILE_BYTES:
+                    return (
+                        f"Файл слишком большой "
+                        f"(>{_MAX_WORK_FILE_BYTES} байт): {path.name}."
+                    )
+            except OSError:
+                continue
+    except OSError as e:
+        return f"Ошибка проверки рабочей папки: {e}"
+    return None
 
 
 def _normalize(s: str | None) -> str:
@@ -149,6 +189,40 @@ def main() -> int:
                     "passed_tests": passed,
                     "total_tests": total,
                     "message": msg,
+                    "failed_test_number": n,
+                    "actual_output": None,
+                    "expected_output": None,
+                }
+            )
+            return 0
+
+        if _output_too_large(proc.stdout or "", proc.stderr or ""):
+            n = passed + 1
+            _emit(
+                {
+                    "status": "error",
+                    "passed_tests": passed,
+                    "total_tests": total,
+                    "message": (
+                        f"Слишком большой вывод на тесте № {n} "
+                        f"(лимит {_MAX_OUTPUT_BYTES} байт)."
+                    ),
+                    "failed_test_number": n,
+                    "actual_output": None,
+                    "expected_output": None,
+                }
+            )
+            return 0
+
+        work_err = _work_tree_violation()
+        if work_err:
+            n = passed + 1
+            _emit(
+                {
+                    "status": "error",
+                    "passed_tests": passed,
+                    "total_tests": total,
+                    "message": work_err,
                     "failed_test_number": n,
                     "actual_output": None,
                     "expected_output": None,

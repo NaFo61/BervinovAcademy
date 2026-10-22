@@ -14,9 +14,17 @@ from mentoring.permissions import IsAdminRole, IsMentorOrAdmin
 
 from . import services
 from .livekit_tokens import LiveKitNotConfiguredError, issue_room_token
-from .models import Conference, ConferenceWhiteboard, UserNotification
+from .models import (
+    BoardAsset,
+    Conference,
+    ConferenceLessonSummary,
+    ConferenceWhiteboard,
+    UserNotification,
+)
 from .serializers import (
+    BoardAssetSerializer,
     ConferenceCreateSerializer,
+    ConferenceLessonSummarySerializer,
     ConferenceSerializer,
     ConferenceWhiteboardSerializer,
     JoinConferenceSerializer,
@@ -68,6 +76,70 @@ class WhiteboardStudioTokenView(APIView):
         return Response(WhiteboardTokenSerializer(payload).data)
 
 
+_BOARD_ASSET_EXT = frozenset(
+    {
+        ".pdf",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".webp",
+        ".svg",
+        ".txt",
+        ".md",
+        ".zip",
+        ".doc",
+        ".docx",
+        ".ppt",
+        ".pptx",
+        ".xls",
+        ".xlsx",
+    }
+)
+_BOARD_ASSET_MAX = 20 * 1024 * 1024
+
+
+class BoardAssetUploadView(APIView):
+    """Крупные файлы для доски → media/S3; на доске только URL."""
+
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        upload = request.FILES.get("file")
+        if not upload:
+            return Response(
+                {"detail": "Нужен файл file."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        from pathlib import Path
+
+        name = getattr(upload, "name", "") or "file"
+        ext = Path(name).suffix.lower()
+        if ext not in _BOARD_ASSET_EXT:
+            return Response(
+                {"detail": "Этот тип файла нельзя загрузить на доску."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        size = int(getattr(upload, "size", 0) or 0)
+        if size <= 0 or size > _BOARD_ASSET_MAX:
+            return Response(
+                {"detail": "Файл пустой или больше 20 МБ."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        asset = BoardAsset.objects.create(
+            uploaded_by=request.user,
+            file=upload,
+            original_name=name[:255],
+            content_type=(upload.content_type or "")[:128],
+            size=size,
+        )
+        return Response(
+            BoardAssetSerializer(asset, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
 class MentorUserSearchView(APIView):
     """Поиск пользователей для приглашения на созвон (только ментор)."""
 
@@ -106,6 +178,7 @@ class ConferenceViewSet(
             "mentor",
             "guest",
             "whiteboard",
+            "lesson_summary",
         ).filter(Q(mentor=user) | Q(guest=user))
         role = self.request.query_params.get("role")
         if role == "mentor":
@@ -249,15 +322,17 @@ class ConferenceViewSet(
                 {"detail": "Конференция уже завершена."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        # Как в Miro: на уроке работаем на постоянной доске ученика.
+        room_id = personal_studio_room_id(conference.guest.public_id)
         ttl = settings.WHITEBOARD_TOKEN_TTL_SECONDS
         token = issue_whiteboard_sync_token(
-            conference.public_id,
+            room_id,
             request.user.public_id,
             ttl_seconds=ttl,
         )
         payload = {
             "token": token,
-            "room_id": conference.public_id,
+            "room_id": room_id,
             "expires_in": ttl,
         }
         license_key = settings.TLDRAW_LICENSE_KEY
@@ -355,6 +430,88 @@ class ConferenceViewSet(
                 board, context={"request": request}
             ).data,
             status=status.HTTP_201_CREATED,
+        )
+
+    @action(
+        detail=True,
+        methods=["get", "post"],
+        url_path="lesson-summary",
+        parser_classes=[JSONParser, MultiPartParser, FormParser],
+    )
+    def lesson_summary(self, request, public_id=None):
+        conference = self.get_object()
+        if not services.user_may_access_conference(request.user, conference):
+            return Response(
+                {"detail": "Нет доступа."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if request.method == "GET":
+            try:
+                summary = conference.lesson_summary
+            except ConferenceLessonSummary.DoesNotExist:
+                return Response(
+                    {"detail": "Конспект ещё не создан."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            return Response(ConferenceLessonSummarySerializer(summary).data)
+
+        if request.user != conference.mentor:
+            return Response(
+                {"detail": "Конспект может запросить только ментор."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        audio = request.FILES.get("audio")
+        if not audio:
+            return Response(
+                {"detail": "Нужен файл audio."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        max_bytes = int(
+            getattr(
+                settings,
+                "LESSON_SUMMARY_MAX_AUDIO_BYTES",
+                80 * 1024 * 1024,
+            )
+        )
+        if audio.size > max_bytes:
+            return Response(
+                {"detail": "Аудио слишком большое."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ctype = (audio.content_type or "").lower()
+        if ctype and not (
+            ctype.startswith("audio/")
+            or ctype.startswith("video/")
+            or ctype
+            in {
+                "application/octet-stream",
+                "application/ogg",
+            }
+        ):
+            return Response(
+                {"detail": "Ожидается аудиофайл."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        summary, _created = ConferenceLessonSummary.objects.update_or_create(
+            conference=conference,
+            defaults={
+                "audio": audio,
+                "transcript": "",
+                "summary_md": "",
+                "status": ConferenceLessonSummary.Status.PENDING,
+                "error_message": "",
+                "created_by": request.user,
+            },
+        )
+        from .tasks import process_lesson_summary_task
+
+        process_lesson_summary_task.delay(summary.pk)
+        return Response(
+            ConferenceLessonSummarySerializer(summary).data,
+            status=status.HTTP_202_ACCEPTED,
         )
 
     @action(detail=True, methods=["post"])
