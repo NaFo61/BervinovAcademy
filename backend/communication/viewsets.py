@@ -33,6 +33,7 @@ from .serializers import (
     WhiteboardTokenSerializer,
 )
 from .stats import build_call_stats, normalize_stats_days
+from .tasks import process_lesson_summary_task
 from .whiteboard_tokens import (
     issue_whiteboard_sync_token,
     personal_studio_room_id,
@@ -506,9 +507,9 @@ class ConferenceViewSet(
                 "created_by": request.user,
             },
         )
-        from .tasks import process_lesson_summary_task
-
         process_lesson_summary_task.delay(summary.pk)
+        # Если Celery eager / тест подменил delay — подтянуть статус.
+        summary.refresh_from_db()
         return Response(
             ConferenceLessonSummarySerializer(summary).data,
             status=status.HTTP_202_ACCEPTED,
