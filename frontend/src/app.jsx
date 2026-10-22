@@ -35,6 +35,8 @@ function App() {
   const [route, navigate, hashParams] = useHashRoute();
   const isCallRoute = route === Routes.CALL;
   const isWhiteboardRoute = route === Routes.WHITEBOARD;
+  const CallFloatingBar = window.CallFloatingBar;
+  const CallAudioBridge = window.CallAudioBridge;
 
   const Page = {
     [Routes.LANDING]: LandingPage,
@@ -60,18 +62,20 @@ function App() {
   }[route] || NotFoundPage || LandingPage;
 
   const pageProps = { navigate, hashParams, route };
-  const hideChrome = isCallRoute;
+  // Шапка всегда видна — в т.ч. во время звонка (каталог, профиль…).
   const fullViewportPage = isCallRoute || isWhiteboardRoute;
 
   return (
     <div className={`${fullViewportPage ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col`}>
       {AppNoticeHost ? <AppNoticeHost /> : null}
-      {!hideChrome && <TopNav route={route} navigate={navigate}/>}
-      {!hideChrome && <RecoveryBanner navigate={navigate}/>}
+      <TopNav route={route} navigate={navigate}/>
+      <RecoveryBanner navigate={navigate}/>
       <main className={`flex-1 min-h-0 ${fullViewportPage ? 'overflow-hidden' : ''}`}>
         <Page {...pageProps}/>
       </main>
       {!NO_FOOTER_ROUTES.has(route) && <Footer navigate={navigate}/>}
+      {CallAudioBridge ? <CallAudioBridge /> : null}
+      {CallFloatingBar ? <CallFloatingBar navigate={navigate} route={route} /> : null}
     </div>
   );
 }

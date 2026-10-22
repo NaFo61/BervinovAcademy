@@ -23,6 +23,54 @@ function isWhiteboardFeatureEnabled() {
 
 const WHITEBOARD_FEATURE_ENABLED = isWhiteboardFeatureEnabled();
 
+/** Живой созвон вне страницы #/call — можно ходить по каталогу/профилю. */
+function getCallShell() {
+  if (!window.__baCallShell) {
+    window.__baCallShell = {
+      confId: null,
+      room: null,
+      snapshot: null,
+      listeners: new Set(),
+      notify() {
+        this.listeners.forEach((fn) => {
+          try { fn(this); } catch (_) { /* ignore */ }
+        });
+      },
+      subscribe(fn) {
+        this.listeners.add(fn);
+        return () => this.listeners.delete(fn);
+      },
+      clear() {
+        this.confId = null;
+        this.room = null;
+        this.snapshot = null;
+        this.notify();
+      },
+      isLive() {
+        const room = this.room;
+        if (!room || !this.confId) return false;
+        const snap = this.snapshot;
+        if (snap && ['ended', 'ending', 'error', 'auth'].includes(snap.phase)) {
+          return false;
+        }
+        const LK = window.LivekitClient || window.LiveKit;
+        const connected = LK?.ConnectionState?.Connected;
+        if (connected != null) return room.state === connected;
+        return String(room.state || '').toLowerCase() === 'connected' || room.state === 1;
+      },
+    };
+  }
+  return window.__baCallShell;
+}
+
+function publishCallShell({ confId, room, snapshot }) {
+  const shell = getCallShell();
+  shell.confId = confId || null;
+  shell.room = room || null;
+  shell.snapshot = snapshot || null;
+  shell.notify();
+}
+
 function participantName(p) {
   if (!p) return 'Участник';
   if (typeof p.name === 'string' && p.name.trim()) return p.name.trim();
@@ -270,6 +318,42 @@ function CallPage({ navigate, hashParams }) {
   const bumpLayout = React.useCallback(() => {
     setLayoutTick((v) => v + 1);
   }, []);
+
+  // Подхватить уже идущий звонок после ухода на каталог/профиль.
+  React.useEffect(() => {
+    if (!confId) return;
+    const shell = getCallShell();
+    if (!shell.isLive() || shell.confId !== confId) return;
+    roomRef.current = shell.room;
+    const snap = shell.snapshot || {};
+    if (snap.conference) setConference(snap.conference);
+    if (typeof snap.isMentor === 'boolean') setIsMentor(snap.isMentor);
+    if (typeof snap.muted === 'boolean') setMuted(snap.muted);
+    if (typeof snap.videoOff === 'boolean') setVideoOff(snap.videoOff);
+    if (typeof snap.sharing === 'boolean') setSharing(snap.sharing);
+    if (snap.joinedAt) joinedAtRef.current = snap.joinedAt;
+    setPhase(snap.phase === 'in_call' || snap.phase === 'loading' ? 'in_call' : (snap.phase || 'in_call'));
+    bumpLayout();
+  }, [confId, bumpLayout]);
+
+  React.useEffect(() => {
+    if (!confId || !roomRef.current) return undefined;
+    if (!['in_call', 'loading'].includes(phase)) return undefined;
+    publishCallShell({
+      confId,
+      room: roomRef.current,
+      snapshot: {
+        conference,
+        isMentor,
+        muted,
+        videoOff,
+        sharing,
+        phase,
+        joinedAt: joinedAtRef.current,
+      },
+    });
+    return undefined;
+  }, [confId, conference, isMentor, muted, videoOff, sharing, phase, layoutTick]);
 
   React.useEffect(() => {
     whiteboardEnabledRef.current = whiteboardEnabled;
@@ -543,6 +627,7 @@ function CallPage({ navigate, hashParams }) {
   const cleanupRoom = React.useCallback(async () => {
     const room = roomRef.current;
     roomRef.current = null;
+    getCallShell().clear();
     if (room) {
       try {
         await room.disconnect();
@@ -584,9 +669,30 @@ function CallPage({ navigate, hashParams }) {
 
     let cancelled = false;
     (async () => {
-      setPhase('loading');
       setError('');
       try {
+        const shell = getCallShell();
+        // Уже в этом созвоне — не переподключаемся (вернулись с каталога).
+        if (shell.isLive() && shell.confId === confId && shell.room) {
+          roomRef.current = shell.room;
+          const snap = shell.snapshot || {};
+          if (snap.conference) setConference(snap.conference);
+          if (typeof snap.isMentor === 'boolean') setIsMentor(snap.isMentor);
+          if (typeof snap.muted === 'boolean') setMuted(snap.muted);
+          if (typeof snap.videoOff === 'boolean') setVideoOff(snap.videoOff);
+          if (typeof snap.sharing === 'boolean') setSharing(snap.sharing);
+          if (snap.joinedAt) joinedAtRef.current = snap.joinedAt;
+          setPhase('in_call');
+          bumpLayout();
+          return;
+        }
+        // Другой активный созвон — сначала отключиться.
+        if (shell.room && shell.confId && shell.confId !== confId) {
+          try { await shell.room.disconnect(); } catch (_) { /* ignore */ }
+          shell.clear();
+        }
+
+        setPhase('loading');
         const join = await window.fetchApiJson(
           `/api/communication/conferences/${encodeURIComponent(confId)}/join/`,
           { method: 'POST', auth: true },
@@ -635,6 +741,8 @@ function CallPage({ navigate, hashParams }) {
           });
         }
         room.on(LK.RoomEvent.Disconnected, () => {
+          getCallShell().clear();
+          roomRef.current = null;
           if (!cancelled) {
             if (!leaveKindRef.current) leaveKindRef.current = 'remote';
             setEndKind(leaveKindRef.current);
@@ -680,14 +788,17 @@ function CallPage({ navigate, hashParams }) {
 
     return () => {
       cancelled = true;
-      notifyLeave(true);
-      cleanupRoom();
+      // Не рвём LiveKit и не шлём leave — пользователь может уйти в каталог.
     };
-  }, [confId, cleanupRoom, bumpLayout, notifyLeave, LK]);
+  }, [confId, bumpLayout, LK]);
 
   React.useEffect(() => {
     if (phase !== 'in_call') return undefined;
-    const onPageHide = () => notifyLeave(true);
+    const onPageHide = () => {
+      // Закрытие вкладки — выходим из комнаты на сервере.
+      notifyLeave(true);
+      getCallShell().clear();
+    };
     window.addEventListener('pagehide', onPageHide);
     return () => window.removeEventListener('pagehide', onPageHide);
   }, [phase, notifyLeave]);
@@ -1098,6 +1209,13 @@ function CallPage({ navigate, hashParams }) {
           <ModeButton active={displayMode === 'grid'} onClick={() => setDisplayMode('grid')}>Мозаика</ModeButton>
           <ModeButton active={displayMode === 'focus'} onClick={() => setDisplayMode('focus')}>Важное</ModeButton>
         </div>
+        <CallControl
+          label="На сайт"
+          active={false}
+          onClick={() => navigate(Routes.CATALOG)}
+        >
+          <I.Book className="w-5 h-5" />
+        </CallControl>
         <CallControl label={muted ? 'Вкл. звук' : 'Без звука'} active={muted} onClick={toggleMute}>
           <I.Mic className="w-5 h-5" off={muted} />
         </CallControl>
@@ -1307,4 +1425,105 @@ function CallControl({ children, label, active, onClick, badge = 0 }) {
   );
 }
 
+/** Звук собеседника, пока открыт каталог/профиль. */
+function CallAudioBridge() {
+  const [tick, setTick] = React.useState(0);
+  React.useEffect(() => getCallShell().subscribe(() => setTick((n) => n + 1)), []);
+  const shell = getCallShell();
+  if (!shell.isLive()) return null;
+  const room = shell.room;
+  const LK = window.LivekitClient || window.LiveKit;
+  if (!room || !LK) return null;
+  const pubs = [];
+  room.remoteParticipants?.forEach((p) => {
+    const map = p.audioTrackPublications;
+    if (map && typeof map.forEach === 'function') {
+      map.forEach((pub) => {
+        if (pub?.track) pubs.push({ key: pub.trackSid || pub.track.sid, pub });
+      });
+    }
+  });
+  return (
+    <div className="hidden" aria-hidden data-call-audio-bridge={tick}>
+      {pubs.map((item) => <AudioTrack key={item.key} publication={item.pub} />)}
+    </div>
+  );
+}
+
+/** Мини-панель: созвон идёт, вы на другой странице. */
+function CallFloatingBar({ navigate, route }) {
+  const [, setTick] = React.useState(0);
+  React.useEffect(() => getCallShell().subscribe(() => setTick((n) => n + 1)), []);
+  const shell = getCallShell();
+  if (!shell.isLive()) return null;
+  if (route === Routes.CALL) return null;
+
+  const snap = shell.snapshot || {};
+  const muted = Boolean(snap.muted);
+  const confId = shell.confId;
+
+  const toggleMute = async () => {
+    const room = shell.room;
+    if (!room) return;
+    const next = !muted;
+    try {
+      await room.localParticipant.setMicrophoneEnabled(!next);
+    } catch (_) { /* ignore */ }
+    publishCallShell({
+      confId,
+      room,
+      snapshot: { ...snap, muted: next, phase: 'in_call' },
+    });
+  };
+
+  const leave = async () => {
+    const room = shell.room;
+    try {
+      await window.fetchApiJson(
+        `/api/communication/conferences/${encodeURIComponent(confId)}/leave/`,
+        { method: 'POST', auth: true },
+      );
+    } catch (_) { /* ignore */ }
+    try { await room?.disconnect(); } catch (_) { /* ignore */ }
+    getCallShell().clear();
+  };
+
+  return (
+    <div className="fixed bottom-4 left-1/2 z-[60] -translate-x-1/2 max-w-[calc(100vw-1.5rem)]">
+      <div className="flex items-center gap-2 rounded-2xl bg-[#0b1224]/95 px-3 py-2 text-white shadow-2xl ring-1 ring-white/15 backdrop-blur-xl">
+        <span className="relative flex h-2.5 w-2.5 shrink-0">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+        </span>
+        <span className="text-xs font-semibold whitespace-nowrap pr-1">Созвон идёт</span>
+        <button
+          type="button"
+          onClick={() => window.openConferenceCall?.(navigate, confId)}
+          className="h-9 rounded-xl bg-cyan-500 px-3 text-xs font-bold text-slate-950 hover:bg-cyan-400"
+        >
+          Вернуться
+        </button>
+        <button
+          type="button"
+          onClick={toggleMute}
+          className="h-9 rounded-xl bg-white/10 px-3 text-xs font-semibold hover:bg-white/15"
+          title={muted ? 'Включить микрофон' : 'Выключить микрофон'}
+        >
+          {muted ? 'Микрофон' : 'Без звука'}
+        </button>
+        <button
+          type="button"
+          onClick={leave}
+          className="h-9 rounded-xl bg-rose-600/90 px-3 text-xs font-semibold hover:bg-rose-500"
+        >
+          Выйти
+        </button>
+      </div>
+    </div>
+  );
+}
+
 window.CallPage = CallPage;
+window.CallFloatingBar = CallFloatingBar;
+window.CallAudioBridge = CallAudioBridge;
+window.getCallShell = getCallShell;
