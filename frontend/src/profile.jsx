@@ -479,10 +479,10 @@ function MyCourses({ enrollments, navigate }) {
       <section className="max-w-7xl mx-auto px-5 sm:px-8 mt-10">
         <h2 className="text-2xl font-bold mb-4">Мои курсы</h2>
         <div className="bg-white rounded-2xl ring-1 ring-black/[0.04] shadow-soft p-8 text-center">
-          <p className="text-sm text-ink/55 mb-4">Вы ещё не начали ни одного курса</p>
+          <p className="text-sm text-ink/55 mb-4">Пока нет курсов. В каталоге — ЕГЭ и IT с нуля.</p>
           <button type="button" onClick={() => navigate(window.Routes.CATALOG)}
             className="h-11 px-6 rounded-xl btn-grad btn-shimmer text-white text-sm font-semibold">
-            Открыть каталог ЕГЭ
+            Открыть каталог
           </button>
         </div>
       </section>

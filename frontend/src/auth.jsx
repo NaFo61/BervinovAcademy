@@ -404,7 +404,7 @@ function AuthForm({ mode, setMode, navigate }) {
         <I.Logo className="w-10 h-10"/>
         <div className="leading-tight">
           <div className="font-bold tracking-tight text-base">Bervinov<span className="grad-text">Academy</span></div>
-          <div className="text-[10px] text-ink/50 uppercase tracking-widest">онлайн‑школа</div>
+          <div className="text-[10px] text-ink/50 uppercase tracking-widest">курсы и занятия</div>
         </div>
       </button>
 
@@ -412,15 +412,15 @@ function AuthForm({ mode, setMode, navigate }) {
         <div className="h-[5.25rem] shrink-0 relative overflow-hidden">
           <AuthFadePanel show={isLogin} className="absolute inset-0">
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
-              С возвращением, <span className="grad-text">друг</span>.
+              С возвращением
             </h1>
-            <p className="text-sm text-ink/60 mt-2">Войди — и продолжай с того места, где остановился.</p>
+            <p className="text-sm text-ink/60 mt-2">Войдите — курс и переписка с преподавателем на месте.</p>
           </AuthFadePanel>
           <AuthFadePanel show={!isLogin} className="absolute inset-0">
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
-              Старт. <span className="grad-text">Поехали.</span>
+              Создайте аккаунт
             </h1>
-            <p className="text-sm text-ink/60 mt-2">Один аккаунт — десятки курсов и личный ментор.</p>
+            <p className="text-sm text-ink/60 mt-2">Курсы по ЕГЭ и IT с нуля. Преподаватель поможет, если задание не идёт.</p>
           </AuthFadePanel>
         </div>
       )}
@@ -575,9 +575,9 @@ function AuthForm({ mode, setMode, navigate }) {
           </div>
           <div className="text-center text-sm text-ink/60 pt-2 pb-1">
             {isLogin ? (
-              <>Нет аккаунта? <button type="button" onClick={() => setMode('register')} className="text-violet-600 font-semibold hover:underline">Зарегистрируйся</button></>
+              <>Нет аккаунта? <button type="button" onClick={() => setMode('register')} className="text-violet-600 font-semibold hover:underline">Зарегистрироваться</button></>
             ) : (
-              <>Уже учишься? <button type="button" onClick={() => setMode('login')} className="text-violet-600 font-semibold hover:underline">Войти</button></>
+              <>Уже есть аккаунт? <button type="button" onClick={() => setMode('login')} className="text-violet-600 font-semibold hover:underline">Войти</button></>
             )}
           </div>
         </div>
@@ -688,14 +688,14 @@ function AuthIllustration({ mode }) {
         <div className="absolute inset-[26%] rounded-full bg-white shadow-glow grid place-items-center text-center px-3 sm:px-4">
           <div className="min-h-[5.5rem] flex flex-col items-center justify-center relative w-full">
             <AuthFadePanel show={isLogin} className="absolute inset-0 flex flex-col items-center justify-center">
-              <div className="grad-text text-5xl font-extrabold leading-none">👋</div>
-              <div className="mt-3 text-sm font-bold">Рады видеть</div>
-              <div className="text-[11px] text-ink/55">снова в Академии</div>
+              <div className="grad-text text-4xl font-extrabold leading-none">Курс</div>
+              <div className="mt-3 text-sm font-bold">на том же месте</div>
+              <div className="text-[11px] text-ink/55">уроки и переписка</div>
             </AuthFadePanel>
-            <AuthFadePanel show={!isLogin} className="absolute inset-0 flex flex-col items-center justify-center">
-              <div className="grad-text text-5xl sm:text-6xl font-extrabold leading-none tracking-tight">42</div>
-              <div className="mt-2 text-xs sm:text-sm font-bold leading-snug text-balance">уроков в стартовом треке</div>
-              <div className="text-[10px] sm:text-[11px] text-ink/55 mt-1 leading-snug">ЕГЭ по информатике</div>
+            <AuthFadePanel show={!isLogin} className="absolute inset-0 flex flex-col items-center justify-center px-2">
+              <div className="grad-text text-3xl sm:text-4xl font-extrabold leading-none tracking-tight">ЕГЭ и IT</div>
+              <div className="mt-2 text-xs sm:text-sm font-bold leading-snug">курсы с преподавателем</div>
+              <div className="text-[10px] sm:text-[11px] text-ink/55 mt-1 leading-snug">информатика и с нуля</div>
             </AuthFadePanel>
           </div>
         </div>
@@ -704,19 +704,18 @@ function AuthIllustration({ mode }) {
           <FloatChip emoji="📚" label="Уроки" tint="#2563EB"/>
         </Orbit>
         <Orbit angle={70} radius="42%" delay={0.5}>
-          <FloatChip emoji="🔥" label="Серия 23 дн" tint="#06B6D4"/>
+          <FloatChip emoji="✏️" label="Задания" tint="#06B6D4"/>
         </Orbit>
         <Orbit angle={155} radius="43%" delay={1}>
-          <FloatChip emoji="⚡" label="Задачи" tint="#38BDF8"/>
+          <FloatChip emoji="💬" label="Чат" tint="#38BDF8"/>
         </Orbit>
         <Orbit angle={235} radius="42%" delay={1.5}>
-          <FloatChip emoji="🎯" label="Топ-3" tint="#0EA5E9"/>
+          <FloatChip emoji="🎓" label="ЕГЭ и IT" tint="#0EA5E9"/>
         </Orbit>
 
         <div className="absolute -bottom-3 -left-3 code-bg rounded-2xl shadow-glow p-3 font-mono text-[11px] leading-tight w-44">
-          <div className="text-emerald-300">{'// твой первый шаг'}</div>
-          <div><span className="text-violet-300">def</span> <span className="text-amber-300">learn</span>():</div>
-          <div className="pl-3"><span className="text-violet-300">return</span> <span className="text-cyan-300">'легко'</span></div>
+          <div className="text-slate-400">lesson.py</div>
+          <div><span className="text-violet-300">print</span>(<span className="text-cyan-300">'привет'</span>)</div>
         </div>
 
         {[
@@ -735,12 +734,12 @@ function AuthIllustration({ mode }) {
 
       <div className="mt-6 text-center h-[4.5rem] relative">
         <AuthFadePanel show={isLogin} className="absolute inset-0 flex flex-col items-center justify-start">
-          <div className="text-lg font-bold">Продолжай учиться</div>
-          <div className="text-sm text-ink/60 mt-1 max-w-xs mx-auto">5 600+ студентов уже растут вместе с Bervinov Academy.</div>
+          <div className="text-lg font-bold">Продолжайте курс</div>
+          <div className="text-sm text-ink/60 mt-1 max-w-xs mx-auto">Уроки, задания и переписка с преподавателем остаются в аккаунте.</div>
         </AuthFadePanel>
         <AuthFadePanel show={!isLogin} className="absolute inset-0 flex flex-col items-center justify-start">
-          <div className="text-lg font-bold">Начни учиться сегодня</div>
-          <div className="text-sm text-ink/60 mt-1 max-w-xs mx-auto">Первый урок и встреча с ментором — бесплатно.</div>
+          <div className="text-lg font-bold">Начните с каталога</div>
+          <div className="text-sm text-ink/60 mt-1 max-w-xs mx-auto">ЕГЭ по информатике и другим предметам или IT с нуля.</div>
         </AuthFadePanel>
       </div>
     </div>

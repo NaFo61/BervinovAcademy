@@ -2601,7 +2601,7 @@ function TopNav({ route, navigate }) {
               Bervinov<span className="grad-text">Academy</span>
             </span>
             <span className="mt-0.5 block text-[9px] uppercase tracking-[0.18em] text-ink/40">
-              учись вживую
+              курсы и занятия
             </span>
           </span>
         </button>
@@ -2967,35 +2967,33 @@ function Footer({ navigate }) {
             <I.Logo className="w-9 h-9" />
             <div>
               <div className="font-bold tracking-tight">Bervinov<span className="grad-text">Academy</span></div>
-              <div className="text-[10px] text-ink/50 uppercase tracking-widest">онлайн‑школа</div>
+              <div className="text-[10px] text-ink/50 uppercase tracking-widest">платформа для учёбы</div>
             </div>
           </div>
-          <p className="text-sm text-ink/60 max-w-sm">
-            Онлайн-платформа подготовки к ЕГЭ по информатике: уроки, практика и разборы преподавателя.
+          <p className="text-sm text-ink/60 max-w-sm leading-relaxed">
+            Занятия с учениками: ЕГЭ по информатике и другим предметам, IT с нуля. Урок, практика и разбор с преподавателем.
           </p>
           <div className="mt-5 flex items-center gap-3">
             <a className="w-10 h-10 rounded-xl bg-black/[0.04] hover:bg-violet-500/10 hover:text-violet-600 flex items-center justify-center transition-colors text-ink/60" href="#"><I.VK className="w-4 h-4" /></a>
             <a className="w-10 h-10 rounded-xl bg-black/[0.04] hover:bg-violet-500/10 hover:text-violet-600 flex items-center justify-center transition-colors text-ink/60" href="#"><I.Mail className="w-4 h-4" /></a>
           </div>
         </div>
-        <FooterCol title="Учёба" items={[
+        <FooterCol title="Курсы" items={[
         { label: 'Каталог курсов', onClick: () => navigate(Routes.CATALOG) },
-        { label: 'Python-интерпретатор', onClick: () => navigate(Routes.PLAYGROUND) },
-        { label: 'Доска', onClick: () => navigate(Routes.WHITEBOARD) },
-        { label: 'Тариф Про', onClick: () => navigate(Routes.PRO) },
-        { label: 'Мой профиль', onClick: () => navigate(Routes.PROFILE) },
-        { label: 'Сертификаты', onClick: () => {} }]
+        { label: 'Тариф Про', onClick: () => navigate(Routes.PRO) }]
         } />
-        <FooterCol title="Компания" items={[
-        { label: 'О школе' }, { label: 'Блог' }, { label: 'Карьера' }, { label: 'Контакты' }]
+        <FooterCol title="На занятии" items={[
+        { label: 'Python в браузере', onClick: () => navigate(Routes.PLAYGROUND) },
+        { label: 'Доска', onClick: () => navigate(Routes.WHITEBOARD) }]
         } />
-        <FooterCol title="Поддержка" items={[
-        { label: 'База знаний' }, { label: 'Сообщество' }, { label: 'Стать ментором' }, { label: 'Партнёрам' }]
+        <FooterCol title="Аккаунт" items={[
+        { label: 'Войти', onClick: () => navigate(Routes.AUTH) },
+        { label: 'Профиль', onClick: () => navigate(Routes.PROFILE) }]
         } />
       </div>
       <div className="border-t border-black/5">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-ink/50">
-          <div>© 2026 Bervinov Academy. Сделано с <span className="text-flame-500">♥</span> для тех, кто учится.</div>
+          <div>© 2026 Bervinov Academy</div>
           <div className="flex items-center gap-5">
             <a href="#">Условия</a><a href="#">Конфиденциальность</a><a href="#">Cookies</a>
           </div>

@@ -348,15 +348,21 @@ function CatalogPage({ navigate, hashParams }) {
 
       <div className="max-w-7xl mx-auto px-5 sm:px-8 pt-12 pb-8">
 
-        <div className="text-xs font-semibold uppercase tracking-widest text-violet-600 mb-3">Каталог</div>
+        <div className="flex items-end justify-between flex-wrap gap-6">
 
-        <div className="flex items-end justify-between flex-wrap gap-4">
+          <div className="max-w-2xl">
 
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
+            <div className="text-xs font-semibold uppercase tracking-widest text-violet-600 mb-3">Каталог</div>
 
-            Найди свой <span className="grad-text">курс</span>
+            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">Курсы</h1>
 
-          </h1>
+            <p className="mt-3 text-base text-ink/60 leading-relaxed">
+
+              ЕГЭ по информатике и другим предметам, а также IT с нуля. В каждом курсе — урок, задание и преподаватель.
+
+            </p>
+
+          </div>
 
           <div className="text-sm text-ink/55">
 
