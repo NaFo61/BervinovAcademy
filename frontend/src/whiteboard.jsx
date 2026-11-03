@@ -8,12 +8,16 @@ function whiteboardFeatureEnabled() {
   return meta.getAttribute('content') !== 'false';
 }
 
-function WhiteboardPage({ navigate }) {
+function WhiteboardPage({ navigate, hashParams }) {
   const token = window.getAccessToken();
+  const ownerFromQuery = hashParams?.get('user') || '';
   const hostRef = React.useRef(null);
+  const ownerIdRef = React.useRef('');
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(true);
   const [roomId, setRoomId] = React.useState('');
+  const [ownerName, setOwnerName] = React.useState('');
+  const [isOwn, setIsOwn] = React.useState(!ownerFromQuery);
   const [importNotice, setImportNotice] = React.useState('');
   const [backNav, setBackNav] = React.useState(null);
   const [sideImages, setSideImages] = React.useState([]);
@@ -28,17 +32,23 @@ function WhiteboardPage({ navigate }) {
 
     let cancelled = false;
     let mounted = false;
-    const pending = window.consumeLessonBoardImport ? window.consumeLessonBoardImport() : null;
+    const pending = !ownerFromQuery && window.consumeLessonBoardImport
+      ? window.consumeLessonBoardImport()
+      : null;
     if (pending?.backRoute) {
       setBackNav({ route: pending.backRoute, query: pending.backQuery || {} });
     }
+
+    const tokenPath = ownerFromQuery
+      ? `/api/communication/whiteboard/users/${encodeURIComponent(ownerFromQuery)}/token/`
+      : '/api/communication/whiteboard/studio/token/';
 
     (async () => {
       setLoading(true);
       setError('');
       try {
         const [data, api] = await Promise.all([
-          window.apiJson('/api/communication/whiteboard/studio/token/', {
+          window.apiJson(tokenPath, {
             method: 'POST',
             auth: true,
             body: {},
@@ -53,11 +63,15 @@ function WhiteboardPage({ navigate }) {
         }
         const host = hostRef.current;
         if (!host) return;
+        ownerIdRef.current = data.owner_public_id || ownerFromQuery || '';
         setRoomId(data.room_id || '');
+        setOwnerName(data.owner_name || '');
+        setIsOwn(typeof data.is_own === 'boolean' ? data.is_own : !ownerFromQuery);
         api.mount(host, {
           roomId: data.room_id,
           syncToken: data.token,
           licenseKey: data.license_key || '',
+          initialSnapshot: data.snapshot || null,
         });
         mounted = true;
         setLoading(false);
@@ -87,13 +101,23 @@ function WhiteboardPage({ navigate }) {
       }
     })();
 
+    const saveTimer = setInterval(() => {
+      if (ownerIdRef.current && window.saveUserBoardSnapshot) {
+        window.saveUserBoardSnapshot(ownerIdRef.current);
+      }
+    }, 20000);
+
     return () => {
       cancelled = true;
+      clearInterval(saveTimer);
+      if (ownerIdRef.current && window.saveUserBoardSnapshot) {
+        window.saveUserBoardSnapshot(ownerIdRef.current);
+      }
       if (mounted && hostRef.current && window.BervinovWhiteboard?.unmount) {
         window.BervinovWhiteboard.unmount(hostRef.current);
       }
     };
-  }, [token]);
+  }, [token, ownerFromQuery]);
 
   if (!token) {
     return (
@@ -118,16 +142,21 @@ function WhiteboardPage({ navigate }) {
           type="button"
           onClick={() => {
             if (backNav?.route) navigate(backNav.route, backNav.query);
+            else if (!isOwn) navigate(Routes.MENTOR);
             else navigate(Routes.PROFILE);
           }}
           className="h-9 px-3 rounded-lg text-sm font-medium text-ink/70 hover:bg-black/[0.04] shrink-0"
         >
-          ← {backNav?.route ? 'К заданию' : 'Назад'}
+          ← {backNav?.route ? 'К заданию' : (!isOwn ? 'К ученикам' : 'Назад')}
         </button>
         <div className="min-w-0 flex-1">
-          <div className="text-base font-semibold text-ink truncate">Моя доска</div>
+          <div className="text-base font-semibold text-ink truncate">
+            {isOwn ? 'Моя доска' : `Доска: ${ownerName || 'ученик'}`}
+          </div>
           <div className="text-xs text-ink/50 truncate">
-            Личная — только вы. В созвоне доска общая.
+            {isOwn
+              ? 'Сохраняется. На созвоне откроется эта же доска.'
+              : 'Можно править без ученика. Рисунок не пропадает.'}
           </div>
         </div>
         <button

@@ -1,4 +1,5 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 
 from .models import (
     BoardAsset,
@@ -7,12 +8,31 @@ from .models import (
     ConferenceLessonSummary,
     ConferenceWhiteboard,
     DirectThread,
+    UserBoard,
     UserNotification,
 )
 
 
+@admin.register(UserBoard)
+class UserBoardAdmin(ModelAdmin):
+    list_display = ("owner", "updated_by", "updated_at", "has_drawing")
+    search_fields = (
+        "owner__email",
+        "owner__first_name",
+        "owner__last_name",
+        "updated_by__email",
+    )
+    readonly_fields = ("created_at", "updated_at")
+    raw_id_fields = ("owner", "updated_by")
+    fields = ("owner", "updated_by", "created_at", "updated_at")
+
+    @admin.display(description="Рисунок сохранён", boolean=True)
+    def has_drawing(self, obj):
+        return bool(obj and obj.snapshot_json)
+
+
 @admin.register(ConferenceWhiteboard)
-class ConferenceWhiteboardAdmin(admin.ModelAdmin):
+class ConferenceWhiteboardAdmin(ModelAdmin):
     list_display = ("conference", "exported_by", "exported_at", "created_at")
     search_fields = (
         "conference__room_name",
@@ -22,7 +42,7 @@ class ConferenceWhiteboardAdmin(admin.ModelAdmin):
 
 
 @admin.register(ConferenceLessonSummary)
-class ConferenceLessonSummaryAdmin(admin.ModelAdmin):
+class ConferenceLessonSummaryAdmin(ModelAdmin):
     list_display = (
         "conference",
         "status",
@@ -35,7 +55,7 @@ class ConferenceLessonSummaryAdmin(admin.ModelAdmin):
 
 
 @admin.register(BoardAsset)
-class BoardAssetAdmin(admin.ModelAdmin):
+class BoardAssetAdmin(ModelAdmin):
     list_display = (
         "public_id",
         "original_name",
@@ -48,7 +68,7 @@ class BoardAssetAdmin(admin.ModelAdmin):
 
 
 @admin.register(Conference)
-class ConferenceAdmin(admin.ModelAdmin):
+class ConferenceAdmin(ModelAdmin):
     list_display = (
         "public_id",
         "mentor",
@@ -68,7 +88,7 @@ class ConferenceAdmin(admin.ModelAdmin):
 
 
 @admin.register(UserNotification)
-class UserNotificationAdmin(admin.ModelAdmin):
+class UserNotificationAdmin(ModelAdmin):
     list_display = (
         "public_id",
         "user",
@@ -83,7 +103,7 @@ class UserNotificationAdmin(admin.ModelAdmin):
 
 
 @admin.register(DirectThread)
-class DirectThreadAdmin(admin.ModelAdmin):
+class DirectThreadAdmin(ModelAdmin):
     list_display = (
         "public_id",
         "mentor",
@@ -102,7 +122,7 @@ class DirectThreadAdmin(admin.ModelAdmin):
 
 
 @admin.register(ChatMessage)
-class ChatMessageAdmin(admin.ModelAdmin):
+class ChatMessageAdmin(ModelAdmin):
     list_display = (
         "public_id",
         "thread",

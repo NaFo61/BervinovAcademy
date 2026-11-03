@@ -6,7 +6,7 @@ import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from communication.models import Conference, ConferenceWhiteboard
+from communication.models import Conference, ConferenceWhiteboard, UserBoard
 from communication.whiteboard_tokens import (
     issue_whiteboard_sync_token,
     verify_whiteboard_sync_token,
@@ -82,6 +82,10 @@ class TestWhiteboardApi:
         assert mentor_token.status_code == status.HTTP_200_OK
         assert mentor_token.data["token"]
         assert mentor_token.data["room_id"] == expected_room
+        assert mentor_token.data["owner_public_id"] == str(
+            student_user.public_id
+        )
+        assert mentor_token.data["is_own"] is False
         payload = verify_whiteboard_sync_token(
             mentor_token.data["token"], expected_room
         )
@@ -154,8 +158,12 @@ class TestWhiteboardApi:
             png_bytes,
             content_type="image/png",
         )
+        export_url = (
+            "/api/communication/conferences/"
+            f"{conference.public_id}/whiteboard/export/"
+        )
         resp = mentor_client.post(
-            f"/api/communication/conferences/{conference.public_id}/whiteboard/export/",
+            export_url,
             {"image": upload},
             format="multipart",
         )
@@ -166,9 +174,11 @@ class TestWhiteboardApi:
             == 1
         )
 
-        get_resp = mentor_client.get(
-            f"/api/communication/conferences/{conference.public_id}/whiteboard/",
+        board_url = (
+            "/api/communication/conferences/"
+            f"{conference.public_id}/whiteboard/"
         )
+        get_resp = mentor_client.get(board_url)
         assert get_resp.status_code == status.HTTP_200_OK
         assert get_resp.data["image_url"]
 
@@ -192,8 +202,12 @@ class TestWhiteboardApi:
         png = SimpleUploadedFile(
             "board.png", b"fake", content_type="image/png"
         )
+        export_url = (
+            "/api/communication/conferences/"
+            f"{conference.public_id}/whiteboard/export/"
+        )
         resp = client.post(
-            f"/api/communication/conferences/{conference.public_id}/whiteboard/export/",
+            export_url,
             {"image": png},
             format="multipart",
         )
@@ -238,3 +252,77 @@ class TestWhiteboardApi:
         )
         assert row["has_whiteboard"] is True
         assert row["whiteboard_exported_at"] is not None
+
+
+@pytest.mark.django_db
+class TestPersonalBoardApi:
+    @pytest.fixture(autouse=True)
+    def enable_whiteboard(self, settings):
+        settings.WHITEBOARD_ENABLED = True
+
+    @override_settings(WHITEBOARD_SYNC_SECRET="test-whiteboard-secret")
+    def test_mentor_opens_student_board_without_call(
+        self, mentor_client, mentor_user, student_user
+    ):
+        token_url = (
+            "/api/communication/whiteboard/users/"
+            f"{student_user.public_id}/token/"
+        )
+        resp = mentor_client.post(token_url)
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["room_id"] == f"u-{student_user.public_id}"
+        assert resp.data["is_own"] is False
+        assert resp.data["owner_name"]
+        payload = verify_whiteboard_sync_token(
+            resp.data["token"], resp.data["room_id"]
+        )
+        assert payload["sub"] == str(mentor_user.public_id)
+
+    @override_settings(WHITEBOARD_SYNC_SECRET="test-whiteboard-secret")
+    def test_student_cannot_open_other_board(
+        self, student_client, mentor_user
+    ):
+        token_url = (
+            "/api/communication/whiteboard/users/"
+            f"{mentor_user.public_id}/token/"
+        )
+        resp = student_client.post(token_url)
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+    @override_settings(WHITEBOARD_SYNC_SECRET="test-whiteboard-secret")
+    def test_snapshot_roundtrip_and_token_returns_it(
+        self, student_client, student_user, mentor_client
+    ):
+        snapshot = {"document": {"store": {}}, "session": {}}
+        snap_url = (
+            "/api/communication/whiteboard/users/"
+            f"{student_user.public_id}/snapshot/"
+        )
+        saved = student_client.put(
+            snap_url,
+            {"snapshot": snapshot},
+            format="json",
+        )
+        assert saved.status_code == status.HTTP_200_OK
+        board = UserBoard.objects.get(owner=student_user)
+        assert board.snapshot_json["document"]["store"] == {}
+
+        token_url = (
+            "/api/communication/whiteboard/users/"
+            f"{student_user.public_id}/token/"
+        )
+        opened = mentor_client.post(token_url)
+        assert opened.status_code == status.HTTP_200_OK
+        assert opened.data["snapshot"]["document"]["store"] == {}
+
+    def test_snapshot_rejects_non_object(self, student_client, student_user):
+        snap_url = (
+            "/api/communication/whiteboard/users/"
+            f"{student_user.public_id}/snapshot/"
+        )
+        resp = student_client.put(
+            snap_url,
+            {"snapshot": "nope"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST

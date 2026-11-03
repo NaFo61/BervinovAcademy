@@ -96,9 +96,10 @@ JWT:
 
 1. Ментор создаёт `Conference` (guest = ученик).
 2. Join → LiveKit token; **камера при входе выключена**, микрофон включается.
-3. Доска: `POST …/whiteboard/token/` → `room_id = u-{guest.public_id}` — одна комната навсегда.
-4. PNG-снимок: `POST …/whiteboard/export/` («Снимок доски»).
-5. Крупные файлы: `POST /api/communication/board-assets/` → URL на доску; sync принимает только image ≤ 2 МБ.
+3. Доска ученика одна и та же: личная страница и созвон открывают `room_id = u-{guest.public_id}`. После звонка она не удаляется.
+4. Ментор без ученика: `POST /api/communication/whiteboard/users/<id>/token/`. Копия рисунка: `PUT …/snapshot/`.
+5. PNG-снимок урока: `POST …/whiteboard/export/` («Снимок доски»).
+6. Крупные файлы: `POST /api/communication/board-assets/` → URL на доску; sync принимает только image ≤ 2 МБ.
 
 ### 4.4. AI-конспект урока
 
@@ -126,6 +127,7 @@ Conference (mentor, guest, room_name, status, …)
   ├─ ConferenceWhiteboard (image PNG, snapshot_json)   # снимок
   └─ ConferenceLessonSummary (audio, transcript, summary_md, status)
 
+UserBoard (owner, snapshot_json)                     # личная доска, не удаляется
 BoardAsset (uploaded_by, file, original_name, size)    # файлы для доски
 
 DirectThread (mentor ↔ student) → ChatMessage → attachments
@@ -146,7 +148,11 @@ Authorization: Bearer <jwt>
 POST /api/communication/conferences/<id>/join/
 
 POST /api/communication/conferences/<id>/whiteboard/token/
-→ {"token":"…","room_id":"u-<guest-uuid>","expires_in":3600}
+→ {"token":"…","room_id":"u-<guest-uuid>","owner_public_id":"…","is_own":false}
+
+POST /api/communication/whiteboard/users/<user-id>/token/
+PUT  /api/communication/whiteboard/users/<user-id>/snapshot/
+{"snapshot":{"document":{},"session":{}}}
 
 POST /api/communication/conferences/<id>/lesson-summary/
 Content-Type: multipart/form-data

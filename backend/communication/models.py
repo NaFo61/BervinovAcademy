@@ -207,6 +207,39 @@ def board_asset_upload_to(instance, filename):
     return f"board_assets/{timezone.now():%Y/%m}/{uuid.uuid4().hex}{ext}"
 
 
+class UserBoard(models.Model):
+    """Личная доска пользователя. Не привязана к созвону и не удаляется."""
+
+    owner = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="personal_board",
+        verbose_name=_("Владелец"),
+    )
+    snapshot_json = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name=_("Сохранённый рисунок"),
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_user_boards",
+        verbose_name=_("Последний правил"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Личная доска")
+        verbose_name_plural = _("Личные доски")
+
+    def __str__(self):
+        return f"Доска {self.owner}"
+
+
 class BoardAsset(UUIDPublicIdMixin, models.Model):
     """Файл для доски: хранится в академии, на доске — URL/превью."""
 

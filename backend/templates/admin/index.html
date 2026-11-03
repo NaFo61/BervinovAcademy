@@ -11,149 +11,179 @@
 {% endblock %}
 
 {% block content %}
-<div class="px-8 py-6 bg-background text-foreground">
-  <div class="mb-2 text-sm text-muted-foreground">
-    {% trans "Пульт владельца. Менторы работают в" %}
-    <a href="/mentor" class="text-primary-600 font-semibold underline">/mentor</a>.
-  </div>
-  <h1 class="text-2xl font-bold mb-6">{% trans "Дашборд школы" %}</h1>
+<div class="ba-dash">
+  <header>
+    <h1 class="ba-title">{% trans "Школа сегодня" %}</h1>
+    <p class="ba-lead">
+      {% trans "Здесь видно, что происходит, и можно сразу открыть нужный раздел. Менторы работают в кабинете на сайте, не здесь." %}
+    </p>
+  </header>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
-      <span class="text-sm text-muted-foreground">{% trans "Пользователи" %}</span>
-      <span class="text-3xl font-bold mt-2 block">{{ total_users }}</span>
-      <span class="text-xs text-muted-foreground mt-1 block">+{{ users_last_30_days }} {% trans "за 30 дней" %}</span>
+  <section>
+    <div class="ba-stats">
+      <a class="ba-stat" href="/admin/users/user/">
+        <div class="ba-stat-label">{% trans "Люди" %}</div>
+        <div class="ba-stat-value">{{ total_users }}</div>
+        <div class="ba-stat-hint">+{{ users_last_30_days }} {% trans "за 30 дней" %}</div>
+      </a>
+      <a class="ba-stat" href="/admin/users/student/">
+        <div class="ba-stat-label">{% trans "Ученики" %}</div>
+        <div class="ba-stat-value">{{ students_count }}</div>
+        <div class="ba-stat-hint">{{ active_students }} {% trans "сейчас на курсах" %}</div>
+      </a>
+      <a class="ba-stat" href="/admin/users/mentor/">
+        <div class="ba-stat-label">{% trans "Менторы" %}</div>
+        <div class="ba-stat-value">{{ mentors_count }}</div>
+        <div class="ba-stat-hint">{% trans "ведут занятия и созвоны" %}</div>
+      </a>
+      <a class="ba-stat" href="/admin/subscriptions/entitlement/">
+        <div class="ba-stat-label">{% trans "Тариф Pro" %}</div>
+        <div class="ba-stat-value">{{ pro_active }}</div>
+        <div class="ba-stat-hint">{% trans "активных доступов" %}</div>
+      </a>
     </div>
-    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
-      <span class="text-sm text-muted-foreground">{% trans "Менторы" %}</span>
-      <span class="text-3xl font-bold mt-2 block">{{ mentors_count }}</span>
-    </div>
-    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
-      <span class="text-sm text-muted-foreground">{% trans "Pro активны" %}</span>
-      <span class="text-3xl font-bold mt-2 block">{{ pro_active }}</span>
-    </div>
-    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
-      <span class="text-sm text-muted-foreground">{% trans "Курсы" %}</span>
-      <span class="text-3xl font-bold mt-2 block">{{ total_courses }}</span>
-    </div>
-    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
-      <span class="text-sm text-muted-foreground">{% trans "Активные записи" %}</span>
-      <span class="text-3xl font-bold mt-2 block">{{ active_students }}</span>
-    </div>
-    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
-      <span class="text-sm text-muted-foreground">{% trans "Завершили курс" %}</span>
-      <span class="text-3xl font-bold mt-2 block">{{ completed_courses }}</span>
-    </div>
-    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
-      <span class="text-sm text-muted-foreground">{% trans "Попытки КР (7д)" %}</span>
-      <span class="text-3xl font-bold mt-2 block">{{ exam_attempts_7d }}</span>
-    </div>
-    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
-      <span class="text-sm text-muted-foreground">{% trans "Отправки кода (7д)" %}</span>
-      <span class="text-3xl font-bold mt-2 block">{{ submissions_7d }}</span>
-    </div>
-  </div>
+  </section>
 
-  <h2 class="text-lg font-semibold mb-4">{% trans "Статистика по звонкам" %}</h2>
-  <p class="text-sm text-muted-foreground mb-4">
-    {% trans "За последние 7 дней. Ниже — также итог за 30 дней." %}
-  </p>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
-      <span class="text-sm text-muted-foreground">{% trans "Звонков (7 дней)" %}</span>
-      <span class="text-3xl font-bold mt-2 block">{{ call_stats_7d.total }}</span>
+  <section>
+    <h2 class="ba-section-title">{% trans "Куда зайти" %}</h2>
+    <p class="ba-section-note">{% trans "Коротко: что лежит в каждом разделе." %}</p>
+    <div class="ba-jumps">
+      <a class="ba-jump" href="/admin/users/user/">
+        <div class="ba-jump-kicker">{% trans "Люди" %}</div>
+        <strong>{% trans "Пользователи" %}</strong>
+        <p>{% trans "Почта, роль, вход и выдача Pro." %}</p>
+      </a>
+      <a class="ba-jump" href="/admin/content/course/">
+        <div class="ba-jump-kicker">{% trans "Программа" %}</div>
+        <strong>{% trans "Курсы" %}</strong>
+        <p>{{ total_courses }} {% trans "курсов. Уроки, тесты и задачи." %}</p>
+      </a>
+      <a class="ba-jump" href="/admin/education/enrollment/">
+        <div class="ba-jump-kicker">{% trans "Учёба" %}</div>
+        <strong>{% trans "Записи на курсы" %}</strong>
+        <p>{{ completed_courses }} {% trans "уже завершили курс." %}</p>
+      </a>
+      <a class="ba-jump" href="/admin/communication/conference/">
+        <div class="ba-jump-kicker">{% trans "Связь" %}</div>
+        <strong>{% trans "Созвоны" %}</strong>
+        <p>{% trans "Кто с кем говорил и чем закончилось." %}</p>
+      </a>
+      <a class="ba-jump" href="/admin/communication/userboard/">
+        <div class="ba-jump-kicker">{% trans "Доски" %}</div>
+        <strong>{% trans "Личные доски" %}</strong>
+        <p>{% trans "У каждого своя. Здесь видно, когда её сохраняли." %}</p>
+      </a>
+      <a class="ba-jump" href="/mentor">
+        <div class="ba-jump-kicker">{% trans "Сайт" %}</div>
+        <strong>{% trans "Кабинет ментора" %}</strong>
+        <p>{% trans "Ученики, доска ученика, ответы и созвон." %}</p>
+      </a>
     </div>
-    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
-      <span class="text-sm text-muted-foreground">{% trans "Завершено" %}</span>
-      <span class="text-3xl font-bold mt-2 block">{{ call_stats_7d.completed }}</span>
-    </div>
-    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
-      <span class="text-sm text-muted-foreground">{% trans "Идут сейчас" %}</span>
-      <span class="text-3xl font-bold mt-2 block">{{ call_stats_7d.in_progress }}</span>
-    </div>
-    <div class="bg-card rounded-2xl p-5 shadow-md border border-border">
-      <span class="text-sm text-muted-foreground">{% trans "Длительность" %}</span>
-      <span class="text-3xl font-bold mt-2 block">{{ call_stats_7d.total_duration_label }}</span>
-    </div>
-  </div>
-  <p class="text-sm text-muted-foreground mb-6">
-    {% trans "За 30 дней:" %}
-    <strong>{{ call_stats_30d.total }}</strong> {% trans "звонков" %},
-    {{ call_stats_30d.completed }} {% trans "завершено" %},
-    {{ call_stats_30d.in_progress }} {% trans "идут" %},
-    {{ call_stats_30d.total_duration_label }}.
-    <a href="/admin/communication/conference/" class="text-primary-600 font-semibold underline">
-      {% trans "Все созвоны" %}
-    </a>
-  </p>
+  </section>
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-    <div class="bg-card rounded-2xl p-6 shadow-md border border-border overflow-x-auto">
-      <h3 class="text-base font-semibold mb-4">{% trans "По дням (7 дней)" %}</h3>
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="text-left text-muted-foreground border-b border-border">
-            <th class="py-2 pr-3 font-semibold">{% trans "Дата" %}</th>
-            <th class="py-2 pr-3 font-semibold">{% trans "Всего" %}</th>
-            <th class="py-2 pr-3 font-semibold">{% trans "Готово" %}</th>
-            <th class="py-2 pr-3 font-semibold">{% trans "Идут" %}</th>
-            <th class="py-2 font-semibold">{% trans "Время" %}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in call_stats_7d.by_day %}
-          <tr class="border-b border-border/60">
-            <td class="py-2 pr-3">{{ row.date }}</td>
-            <td class="py-2 pr-3">{{ row.total }}</td>
-            <td class="py-2 pr-3">{{ row.completed }}</td>
-            <td class="py-2 pr-3">{{ row.in_progress }}</td>
-            <td class="py-2">{{ row.duration_label }}</td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="5" class="py-4 text-muted-foreground">{% trans "Пока нет звонков" %}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <section>
+    <h2 class="ba-section-title">{% trans "Созвоны за 7 дней" %}</h2>
+    <p class="ba-section-note">
+      {{ call_stats_7d.total }} {% trans "всего" %},
+      {{ call_stats_7d.completed }} {% trans "завершено" %},
+      {{ call_stats_7d.in_progress }} {% trans "идут сейчас" %},
+      {{ call_stats_7d.total_duration_label }}.
+      {% trans "За 30 дней:" %}
+      <strong>{{ call_stats_30d.total }}</strong>.
+      <a class="ba-link" href="/admin/communication/conference/">{% trans "Открыть все" %}</a>
+    </p>
+    <div class="ba-split">
+      <div class="ba-panel">
+        <table class="ba-table">
+          <thead>
+            <tr>
+              <th>{% trans "День" %}</th>
+              <th>{% trans "Всего" %}</th>
+              <th>{% trans "Готово" %}</th>
+              <th>{% trans "Идут" %}</th>
+              <th>{% trans "Время" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in call_stats_7d.by_day %}
+            <tr>
+              <td>{{ row.date }}</td>
+              <td>{{ row.total }}</td>
+              <td>{{ row.completed }}</td>
+              <td>{{ row.in_progress }}</td>
+              <td>{{ row.duration_label }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5">{% trans "Пока нет звонков" %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="ba-panel">
+        <table class="ba-table">
+          <thead>
+            <tr>
+              <th>{% trans "Кто" %}</th>
+              <th>{% trans "Статус" %}</th>
+              <th>{% trans "Время" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in call_stats_7d.recent %}
+            <tr>
+              <td>{{ row.mentor_name }} → {{ row.guest_name }}</td>
+              <td>{{ row.status }}</td>
+              <td>{{ row.duration_label }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="3">{% trans "Пока нет звонков" %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-    <div class="bg-card rounded-2xl p-6 shadow-md border border-border overflow-x-auto">
-      <h3 class="text-base font-semibold mb-4">{% trans "Последние звонки" %}</h3>
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="text-left text-muted-foreground border-b border-border">
-            <th class="py-2 pr-3 font-semibold">{% trans "Кто" %}</th>
-            <th class="py-2 pr-3 font-semibold">{% trans "Статус" %}</th>
-            <th class="py-2 font-semibold">{% trans "Время" %}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in call_stats_7d.recent %}
-          <tr class="border-b border-border/60">
-            <td class="py-2 pr-3">{{ row.mentor_name }} → {{ row.guest_name }}</td>
-            <td class="py-2 pr-3">{{ row.status }}</td>
-            <td class="py-2">{{ row.duration_label }}</td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="3" class="py-4 text-muted-foreground">{% trans "Пока нет звонков" %}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
+  </section>
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-    <div class="bg-card rounded-2xl p-6 shadow-md border border-border">
-      <h2 class="text-lg font-semibold mb-4">{% trans "Регистрации" %}</h2>
+  <section>
+    <h2 class="ba-section-title">{% trans "За неделю учёбы" %}</h2>
+    <div class="ba-stats">
+      <a class="ba-stat" href="/admin/content/course/">
+        <div class="ba-stat-label">{% trans "Курсы" %}</div>
+        <div class="ba-stat-value">{{ total_courses }}</div>
+        <div class="ba-stat-hint">{% trans "в каталоге" %}</div>
+      </a>
+      <a class="ba-stat" href="/admin/education/enrollment/">
+        <div class="ba-stat-label">{% trans "Завершили курс" %}</div>
+        <div class="ba-stat-value">{{ completed_courses }}</div>
+        <div class="ba-stat-hint">{% trans "записей со статусом «завершён»" %}</div>
+      </a>
+      <a class="ba-stat" href="/admin/exams/examattempt/">
+        <div class="ba-stat-label">{% trans "Контрольные" %}</div>
+        <div class="ba-stat-value">{{ exam_attempts_7d }}</div>
+        <div class="ba-stat-hint">{% trans "попыток за 7 дней" %}</div>
+      </a>
+      <a class="ba-stat" href="/admin/progress/codesubmission/">
+        <div class="ba-stat-label">{% trans "Код" %}</div>
+        <div class="ba-stat-value">{{ submissions_7d }}</div>
+        <div class="ba-stat-hint">{% trans "отправок за 7 дней" %}</div>
+      </a>
+    </div>
+  </section>
+
+  <section class="ba-charts">
+    <div class="ba-panel">
+      <h2 class="ba-section-title">{% trans "Новые люди по месяцам" %}</h2>
       <canvas id="userActivityChart"></canvas>
     </div>
-    <div class="bg-card rounded-2xl p-6 shadow-md border border-border">
-      <h2 class="text-lg font-semibold mb-4">{% trans "Популярность курсов" %}</h2>
+    <div class="ba-panel">
+      <h2 class="ba-section-title">{% trans "На какие курсы записываются" %}</h2>
       <canvas id="popularCoursesChart"></canvas>
     </div>
-  </div>
+  </section>
 </div>
 
 <script>

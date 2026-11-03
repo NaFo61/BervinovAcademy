@@ -286,6 +286,8 @@ function CallPage({ navigate, hashParams }) {
   const [whiteboardSyncToken, setWhiteboardSyncToken] = React.useState('');
   const [whiteboardRoomId, setWhiteboardRoomId] = React.useState('');
   const [whiteboardLicenseKey, setWhiteboardLicenseKey] = React.useState('');
+  const [whiteboardOwnerId, setWhiteboardOwnerId] = React.useState('');
+  const [whiteboardSnapshot, setWhiteboardSnapshot] = React.useState(null);
   const [whiteboardNotice, setWhiteboardNotice] = React.useState('');
   const [whiteboardSaving, setWhiteboardSaving] = React.useState(false);
   const [whiteboardSaved, setWhiteboardSaved] = React.useState(false);
@@ -414,6 +416,8 @@ function CallPage({ navigate, hashParams }) {
       setWhiteboardSyncToken('');
       setWhiteboardRoomId('');
       setWhiteboardLicenseKey('');
+      setWhiteboardOwnerId('');
+      setWhiteboardSnapshot(null);
       return undefined;
     }
 
@@ -430,12 +434,16 @@ function CallPage({ navigate, hashParams }) {
           setWhiteboardSyncToken(data.token || '');
           setWhiteboardRoomId(data.room_id || '');
           setWhiteboardLicenseKey(data.license_key || '');
+          setWhiteboardOwnerId(data.owner_public_id || '');
+          setWhiteboardSnapshot(data.snapshot || null);
         }
       } catch (_) {
         if (!cancelled) {
           setWhiteboardSyncToken('');
           setWhiteboardRoomId('');
           setWhiteboardLicenseKey('');
+          setWhiteboardOwnerId('');
+          setWhiteboardSnapshot(null);
         }
       }
     };
@@ -448,6 +456,23 @@ function CallPage({ navigate, hashParams }) {
       if (timerId) clearInterval(timerId);
     };
   }, [confId, phase]);
+
+  React.useEffect(() => {
+    if (phase !== 'in_call' || !whiteboardOwnerId) return undefined;
+    const save = () => {
+      if (window.saveUserBoardSnapshot) window.saveUserBoardSnapshot(whiteboardOwnerId);
+    };
+    const timerId = setInterval(save, 20000);
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') save();
+    };
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      clearInterval(timerId);
+      document.removeEventListener('visibilitychange', onHide);
+      save();
+    };
+  }, [phase, whiteboardOwnerId]);
 
   // Тихая запись аудио у ментора для AI-конспекта.
   React.useEffect(() => {
@@ -1157,6 +1182,8 @@ function CallPage({ navigate, hashParams }) {
                 roomId={boardRoomId}
                 syncToken={whiteboardSyncToken}
                 licenseKey={whiteboardLicenseKey}
+                initialSnapshot={whiteboardSnapshot}
+                ownerId={whiteboardOwnerId}
                 selected={tile.key === selectedTileKey}
                 onSelect={() => selectTile(tile.key)}
                 isGridMode
@@ -1173,6 +1200,8 @@ function CallPage({ navigate, hashParams }) {
               roomId={boardRoomId}
               syncToken={whiteboardSyncToken}
               licenseKey={whiteboardLicenseKey}
+              initialSnapshot={whiteboardSnapshot}
+              ownerId={whiteboardOwnerId}
               isGridMode={false}
               onSelect={() => selectTile(mainTile?.key)}
             />
@@ -1190,7 +1219,9 @@ function CallPage({ navigate, hashParams }) {
                     fit="contain"
                     roomId={boardRoomId}
                     syncToken={whiteboardSyncToken}
-                licenseKey={whiteboardLicenseKey}
+                    licenseKey={whiteboardLicenseKey}
+                    initialSnapshot={whiteboardSnapshot}
+                    ownerId={whiteboardOwnerId}
                     isGridMode={false}
                     selected={tile.key === selectedTileKey}
                     onSelect={() => selectTile(tile.key)}
@@ -1259,7 +1290,7 @@ function CallPage({ navigate, hashParams }) {
   );
 }
 
-function VideoTile({ tile, main = false, compact = false, clean = false, fit = 'cover', selected = false, onSelect, roomId, syncToken, licenseKey, isGridMode = false }) {
+function VideoTile({ tile, main = false, compact = false, clean = false, fit = 'cover', selected = false, onSelect, roomId, syncToken, licenseKey, initialSnapshot = null, ownerId = '', isGridMode = false }) {
   const base = compact
     ? 'h-28 cursor-pointer'
     : main
@@ -1279,7 +1310,7 @@ function VideoTile({ tile, main = false, compact = false, clean = false, fit = '
     if (whiteboardActive) {
       return (
         <div className={shellClass} aria-label={tileLabel}>
-          <WhiteboardTile roomId={roomId} syncToken={syncToken} licenseKey={licenseKey} />
+          <WhiteboardTile roomId={roomId} syncToken={syncToken} licenseKey={licenseKey} initialSnapshot={initialSnapshot} ownerId={ownerId} />
           {!clean && (
             <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent pointer-events-none z-10">
               <div className="flex items-center gap-2">
@@ -1304,7 +1335,7 @@ function VideoTile({ tile, main = false, compact = false, clean = false, fit = '
             <I.Layers className="w-5 h-5" />
           </div>
           <div className="text-xs font-semibold">Доска ученика</div>
-          <div className="text-[10px] text-slate-500">Нажмите, чтобы открыть</div>
+          <div className="text-[10px] text-slate-500">Та же, что в кабинете. Не стирается</div>
         </div>
         {!clean && (
           <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent pointer-events-none z-10">
@@ -1349,7 +1380,7 @@ function VideoTile({ tile, main = false, compact = false, clean = false, fit = '
   );
 }
 
-function WhiteboardTile({ roomId, syncToken, licenseKey }) {
+function WhiteboardTile({ roomId, syncToken, licenseKey, initialSnapshot, ownerId }) {
   const hostRef = React.useRef(null);
   const [bundleError, setBundleError] = React.useState('');
 
@@ -1363,7 +1394,12 @@ function WhiteboardTile({ roomId, syncToken, licenseKey }) {
           ? await window.ensureWhiteboardBundle()
           : window.BervinovWhiteboard;
         if (cancelled || !api?.mount) return;
-        api.mount(host, { roomId, syncToken, licenseKey });
+        api.mount(host, {
+          roomId,
+          syncToken,
+          licenseKey,
+          initialSnapshot: initialSnapshot || null,
+        });
       } catch (err) {
         if (!cancelled) {
           setBundleError(err?.message || 'Доска не загрузилась');
@@ -1372,9 +1408,12 @@ function WhiteboardTile({ roomId, syncToken, licenseKey }) {
     })();
     return () => {
       cancelled = true;
+      if (ownerId && window.saveUserBoardSnapshot) {
+        window.saveUserBoardSnapshot(ownerId);
+      }
       window.BervinovWhiteboard?.unmount?.(host);
     };
-  }, [roomId, syncToken, licenseKey]);
+  }, [roomId, syncToken, licenseKey, ownerId]);
 
   if (!syncToken) {
     return (

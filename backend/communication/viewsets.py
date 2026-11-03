@@ -1,3 +1,5 @@
+import json
+
 from common.drf import UUID_LOOKUP_REGEX
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -19,6 +21,7 @@ from .models import (
     Conference,
     ConferenceLessonSummary,
     ConferenceWhiteboard,
+    UserBoard,
     UserNotification,
 )
 from .serializers import (
@@ -47,34 +50,135 @@ def _display_name(user) -> str:
     return full or user.email or str(user.public_id)
 
 
+_BOARD_SNAPSHOT_MAX_CHARS = 4 * 1024 * 1024
+
+
+def _whiteboard_disabled_response():
+    if settings.WHITEBOARD_ENABLED:
+        return None
+    return Response(
+        {"detail": "Доска отключена."},
+        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+    )
+
+
+def user_may_open_board(actor, owner) -> bool:
+    """Своя доска — всегда. Чужую — ментор или админ, ученик не нужен."""
+    if actor.pk == owner.pk:
+        return True
+    return getattr(actor, "role", None) in ("mentor", "admin")
+
+
+def board_token_payload(actor, owner) -> dict:
+    room_id = personal_studio_room_id(owner.public_id)
+    ttl = settings.WHITEBOARD_TOKEN_TTL_SECONDS
+    token = issue_whiteboard_sync_token(
+        room_id,
+        actor.public_id,
+        ttl_seconds=ttl,
+    )
+    board = UserBoard.objects.filter(owner=owner).first()
+    updated_at = None
+    snapshot = None
+    if board and board.snapshot_json:
+        snapshot = board.snapshot_json
+        if board.updated_at:
+            updated_at = board.updated_at.isoformat()
+    payload = {
+        "token": token,
+        "room_id": room_id,
+        "expires_in": ttl,
+        "owner_public_id": str(owner.public_id),
+        "owner_name": _display_name(owner),
+        "is_own": actor.pk == owner.pk,
+        "snapshot": snapshot,
+        "snapshot_updated_at": updated_at,
+    }
+    license_key = settings.TLDRAW_LICENSE_KEY
+    if license_key:
+        payload["license_key"] = license_key
+    return payload
+
+
+def _owner_or_error(request, user_public_id):
+    disabled = _whiteboard_disabled_response()
+    if disabled:
+        return None, disabled
+    try:
+        owner = User.objects.get(public_id=user_public_id)
+    except User.DoesNotExist:
+        return None, Response(
+            {"detail": "Пользователь не найден."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    if not user_may_open_board(request.user, owner):
+        return None, Response(
+            {"detail": "Нет доступа к этой доске."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    return owner, None
+
+
 class WhiteboardStudioTokenView(APIView):
-    """Токен sync для личной доски вне созвона (не общая на всех)."""
+    """Токен своей личной доски. Комнату клиент выбрать не может."""
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        if not settings.WHITEBOARD_ENABLED:
-            return Response(
-                {"detail": "Доска отключена."},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
-        # Комнату задаёт сервер: клиент не может попасть в чужую доску.
-        room_id = personal_studio_room_id(request.user.public_id)
-        ttl = settings.WHITEBOARD_TOKEN_TTL_SECONDS
-        token = issue_whiteboard_sync_token(
-            room_id,
-            request.user.public_id,
-            ttl_seconds=ttl,
-        )
-        payload = {
-            "token": token,
-            "room_id": room_id,
-            "expires_in": ttl,
-        }
-        license_key = settings.TLDRAW_LICENSE_KEY
-        if license_key:
-            payload["license_key"] = license_key
+        disabled = _whiteboard_disabled_response()
+        if disabled:
+            return disabled
+        payload = board_token_payload(request.user, request.user)
         return Response(WhiteboardTokenSerializer(payload).data)
+
+
+class UserBoardTokenView(APIView):
+    """Токен доски пользователя. Ментор заходит без ученика."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_public_id):
+        owner, error = _owner_or_error(request, user_public_id)
+        if error:
+            return error
+        payload = board_token_payload(request.user, owner)
+        return Response(WhiteboardTokenSerializer(payload).data)
+
+
+class UserBoardSnapshotView(APIView):
+    """Копия рисунка в базе школы. Комната sync при этом не удаляется."""
+
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, user_public_id):
+        owner, error = _owner_or_error(request, user_public_id)
+        if error:
+            return error
+        raw = request.data.get("snapshot")
+        if not isinstance(raw, dict):
+            return Response(
+                {"detail": "Нужен объект snapshot."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        encoded = json.dumps(raw, separators=(",", ":"))
+        if len(encoded) > _BOARD_SNAPSHOT_MAX_CHARS:
+            return Response(
+                {"detail": "Снимок доски слишком большой."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        board, _created = UserBoard.objects.update_or_create(
+            owner=owner,
+            defaults={
+                "snapshot_json": raw,
+                "updated_by": request.user,
+            },
+        )
+        return Response(
+            {
+                "owner_public_id": str(owner.public_id),
+                "updated_at": board.updated_at.isoformat(),
+            }
+        )
 
 
 _BOARD_ASSET_EXT = frozenset(
@@ -323,22 +427,8 @@ class ConferenceViewSet(
                 {"detail": "Конференция уже завершена."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        # Как в Miro: на уроке работаем на постоянной доске ученика.
-        room_id = personal_studio_room_id(conference.guest.public_id)
-        ttl = settings.WHITEBOARD_TOKEN_TTL_SECONDS
-        token = issue_whiteboard_sync_token(
-            room_id,
-            request.user.public_id,
-            ttl_seconds=ttl,
-        )
-        payload = {
-            "token": token,
-            "room_id": room_id,
-            "expires_in": ttl,
-        }
-        license_key = settings.TLDRAW_LICENSE_KEY
-        if license_key:
-            payload["license_key"] = license_key
+        # На уроке — постоянная доска ученика, не отдельная на каждый звонок.
+        payload = board_token_payload(request.user, conference.guest)
         return Response(WhiteboardTokenSerializer(payload).data)
 
     @action(detail=True, methods=["get"], url_path="whiteboard")
@@ -408,8 +498,6 @@ class ConferenceViewSet(
             if isinstance(raw_snapshot, (dict, list)):
                 snapshot_json = raw_snapshot
             else:
-                import json
-
                 try:
                     snapshot_json = json.loads(raw_snapshot)
                 except json.JSONDecodeError:

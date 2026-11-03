@@ -188,7 +188,26 @@ function bindViewportBounds(editor, rootEl) {
   };
 }
 
-function WhiteboardEditor({ container, roomId, syncBaseUrl, syncToken, licenseKey }) {
+function pageIsEmpty(editor) {
+  try {
+    const ids = editor.getCurrentPageShapeIds();
+    if (!ids || typeof ids.size !== 'number') return false;
+    return ids.size === 0;
+  } catch (_) {
+    return false;
+  }
+}
+
+function restoreSnapshotIfEmpty(editor, snapshot) {
+  if (!editor || !snapshot || !pageIsEmpty(editor)) return;
+  try {
+    loadSnapshot(editor.store, snapshot);
+  } catch (_) {
+    /* битый снимок не затирает живую доску */
+  }
+}
+
+function WhiteboardEditor({ container, roomId, syncBaseUrl, syncToken, licenseKey, initialSnapshot }) {
   const rootRef = React.useRef(null);
   const editorRef = React.useRef(null);
   const cleanupRef = React.useRef(null);
@@ -253,13 +272,14 @@ function WhiteboardEditor({ container, roomId, syncBaseUrl, syncToken, licenseKe
           editor.registerExternalAssetHandler('url', (payload) => unfurlBookmarkUrl(httpBase, payload));
           cleanupRef.current?.();
           cleanupRef.current = bindViewportBounds(editor, rootRef.current);
+          requestAnimationFrame(() => restoreSnapshotIfEmpty(editor, initialSnapshot));
         }}
       />
     </div>
   );
 }
 
-function WhiteboardApp({ container, roomId, syncBaseUrl, syncToken, licenseKey }) {
+function WhiteboardApp({ container, roomId, syncBaseUrl, syncToken, licenseKey, initialSnapshot }) {
   if (!syncToken) {
     return <WhiteboardStatus loadingText="Получение доступа к доске…" />;
   }
@@ -271,6 +291,7 @@ function WhiteboardApp({ container, roomId, syncBaseUrl, syncToken, licenseKey }
       syncBaseUrl={syncBaseUrl}
       syncToken={syncToken}
       licenseKey={licenseKey}
+      initialSnapshot={initialSnapshot}
     />
   );
 }
@@ -396,6 +417,7 @@ function mount(container, options = {}) {
       syncBaseUrl={options.syncBaseUrl}
       syncToken={options.syncToken}
       licenseKey={options.licenseKey}
+      initialSnapshot={options.initialSnapshot || null}
     />,
   );
   mounts.set(container, { root, roomId: String(roomId), editor: null });

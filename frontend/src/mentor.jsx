@@ -19,7 +19,7 @@ function formatEnrollDate(iso) {
   return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
 }
 
-function NewStudentsBlock({ count, items, loading, onOpenProfile }) {
+function NewStudentsBlock({ count, items, loading, onOpenProfile, onOpenBoard }) {
   return (
     <div className="bg-white rounded-2xl ring-1 ring-black/[0.04] shadow-soft p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -49,7 +49,15 @@ function NewStudentsBlock({ count, items, loading, onOpenProfile }) {
                 </button>
                 <div className="text-xs text-ink/50 mt-0.5">{row.course_title || 'Курс'}</div>
               </div>
-              <div className="text-xs text-ink/45">{formatEnrollDate(row.started_at)}</div>
+              <div className="flex items-center gap-3">
+                {onOpenBoard && (
+                  <button type="button" onClick={() => onOpenBoard(row.user_public_id)}
+                    className="text-xs font-semibold text-violet-600 hover:underline">
+                    Доска
+                  </button>
+                )}
+                <div className="text-xs text-ink/45">{formatEnrollDate(row.started_at)}</div>
+              </div>
             </li>
           ))}
         </ul>
@@ -169,6 +177,11 @@ function MentorPage({ navigate, hashParams }) {
 
   const openProfile = (userId) => {
     window.openStudentProfile(navigate, userId);
+  };
+
+  const openBoard = (userPublicId) => {
+    if (!userPublicId) return;
+    navigate(Routes.WHITEBOARD, { user: userPublicId });
   };
 
   const startCallWith = async (userPublicId) => {
@@ -426,6 +439,7 @@ function MentorPage({ navigate, hashParams }) {
           items={newStudents}
           loading={newStudentsLoading}
           onOpenProfile={openProfile}
+          onOpenBoard={openBoard}
         />
 
         <div className="flex flex-wrap gap-2">
@@ -702,6 +716,7 @@ function MentorPage({ navigate, hashParams }) {
                     <td className="p-4">
                       <div className="flex flex-wrap gap-x-3 gap-y-1">
                         <MentorLink onClick={() => openProfile(s.user_public_id)}>Профиль</MentorLink>
+                        <MentorLink onClick={() => openBoard(s.user_public_id)}>Доска</MentorLink>
                         <MentorLink onClick={() => window.openChatWithUser(navigate, s.user_public_id)}>Написать</MentorLink>
                         <MentorLink onClick={() => startCallWith(s.user_public_id)}>Созвон</MentorLink>
                         <MentorLink onClick={() => { setSelectedStudent(s.user_public_id); setTab('code'); }}>Код</MentorLink>

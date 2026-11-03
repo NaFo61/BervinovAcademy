@@ -3,7 +3,7 @@ import websocketPlugin from '@fastify/websocket';
 import fastify from 'fastify';
 import { verifyWhiteboardToken } from './auth.mjs';
 import { AssetTooLargeError, loadAsset, storeAsset } from './assets.mjs';
-import { makeOrLoadRoom } from './rooms.mjs';
+import { checkpointRooms, makeOrLoadRoom } from './rooms.mjs';
 import { unfurl } from 'unfurl.js';
 
 const PORT = Number(process.env.PORT || 5858);
@@ -99,6 +99,18 @@ app.register(async (scopedApp) => {
     }
   });
 });
+
+function shutdown() {
+  try {
+    checkpointRooms();
+  } catch (_) {
+    /* файл комнаты уже на диске */
+  }
+  process.exit(0);
+}
+
+process.once('SIGTERM', shutdown);
+process.once('SIGINT', shutdown);
 
 app.listen({ port: PORT, host: '0.0.0.0' }, (err) => {
   if (err) {

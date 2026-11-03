@@ -97,6 +97,11 @@ UNFOLD = {
                         "icon": "videocam",
                         "link": "/admin/communication/conference/",
                     },
+                    {
+                        "title": _("Личные доски"),
+                        "icon": "draw",
+                        "link": "/admin/communication/userboard/",
+                    },
                 ],
             },
             {

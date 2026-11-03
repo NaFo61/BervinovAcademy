@@ -8,6 +8,8 @@ from .viewsets import (
     ConferenceViewSet,
     LiveKitWebhookView,
     MentorUserSearchView,
+    UserBoardSnapshotView,
+    UserBoardTokenView,
     UserNotificationViewSet,
     WhiteboardStudioTokenView,
 )
@@ -32,6 +34,14 @@ urlpatterns = [
     path(
         "communication/whiteboard/studio/token/",
         WhiteboardStudioTokenView.as_view(),
+    ),
+    path(
+        "communication/whiteboard/users/<uuid:user_public_id>/token/",
+        UserBoardTokenView.as_view(),
+    ),
+    path(
+        "communication/whiteboard/users/<uuid:user_public_id>/snapshot/",
+        UserBoardSnapshotView.as_view(),
     ),
     path(
         "communication/board-assets/",

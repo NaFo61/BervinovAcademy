@@ -1275,6 +1275,23 @@ async function uploadBoardAsset(file) {
   });
 }
 
+function saveUserBoardSnapshot(ownerPublicId) {
+  if (!ownerPublicId || !window.BervinovWhiteboard?.exportSnapshotJson) {
+    return Promise.resolve(false);
+  }
+  let snapshot;
+  try {
+    snapshot = window.BervinovWhiteboard.exportSnapshotJson();
+  } catch (_) {
+    return Promise.resolve(false);
+  }
+  if (!snapshot || typeof snapshot !== 'object') return Promise.resolve(false);
+  return fetchApiJson(
+    `/api/communication/whiteboard/users/${encodeURIComponent(ownerPublicId)}/snapshot/`,
+    { method: 'PUT', auth: true, body: { snapshot } },
+  ).then(() => true).catch(() => false);
+}
+
 function LessonSummaryModal({ conferenceId, title, initial, onClose }) {
   const [loading, setLoading] = React.useState(!initial);
   const [error, setError] = React.useState('');
@@ -3196,6 +3213,7 @@ Object.assign(window, {
   openLessonImagesOnBoard,
   consumeLessonBoardImport,
   whiteboardFeatureEnabled,
+  saveUserBoardSnapshot,
   enableWebPushNotifications,
   fetchConferenceWhiteboard,
   fetchConferenceLessonSummary,

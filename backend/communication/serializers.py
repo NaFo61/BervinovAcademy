@@ -136,6 +136,13 @@ class WhiteboardTokenSerializer(serializers.Serializer):
     license_key = serializers.CharField(
         read_only=True, required=False, allow_blank=True
     )
+    owner_public_id = serializers.CharField(read_only=True)
+    owner_name = serializers.CharField(read_only=True)
+    is_own = serializers.BooleanField(read_only=True)
+    snapshot = serializers.JSONField(read_only=True, allow_null=True)
+    snapshot_updated_at = serializers.CharField(
+        read_only=True, allow_null=True, required=False
+    )
 
 
 class ConferenceWhiteboardSerializer(serializers.ModelSerializer):

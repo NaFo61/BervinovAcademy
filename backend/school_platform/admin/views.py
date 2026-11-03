@@ -16,6 +16,7 @@ def dashboard_callback(request, context):
 
     total_users = User.objects.count()
     mentors_count = User.objects.filter(role="mentor").count()
+    students_count = User.objects.filter(role="student").count()
     total_courses = 0
     active_students = 0
     completed_courses = 0
@@ -107,6 +108,7 @@ def dashboard_callback(request, context):
         {
             "total_users": total_users,
             "mentors_count": mentors_count,
+            "students_count": students_count,
             "total_courses": total_courses,
             "active_students": active_students,
             "completed_courses": completed_courses,
