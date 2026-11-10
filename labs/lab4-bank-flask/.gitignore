@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+bank_catalog.db
+*.db-journal
+.DS_Store
