@@ -1,6 +1,8 @@
 from django.urls import path
 
 from tutoring.views import (
+    IceLinkView,
+    IceStatusView,
     LessonAccessView,
     LessonActionView,
     LessonListView,
@@ -45,6 +47,16 @@ urlpatterns = [
         name="tutoring-tariffs",
     ),
     path("tutoring/stats/", MentorStatsView.as_view(), name="tutoring-stats"),
+    path(
+        "tutoring/ice/status/",
+        IceStatusView.as_view(),
+        name="tutoring-ice-status",
+    ),
+    path(
+        "tutoring/ice/link/",
+        IceLinkView.as_view(),
+        name="tutoring-ice-link",
+    ),
     path(
         "tutoring/access/",
         LessonAccessView.as_view(),

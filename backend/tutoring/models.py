@@ -335,3 +335,38 @@ class LessonReminder(models.Model):
 
     def __str__(self):
         return f"{self.lesson_id} -{self.offset_minutes}м"
+
+
+class TutoringIceLink(models.Model):
+    """Связка academy-пользователя с репетитором в pivovarov-ice."""
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="ice_link",
+        verbose_name=_("Пользователь"),
+    )
+    ice_tutor_id = models.PositiveIntegerField(
+        verbose_name=_("ICE tutor id"),
+        db_index=True,
+    )
+    telegram_id = models.BigIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Telegram id"),
+        db_index=True,
+    )
+    display_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name=_("Имя в боте"),
+    )
+    linked_at = models.DateTimeField(auto_now=True, verbose_name=_("Привязан"))
+
+    class Meta:
+        verbose_name = _("Связь с ICE")
+        verbose_name_plural = _("Связи с ICE")
+
+    def __str__(self):
+        return f"{self.user_id} → ice:{self.ice_tutor_id}"

@@ -344,6 +344,58 @@ function LessonList({ title, items, busy, onCancel, onMove, movingId }) {
   );
 }
 
+function statsPeriod(mode, offset) {
+  const now = new Date();
+  if (mode === 'week') {
+    const day = now.getDay();
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    const from = new Date(now);
+    from.setDate(now.getDate() + mondayOffset + offset * 7);
+    from.setHours(0, 0, 0, 0);
+    const to = new Date(from);
+    to.setDate(from.getDate() + 6);
+    return {
+      from: isoDay(from),
+      to: isoDay(to),
+      group: 'week',
+      label: `${from.getDate()}–${to.getDate()} ${MONTHS_GEN[to.getMonth()]}`,
+      headline: `Получено за ${from.getDate()}–${to.getDate()} ${MONTHS_GEN[to.getMonth()]}`,
+      forecast: 'Прогноз до конца недели',
+    };
+  }
+  if (mode === 'month') {
+    const first = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const last = new Date(first.getFullYear(), first.getMonth() + 1, 0);
+    return {
+      from: isoDay(first),
+      to: isoDay(last),
+      group: 'week',
+      label: MONTHS_PREP[first.getMonth()],
+      headline: `Получено в ${MONTHS_PREP[first.getMonth()]}`,
+      forecast: 'Прогноз до конца месяца',
+    };
+  }
+  const year = now.getFullYear() + offset;
+  return {
+    from: `${year}-01-01`,
+    to: `${year}-12-31`,
+    group: 'month',
+    label: String(year),
+    headline: `Получено в ${year} году`,
+    forecast: 'Прогноз до конца года',
+  };
+}
+
+function isoDay(date) {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+const MONTHS_PREP = ['январе', 'феврале', 'марте', 'апреле', 'мае', 'июне', 'июле', 'августе', 'сентябре', 'октябре', 'ноябре', 'декабре'];
+const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+const MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
 function MentorLessonsPanel({ isAdmin, mentors }) {
   const [section, setSection] = React.useState('calendar');
   const [windows, setWindows] = React.useState(() => WEEKDAYS.map(() => ({ on: false, start: '16:00', end: '20:00' })));
@@ -352,6 +404,9 @@ function MentorLessonsPanel({ isAdmin, mentors }) {
   const [lessons, setLessons] = React.useState([]);
   const [money, setMoney] = React.useState({ pending: [], debtors: [] });
   const [stats, setStats] = React.useState(null);
+  const [ice, setIce] = React.useState(null);
+  const [statsMode, setStatsMode] = React.useState('month');
+  const [statsOffset, setStatsOffset] = React.useState(0);
   const [email, setEmail] = React.useState('');
   const [mentorId, setMentorId] = React.useState('');
   const [error, setError] = React.useState('');
@@ -359,13 +414,25 @@ function MentorLessonsPanel({ isAdmin, mentors }) {
   const [busy, setBusy] = React.useState(false);
   const [journal, setJournal] = React.useState({});
 
+  const period = React.useMemo(() => statsPeriod(statsMode, statsOffset), [statsMode, statsOffset]);
+
+  const loadStats = React.useCallback(async () => {
+    const query = new URLSearchParams({
+      from: period.from,
+      to: period.to,
+      group: period.group,
+    });
+    const month = await window.fetchApiJson(`/api/tutoring/stats/?${query}`, { auth: true });
+    setStats(month);
+  }, [period.from, period.to, period.group]);
+
   const load = React.useCallback(async () => {
-    const [availability, price, rows, claims, month] = await Promise.all([
+    const [availability, price, rows, claims, iceStatus] = await Promise.all([
       window.fetchApiJson('/api/tutoring/availability/', { auth: true }),
       window.fetchApiJson('/api/tutoring/tariffs/', { auth: true }),
       window.fetchApiJson('/api/tutoring/lessons/', { auth: true }),
       window.fetchApiJson('/api/tutoring/payment-claims/', { auth: true }),
-      window.fetchApiJson('/api/tutoring/stats/', { auth: true }),
+      window.fetchApiJson('/api/tutoring/ice/status/', { auth: true }).catch(() => null),
     ]);
     setTimezoneName(availability.timezone || 'Europe/Moscow');
     setWindows(WEEKDAYS.map((_, index) => {
@@ -386,7 +453,7 @@ function MentorLessonsPanel({ isAdmin, mentors }) {
       learned_note: item.learned_note || '',
     }])));
     setMoney(claims || { pending: [], debtors: [] });
-    setStats(month);
+    setIce(iceStatus);
   }, []);
 
   React.useEffect(() => {
@@ -394,6 +461,33 @@ function MentorLessonsPanel({ isAdmin, mentors }) {
     load().catch((err) => { if (!cancel) setError(err.message || 'Не удалось загрузить занятия'); });
     return () => { cancel = true; };
   }, [load]);
+
+  React.useEffect(() => {
+    if (section !== 'stats') return undefined;
+    let cancel = false;
+    setStats(null);
+    loadStats().catch((err) => { if (!cancel) setError(err.message || 'Не удалось загрузить статистику'); });
+    return () => { cancel = true; };
+  }, [section, loadStats]);
+
+  const linkIce = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      const data = await window.fetchApiJson('/api/tutoring/ice/link/', {
+        method: 'POST',
+        auth: true,
+        body: {},
+      });
+      setIce(data.status || data);
+      setHint('Кабинет бота привязан.');
+      await loadStats();
+    } catch (err) {
+      setError(err.message || 'Не удалось привязать кабинет бота');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const saveWindows = async () => {
     setBusy(true);
@@ -514,6 +608,61 @@ function MentorLessonsPanel({ isAdmin, mentors }) {
     <div className="space-y-4">
       {error && <div className="p-4 rounded-xl bg-red-50 text-red-700 text-sm ring-1 ring-red-200">{error}</div>}
       {hint && <div className="p-4 rounded-xl bg-emerald-50 text-emerald-800 text-sm ring-1 ring-emerald-200">{hint}</div>}
+      {ice && (
+        <div className={`p-4 rounded-2xl text-sm ring-1 ${ice.ice_linked ? 'bg-emerald-50 ring-emerald-200 text-emerald-900' : 'bg-amber-50 ring-amber-200 text-amber-950'}`}>
+          <p className="font-semibold">Кабинет в Telegram-боте</p>
+          {ice.ice_linked ? (
+            <p className="mt-1">
+              Привязан: {ice.tutor?.display_name || 'репетитор'} · статус {ice.tutor?.status || '—'}
+              {ice.tutor?.ice_tutor_id ? ` · id ${ice.tutor.ice_tutor_id}` : ''}
+              {money?.source === 'ice' || stats?.source === 'ice' ? ' · цифры из бота' : ''}
+            </p>
+          ) : (
+            <p className="mt-1">{ice.hint || 'Нужна привязка Telegram и инвайт репетитора.'}</p>
+          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {!ice.telegram_linked && (
+              <a href="#/profile/edit" className="h-9 px-3 rounded-lg text-sm font-semibold bg-white ring-1 ring-black/10 inline-flex items-center">Привязать Telegram</a>
+            )}
+            {ice.bot_url && (
+              <a href={ice.bot_url} target="_blank" rel="noreferrer" className="h-9 px-3 rounded-lg text-sm font-semibold bg-white ring-1 ring-black/10 inline-flex items-center">
+                Открыть @{ice.bot_username || 'бот'}
+              </a>
+            )}
+            {ice.ice_enabled && !ice.ice_linked && (
+              <button type="button" disabled={busy} onClick={linkIce} className="h-9 px-3 rounded-lg text-sm font-semibold btn-grad text-white">
+                {ice.telegram_linked ? 'Привязать кабинет' : 'Привязать по Telegram / обновить'}
+              </button>
+            )}
+            {isAdmin && ice.ice_enabled && !ice.ice_linked && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setError('');
+                  try {
+                    const data = await window.fetchApiJson('/api/tutoring/ice/link/', {
+                      method: 'POST',
+                      auth: true,
+                      body: { ice_tutor_id: 3 },
+                    });
+                    setIce(data.status || data);
+                    setHint('Привязан кабинет Мирона (ICE tutor 3).');
+                  } catch (err) {
+                    setError(err.message || 'Не удалось привязать tutor 3');
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+                className="h-9 px-3 rounded-lg text-sm font-semibold bg-white ring-1 ring-black/10"
+              >
+                Админ: tutor #3
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       {isAdmin && (
         <form onSubmit={grant} className="p-4 rounded-2xl bg-white ring-1 ring-black/[0.06] space-y-3">
           <p className="font-semibold">Выдать занятия ученику с Авито</p>
@@ -667,13 +816,98 @@ function MentorLessonsPanel({ isAdmin, mentors }) {
           </div>
         </div>
       )}
-      {section === 'stats' && stats && (
-        <div className="grid sm:grid-cols-3 gap-3">
-          <StatCard title="Начислено за месяц" value={rub(stats.charged_kop)} />
-          <StatCard title="Получено оплатами" value={rub(stats.received_kop)} />
-          <StatCard title="Прогноз по будущим" value={rub(stats.forecast_kop)} />
+      {section === 'stats' && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {[
+              ['week', 'Неделя'],
+              ['month', 'Месяц'],
+              ['year', 'Год'],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => { setStatsMode(id); setStatsOffset(0); }}
+                className={`h-10 px-4 rounded-xl text-sm font-semibold ${statsMode === id ? 'bg-ink text-white' : 'bg-white ring-1 ring-black/[0.06]'}`}
+              >
+                {label}
+              </button>
+            ))}
+            <div className="flex items-center gap-1 ml-auto">
+              <button type="button" aria-label="Назад" onClick={() => setStatsOffset((value) => value - 1)} className="h-10 w-10 rounded-xl bg-white ring-1 ring-black/[0.06] font-bold">‹</button>
+              <button type="button" aria-label="Вперёд" onClick={() => setStatsOffset((value) => value + 1)} className="h-10 w-10 rounded-xl bg-white ring-1 ring-black/[0.06] font-bold">›</button>
+            </div>
+          </div>
+          {!stats && <p className="text-sm text-ink/50">Загружаем статистику…</p>}
+          {stats && (
+            <>
+              <div className="p-5 rounded-2xl bg-white ring-1 ring-black/[0.06]">
+                <p className="text-sm text-ink/55">{period.headline}</p>
+                <p className="mt-1 text-3xl sm:text-4xl font-extrabold tracking-tight">{rub(stats.received_kop)}</p>
+                <p className="mt-2 text-sm text-ink/50">{period.forecast}: {rub(stats.forecast_kop)}</p>
+                {stats.source === 'ice' && <p className="mt-2 text-xs text-emerald-700">Источник: общий кабинет с ботом</p>}
+              </div>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <StatCard title="Начислено" value={rub(stats.charged_kop)} />
+                <StatCard title="Получено" value={rub(stats.received_kop)} />
+                <StatCard title="Прогноз" value={rub(stats.forecast_kop)} />
+              </div>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <StatCard title="Проведено" value={String(stats.completed_count || 0)} />
+                <StatCard title="Отмены" value={String(stats.cancelled_count || 0)} />
+                <StatCard title="Не пришёл" value={String(stats.no_show_count || 0)} />
+              </div>
+              {(stats.buckets || []).length > 0 && (
+                <div className="p-4 rounded-2xl bg-white ring-1 ring-black/[0.06]">
+                  <p className="text-sm font-semibold mb-3">По периодам</p>
+                  <StatsBars buckets={stats.buckets} group={stats.group || period.group} />
+                </div>
+              )}
+              {(stats.debtors || []).length > 0 && (
+                <div className="p-4 rounded-2xl bg-white ring-1 ring-black/[0.06]">
+                  <p className="text-sm font-semibold mb-2">Должники</p>
+                  {stats.debtors.map((row) => (
+                    <p key={row.student_id || row.student?.public_id} className="text-sm py-1">
+                      {row.display_name || row.student?.name} · {moneyLine(row.balance_kop)}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+function StatsBars({ buckets, group }) {
+  const maxValue = Math.max(1, ...buckets.map((item) => Math.max(item.charged_kop || 0, item.received_kop || 0, item.forecast_kop || 0)));
+  return (
+    <div className="flex items-end gap-2 h-28">
+      {buckets.map((item) => {
+        const start = item.period_start ? new Date(`${item.period_start}T00:00:00`) : null;
+        let label = item.period_start || '';
+        if (start && !Number.isNaN(start.getTime())) {
+          if (group === 'month') label = MONTHS_SHORT[start.getMonth()];
+          else {
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            label = `${start.getDate()}–${end.getDate()}`;
+          }
+        }
+        const height = (value) => `${Math.max(4, Math.round((Number(value || 0) / maxValue) * 100))}%`;
+        return (
+          <div key={item.period_start} className="flex-1 min-w-0 flex flex-col items-center gap-1 h-full justify-end">
+            <div className="w-full flex items-end justify-center gap-0.5 h-24">
+              <span className="w-1.5 sm:w-2 rounded-sm bg-slate-400" style={{ height: height(item.charged_kop) }} title={`Начислено ${rub(item.charged_kop)}`} />
+              <span className="w-1.5 sm:w-2 rounded-sm bg-emerald-600" style={{ height: height(item.received_kop) }} title={`Получено ${rub(item.received_kop)}`} />
+              <span className="w-1.5 sm:w-2 rounded-sm bg-amber-400" style={{ height: height(item.forecast_kop) }} title={`Прогноз ${rub(item.forecast_kop)}`} />
+            </div>
+            <span className="text-[10px] text-ink/50 truncate w-full text-center">{label}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

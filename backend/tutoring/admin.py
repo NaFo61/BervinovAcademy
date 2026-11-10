@@ -7,6 +7,7 @@ from tutoring.models import (
     LessonAccess,
     LessonTariff,
     PaymentClaim,
+    TutoringIceLink,
     TutoringLesson,
     TutorSettings,
 )
@@ -65,3 +66,16 @@ class PaymentClaimAdmin(ModelAdmin):
     list_display = ("created_at", "student", "mentor", "amount_kop", "status")
     list_filter = ("status",)
     raw_id_fields = ("student", "mentor")
+
+
+@admin.register(TutoringIceLink)
+class TutoringIceLinkAdmin(ModelAdmin):
+    list_display = (
+        "user",
+        "ice_tutor_id",
+        "display_name",
+        "telegram_id",
+        "linked_at",
+    )
+    search_fields = ("user__email", "display_name")
+    raw_id_fields = ("user",)

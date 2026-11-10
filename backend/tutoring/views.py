@@ -4,6 +4,14 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from mentoring.permissions import IsAdminRole, IsMentorOrAdmin
+from tutoring.ice.db import ice_configured
+from tutoring.ice.link import (
+    ice_status,
+    link_user_to_ice,
+    resolve_ice_tutor_id,
+)
+from tutoring.ice.money import ice_decide_claim, ice_pending_and_debtors
+from tutoring.ice.stats import ice_period_stats
 from tutoring.services import (
     TutoringError,
     availability_payload,
@@ -128,6 +136,15 @@ class LessonActionView(TutoringView):
 
 class PaymentClaimListView(TutoringView):
     def get(self, request):
+        if ice_configured() and request.user.role in ("mentor", "admin"):
+            try:
+                tutor_id = resolve_ice_tutor_id(
+                    request.user, request.query_params.get("mentor")
+                )
+                return Response(ice_pending_and_debtors(tutor_id=tutor_id))
+            except TutoringError:
+                # Нет привязки — локальная касса академии.
+                pass
         return Response(pending_and_debtors(request.user))
 
     def post(self, request):
@@ -148,6 +165,25 @@ class PaymentClaimActionView(TutoringView):
         if request.user.role not in ("mentor", "admin"):
             return Response({"detail": "Решает ментор."}, status=403)
         try:
+            claim_id = None
+            try:
+                claim_id = int(str(public_id))
+            except (TypeError, ValueError):
+                claim_id = None
+            if ice_configured() and claim_id is not None:
+                from tutoring.models import TutoringIceLink
+
+                if TutoringIceLink.objects.filter(user=request.user).exists():
+                    tutor_id = resolve_ice_tutor_id(
+                        request.user, request.data.get("mentor")
+                    )
+                    return Response(
+                        ice_decide_claim(
+                            tutor_id=tutor_id,
+                            claim_id=claim_id,
+                            action=action,
+                        )
+                    )
             if action == "confirm":
                 claim = confirm_claim(actor=request.user, public_id=public_id)
             elif action == "reject":
@@ -218,15 +254,76 @@ class MentorStatsView(TutoringView):
 
     def get(self, request):
         try:
-            mentor = resolve_mentor_actor(
-                request.user, request.query_params.get("mentor")
-            )
-            payload = month_stats(
-                mentor=mentor, month=request.query_params.get("month") or ""
-            )
+            use_ice = False
+            if ice_configured():
+                try:
+                    tutor_id = resolve_ice_tutor_id(
+                        request.user, request.query_params.get("mentor")
+                    )
+                    use_ice = True
+                except TutoringError as exc:
+                    # Нет привязки — показываем локальную кассу, не 409.
+                    if exc.status_code not in (404, 409):
+                        return _guard(exc)
+            if use_ice:
+                payload = ice_period_stats(
+                    tutor_id=tutor_id,
+                    date_from=request.query_params.get("from") or "",
+                    date_to=request.query_params.get("to") or "",
+                    group=request.query_params.get("group") or "week",
+                    month=request.query_params.get("month") or "",
+                )
+            else:
+                mentor = resolve_mentor_actor(
+                    request.user, request.query_params.get("mentor")
+                )
+                payload = month_stats(
+                    mentor=mentor,
+                    month=request.query_params.get("month") or "",
+                )
+                payload["source"] = "local"
+                payload["buckets"] = []
+                payload["by_student"] = []
+                payload["debtors"] = []
+                payload["completed_count"] = 0
+                payload["cancelled_count"] = 0
+                payload["no_show_count"] = 0
         except TutoringError as exc:
             return _guard(exc)
         return Response(payload)
+
+
+class IceStatusView(TutoringView):
+    permission_classes = [IsAuthenticated, IsMentorOrAdmin]
+
+    def get(self, request):
+        return Response(ice_status(request.user))
+
+
+class IceLinkView(TutoringView):
+    permission_classes = [IsAuthenticated, IsMentorOrAdmin]
+
+    def post(self, request):
+        try:
+            raw = request.data.get("ice_tutor_id")
+            ice_tutor_id = int(raw) if raw not in (None, "") else None
+            link = link_user_to_ice(
+                user=request.user, ice_tutor_id=ice_tutor_id
+            )
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "ice_tutor_id должен быть числом."}, status=400
+            )
+        except TutoringError as exc:
+            return _guard(exc)
+        return Response(
+            {
+                "ice_tutor_id": link.ice_tutor_id,
+                "display_name": link.display_name,
+                "telegram_id": link.telegram_id,
+                "status": ice_status(request.user),
+            }
+        )
 
 
 class LessonAccessView(TutoringView):

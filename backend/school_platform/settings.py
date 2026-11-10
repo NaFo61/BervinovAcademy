@@ -490,6 +490,11 @@ VK_OAUTH_CLIENT_SECRET = config("VK_OAUTH_CLIENT_SECRET", default="").strip()
 TELEGRAM_BOT_TOKEN = config("TELEGRAM_BOT_TOKEN", default="").strip()
 TELEGRAM_BOT_USERNAME = config("TELEGRAM_BOT_USERNAME", default="").strip()
 TELEGRAM_WEBHOOK_SECRET = config("TELEGRAM_WEBHOOK_SECRET", default="").strip()
+# Мост к pivovarov-ice (общая касса бота и сайта). Пусто = только локальный tutoring.
+ICE_DATABASE_URL = config("ICE_DATABASE_URL", default="").strip()
+ICE_BOT_USERNAME = config(
+    "ICE_BOT_USERNAME", default="pivovarovicebot"
+).strip()
 VAPID_PUBLIC_KEY = config("VAPID_PUBLIC_KEY", default="").strip()
 VAPID_PRIVATE_KEY = config("VAPID_PRIVATE_KEY", default="").strip()
 VAPID_ADMIN_EMAIL = config(
