@@ -1894,7 +1894,7 @@ function computeSolutionUnlocked(lesson, sessionFails, justCorrect) {
 const I = {
   Logo: ({ className = 'w-9 h-9' }) =>
   <img
-    src={`${getAppBase()}/img/logo.png`}
+    src={`${getAppBase()}/img/logo.png?v=2`}
     alt=""
     width="64"
     height="64"
