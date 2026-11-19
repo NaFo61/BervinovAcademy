@@ -51,6 +51,7 @@ const copy = (from, to) => {
 };
 
 copy("index.html", "index.html");
+copy("favicon.ico", "favicon.ico");
 copy("tailwind.css", "tailwind.css");
 copy("src", "src");
 copy("public", "public");

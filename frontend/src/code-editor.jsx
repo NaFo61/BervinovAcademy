@@ -65,31 +65,33 @@ function configureMonacoEnvironment(base) {
 
 function applyBaTheme(monaco) {
   if (monaco.editor.__baTheme) return;
-  monaco.editor.defineTheme('ba-dark', {
-    base: 'vs-dark',
+  monaco.editor.defineTheme('ba-light', {
+    base: 'vs',
     inherit: true,
     rules: [
-      { token: 'comment', foreground: '8B949E', fontStyle: 'italic' },
-      { token: 'string', foreground: 'A5D6FF' },
-      { token: 'keyword', foreground: 'FF7B72' },
-      { token: 'number', foreground: '79C0FF' },
-      { token: 'type', foreground: 'FFA657' },
-      { token: 'delimiter', foreground: 'C9D1D9' },
+      { token: 'comment', foreground: '64748B', fontStyle: 'italic' },
+      { token: 'string', foreground: '0F766E' },
+      { token: 'keyword', foreground: '1D4ED8', fontStyle: 'bold' },
+      { token: 'number', foreground: '0369A1' },
+      { token: 'type', foreground: 'C2410C' },
+      { token: 'delimiter', foreground: '334155' },
     ],
     colors: {
-      'editor.background': '#0d1117',
-      'editor.foreground': '#e6edf3',
-      'editorLineNumber.foreground': '#6e7681',
-      'editorLineNumber.activeForeground': '#e6edf3',
-      'editor.selectionBackground': '#388bfd66',
-      'editor.inactiveSelectionBackground': '#388bfd44',
-      'editor.selectionHighlightBackground': '#388bfd33',
-      'editorCursor.foreground': '#06B6D4',
-      'editor.lineHighlightBackground': '#161b22',
-      'editorIndentGuide.background': '#21262d',
-      'editorIndentGuide.activeBackground': '#30363d',
-      'scrollbarSlider.background': '#ffffff22',
-      'scrollbarSlider.hoverBackground': '#ffffff33',
+      'editor.background': '#FFFFFF',
+      'editor.foreground': '#0B1226',
+      'editorLineNumber.foreground': '#94A3B8',
+      'editorLineNumber.activeForeground': '#1D4ED8',
+      'editor.selectionBackground': '#FDE68A',
+      'editor.inactiveSelectionBackground': '#FEF3C7',
+      'editor.selectionHighlightBackground': '#FEF9C3',
+      'editorCursor.foreground': '#2563EB',
+      'editor.lineHighlightBackground': '#F6F8FC',
+      'editorIndentGuide.background': '#E2E8F0',
+      'editorIndentGuide.activeBackground': '#93C5FD',
+      'scrollbarSlider.background': '#2563EB22',
+      'scrollbarSlider.hoverBackground': '#2563EB44',
+      'editorWidget.background': '#FFFFFF',
+      'editorWidget.border': '#E2E8F0',
     },
   });
   monaco.editor.__baTheme = true;
@@ -300,7 +302,7 @@ function PythonCodeEditor({
       const editor = monacoApi.editor.create(hostRef.current, {
         value: valueRef.current || '',
         language: 'python',
-        theme: 'ba-dark',
+        theme: 'ba-light',
         readOnly: !!readOnly,
         automaticLayout: true,
         fontFamily: "'JetBrains Mono', ui-monospace, monospace",
@@ -368,16 +370,16 @@ function PythonCodeEditor({
   const showTextarea = !ready;
 
   return (
-    <div className={`rounded-2xl overflow-hidden ring-1 ring-black/[0.06] bg-[#0d1117] code-bg ${className}`}>
+    <div className={`rounded-2xl overflow-hidden ring-1 ring-black/[0.06] bg-white ${className}`}>
       {showHeader && (
-        <div className="px-4 py-2.5 border-b border-white/10 flex items-center gap-2 text-xs text-slate-400">
-          <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 font-semibold">Python</span>
-          <span className="ml-auto font-mono text-[11px] text-slate-500">{filename}</span>
+        <div className="px-4 py-2.5 border-b border-black/[0.06] flex items-center gap-2 text-xs text-ink/55 bg-white">
+          <span className="px-2 py-0.5 rounded bg-sky-50 text-sky-800 font-semibold ring-1 ring-sky-200">Python</span>
+          <span className="ml-auto font-mono text-[11px] text-ink/40">{filename}</span>
           {!ready && !loadError && (
-            <span className="text-[10px] text-slate-500">{statusHint || 'загрузка…'}</span>
+            <span className="text-[10px] text-ink/40">{statusHint || 'загрузка…'}</span>
           )}
           {loadError && (
-            <span className="text-[10px] text-amber-300/90" title={loadError}>простой режим</span>
+            <span className="text-[10px] text-amber-700" title={loadError}>простой режим</span>
           )}
         </div>
       )}
@@ -388,8 +390,8 @@ function PythonCodeEditor({
           spellCheck="false"
           disabled={readOnly}
           aria-label={filename}
-          className="w-full bg-transparent text-slate-100 font-mono text-xs leading-[1.55] p-4 resize-y focus:outline-none disabled:opacity-60"
-          style={{ minHeight: height, caretColor: '#06B6D4' }}
+          className="w-full bg-white text-ink font-mono text-xs leading-[1.55] p-4 resize-y focus:outline-none disabled:opacity-60"
+          style={{ minHeight: height, caretColor: '#2563EB' }}
         />
       )}
       {useMonaco && (

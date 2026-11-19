@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="app-base" content="" />
 <title>Bervinov Academy · курсы и занятия с преподавателем</title>
+<link rel="icon" href="favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" href="img/logo.png" />
+<link rel="apple-touch-icon" href="img/logo.png" />
 <link rel="stylesheet" href="tailwind.css" />
 <style>
   :root {
@@ -21,18 +24,34 @@
     color: var(--ink);
     font-family: 'Inter', system-ui, sans-serif;
   }
-  ::selection { background: rgba(37, 99, 235, 0.18); color: var(--ink); }
+  ::selection,
+  ::-moz-selection {
+    background: #1D4ED8 !important;
+    color: #ffffff !important;
+  }
 
-  /* Dark code surfaces: selection must stay light-on-dark */
+  /* Dark code surfaces: solid highlight, light text stays readable */
   .code-bg ::selection,
+  .code-bg ::-moz-selection,
   .chat-code-block ::selection,
+  .chat-code-block ::-moz-selection,
   .chat-code-block code ::selection,
+  .chat-code-block code ::-moz-selection,
   .theory-content pre ::selection,
+  .theory-content pre ::-moz-selection,
   .theory-content pre code ::selection,
+  .theory-content pre code ::-moz-selection,
   textarea.code-bg ::selection,
-  .monaco-editor .view-lines ::selection {
-    background: rgba(56, 189, 248, 0.45);
-    color: #f8fafc;
+  textarea.code-bg ::-moz-selection {
+    background: #0369A1;
+    color: #ffffff;
+  }
+
+  /* Light Monaco: amber highlight keeps blue keywords readable */
+  .monaco-editor ::selection,
+  .monaco-editor ::-moz-selection {
+    background: #FDE68A !important;
+    color: #0B1226 !important;
   }
 
   /* ---- Primary surfaces & gradients ---- */
@@ -166,8 +185,8 @@
   }
   .site-header__mark {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 2.25rem; height: 2.25rem; border-radius: 12px;
-    background: linear-gradient(145deg, rgba(37,99,235,0.14), rgba(34,211,238,0.16));
+    width: 2.25rem; height: 2.25rem; flex-shrink: 0;
+    background: transparent;
   }
   .site-header__nav {
     display: none;
@@ -362,9 +381,10 @@
     background: #0B1226;
     color: #E2E8F0;
   }
-  .code-bg ::selection {
-    background: rgba(56, 189, 248, 0.45);
-    color: #f8fafc;
+  .code-bg ::selection,
+  .code-bg ::-moz-selection {
+    background: #0369A1;
+    color: #ffffff;
   }
 
   .check-dot {
@@ -548,9 +568,11 @@
     line-height: 1.55;
   }
   .chat-code-block ::selection,
-  .chat-code-block *::selection {
-    background: rgba(56, 189, 248, 0.45) !important;
-    color: #f8fafc !important;
+  .chat-code-block *::selection,
+  .chat-code-block ::-moz-selection,
+  .chat-code-block *::-moz-selection {
+    background: #0369A1 !important;
+    color: #ffffff !important;
   }
 </style>
 <!-- After Tailwind: tldraw CSS must win over preflight or toolbar icons go pale -->

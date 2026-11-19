@@ -1892,19 +1892,15 @@ function computeSolutionUnlocked(lesson, sessionFails, justCorrect) {
 
 // ------- Icons (line, 1.6 stroke) -------
 const I = {
-  Logo: ({ className = 'w-8 h-8' }) =>
-  <svg viewBox="0 0 32 32" className={className} fill="none">
-      <defs>
-        <linearGradient id="lg" x1="0" y1="0" x2="32" y2="32">
-          <stop offset="0%" stopColor="#1D4ED8" />
-          <stop offset="60%" stopColor="#0EA5E9" />
-          <stop offset="100%" stopColor="#22D3EE" />
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="28" height="28" rx="9" fill="url(#lg)" />
-      <path d="M10.5 9h6.2c2.4 0 4.1 1.3 4.1 3.5 0 1.6-1 2.7-2.4 3.1 1.7.3 2.9 1.5 2.9 3.4 0 2.4-1.8 3.9-4.5 3.9h-6.3V9z" fill="white" />
-      <path d="M13.6 11.7v3.1h2.8c1.3 0 2-.5 2-1.6s-.7-1.5-2-1.5h-2.8zM13.6 17.2v3.5h3.1c1.4 0 2.2-.6 2.2-1.8 0-1.1-.8-1.7-2.2-1.7h-3.1z" fill="#1D4ED8" />
-    </svg>,
+  Logo: ({ className = 'w-9 h-9' }) =>
+  <img
+    src={`${getAppBase()}/img/logo.png`}
+    alt=""
+    width="64"
+    height="64"
+    draggable="false"
+    className={`block object-cover ${className}`}
+  />,
 
   Search: ({ className }) =>
   <svg viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="1.6">
@@ -2611,7 +2607,7 @@ function TopNav({ route, navigate }) {
           aria-label="Bervinov Academy — на главную"
         >
           <span className="site-header__mark">
-            <I.Logo className="w-6 h-6" />
+            <I.Logo className="h-full w-full" />
           </span>
           <span className="leading-none hidden sm:block">
             <span className="block font-extrabold tracking-tight text-[14px] text-ink">
