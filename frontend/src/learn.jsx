@@ -86,6 +86,13 @@ function moduleTaskNumber(mod) {
   return '';
 }
 
+function isEgeGraphModule(course, module) {
+  if (!course || course.slug !== 'ege-informatika' || !module) return false;
+  const marker = String(module.description || '').match(/content-pack:\s*([a-z0-9_-]+)/i);
+  if (marker && /^ege-n1(?:-|$)/i.test(marker[1])) return true;
+  return /граф/i.test(String(module.title || ''));
+}
+
 function groupModulesByTask(modules) {
   const groups = [];
   const index = new Map();
@@ -314,6 +321,9 @@ function LearnPage({ navigate, hashParams }) {
     if (!id) return null;
     return (courseData.modules || []).find(m => m.public_id === id) || null;
   }, [courseData, moduleParam, currentLesson]);
+  const graphBoardText = (
+    isEgeGraphModule(courseData, currentModule) && lessonData && lessonData.question_text
+  ) ? String(lessonData.question_text) : '';
   const hasModuleStub = !!currentModule && moduleLessons.length === 0;
   const lessonUnits = React.useMemo(
     () => groupLessonsByUnit(moduleLessons),
@@ -984,6 +994,7 @@ function LearnPage({ navigate, hashParams }) {
                 onLogin={() => navigate(Routes.AUTH)}
                 onRefreshLesson={refreshLesson}
                 navigate={navigate}
+                boardStatement={graphBoardText}
               />
 
             ) : lessonType === 'checkbox' && lessonData ? (
@@ -999,6 +1010,7 @@ function LearnPage({ navigate, hashParams }) {
                 onLogin={() => navigate(Routes.AUTH)}
                 onRefreshLesson={refreshLesson}
                 navigate={navigate}
+                boardStatement={graphBoardText}
               />
 
             ) : lessonType === 'short_answer' && lessonData ? (
@@ -1014,6 +1026,7 @@ function LearnPage({ navigate, hashParams }) {
                 onLogin={() => navigate(Routes.AUTH)}
                 onRefreshLesson={refreshLesson}
                 navigate={navigate}
+                boardStatement={graphBoardText}
               />
 
             ) : lessonType === 'coding' && lessonData ? (
@@ -1184,7 +1197,7 @@ function TheoryLesson({ lesson, isDone, onComplete, onLogin, navigate }) {
 
 // ─── Radio question ──────────────────────────────────────────────────────────
 
-function RadioLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson, navigate }) {
+function RadioLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson, navigate, boardStatement }) {
   const loggedIn  = !!window.getAccessToken();
   const isCorrect = result?.is_correct;
   const [sessionFails, setSessionFails] = React.useState(0);
@@ -1220,7 +1233,7 @@ function RadioLesson({ lesson, selected, setSelected, submitted, result, loading
     <div>
       <LessonHeader type="radio" title={lesson.title} label="Вопрос — один правильный ответ"/>
       {window.LessonAttachments && (
-        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} statement={boardStatement} />
       )}
 
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
@@ -1312,7 +1325,7 @@ function RadioLesson({ lesson, selected, setSelected, submitted, result, loading
 
 // ─── Checkbox question ───────────────────────────────────────────────────────
 
-function CheckboxLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson, navigate }) {
+function CheckboxLesson({ lesson, selected, setSelected, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson, navigate, boardStatement }) {
   const loggedIn  = !!window.getAccessToken();
   const isCorrect = result?.is_correct;
   const [sessionFails, setSessionFails] = React.useState(0);
@@ -1357,7 +1370,7 @@ function CheckboxLesson({ lesson, selected, setSelected, submitted, result, load
     <div>
       <LessonHeader type="checkbox" title={lesson.title} label="Вопрос — несколько правильных ответов"/>
       {window.LessonAttachments && (
-        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} statement={boardStatement} />
       )}
 
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
@@ -1447,6 +1460,7 @@ function CheckboxLesson({ lesson, selected, setSelected, submitted, result, load
 
 function ShortAnswerLesson({
   lesson, answer, setAnswer, submitted, result, loading, onSubmit, onRetry, onLogin, onRefreshLesson, navigate,
+  boardStatement,
 }) {
   const loggedIn  = !!window.getAccessToken();
   const isCorrect = result?.is_correct;
@@ -1482,7 +1496,7 @@ function ShortAnswerLesson({
     <div>
       <LessonHeader type="short_answer" title={lesson.title} label="Краткий ответ"/>
       {window.LessonAttachments && (
-        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} statement={boardStatement} />
       )}
 
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">

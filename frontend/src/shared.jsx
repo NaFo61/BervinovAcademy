@@ -1051,6 +1051,219 @@ function openLessonImagesOnBoard(navigate, { urls, title } = {}) {
   navigate(Routes.WHITEBOARD);
 }
 
+const SHEET_FONT = '"Segoe UI", "Noto Sans", "DejaVu Sans", "Liberation Sans", Arial, sans-serif';
+
+function plainStatement(value) {
+  return String(value || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function wrapCanvasLines(ctx, text, maxWidth) {
+  const words = String(text || '').split(' ').filter(Boolean);
+  const lines = [];
+  let line = '';
+  const pushLong = (word) => {
+    let chunk = '';
+    for (const ch of word) {
+      const trial = chunk + ch;
+      if (ctx.measureText(trial).width > maxWidth && chunk) {
+        lines.push(chunk);
+        chunk = ch;
+      } else {
+        chunk = trial;
+      }
+    }
+    return chunk;
+  };
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word;
+    if (ctx.measureText(next).width <= maxWidth) {
+      line = next;
+      continue;
+    }
+    if (line) lines.push(line);
+    line = ctx.measureText(word).width <= maxWidth ? word : pushLong(word);
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [''];
+}
+
+function sameOriginMediaPath(url) {
+  try {
+    const parsed = new URL(url, window.location.href);
+    if (parsed.origin === window.location.origin) return '';
+    return `${parsed.pathname}${parsed.search}`;
+  } catch (_) {
+    return '';
+  }
+}
+
+function asImageBlob(blob, url) {
+  if (blob && String(blob.type || '').startsWith('image/')) return blob;
+  const name = String(url || '').toLowerCase();
+  const type = name.endsWith('.svg') ? 'image/svg+xml'
+    : name.endsWith('.jpg') || name.endsWith('.jpeg') ? 'image/jpeg'
+    : name.endsWith('.webp') ? 'image/webp'
+    : name.endsWith('.gif') ? 'image/gif'
+    : 'image/png';
+  return new Blob([blob], { type });
+}
+
+async function fetchImageBlob(url) {
+  try {
+    const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+    if (!response.ok) throw new Error('image');
+    return asImageBlob(await response.blob(), url);
+  } catch (err) {
+    const path = sameOriginMediaPath(url);
+    if (!path) throw err;
+    const response = await fetch(path, { credentials: 'omit' });
+    if (!response.ok) throw err;
+    return asImageBlob(await response.blob(), url);
+  }
+}
+
+function loadDrawableImage(url) {
+  return fetchImageBlob(url).then((blob) => new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const w = img.naturalWidth || 520;
+      const h = img.naturalHeight || 470;
+      URL.revokeObjectURL(objectUrl);
+      resolve({ img, w, h });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('image'));
+    };
+    img.src = objectUrl;
+  }));
+}
+
+function fitSheetImage(img, maxW) {
+  const scale = img.w > maxW ? maxW / img.w : 1;
+  return {
+    img: img.img,
+    dw: Math.max(80, Math.round(img.w * scale)),
+    dh: Math.max(60, Math.round(img.h * scale)),
+  };
+}
+
+function layoutSheetImages(images, contentW) {
+  const gap = 28;
+  if (images.length === 2) {
+    const slot = Math.floor((contentW - gap) / 2);
+    const fitted = images.map((img) => fitSheetImage(img, slot));
+    const rowH = Math.max(fitted[0].dh, fitted[1].dh);
+    if (rowH <= 760) return { row: true, items: fitted, height: rowH, gap };
+  }
+  const stacked = images.map((img) => fitSheetImage(img, contentW));
+  const height = stacked.reduce((sum, img, index) => sum + img.dh + (index ? gap : 0), 0);
+  return { row: false, items: stacked, height, gap };
+}
+
+async function composeTaskSheetBlob({ title, statement, imageUrls }) {
+  const text = plainStatement(statement);
+  const urls = (imageUrls || []).filter(Boolean);
+  if (!text || !urls.length || typeof document === 'undefined') return null;
+  const images = [];
+  for (const url of urls) {
+    images.push(await loadDrawableImage(url));
+  }
+  const pixel = 2;
+  const cssW = 1240;
+  const pad = 40;
+  const contentW = cssW - pad * 2;
+  const measure = document.createElement('canvas').getContext('2d');
+  measure.font = `22px ${SHEET_FONT}`;
+  const bodyLines = wrapCanvasLines(measure, text, contentW);
+  const heading = plainStatement(title);
+  measure.font = `700 26px ${SHEET_FONT}`;
+  const titleLines = heading ? wrapCanvasLines(measure, heading, contentW) : [];
+  const layout = layoutSheetImages(images, contentW);
+  const titleH = titleLines.length ? titleLines.length * 34 + 8 : 0;
+  const bodyH = bodyLines.length * 32;
+  const cssH = pad + titleH + bodyH + 28 + layout.height + pad;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(cssW * pixel);
+  canvas.height = Math.round(cssH * pixel);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(pixel, 0, 0, pixel, 0, 0);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, cssW, cssH);
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, cssW - 2, cssH - 2);
+  ctx.textBaseline = 'top';
+  let y = pad;
+  if (titleLines.length) {
+    ctx.fillStyle = '#1e1b4b';
+    ctx.font = `700 26px ${SHEET_FONT}`;
+    for (const line of titleLines) {
+      ctx.fillText(line, pad, y);
+      y += 34;
+    }
+    y += 8;
+  }
+  ctx.fillStyle = '#1f2937';
+  ctx.font = `22px ${SHEET_FONT}`;
+  for (const line of bodyLines) {
+    ctx.fillText(line, pad, y);
+    y += 32;
+  }
+  y += 28;
+  if (layout.row) {
+    let x = pad;
+    for (const item of layout.items) {
+      const iy = y + Math.round((layout.height - item.dh) / 2);
+      ctx.drawImage(item.img, x, iy, item.dw, item.dh);
+      x += item.dw + layout.gap;
+    }
+  } else {
+    let iy = y;
+    for (const item of layout.items) {
+      ctx.drawImage(item.img, pad, iy, item.dw, item.dh);
+      iy += item.dh + layout.gap;
+    }
+  }
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), 'image/png');
+  });
+}
+
+async function openTaskSheetOnBoard(navigate, { urls, title, statement } = {}) {
+  const list = (urls || []).filter(Boolean);
+  const text = plainStatement(statement);
+  if (!list.length || typeof navigate !== 'function') return;
+  if (!text) {
+    openLessonImagesOnBoard(navigate, { urls: list, title });
+    return;
+  }
+  try {
+    const blob = await composeTaskSheetBlob({ title, statement: text, imageUrls: list });
+    if (!blob) throw new Error('empty');
+    const file = new File([blob], 'zadanie.png', { type: 'image/png' });
+    const data = await uploadBoardAsset(file);
+    const url = mediaUrl(data?.url) || data?.url || '';
+    if (!url) throw new Error('no url');
+    openLessonImagesOnBoard(navigate, { urls: [url], title });
+  } catch (_) {
+    notifyUser(
+      'Не получилось собрать задание',
+      'Откроем схему как раньше. Текст условия на доску не попал.',
+    );
+    openLessonImagesOnBoard(navigate, { urls: list, title });
+  }
+}
+
 function safeFileName(name) {
   const base = String(name || 'data.txt').split(/[/\\]/).pop() || 'data.txt';
   return base.replace(/[^\w.\- ()а-яА-ЯёЁ]/g, '_') || 'data.txt';
@@ -1136,15 +1349,34 @@ function LessonImageZoom({ src, alt, onClose }) {
   return tree;
 }
 
-function LessonAttachments({ items, navigate, lessonTitle, hideImages }) {
+function LessonAttachments({ items, navigate, lessonTitle, hideImages, statement }) {
   const [zoom, setZoom] = React.useState(null);
   const [fileBusy, setFileBusy] = React.useState('');
+  const [sheetBusy, setSheetBusy] = React.useState(false);
   const list = Array.isArray(items) ? items : [];
   const images = hideImages ? [] : list.filter(isLessonImageAttachment);
   const files = list.filter((row) => !isLessonImageAttachment(row));
   if (!images.length && !files.length) return null;
   const loggedIn = !!getAccessToken();
   const canBoard = loggedIn && whiteboardFeatureEnabled() && images.length > 0 && typeof navigate === 'function';
+  const statementText = plainStatement(statement);
+  const sendToBoard = async () => {
+    const urls = images.map((row) => mediaUrl(row.url) || row.url).filter(Boolean);
+    if (!statementText) {
+      openLessonImagesOnBoard(navigate, { urls, title: lessonTitle });
+      return;
+    }
+    setSheetBusy(true);
+    try {
+      await openTaskSheetOnBoard(navigate, {
+        urls,
+        title: lessonTitle,
+        statement: statementText,
+      });
+    } finally {
+      setSheetBusy(false);
+    }
+  };
 
   return (
     <div className="mt-5 space-y-4">
@@ -1172,18 +1404,18 @@ function LessonAttachments({ items, navigate, lessonTitle, hideImages }) {
           {canBoard && (
             <button
               type="button"
-              onClick={() => openLessonImagesOnBoard(navigate, {
-                urls: images.map((row) => mediaUrl(row.url) || row.url).filter(Boolean),
-                title: lessonTitle,
-              })}
-              className="mt-3 min-h-11 w-full sm:w-auto px-4 rounded-xl text-sm font-semibold text-violet-800 bg-violet-50 ring-1 ring-violet-200 hover:bg-violet-100"
+              disabled={sheetBusy}
+              onClick={sendToBoard}
+              className="mt-3 min-h-11 w-full sm:w-auto px-4 rounded-xl text-sm font-semibold text-violet-800 bg-violet-50 ring-1 ring-violet-200 hover:bg-violet-100 disabled:opacity-60"
             >
-              На личную доску
+              {sheetBusy ? 'Собираем…' : 'На личную доску'}
             </button>
           )}
           {canBoard && (
             <p className="mt-2 text-[12px] text-ink/45 leading-relaxed">
-              Картинка откроется на вашей доске. Можно рисовать сверху. Это черновик, на оценку не влияет.
+              {statementText
+                ? 'Условие и схема откроются одной картинкой. Можно рисовать сверху. Это черновик, на оценку не влияет.'
+                : 'Картинка откроется на вашей доске. Можно рисовать сверху. Это черновик, на оценку не влияет.'}
             </p>
           )}
           {!loggedIn && images.length > 0 && whiteboardFeatureEnabled() && (
