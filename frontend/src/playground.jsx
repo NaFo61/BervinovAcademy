@@ -202,15 +202,15 @@ function PlaygroundPage({ navigate }) {
   }, []);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#070b14]">
+    <div className="min-h-[calc(100vh-4rem)]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-400/80 mb-2">Песочница</div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-              Python<span className="text-cyan-400">‑интерпретатор</span>
+            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-700 mb-2">Песочница</div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">
+              Python<span className="grad-text">‑интерпретатор</span>
             </h1>
-            <p className="mt-2 text-sm text-white/50 max-w-xl">
+            <p className="mt-2 text-sm text-ink/60 max-w-xl">
               Код выполняется в браузере. Текстовый файл задания можно открыть через open("имя.txt").
             </p>
           </div>
@@ -218,7 +218,7 @@ function PlaygroundPage({ navigate }) {
             <button
               type="button"
               onClick={() => navigate(window.Routes.MESSAGES)}
-              className="h-11 px-4 rounded-xl text-sm font-semibold text-white/70 ring-1 ring-white/10 hover:bg-white/5 transition-colors"
+              className="h-11 px-4 rounded-xl text-sm font-semibold text-ink/70 bg-white ring-1 ring-black/[0.08] hover:bg-black/[0.03] transition-colors"
             >
               К сообщениям
             </button>
@@ -226,10 +226,10 @@ function PlaygroundPage({ navigate }) {
               type="button"
               onClick={run}
               disabled={running}
-              className="h-11 px-6 rounded-xl text-sm font-bold text-[#041018] bg-gradient-to-r from-cyan-400 to-sky-400 hover:brightness-110 disabled:opacity-50 inline-flex items-center gap-2 shadow-[0_0_24px_rgba(34,211,238,0.25)]"
+              className="btn-grad h-11 px-6 rounded-xl text-sm font-bold text-white disabled:opacity-50 inline-flex items-center gap-2"
             >
               {running
-                ? <span className="w-4 h-4 border-2 border-[#041018]/35 border-t-[#041018] rounded-full animate-spin" />
+                ? <span className="w-4 h-4 border-2 border-white/35 border-t-white rounded-full animate-spin" />
                 : <window.I.Play className="w-4 h-4" />}
               {running ? 'Бежит…' : 'Запустить'}
               <kbd className="hidden sm:inline ml-1 text-[10px] font-mono opacity-70">Ctrl+Enter</kbd>
@@ -237,13 +237,13 @@ function PlaygroundPage({ navigate }) {
           </div>
         </div>
 
-        <p className="mb-4 text-xs text-white/40">{readyHint}{status ? ` · ${status}` : ''}</p>
+        <p className="mb-4 text-xs text-ink/45">{readyHint}{status ? ` · ${status}` : ''}</p>
 
-        <div className="mb-4 rounded-2xl ring-1 ring-white/10 bg-[#0d1117] px-4 py-3">
+        <div className="mb-4 rounded-2xl ring-1 ring-black/[0.06] bg-white px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-[11px] font-bold uppercase tracking-widest text-sky-300/90">Текстовые файлы</div>
-              <p className="mt-1 text-[12px] text-white/45">
+              <div className="text-[11px] font-bold uppercase tracking-widest text-sky-800">Текстовые файлы</div>
+              <p className="mt-1 text-[12px] text-ink/55">
                 {files.length
                   ? 'Файл уже рядом с программой. Читайте его через open("имя").'
                   : 'Добавьте txt, если в задании есть файл.'}
@@ -252,7 +252,7 @@ function PlaygroundPage({ navigate }) {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="h-9 px-3 rounded-lg text-[12px] font-semibold text-cyan-100 bg-cyan-400/10 ring-1 ring-cyan-300/30 hover:bg-cyan-400/20"
+              className="h-9 px-3 rounded-lg text-[12px] font-semibold text-sky-800 bg-sky-50 ring-1 ring-sky-200 hover:bg-sky-100"
             >
               Добавить txt
             </button>
@@ -274,12 +274,12 @@ function PlaygroundPage({ navigate }) {
           {files.length > 0 && (
             <ul className="mt-3 space-y-1.5">
               {files.map((file) => (
-                <li key={file.name} className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2">
-                  <span className="min-w-0 truncate font-mono text-[12px] text-white/80">{file.name}</span>
+                <li key={file.name} className="flex items-center justify-between gap-3 rounded-lg bg-black/[0.03] px-3 py-2">
+                  <span className="min-w-0 truncate font-mono text-[12px] text-ink/80">{file.name}</span>
                   <button
                     type="button"
                     onClick={() => setFiles((prev) => prev.filter((row) => row.name !== file.name))}
-                    className="shrink-0 text-[11px] font-semibold text-white/45 hover:text-white"
+                    className="shrink-0 text-[11px] font-semibold text-ink/45 hover:text-ink"
                   >
                     Убрать
                   </button>
@@ -299,40 +299,40 @@ function PlaygroundPage({ navigate }) {
           />
 
           <div className="flex flex-col gap-4 min-h-0">
-            <div className="rounded-2xl overflow-hidden ring-1 ring-white/10 bg-[#0d1117] flex flex-col min-h-[160px]">
-              <div className="px-4 py-2.5 border-b border-white/10 flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-widest text-amber-300/90">Входные данные</span>
-                <span className="text-[10px] text-white/35 font-mono">stdin · для input()</span>
+            <div className="rounded-2xl overflow-hidden ring-1 ring-black/[0.06] bg-white flex flex-col min-h-[160px]">
+              <div className="px-4 py-2.5 border-b border-black/[0.06] flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-amber-700">Входные данные</span>
+                <span className="text-[10px] text-ink/40 font-mono">stdin · для input()</span>
               </div>
               <textarea
                 value={stdin}
                 onChange={(e) => setStdin(e.target.value)}
                 spellCheck="false"
                 placeholder={'строка 1\nстрока 2'}
-                className="flex-1 min-h-[120px] w-full bg-transparent text-slate-100 font-mono text-xs leading-[1.55] p-4 resize-y focus:outline-none placeholder:text-white/25"
-                style={{ caretColor: '#FBBF24' }}
+                className="flex-1 min-h-[120px] w-full bg-white text-ink font-mono text-xs leading-[1.55] p-4 resize-y focus:outline-none placeholder:text-ink/30"
+                style={{ caretColor: '#D97706' }}
               />
             </div>
 
-            <div className="rounded-2xl overflow-hidden ring-1 ring-white/10 bg-[#0d1117] flex flex-col flex-1 min-h-[220px]">
-              <div className="px-4 py-2.5 border-b border-white/10 flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-300/90">Вывод</span>
+            <div className="rounded-2xl overflow-hidden ring-1 ring-black/[0.06] bg-white flex flex-col flex-1 min-h-[220px]">
+              <div className="px-4 py-2.5 border-b border-black/[0.06] flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-700">Вывод</span>
                 <button
                   type="button"
                   onClick={() => { setStdout(''); setStderr(''); setRunError(''); }}
-                  className="text-[10px] font-semibold text-white/40 hover:text-white/70"
+                  className="text-[10px] font-semibold text-ink/45 hover:text-ink"
                 >
                   Очистить
                 </button>
               </div>
               <pre className="flex-1 overflow-auto p-4 text-xs font-mono leading-[1.55] min-h-[180px] whitespace-pre-wrap break-words">
                 {!stdout && !stderr && !runError ? (
-                  <span className="text-white/25">Здесь появится print() и ошибки…</span>
+                  <span className="text-ink/35">Здесь появится print() и ошибки…</span>
                 ) : (
                   <>
-                    {stdout ? <span className="text-emerald-100/90">{stdout}</span> : null}
-                    {stderr ? <span className="block text-red-400">{stderr}</span> : null}
-                    {runError ? <span className="block text-red-400">{runError}</span> : null}
+                    {stdout ? <span className="text-ink">{stdout}</span> : null}
+                    {stderr ? <span className="block text-rose-600">{stderr}</span> : null}
+                    {runError ? <span className="block text-rose-600">{runError}</span> : null}
                   </>
                 )}
               </pre>

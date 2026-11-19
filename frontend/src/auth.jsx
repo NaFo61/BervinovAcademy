@@ -643,7 +643,7 @@ function Field({
         {Icon && <Icon className="w-4 h-4 text-ink/40 shrink-0"/>}
         <input id={id} name={name} type={type} value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur}
           placeholder={placeholder} inputMode={inputMode} autoComplete={autoComplete}
-          className="flex-1 min-w-0 bg-transparent text-sm placeholder:text-ink/35 caret-violet-600 selection:bg-violet-200/50 outline-none"/>
+          className="flex-1 min-w-0 bg-transparent text-sm placeholder:text-ink/35 caret-violet-600 outline-none"/>
         {rightSlot}
       </div>
       <div className="h-5 overflow-hidden">
