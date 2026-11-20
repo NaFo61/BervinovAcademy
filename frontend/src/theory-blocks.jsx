@@ -45,6 +45,107 @@ function imageSrc(block) {
   return window.mediaUrl?.(block?.url) || block?.url || '';
 }
 
+function imageIdentity(url) {
+  const raw = String(url || '').split('#')[0].split('?')[0];
+  try {
+    const parsed = new URL(raw, 'https://academy.local');
+    return decodeURIComponent(parsed.pathname).toLowerCase();
+  } catch (_) {
+    return raw.toLowerCase();
+  }
+}
+
+function resolveImageUrl(src) {
+  return String(window.mediaUrl?.(src) || src || '');
+}
+
+function htmlHasVisibleContent(html) {
+  const raw = String(html || '');
+  if (!raw.trim()) return false;
+  if (typeof document === 'undefined') return true;
+  const node = document.createElement('div');
+  node.innerHTML = raw;
+  if (node.querySelector('pre, table, iframe, video, ul, ol, blockquote')) return true;
+  return (node.textContent || '').replace(/\u00a0/g, ' ').trim().length > 0;
+}
+
+function takeImagesFromHtml(html) {
+  const clean = window.sanitizeHtml ? window.sanitizeHtml(html || '') : String(html || '');
+  if (typeof document === 'undefined') return { html: clean, images: [] };
+  const template = document.createElement('template');
+  template.innerHTML = clean;
+  const images = [];
+  Array.from(template.content.querySelectorAll('img')).forEach((img) => {
+    const src = img.getAttribute('src') || '';
+    if (!src) return;
+    const figure = img.closest('figure');
+    const caption = figure?.querySelector('figcaption')?.textContent?.replace(/\s+/g, ' ').trim();
+    images.push({
+      src,
+      alt: caption || img.getAttribute('alt') || 'Схема',
+    });
+    img.remove();
+    if (figure && !figure.querySelector('img')) figure.remove();
+  });
+  template.content.querySelectorAll('p, figure').forEach((node) => {
+    if (!(node.textContent || '').replace(/\u00a0/g, ' ').trim() && !node.querySelector('img, iframe, video')) {
+      node.remove();
+    }
+  });
+  const holder = document.createElement('div');
+  holder.append(...template.content.childNodes);
+  return { html: holder.innerHTML, images };
+}
+
+function prepareTheoryView(lesson) {
+  const images = [];
+  const seen = new Set();
+  const push = (src, alt) => {
+    const href = resolveImageUrl(src);
+    if (!href) return;
+    const key = imageIdentity(href);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    images.push({ src: href, alt: alt || 'Схема' });
+  };
+
+  const rawBlocks = Array.isArray(lesson?.blocks) ? lesson.blocks : [];
+  let blocks = null;
+  let legacyHtml = '';
+  if (rawBlocks.length) {
+    blocks = rawBlocks.map((block) => {
+      if (!block) return null;
+      if (block.type === 'image') {
+        push(imageSrc(block), block.caption || block.name || 'Картинка урока');
+        return null;
+      }
+      if (block.type === 'text' || block.type === 'callout') {
+        const split = takeImagesFromHtml(block.html || '');
+        split.images.forEach((image) => push(image.src, image.alt));
+        if (!htmlHasVisibleContent(split.html)) return null;
+        return { ...block, html: split.html };
+      }
+      return block;
+    }).filter(Boolean);
+  } else {
+    const split = takeImagesFromHtml(lesson?.content || '');
+    split.images.forEach((image) => push(image.src, image.alt));
+    if (split.html.trim()) legacyHtml = split.html;
+    else if (!images.length) legacyHtml = '<p>Содержимое урока ещё добавляется.</p>';
+  }
+
+  const attachments = Array.isArray(lesson?.attachments) ? lesson.attachments : [];
+  const isImage = typeof window.isLessonImageAttachment === 'function'
+    ? window.isLessonImageAttachment
+    : (row) => /\.(png|jpe?g|gif|webp|svg)$/i.test(String(row?.name || row?.url || ''));
+  attachments.forEach((row) => {
+    if (!isImage(row)) return;
+    push(row.url, row.name || 'Схема');
+  });
+
+  return { blocks, legacyHtml, images };
+}
+
 function BoardButton({ urls, title, navigate }) {
   const loggedIn = !!window.getAccessToken?.();
   const enabled = typeof window.whiteboardFeatureEnabled === 'function'
@@ -66,7 +167,36 @@ function BoardButton({ urls, title, navigate }) {
   );
 }
 
-function TheoryBlockRead({ block, navigate, lessonTitle }) {
+function TheoryShotRow({ images, onOpen }) {
+  if (!images.length) return null;
+  const many = images.length > 1;
+  return (
+    <div className="theory-shots" aria-label={many ? 'Схемы урока' : 'Схема урока'}>
+      <div className="theory-shots-label">{many ? 'Схемы' : 'Схема'}</div>
+      <div className="theory-shots-row">
+        {images.map((image, index) => (
+          <button
+            key={`${image.src}-${index}`}
+            type="button"
+            className="theory-shot"
+            title={image.alt}
+            aria-label={`Открыть схему: ${image.alt}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpen(image);
+            }}
+          >
+            <img src={image.src} alt={image.alt} />
+          </button>
+        ))}
+      </div>
+      <p className="theory-shots-hint">Нажмите на квадрат, чтобы открыть схему.</p>
+    </div>
+  );
+}
+
+function TheoryBlockRead({ block }) {
+  if (block.type === 'image') return null;
   if (block.type === 'heading') {
     return (
       <div className="theory-content">
@@ -82,19 +212,6 @@ function TheoryBlockRead({ block, navigate, lessonTitle }) {
       />
     );
   }
-  if (block.type === 'image') {
-    const href = imageSrc(block);
-    if (!href) return null;
-    return (
-      <figure className="theory-figure">
-        <img src={href} alt={block.caption || block.name || 'Картинка урока'} />
-        {block.caption ? <figcaption>{block.caption}</figcaption> : null}
-        <div className="px-4 pb-3">
-          <BoardButton urls={[href]} title={lessonTitle} navigate={navigate} />
-        </div>
-      </figure>
-    );
-  }
   return (
     <div
       className="theory-content"
@@ -106,39 +223,53 @@ function TheoryBlockRead({ block, navigate, lessonTitle }) {
 function TheoryBlocksView({ lesson, navigate }) {
   const hostRef = React.useRef(null);
   const [zoom, setZoom] = React.useState(null);
-  const blocks = Array.isArray(lesson?.blocks) ? lesson.blocks : [];
+  const view = prepareTheoryView(lesson);
+  const blocks = view.blocks;
   const attachments = lesson?.attachments || [];
+  const imageUrls = view.images.map((image) => image.src);
   React.useEffect(() => {
     if (hostRef.current && window.enhancePythonBlocks) {
       window.enhancePythonBlocks(hostRef.current, navigate);
     }
-  }, [lesson?.content, lesson?.public_id, blocks.length, navigate]);
+  }, [lesson?.content, lesson?.public_id, blocks?.length, navigate]);
   React.useEffect(() => {
     const root = hostRef.current;
     if (!root) return undefined;
     const onClick = (event) => {
       const img = event.target.closest && event.target.closest('img');
-      if (!img || !root.contains(img)) return;
+      if (!img || !root.contains(img) || img.closest('.theory-shot')) return;
       setZoom({ src: img.currentSrc || img.src, alt: img.alt || 'Схема' });
     };
     root.addEventListener('click', onClick);
     return () => root.removeEventListener('click', onClick);
-  }, [lesson?.content, lesson?.public_id, blocks.length]);
+  }, [lesson?.content, lesson?.public_id, blocks?.length, view.images.length]);
   const zoomNode = zoom && window.LessonImageZoom
     ? <window.LessonImageZoom src={zoom.src} alt={zoom.alt} onClose={() => setZoom(null)} />
     : null;
-  if (blocks.length) {
+  const gallery = (
+    <>
+      <TheoryShotRow
+        images={view.images}
+        onOpen={(image) => setZoom({ src: image.src, alt: image.alt || 'Схема' })}
+      />
+      <BoardButton urls={imageUrls} title={lesson?.title} navigate={navigate} />
+    </>
+  );
+  if (blocks) {
     return (
       <div ref={hostRef}>
-        <div className="mt-6 space-y-5">
-          {blocks.map((block) => (
-            <TheoryBlockRead
-              key={block.id || block.attachment_id || block.type}
-              block={block}
-              navigate={navigate}
-              lessonTitle={lesson.title}
-            />
-          ))}
+        <div className="mt-6">
+          {gallery}
+          {blocks.length > 0 && (
+            <div className={`space-y-5 ${view.images.length ? 'mt-6' : ''}`}>
+              {blocks.map((block) => (
+                <TheoryBlockRead
+                  key={block.id || block.attachment_id || block.type}
+                  block={block}
+                />
+              ))}
+            </div>
+          )}
         </div>
         {window.LessonAttachments && (
           <window.LessonAttachments
@@ -154,15 +285,25 @@ function TheoryBlocksView({ lesson, navigate }) {
   }
   return (
     <div ref={hostRef}>
-      {window.LessonAttachments && (
-        <window.LessonAttachments items={attachments} navigate={navigate} lessonTitle={lesson.title} />
+      {view.images.length > 0 && (
+        <div className="mt-6">
+          {gallery}
+        </div>
       )}
-      <div
-        className="theory-content mt-6"
-        dangerouslySetInnerHTML={{
-          __html: window.sanitizeHtml(lesson?.content || '<p>Содержимое урока ещё добавляется.</p>'),
-        }}
-      />
+      {window.LessonAttachments && (
+        <window.LessonAttachments
+          items={attachments}
+          hideImages
+          navigate={navigate}
+          lessonTitle={lesson.title}
+        />
+      )}
+      {view.legacyHtml ? (
+        <div
+          className="theory-content mt-6"
+          dangerouslySetInnerHTML={{ __html: window.sanitizeHtml(view.legacyHtml) }}
+        />
+      ) : null}
       {zoomNode}
     </div>
   );
