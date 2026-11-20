@@ -97,6 +97,7 @@ frontend/node_modules/
 # Frontend build output
 frontend/dist/
 frontend/dist-ssr/
+frontend/tldraw-assets/
 
 # Frontend logs
 npm-debug.log*

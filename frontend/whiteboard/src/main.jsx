@@ -1,5 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { getAssetUrls } from '@tldraw/assets/selfHosted';
 import { useSync } from '@tldraw/sync';
 import {
   AssetRecordType,
@@ -14,9 +15,35 @@ import 'tldraw/tldraw.css';
 
 const mounts = new Map();
 
+function appBasePath() {
+  const meta = document.querySelector('meta[name="app-base"]');
+  return (meta?.getAttribute('content') || '').replace(/\/$/, '');
+}
+
+function sameOriginSyncUrls() {
+  const appBase = appBasePath();
+  const httpProto = window.location.protocol === 'https:' ? 'https:' : 'http:';
+  const wsProto = httpProto === 'https:' ? 'wss:' : 'ws:';
+  const origin = `${window.location.host}${appBase}`;
+  return {
+    wsBase: `${wsProto}//${origin}/whiteboard-sync`,
+    httpBase: `${httpProto}//${origin}/whiteboard-sync`,
+  };
+}
+
+function isSameSiteBase(value) {
+  try {
+    const url = new URL(value, window.location.href);
+    return url.host === window.location.host;
+  } catch (_) {
+    return false;
+  }
+}
+
 function resolveSyncUrls(syncBaseUrl) {
   const trimmed = String(syncBaseUrl || '').replace(/\/$/, '');
-  if (trimmed) {
+  // Чужой хост или голый порт VPN режет, даже если сам сайт открыт.
+  if (trimmed && /^(https?|wss?):\/\//i.test(trimmed) && isSameSiteBase(trimmed)) {
     if (trimmed.startsWith('ws')) {
       return {
         wsBase: trimmed,
@@ -30,20 +57,18 @@ function resolveSyncUrls(syncBaseUrl) {
   }
 
   const devPort = window.location.port;
-  if (devPort === '3000' || devPort === '4173') {
+  if (!trimmed && (devPort === '3000' || devPort === '4173')) {
     return {
       wsBase: 'ws://127.0.0.1:5858',
       httpBase: 'http://127.0.0.1:5858',
     };
   }
 
-  const meta = document.querySelector('meta[name="app-base"]');
-  const appBase = (meta?.getAttribute('content') || '').replace(/\/$/, '');
+  return sameOriginSyncUrls();
+}
 
-  return {
-    wsBase: `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}${appBase}/whiteboard-sync`,
-    httpBase: `${window.location.protocol}//${window.location.host}${appBase}/whiteboard-sync`,
-  };
+function boardAssetUrls() {
+  return getAssetUrls({ baseUrl: `${appBasePath()}/tldraw-assets` });
 }
 
 function buildConnectUri(wsBase, roomId, syncToken) {
@@ -216,6 +241,7 @@ function WhiteboardEditor({ container, roomId, syncBaseUrl, syncToken, licenseKe
     [syncBaseUrl],
   );
   const assets = React.useMemo(() => createAssetStore(httpBase), [httpBase]);
+  const assetUrls = React.useMemo(() => boardAssetUrls(), []);
   const connectUri = React.useMemo(
     () => buildConnectUri(wsBase, roomId, syncToken),
     [wsBase, roomId, syncToken],
@@ -263,6 +289,7 @@ function WhiteboardEditor({ container, roomId, syncBaseUrl, syncToken, licenseKe
         inferDarkMode={false}
         autoFocus
         licenseKey={licenseKey || undefined}
+        assetUrls={assetUrls}
         options={{ maxPages: 1 }}
         onMount={(editor) => {
           editorRef.current = editor;
@@ -478,6 +505,7 @@ function WhiteboardReadOnly({ container, snapshot, licenseKey }) {
     }
     return next;
   }, [snapshot]);
+  const assetUrls = React.useMemo(() => boardAssetUrls(), []);
 
   return (
     <div ref={rootRef} className="whiteboard-root absolute inset-0 z-[2]">
@@ -485,6 +513,7 @@ function WhiteboardReadOnly({ container, snapshot, licenseKey }) {
         store={store}
         inferDarkMode={false}
         licenseKey={licenseKey || undefined}
+        assetUrls={assetUrls}
         options={{ maxPages: 1 }}
         onMount={(editor) => {
           editor.updateInstanceState({ isReadonly: true });
