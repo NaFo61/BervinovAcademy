@@ -198,6 +198,7 @@ frontend/dist/
 frontend/dist-ssr/
 frontend/whiteboard.bundle.js
 frontend/whiteboard.bundle.js.map
+frontend/tldraw-assets/
 dist-ssr/
 
 # Logs

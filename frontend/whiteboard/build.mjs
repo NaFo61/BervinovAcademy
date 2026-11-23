@@ -31,4 +31,25 @@ for (const outfile of outFiles) {
   });
 }
 
+const assetDirs = ['fonts', 'icons', 'embed-icons', 'translations'];
+const assetSrc = path.join(__dirname, 'node_modules', '@tldraw', 'assets');
+const assetTargets = [
+  path.join(__dirname, '..', 'dist', 'tldraw-assets'),
+  path.join(__dirname, '..', 'tldraw-assets'),
+];
+
+for (const target of assetTargets) {
+  fs.rmSync(target, { recursive: true, force: true });
+  fs.mkdirSync(target, { recursive: true });
+  for (const dir of assetDirs) {
+    const from = path.join(assetSrc, dir);
+    if (!fs.existsSync(from)) {
+      console.error(`Missing tldraw assets: ${from}`);
+      process.exit(1);
+    }
+    fs.cpSync(from, path.join(target, dir), { recursive: true });
+  }
+}
+
 console.log('Built whiteboard bundle -> frontend/dist/ and frontend/whiteboard.bundle.js');
+console.log('Copied tldraw assets -> /tldraw-assets/ (same origin as the site)');
