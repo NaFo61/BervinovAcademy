@@ -25,7 +25,7 @@ const TRACKS = [
     kicker: 'С нуля',
     title: 'IT',
     desc: 'Если экзамен ещё не цель. Основы программирования: как написать программу, прочитать ошибку и довести задачу до результата.',
-    points: ['Первые программы на Python', 'Код запускается в браузере', 'Можно начать без опыта'],
+    points: ['Первые программы на Python', 'Сразу видно результат', 'Можно начать без опыта'],
     Icon: I.Layers,
   },
 ];
@@ -42,7 +42,7 @@ const STEPS = [
     Icon: I.Layers,
   },
   {
-    title: 'Код в браузере',
+    title: 'Программа на Python',
     desc: 'Python запускается на платформе. Сразу видно, что вывела программа и где ошибка.',
     Icon: I.Code,
   },
@@ -99,7 +99,7 @@ function Hero({ navigate }) {
             className="mt-10 grid sm:grid-cols-3 gap-4 max-w-xl text-sm text-ink/70">
             {[
               'Урок, затем задание',
-              'Python прямо в браузере',
+              'Практика на Python',
               'Чат и созвон с преподавателем',
             ].map((line) => (
               <li key={line} className="flex items-start gap-2">

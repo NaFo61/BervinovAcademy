@@ -178,10 +178,65 @@ async function unfurlBookmarkUrl(httpBase, { url }) {
 
 function WhiteboardStatus({ children, loadingText, errorText }) {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-white text-slate-600 text-sm px-4 text-center pointer-events-none">
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#f8fafc',
+        color: '#0B1226',
+        font: '14px/1.45 system-ui, sans-serif',
+        textAlign: 'center',
+        padding: '16px',
+        pointerEvents: 'none',
+      }}
+    >
       {children || loadingText || errorText}
     </div>
   );
+}
+
+class BoardGuard extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <WhiteboardStatus>
+          <div style={{ pointerEvents: 'auto' }}>
+            <div style={{ fontWeight: 650 }}>Доска остановилась</div>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              style={{
+                marginTop: 12,
+                height: 36,
+                padding: '0 14px',
+                borderRadius: 10,
+                border: 0,
+                background: '#2563EB',
+                color: '#fff',
+                font: '600 13px/1 system-ui, sans-serif',
+                cursor: 'pointer',
+              }}
+            >
+              Обновить
+            </button>
+          </div>
+        </WhiteboardStatus>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function bindViewportBounds(editor, rootEl) {
@@ -250,6 +305,12 @@ function WhiteboardEditor({ container, roomId, syncBaseUrl, syncToken, licenseKe
     uri: connectUri,
     assets,
   });
+  // useSync drops the store object when the socket later reports an error.
+  // Unmounting Tldraw at that moment leaves a white panel. Keep the last
+  // live store so the board stays on screen.
+  const keptStoreRef = React.useRef(null);
+  if (store.store) keptStoreRef.current = store.store;
+  const liveStore = keptStoreRef.current;
 
   React.useEffect(() => {
     const editor = editorRef.current;
@@ -265,27 +326,27 @@ function WhiteboardEditor({ container, roomId, syncBaseUrl, syncToken, licenseKe
     cleanupRef.current = null;
   }, []);
 
-  if (store.status === 'loading') {
-    return <WhiteboardStatus loadingText="Подключение к доске…" />;
+  if (!liveStore && store.status === 'error') {
+    return (
+      <WhiteboardStatus>
+        <div>
+          <div style={{ fontWeight: 650 }}>Не удалось подключить доску</div>
+          <div style={{ marginTop: 8, fontSize: 12, color: '#64748b' }}>
+            {store.error?.message || 'Нет связи с доской'}
+          </div>
+        </div>
+      </WhiteboardStatus>
+    );
   }
 
-  if (store.status === 'error') {
-    return (
-      <WhiteboardStatus
-        errorText={(
-          <>
-            <div className="font-semibold text-slate-700">Не удалось подключить доску</div>
-            <div className="text-xs text-slate-500 mt-2">{store.error?.message || 'Ошибка sync-сервера'}</div>
-          </>
-        )}
-      />
-    );
+  if (!liveStore) {
+    return <WhiteboardStatus loadingText="Подключение к доске…" />;
   }
 
   return (
     <div ref={rootRef} className="whiteboard-root absolute inset-0 z-[2] pointer-events-auto">
       <Tldraw
-        store={store.store}
+        store={liveStore}
         inferDarkMode={false}
         autoFocus
         licenseKey={licenseKey || undefined}
@@ -312,14 +373,16 @@ function WhiteboardApp({ container, roomId, syncBaseUrl, syncToken, licenseKey, 
   }
 
   return (
-    <WhiteboardEditor
-      container={container}
-      roomId={roomId}
-      syncBaseUrl={syncBaseUrl}
-      syncToken={syncToken}
-      licenseKey={licenseKey}
-      initialSnapshot={initialSnapshot}
-    />
+    <BoardGuard>
+      <WhiteboardEditor
+        container={container}
+        roomId={roomId}
+        syncBaseUrl={syncBaseUrl}
+        syncToken={syncToken}
+        licenseKey={licenseKey}
+        initialSnapshot={initialSnapshot}
+      />
+    </BoardGuard>
   );
 }
 

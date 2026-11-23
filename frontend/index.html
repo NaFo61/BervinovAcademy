@@ -629,6 +629,20 @@
 <!-- WHITEBOARD_ASSETS_START -->
 <link rel="stylesheet" href="whiteboard.bundle.css" />
 <!-- WHITEBOARD_ASSETS_END -->
+<style>
+  /*
+    tldraw paints .tl-canvas with content-visibility:auto and contain:strict.
+    After the first frame Chrome decides the canvas is off-screen (the board
+    sits in overflow:hidden) and stops painting it. The toolbar may remain;
+    the drawing surface goes white a moment later. Force it to stay painted.
+    Fonts and icons stay on /tldraw-assets (see whiteboard bundle).
+  */
+  .whiteboard-root .tl-canvas,
+  .whiteboard-studio .tl-canvas {
+    content-visibility: visible !important;
+    contain: none !important;
+  }
+</style>
 </head>
 <body class="antialiased">
 <div id="root"></div>

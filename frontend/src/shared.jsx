@@ -2559,7 +2559,7 @@ function NotificationBell({ navigate }) {
             </button>
             <button type="button" onClick={() => window.enableWebPushNotifications?.()}
               className="text-xs font-semibold text-ink/45 hover:text-violet-600">
-              Push в браузере
+              Уведомления
             </button>
           </div>
         </div>
@@ -3228,7 +3228,7 @@ function Footer({ navigate }) {
         { label: 'Тариф Про', onClick: () => navigate(Routes.PRO) }]
         } />
         <FooterCol title="На занятии" items={[
-        { label: 'Python в браузере', onClick: () => navigate(Routes.PLAYGROUND) },
+        { label: 'Python', onClick: () => navigate(Routes.PLAYGROUND) },
         { label: 'Доска', onClick: () => navigate(Routes.WHITEBOARD) }]
         } />
         <FooterCol title="Аккаунт" items={[

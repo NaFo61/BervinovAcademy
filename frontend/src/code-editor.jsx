@@ -97,6 +97,39 @@ function applyBaTheme(monaco) {
   monaco.editor.__baTheme = true;
 }
 
+function ensureMonacoStylesheet(base) {
+  const href = `${base}/vs/editor/editor.main.css`;
+  const existing = document.querySelector('link[data-ba-monaco-css]');
+  if (existing && existing.dataset.baMonacoCss === href && existing.dataset.baLoaded === '1') {
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    const link = existing && existing.dataset.baMonacoCss === href
+      ? existing
+      : document.createElement('link');
+    if (link !== existing) {
+      link.rel = 'stylesheet';
+      link.href = href;
+      link.dataset.baMonacoCss = href;
+      document.head.appendChild(link);
+    }
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      link.dataset.baLoaded = '1';
+      resolve();
+    };
+    link.addEventListener('load', done, { once: true });
+    link.addEventListener('error', () => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('Не удалось загрузить стиль редактора'));
+    }, { once: true });
+    if (link.sheet) done();
+  });
+}
+
 function loadMonacoFromBase(base) {
   configureMonacoEnvironment(base);
   return loadScriptOnce(`${base}/vs/loader.js`, MONACO_LOAD_TIMEOUT_MS).then(
@@ -131,7 +164,7 @@ function loadMonacoFromBase(base) {
           applyBaTheme(monaco);
           window.__monacoLoaderReady = true;
           window.__monacoBase = base;
-          resolve(monaco);
+          ensureMonacoStylesheet(base).then(() => resolve(monaco)).catch(reject);
         },
         (err) => {
           clearTimeout(timer);
@@ -142,7 +175,7 @@ function loadMonacoFromBase(base) {
   );
 }
 
-function ensureMonaco(onStatus) {
+function ensureMonaco() {
   if (window.monaco?.editor) return Promise.resolve(window.monaco);
   if (window.__monacoLoading) return window.__monacoLoading;
 
@@ -150,7 +183,6 @@ function ensureMonaco(onStatus) {
     let lastErr = null;
     for (let i = 0; i < MONACO_CDN_BASES.length; i += 1) {
       const base = MONACO_CDN_BASES[i];
-      onStatus?.(`Загрузка редактора (${i + 1}/${MONACO_CDN_BASES.length})…`);
       try {
         return await loadMonacoFromBase(base);
       } catch (err) {
@@ -260,23 +292,20 @@ function PythonCodeEditor({
   const [monacoApi, setMonacoApi] = React.useState(null);
   const [loadError, setLoadError] = React.useState('');
   const [ready, setReady] = React.useState(false);
-  const [statusHint, setStatusHint] = React.useState('загрузка…');
 
   onChangeRef.current = onChange;
   valueRef.current = value;
 
   React.useEffect(() => {
     let disposed = false;
-    ensureMonaco(setStatusHint)
+    ensureMonaco()
       .then((monaco) => {
         if (disposed) return;
         setMonacoApi(monaco);
-        setStatusHint('');
       })
       .catch((err) => {
         if (disposed) return;
         setLoadError(err.message || 'Ошибка загрузки редактора');
-        setStatusHint('');
       });
     return () => { disposed = true; };
   }, []);
@@ -334,7 +363,14 @@ function PythonCodeEditor({
         resizeObs = new ResizeObserver(() => editor.layout());
         resizeObs.observe(hostRef.current);
       }
-      setReady(true);
+      // Layout while the host is full size but still hidden. Revealing before
+      // this paints a stretched unstyled frame (the "strange picture").
+      editor.layout();
+      raf = requestAnimationFrame(() => {
+        if (disposed) return;
+        editor.layout();
+        setReady(true);
+      });
     };
 
     raf = requestAnimationFrame(mount);
@@ -375,33 +411,38 @@ function PythonCodeEditor({
         <div className="px-4 py-2.5 border-b border-black/[0.06] flex items-center gap-2 text-xs text-ink/55 bg-white">
           <span className="px-2 py-0.5 rounded bg-sky-50 text-sky-800 font-semibold ring-1 ring-sky-200">Python</span>
           <span className="ml-auto font-mono text-[11px] text-ink/40">{filename}</span>
-          {!ready && !loadError && (
-            <span className="text-[10px] text-ink/40">{statusHint || 'загрузка…'}</span>
-          )}
-          {loadError && (
-            <span className="text-[10px] text-amber-700" title={loadError}>простой режим</span>
-          )}
         </div>
       )}
-      {showTextarea && (
-        <textarea
-          value={value || ''}
-          onChange={(e) => onChange?.(e.target.value)}
-          spellCheck="false"
-          disabled={readOnly}
-          aria-label={filename}
-          className="w-full bg-white text-ink font-mono text-xs leading-[1.55] p-4 resize-y focus:outline-none disabled:opacity-60"
-          style={{ minHeight: height, caretColor: '#2563EB' }}
-        />
-      )}
-      {useMonaco && (
-        <div
-          ref={hostRef}
-          style={{ height: ready ? height : 0, overflow: 'hidden' }}
-          className="w-full"
-          aria-hidden={!ready}
-        />
-      )}
+      <div className="relative bg-white" style={{ minHeight: height }}>
+        {showTextarea && (
+          <textarea
+            value={value || ''}
+            onChange={(e) => onChange?.(e.target.value)}
+            spellCheck="false"
+            disabled={readOnly}
+            aria-label={filename}
+            className="w-full bg-white text-ink font-mono text-xs leading-[1.55] p-4 resize-y focus:outline-none disabled:opacity-60"
+            style={{ minHeight: height, caretColor: '#2563EB' }}
+          />
+        )}
+        {useMonaco && (
+          <div
+            ref={hostRef}
+            style={{
+              height,
+              background: '#ffffff',
+              overflow: 'hidden',
+              visibility: ready ? 'visible' : 'hidden',
+              position: ready ? 'relative' : 'absolute',
+              left: 0,
+              right: 0,
+              top: 0,
+            }}
+            className="w-full"
+            aria-hidden={!ready}
+          />
+        )}
+      </div>
     </div>
   );
 }

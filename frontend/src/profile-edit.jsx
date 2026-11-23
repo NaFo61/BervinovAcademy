@@ -681,7 +681,7 @@ function AccountConnectPanel({ user, onUser }) {
           </button>
           <button type="button" onClick={() => window.enableWebPushNotifications?.()}
             className="h-10 px-4 rounded-xl text-sm font-semibold ring-1 ring-black/[0.08] bg-white hover:bg-black/[0.02]">
-            Push в браузере
+            Уведомления
           </button>
         </div>
       </div>
