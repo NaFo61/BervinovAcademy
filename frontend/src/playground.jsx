@@ -6,8 +6,7 @@ const PYODIDE_INDEXES = [
   `https://cdn.jsdelivr.net/npm/pyodide@${PYODIDE_VERSION}/`,
 ];
 const PYODIDE_LOAD_TIMEOUT_MS = 45000;
-const DEFAULT_PLAYGROUND_CODE = `# Пиши код и жми «Запустить»
-name = input("Как тебя зовут? ")
+const DEFAULT_PLAYGROUND_CODE = `name = input("Как тебя зовут? ")
 print(f"Привет, {name}!")
 `;
 
@@ -23,7 +22,7 @@ function loadScriptWithTimeout(src, timeoutMs) {
   });
 }
 
-function ensurePyodide(onStatus) {
+function ensurePyodide() {
   if (window.__pyodideInstance) return Promise.resolve(window.__pyodideInstance);
   if (window.__pyodideLoading) return window.__pyodideLoading;
 
@@ -32,11 +31,9 @@ function ensurePyodide(onStatus) {
     for (let i = 0; i < PYODIDE_INDEXES.length; i += 1) {
       const indexURL = PYODIDE_INDEXES[i];
       try {
-        onStatus?.(`Загрузка Python в браузере (${i + 1}/${PYODIDE_INDEXES.length})…`);
         if (!window.loadPyodide) {
           await loadScriptWithTimeout(`${indexURL}pyodide.js`, PYODIDE_LOAD_TIMEOUT_MS);
         }
-        onStatus?.('Инициализация интерпретатора…');
         const pyodide = await Promise.race([
           window.loadPyodide({ indexURL }),
           new Promise((_, reject) => {
@@ -44,7 +41,6 @@ function ensurePyodide(onStatus) {
           }),
         ]);
         window.__pyodideInstance = pyodide;
-        onStatus?.('Готово');
         return pyodide;
       } catch (err) {
         lastErr = err;
@@ -136,7 +132,7 @@ sys.stdin = StringIO(${JSON.stringify(stdin)})
   };
 }
 
-function PlaygroundPage({ navigate }) {
+function PlaygroundPage() {
   const stash = React.useMemo(() => window.takePlaygroundStash?.() || { code: '', stdin: '', file: null }, []);
   const [code, setCode] = React.useState(stash.code || DEFAULT_PLAYGROUND_CODE);
   const [stdin, setStdin] = React.useState(stash.stdin || '');
@@ -147,7 +143,6 @@ function PlaygroundPage({ navigate }) {
   const [runError, setRunError] = React.useState('');
   const [status, setStatus] = React.useState('');
   const [running, setRunning] = React.useState(false);
-  const [readyHint, setReadyHint] = React.useState('Первый запуск подгрузит Python (~10–20 МБ).');
   const [editorH, setEditorH] = React.useState(320);
 
   React.useEffect(() => {
@@ -160,7 +155,7 @@ function PlaygroundPage({ navigate }) {
 
   React.useEffect(() => {
     // warm load in background
-    ensurePyodide(setReadyHint).catch(() => setReadyHint('Не удалось подготовить интерпретатор'));
+    ensurePyodide().catch(() => {});
   }, []);
 
   const run = async () => {
@@ -210,18 +205,8 @@ function PlaygroundPage({ navigate }) {
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">
               Python<span className="grad-text">‑интерпретатор</span>
             </h1>
-            <p className="mt-2 text-sm text-ink/60 max-w-xl">
-              Код выполняется в браузере. Текстовый файл задания можно открыть через open("имя.txt").
-            </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => navigate(window.Routes.MESSAGES)}
-              className="h-11 px-4 rounded-xl text-sm font-semibold text-ink/70 bg-white ring-1 ring-black/[0.08] hover:bg-black/[0.03] transition-colors"
-            >
-              К сообщениям
-            </button>
             <button
               type="button"
               onClick={run}
@@ -231,23 +216,17 @@ function PlaygroundPage({ navigate }) {
               {running
                 ? <span className="w-4 h-4 border-2 border-white/35 border-t-white rounded-full animate-spin" />
                 : <window.I.Play className="w-4 h-4" />}
-              {running ? 'Бежит…' : 'Запустить'}
-              <kbd className="hidden sm:inline ml-1 text-[10px] font-mono opacity-70">Ctrl+Enter</kbd>
+              {running ? 'Запуск…' : 'Запустить'}
             </button>
           </div>
         </div>
 
-        <p className="mb-4 text-xs text-ink/45">{readyHint}{status ? ` · ${status}` : ''}</p>
+        {status ? <p className="mb-4 text-xs text-ink/45">{status}</p> : null}
 
         <div className="mb-4 rounded-2xl ring-1 ring-black/[0.06] bg-white px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-[11px] font-bold uppercase tracking-widest text-sky-800">Текстовые файлы</div>
-              <p className="mt-1 text-[12px] text-ink/55">
-                {files.length
-                  ? 'Файл уже рядом с программой. Читайте его через open("имя").'
-                  : 'Добавьте txt, если в задании есть файл.'}
-              </p>
+              <div className="text-[11px] font-bold uppercase tracking-widest text-sky-800">Файлы</div>
             </div>
             <button
               type="button"
@@ -302,7 +281,6 @@ function PlaygroundPage({ navigate }) {
             <div className="rounded-2xl overflow-hidden ring-1 ring-black/[0.06] bg-white flex flex-col min-h-[160px]">
               <div className="px-4 py-2.5 border-b border-black/[0.06] flex items-center justify-between">
                 <span className="text-[11px] font-bold uppercase tracking-widest text-amber-700">Входные данные</span>
-                <span className="text-[10px] text-ink/40 font-mono">stdin · для input()</span>
               </div>
               <textarea
                 value={stdin}
@@ -327,7 +305,7 @@ function PlaygroundPage({ navigate }) {
               </div>
               <pre className="flex-1 overflow-auto p-4 text-xs font-mono leading-[1.55] min-h-[180px] whitespace-pre-wrap break-words">
                 {!stdout && !stderr && !runError ? (
-                  <span className="text-ink/35">Здесь появится print() и ошибки…</span>
+                  <span className="text-ink/35">Пока пусто</span>
                 ) : (
                   <>
                     {stdout ? <span className="text-ink">{stdout}</span> : null}
