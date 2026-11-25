@@ -20,73 +20,32 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           timeout: 3m
           command_timeout: 8m
-          script_stop: true
+          script_stop: false
           script: |
-            set +e
-            echo "=== identity ==="
-            id
-            hostname
-            date -u
-            uptime
-            echo "=== disk ==="
-            df -hT
-            df -i
-            echo "=== memory ==="
-            free -h
-            echo "=== ssh service ==="
-            systemctl is-active ssh sshd ssh.socket 2>/dev/null
-            systemctl --no-pager --full status ssh sshd ssh.socket 2>/dev/null | head -n 80
-            echo "=== listeners ==="
-            ss -lntp 2>/dev/null | grep -E ':22|:80|:443' || netstat -lntp 2>/dev/null | grep -E ':22|:80|:443'
-            echo "=== ssh connections ==="
-            ss -tn sport = :22 2>/dev/null | awk 'NR==1 || NR<=40 {print} END {print "count", NR-1}'
-            echo "=== sshd effective ==="
-            sshd -T 2>/dev/null | grep -Ei '^(port|listenaddress|maxstartups|persourcemaxstartups|persourcenetblocksize|persourcepenalties|persourcepenaltyexemptlist|maxauthtries|permitrootlogin|pubkeyauthentication|passwordauthentication|kbdinteractiveauthentication|challengeresponseauthentication|authenticationmethods|allowusers|denyusers|allowgroups|denygroups|usedns|loglevel|maxsessions|logingracetime|clientaliveinterval|authorizedkeysfile|authorizedkeyscommand) '
-            echo "=== sshd config ==="
-            grep -nEv '^[[:space:]]*#|^[[:space:]]*$' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf 2>/dev/null
-            echo "=== wrappers ==="
-            echo "-- hosts.allow --"
-            cat /etc/hosts.allow 2>/dev/null
-            echo "-- hosts.deny --"
-            cat /etc/hosts.deny 2>/dev/null
-            echo "=== fail2ban ==="
-            if command -v fail2ban-client >/dev/null 2>&1; then
-              fail2ban-client status
-              for jail in $(fail2ban-client status 2>/dev/null | sed -n 's/.*Jail list://p' | tr ',' ' '); do
-                echo "-- jail $jail --"
-                fail2ban-client status "$jail"
-              done
-            else
-              echo "fail2ban-client not installed"
-            fi
-            echo "=== fail2ban recent log ==="
-            if [ -f /var/log/fail2ban.log ]; then
-              tail -n 120 /var/log/fail2ban.log
-            fi
-            echo "=== crowdsec ==="
-            if command -v cscli >/dev/null 2>&1; then
-              cscli decisions list
-            else
-              echo "cscli not installed"
-            fi
-            echo "=== firewall ==="
-            ufw status verbose 2>/dev/null | head -n 60
-            iptables -S 2>/dev/null | grep -Ei 'f2b|dport 22|sport 22|REJECT|DROP' | head -n 120
-            echo "=== auth events ==="
-            journalctl --since "-12h" --no-pager -n 400 -u ssh -u sshd -u ssh.socket 2>/dev/null
-            echo "=== auth.log matches ==="
-            if [ -f /var/log/auth.log ]; then
-              grep -E 'sshd|fail2ban' /var/log/auth.log | tail -n 200
-            fi
-            echo "=== root keys ==="
-            ls -la /root/.ssh 2>/dev/null
-            if [ -f /root/.ssh/authorized_keys ]; then
-              echo "lines $(wc -l < /root/.ssh/authorized_keys)"
-              ssh-keygen -lf /root/.ssh/authorized_keys
-              awk '{print NR, $1, $NF}' /root/.ssh/authorized_keys
-            else
-              echo "no /root/.ssh/authorized_keys"
-            fi
-            echo "=== sshd test ==="
-            sshd -t && echo "sshd -t ok"
-            echo "DIAGNOSE_DONE"
+            echo BEGIN
+            echo "--- keys ---"
+            ssh-keygen -lf /root/.ssh/authorized_keys || true
+            awk '{print NR, $1, $NF}' /root/.ssh/authorized_keys || true
+            echo "--- f2b settings ---"
+            for k in bantime findtime maxretry banaction ignoreregex ignoreip; do
+              printf '%s ' "$k"
+              fail2ban-client get sshd "$k" || true
+            done
+            echo "--- jail files ---"
+            grep -nEv '^[[:space:]]*#|^[[:space:]]*$' /etc/fail2ban/jail.local /etc/fail2ban/jail.d/*.conf /etc/fail2ban/jail.d/*.local 2>/dev/null || true
+            echo "--- banned now ---"
+            fail2ban-client get sshd banip || true
+            echo "--- ban unban 12h ---"
+            grep -E 'Ban |Unban ' /var/log/fail2ban.log | awk -v cut="$(date -u -d '12 hours ago' '+%Y-%m-%d %H:%M:%S')" '$1" "$2 >= cut' | tail -n 200 || true
+            echo "--- accepted 30d ---"
+            journalctl --since "-30d" -t sshd --no-pager | grep "Accepted publickey" | grep -oE 'from [0-9.]+' | sort | uniq -c | sort -nr || true
+            echo "--- accepted lines ---"
+            journalctl --since "-14d" -t sshd --no-pager | grep "Accepted publickey" | tail -n 40 || true
+            echo "--- sshd problems 24h ---"
+            journalctl --since "-24h" -t sshd --no-pager | grep -E 'drop connection|Unable to negotiate|Connection closed|fatal:|error:|maximum authentication|Did not receive identification|banner exchange|Timeout before authentication|Failed publickey' | tail -n 120 || true
+            echo "--- iptables ssh ---"
+            iptables -S | grep -Ei 'f2b|dport 22' | head -n 40 || true
+            echo "--- socket unit ---"
+            systemctl cat ssh.socket || true
+            echo END
+            exit 0
