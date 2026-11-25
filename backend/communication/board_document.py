@@ -26,6 +26,8 @@ _COLORS = {
     "#E11D48": "#E11D48",
     "#059669": "#059669",
 }
+_FONTS = {"sans", "serif", "hand", "mono"}
+_MAX_TEXT = 500
 
 
 class BoardDocumentError(ValueError):
@@ -172,6 +174,34 @@ def validate_item(raw: Any) -> dict:
             ),
             "w": _num(raw.get("w"), 8, 2000, "Неверный размер картинки."),
             "h": _num(raw.get("h"), 8, 2000, "Неверный размер картинки."),
+        }
+    if kind == "text":
+        return {
+            "id": item_id,
+            "type": "text",
+            "text": _text(raw.get("text")),
+            "color": _color(raw.get("color")),
+            "font": _font(raw.get("font")),
+            "size": _num(
+                raw.get("size"),
+                16,
+                72,
+                "Неверный размер текста.",
+            ),
+            "x": _num(
+                raw.get("x"),
+                WORLD_MIN,
+                WORLD_MAX,
+                "Неверное место текста.",
+            ),
+            "y": _num(
+                raw.get("y"),
+                WORLD_MIN,
+                WORLD_MAX,
+                "Неверное место текста.",
+            ),
+            "w": _num(raw.get("w"), 8, 4000, "Неверный размер текста."),
+            "h": _num(raw.get("h"), 8, 4000, "Неверный размер текста."),
         }
     raise BoardDocumentError("Неизвестный тип фигуры.")
 
@@ -393,6 +423,24 @@ def _as_revision(value) -> int:
     if value < 0:
         raise BoardDocumentError("Неверная версия доски.")
     return value
+
+
+def _font(value: Any) -> str:
+    if not isinstance(value, str) or value not in _FONTS:
+        raise BoardDocumentError("Неверный шрифт.")
+    return value
+
+
+def _text(value: Any) -> str:
+    if not isinstance(value, str):
+        raise BoardDocumentError("Неверный текст.")
+    text = value.replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not text or len(text) > _MAX_TEXT:
+        raise BoardDocumentError("Неверный текст.")
+    for char in text:
+        if ord(char) < 32 and char not in "\n\t":
+            raise BoardDocumentError("Неверный текст.")
+    return text
 
 
 def _color(value: Any) -> str:

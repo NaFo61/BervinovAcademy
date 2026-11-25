@@ -316,3 +316,79 @@ def test_far_stroke_and_picture_fit_on_the_canvas(
         board.snapshot_json["revision"],
     )
     assert rejected.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def _note(item_id="textnote1"):
+    return {
+        "id": item_id,
+        "type": "text",
+        "text": "Привет",
+        "x": 12,
+        "y": 40,
+        "w": 140,
+        "h": 40,
+        "color": "#E11D48",
+        "font": "hand",
+        "size": 28,
+    }
+
+
+@override_settings(WHITEBOARD_ENABLED=True)
+def test_text_keeps_font_and_color(student_client, student_user):
+    saved = _put_board(student_client, student_user, [_note()], 0)
+    assert saved.status_code == status.HTTP_200_OK
+    board = UserBoard.objects.get(owner=student_user)
+    item = board.snapshot_json["items"][0]
+    assert item["text"] == "Привет"
+    assert item["font"] == "hand"
+    assert item["color"] == "#E11D48"
+    assert item["size"] == 28
+
+    bad = _note("textnote2")
+    bad["font"] = "arbitrary-css"
+    rejected = _put_board(
+        student_client,
+        student_user,
+        [bad],
+        board.snapshot_json["revision"],
+    )
+    assert rejected.status_code == status.HTTP_400_BAD_REQUEST
+    board.refresh_from_db()
+    assert [row["id"] for row in board.snapshot_json["items"]] == ["textnote1"]
+
+
+@override_settings(WHITEBOARD_ENABLED=True)
+def test_two_people_see_the_same_text(mentor_user, student_user):
+    async def run():
+        student = WebsocketCommunicator(
+            application, _ws_path(student_user, student_user)
+        )
+        mentor = WebsocketCommunicator(
+            application, _ws_path(student_user, mentor_user)
+        )
+        student_ok, _ = await student.connect()
+        mentor_ok, _ = await mentor.connect()
+        assert student_ok
+        assert mentor_ok
+        await student.receive_json_from()
+        await mentor.receive_json_from()
+        await student.send_json_to(
+            {
+                "event": "commit",
+                "payload": {"client": "tab-student", "item": _note()},
+            }
+        )
+        own = await student.receive_json_from()
+        peer = await mentor.receive_json_from()
+        assert own["event"] == "commit"
+        assert peer["payload"]["item"]["text"] == "Привет"
+        assert peer["payload"]["item"]["font"] == "hand"
+        assert peer["payload"]["item"]["color"] == "#E11D48"
+        board = await sync_to_async(UserBoard.objects.get)(owner=student_user)
+        stored = board.snapshot_json["items"][0]
+        assert stored["text"] == "Привет"
+        assert stored["font"] == "hand"
+        await student.disconnect()
+        await mentor.disconnect()
+
+    _run(run)

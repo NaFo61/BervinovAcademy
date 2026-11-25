@@ -13,6 +13,71 @@ const PEN_COLORS = [
   { value: '#E11D48', label: 'Красный' },
   { value: '#059669', label: 'Зелёный' },
 ];
+const FONTS = [
+  { value: 'sans', label: 'Обычный', css: 'system-ui, "Segoe UI", sans-serif' },
+  { value: 'serif', label: 'С засечками', css: 'Georgia, "Times New Roman", serif' },
+  { value: 'hand', label: 'Рукописный', css: '"Comic Sans MS", "Segoe Script", cursive' },
+  { value: 'mono', label: 'Машинный', css: 'ui-monospace, Consolas, monospace' },
+];
+const TEXT_SIZE = 28;
+const TEXT_WRAP = 320;
+const layoutCache = new Map();
+
+function fontCss(key) {
+  const found = FONTS.find((row) => row.value === key);
+  return found ? found.css : FONTS[0].css;
+}
+
+function wrapText(ctx, text, maxWidth) {
+  const paragraphs = String(text || '').split('\n');
+  const lines = [];
+  paragraphs.forEach((paragraph) => {
+    const words = paragraph.split(/(\s+)/);
+    let line = '';
+    words.forEach((word) => {
+      const trial = line + word;
+      if (line && ctx.measureText(trial).width > maxWidth) {
+        lines.push(line.replace(/\s+$/, ''));
+        line = word.trimStart();
+      } else line = trial;
+    });
+    lines.push(line);
+  });
+  return lines.length ? lines : [''];
+}
+
+function layoutText(item) {
+  const size = Number(item.size) || TEXT_SIZE;
+  const key = `${item.font}|${size}|${item.text}`;
+  const cached = layoutCache.get(key);
+  if (cached) return cached;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.font = `${size}px ${fontCss(item.font)}`;
+  const lines = wrapText(ctx, item.text || '', TEXT_WRAP);
+  const lineH = size * 1.35;
+  let width = 8;
+  lines.forEach((line) => {
+    width = Math.max(width, ctx.measureText(line || ' ').width);
+  });
+  const result = {
+    lines,
+    lineH,
+    w: Math.min(4000, Math.max(8, Math.round(width + 8))),
+    h: Math.min(4000, Math.max(8, Math.round(lines.length * lineH + 4))),
+  };
+  layoutCache.set(key, result);
+  if (layoutCache.size > 200) layoutCache.delete(layoutCache.keys().next().value);
+  return result;
+}
+
+function copyItem(item) {
+  if (!item) return item;
+  if (item.type === 'stroke') {
+    return { ...item, points: (item.points || []).map((pt) => [pt[0], pt[1]]) };
+  }
+  return { ...item };
+}
 
 function whiteboardFeatureEnabled() {
   const meta = document.querySelector('meta[name="whiteboard-enabled"]');
@@ -74,9 +139,10 @@ function distToSegment(px, py, ax, ay, bx, by) {
 
 function hitsItem(item, x, y, pad = 0) {
   if (!item) return false;
-  if (item.type === 'image') {
-    return x >= item.x - pad && y >= item.y - pad
-      && x <= item.x + item.w + pad && y <= item.y + item.h + pad;
+  if (item.type === 'image' || item.type === 'text') {
+    const box = itemBounds(item);
+    return !!box && x >= box.minX - pad && y >= box.minY - pad
+      && x <= box.maxX + pad && y <= box.maxY + pad;
   }
   const pts = item.points || [];
   const radius = pad + (Number(item.size) || 4) / 2;
@@ -127,12 +193,14 @@ function contentBox(items) {
   let any = false;
   (items || []).forEach((item) => {
     if (!item) return;
-    if (item.type === 'image') {
+    if (item.type === 'image' || item.type === 'text') {
+      const box = itemBounds(item);
+      if (!box) return;
       any = true;
-      minX = Math.min(minX, item.x);
-      minY = Math.min(minY, item.y);
-      maxX = Math.max(maxX, item.x + item.w);
-      maxY = Math.max(maxY, item.y + item.h);
+      minX = Math.min(minX, box.minX);
+      minY = Math.min(minY, box.minY);
+      maxX = Math.max(maxX, box.maxX);
+      maxY = Math.max(maxY, box.maxY);
       return;
     }
     (item.points || []).forEach((pt) => {
@@ -181,8 +249,49 @@ function topItem(items, x, y, pad) {
   return null;
 }
 
+function itemBounds(item) {
+  if (!item) return null;
+  if (item.type === 'image' || item.type === 'text') {
+    const w = Number(item.w) || 32;
+    const h = Number(item.h) || 32;
+    return { minX: item.x, minY: item.y, maxX: item.x + w, maxY: item.y + h };
+  }
+  return contentBox([item]);
+}
+
+function boundsOverlap(a, b) {
+  if (!a || !b) return false;
+  return a.minX <= b.maxX && a.maxX >= b.minX && a.minY <= b.maxY && a.maxY >= b.minY;
+}
+
+function unionBounds(items) {
+  let box = null;
+  (items || []).forEach((item) => {
+    const next = itemBounds(item);
+    if (!next) return;
+    if (!box) {
+      box = { ...next };
+      return;
+    }
+    box.minX = Math.min(box.minX, next.minX);
+    box.minY = Math.min(box.minY, next.minY);
+    box.maxX = Math.max(box.maxX, next.maxX);
+    box.maxY = Math.max(box.maxY, next.maxY);
+  });
+  return box;
+}
+
+function boxFromCorners(x0, y0, x1, y1) {
+  return {
+    minX: Math.min(x0, x1),
+    minY: Math.min(y0, y1),
+    maxX: Math.max(x0, x1),
+    maxY: Math.max(y0, y1),
+  };
+}
+
 function movedItem(origin, dx, dy) {
-  if (origin.type === 'image') {
+  if (origin.type === 'image' || origin.type === 'text') {
     return { ...origin, x: clampWorld(origin.x + dx), y: clampWorld(origin.y + dy) };
   }
   return {
@@ -214,9 +323,14 @@ function WhiteboardPage({ navigate, hashParams }) {
   const pendingRef = React.useRef({ upserts: new Map(), removes: new Set() });
   const remoteLiveRef = React.useRef({});
   const localStrokeRef = React.useRef(null);
-  const toolRef = React.useRef('pen');
+  const toolRef = React.useRef('select');
   const colorRef = React.useRef(PEN_COLORS[0].value);
-  const eraserCursorRef = React.useRef(null);
+  const fontRef = React.useRef(FONTS[0].value);
+  const selectionRef = React.useRef(new Set());
+  const marqueeRef = React.useRef(null);
+  const editorRef = React.useRef(null);
+  const editorNodeRef = React.useRef(null);
+  const ignoreEditorBlurRef = React.useRef(false);
   const imagesRef = React.useRef(new Map());
   const genRef = React.useRef(0);
   const saveTimerRef = React.useRef(0);
@@ -238,8 +352,11 @@ function WhiteboardPage({ navigate, hashParams }) {
 
   const [error, setError] = React.useState('');
   const [ready, setReady] = React.useState(false);
-  const [tool, setTool] = React.useState('pen');
+  const [tool, setTool] = React.useState('select');
   const [color, setColor] = React.useState(PEN_COLORS[0].value);
+  const [font, setFont] = React.useState(FONTS[0].value);
+  const [selectionIds, setSelectionIds] = React.useState([]);
+  const [editor, setEditor] = React.useState(null);
   const [status, setStatus] = React.useState('Подключение…');
   const [notice, setNotice] = React.useState('');
   const [isOwn, setIsOwn] = React.useState(!ownerFromQuery);
@@ -384,6 +501,16 @@ function WhiteboardPage({ navigate, hashParams }) {
   }, [color]);
 
   React.useEffect(() => {
+    fontRef.current = font;
+  }, [font]);
+
+  const setSelection = React.useCallback((ids) => {
+    const next = [...new Set(ids || [])];
+    selectionRef.current = new Set(next);
+    setSelectionIds(next);
+  }, []);
+
+  React.useEffect(() => {
     paintRef.current = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -426,6 +553,7 @@ function WhiteboardPage({ navigate, hashParams }) {
       }
       const drawItem = (item) => {
         if (!item) return;
+        if (editorRef.current && item.id === editorRef.current.id) return;
         if (item.type === 'image') {
           let img = imagesRef.current.get(item.src);
           if (!img) {
@@ -441,6 +569,19 @@ function WhiteboardPage({ navigate, hashParams }) {
           }
           return;
         }
+        if (item.type === 'text') {
+          const layout = layoutText(item);
+          const size = Number(item.size) || TEXT_SIZE;
+          ctx.save();
+          ctx.font = `${size}px ${fontCss(item.font)}`;
+          ctx.fillStyle = item.color || '#0B1226';
+          ctx.textBaseline = 'top';
+          layout.lines.forEach((line, index) => {
+            ctx.fillText(line, item.x, item.y + index * layout.lineH);
+          });
+          ctx.restore();
+          return;
+        }
         const pts = item.points || [];
         if (!pts.length) return;
         ctx.beginPath();
@@ -453,41 +594,60 @@ function WhiteboardPage({ navigate, hashParams }) {
         else pts.slice(1).forEach((pt) => ctx.lineTo(pt[0], pt[1]));
         ctx.stroke();
       };
+      const drawFrame = (box, fill) => {
+        if (!box) return;
+        const gap = 6 / camera.scale;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(37, 99, 235, 0.95)';
+        ctx.lineWidth = 1.5 / camera.scale;
+        ctx.setLineDash([7 / camera.scale, 5 / camera.scale]);
+        if (fill) {
+          ctx.fillStyle = 'rgba(37, 99, 235, 0.08)';
+          ctx.fillRect(box.minX, box.minY, box.maxX - box.minX, box.maxY - box.minY);
+        }
+        ctx.strokeRect(
+          box.minX - (fill ? 0 : gap),
+          box.minY - (fill ? 0 : gap),
+          box.maxX - box.minX + (fill ? 0 : gap * 2),
+          box.maxY - box.minY + (fill ? 0 : gap * 2),
+        );
+        ctx.restore();
+      };
       const live = remoteLiveRef.current;
       (docRef.current.items || []).forEach((item) => {
         if (!live[item.id]) drawItem(item);
       });
       Object.values(live).forEach(drawItem);
       if (localStrokeRef.current) drawItem(localStrokeRef.current);
-      if (toolRef.current === 'eraser' && eraserCursorRef.current) {
-        const [x, y] = eraserCursorRef.current;
-        ctx.beginPath();
-        ctx.arc(x, y, 16 / camera.scale, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(11, 18, 38, 0.45)';
-        ctx.lineWidth = 2 / camera.scale;
-        ctx.stroke();
+      const itemsNow = docRef.current.items || [];
+      let selected = itemsNow.filter((item) => selectionRef.current.has(item.id));
+      if (marqueeRef.current) {
+        const area = boxFromCorners(
+          marqueeRef.current.x0,
+          marqueeRef.current.y0,
+          marqueeRef.current.x1,
+          marqueeRef.current.y1,
+        );
+        drawFrame(area, true);
+        selected = itemsNow.filter((item) => boundsOverlap(itemBounds(item), area));
       }
-      if (dragRef.current && dragRef.current.moved) {
-        const dragged = (docRef.current.items || []).find((row) => row.id === dragRef.current.id);
-        const box = contentBox(dragged ? [dragged] : []);
-        if (box) {
-          const gap = 8 / camera.scale;
-          ctx.strokeStyle = 'rgba(37, 99, 235, 0.9)';
-          ctx.lineWidth = 2 / camera.scale;
-          ctx.setLineDash([8 / camera.scale, 6 / camera.scale]);
-          ctx.strokeRect(
-            box.minX - gap,
-            box.minY - gap,
-            box.maxX - box.minX + gap * 2,
-            box.maxY - box.minY + gap * 2,
-          );
-          ctx.setLineDash([]);
-        }
+      drawFrame(unionBounds(selected), false);
+      const editing = editorRef.current;
+      const node = editorNodeRef.current;
+      if (editing && node) {
+        node.style.left = `${(editing.x - camera.x) * camera.scale + view.rect.width / 2}px`;
+        node.style.top = `${(editing.y - camera.y) * camera.scale + view.rect.height / 2}px`;
+        node.style.width = `${TEXT_WRAP * camera.scale}px`;
+        node.style.fontSize = `${(editing.size || TEXT_SIZE) * camera.scale}px`;
       }
       ctx.restore();
     };
     paintRef.current();
   }, [docVersion, tool]);
+
+  React.useEffect(() => {
+    if (editor) paintRef.current();
+  }, [editor]);
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -560,6 +720,103 @@ function WhiteboardPage({ navigate, hashParams }) {
     });
     if (!sent) persistSoon();
   }, [flushSnapshot, markDirty, persistSoon, sendJson, setBoard]);
+
+  const commitEditor = React.useCallback(() => {
+    const current = editorRef.current;
+    if (!current) return;
+    editorRef.current = null;
+    setEditor(null);
+    const text = String(current.text || '').replace(/\u0000/g, '').trim();
+    if (!text) {
+      if (!current.isNew) commitRemove([current.id]);
+      setSelection(selectionRef.current.has(current.id)
+        ? [...selectionRef.current].filter((id) => id !== current.id)
+        : [...selectionRef.current]);
+      scheduleDraw();
+      return;
+    }
+    const item = {
+      id: current.id,
+      type: 'text',
+      text: text.slice(0, 500),
+      x: current.x,
+      y: current.y,
+      color: current.color || colorRef.current,
+      font: current.font || fontRef.current,
+      size: current.size || TEXT_SIZE,
+    };
+    const box = layoutText(item);
+    commitItem({ ...item, w: box.w, h: box.h });
+    setSelection([item.id]);
+    scheduleDraw();
+  }, [commitItem, commitRemove, scheduleDraw, setSelection]);
+
+  const openEditor = React.useCallback((item, isNew) => {
+    const next = {
+      id: item.id,
+      x: item.x,
+      y: item.y,
+      text: item.text || '',
+      color: item.color || colorRef.current,
+      font: item.font || fontRef.current,
+      size: item.size || TEXT_SIZE,
+      isNew: !!isNew,
+    };
+    ignoreEditorBlurRef.current = true;
+    editorRef.current = next;
+    colorRef.current = next.color;
+    fontRef.current = next.font;
+    setColor(next.color);
+    setFont(next.font);
+    setEditor(next);
+    setSelection([item.id]);
+    scheduleDraw();
+    window.setTimeout(() => {
+      ignoreEditorBlurRef.current = false;
+      editorNodeRef.current?.focus();
+    }, 0);
+  }, [scheduleDraw, setSelection]);
+
+  const applyStyle = React.useCallback((patch) => {
+    if (patch.color) {
+      colorRef.current = patch.color;
+      setColor(patch.color);
+    }
+    if (patch.font) {
+      fontRef.current = patch.font;
+      setFont(patch.font);
+    }
+    if (editorRef.current) {
+      const next = { ...editorRef.current, ...patch };
+      editorRef.current = next;
+      setEditor(next);
+    }
+    const ids = selectionRef.current;
+    if (!ids.size || editorRef.current) return;
+    (docRef.current.items || []).forEach((item) => {
+      if (!ids.has(item.id)) return;
+      if (patch.color && (item.type === 'stroke' || item.type === 'text')) {
+        const updated = { ...copyItem(item), color: patch.color };
+        if (updated.type === 'text') {
+          const box = layoutText(updated);
+          updated.w = box.w;
+          updated.h = box.h;
+        }
+        commitItem(updated);
+      } else if (patch.font && item.type === 'text') {
+        const updated = { ...item, font: patch.font };
+        const box = layoutText(updated);
+        commitItem({ ...updated, w: box.w, h: box.h });
+      }
+    });
+  }, [commitItem]);
+
+  const removeSelection = React.useCallback(() => {
+    const ids = [...selectionRef.current];
+    if (!ids.length) return;
+    setSelection([]);
+    commitRemove(ids);
+  }, [commitRemove, setSelection]);
 
   const placeImage = React.useCallback(async (src, x, y, center = false) => {
     const size = await loadImageSize(src);
@@ -737,9 +994,16 @@ function WhiteboardPage({ navigate, hashParams }) {
       return tag === 'INPUT' || tag === 'TEXTAREA' || event.target?.isContentEditable;
     };
     const down = (event) => {
-      if (event.code !== 'Space' || typing(event)) return;
-      spaceRef.current = true;
-      event.preventDefault();
+      if (typing(event)) return;
+      if (event.code === 'Space') {
+        spaceRef.current = true;
+        event.preventDefault();
+        return;
+      }
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault();
+        removeSelection();
+      }
     };
     const up = (event) => {
       if (event.code === 'Space') spaceRef.current = false;
@@ -750,7 +1014,7 @@ function WhiteboardPage({ navigate, hashParams }) {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
     };
-  }, []);
+  }, [removeSelection]);
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -783,6 +1047,8 @@ function WhiteboardPage({ navigate, hashParams }) {
   React.useEffect(() => {
     if (!ready) return undefined;
     const onPaste = (event) => {
+      const tag = event.target && event.target.tagName;
+      if (tag === 'TEXTAREA' || tag === 'INPUT') return;
       const list = event.clipboardData && event.clipboardData.items;
       if (!list) return;
       let file = null;
@@ -804,16 +1070,16 @@ function WhiteboardPage({ navigate, hashParams }) {
     return () => window.removeEventListener('paste', onPaste);
   }, [ready, addImageFile]);
 
-  const queueLiveItem = (item) => {
-    if (!item) return;
-    liveItemRef.current = item;
+  const queueLiveItems = (items) => {
+    const list = (items || []).filter(Boolean);
+    if (!list.length) return;
+    liveItemRef.current = list[list.length - 1];
     if (liveTimerRef.current) return;
-    const copy = item.type === 'stroke'
-      ? { ...item, points: item.points.map((pt) => [pt[0], pt[1]]) }
-      : { ...item };
-    sendJson({
-      event: 'live',
-      payload: { client: clientIdRef.current, item: copy },
+    list.forEach((item) => {
+      sendJson({
+        event: 'live',
+        payload: { client: clientIdRef.current, item: copyItem(item) },
+      });
     });
     liveTimerRef.current = window.setTimeout(() => {
       liveTimerRef.current = 0;
@@ -846,8 +1112,11 @@ function WhiteboardPage({ navigate, hashParams }) {
       scheduleDraw();
       return;
     }
-    const item = (docRef.current.items || []).find((row) => row.id === drag.id);
-    if (item) commitItem(item);
+    const ids = drag.ids || (drag.id ? [drag.id] : []);
+    const moved = ids
+      .map((id) => (docRef.current.items || []).find((row) => row.id === id))
+      .filter(Boolean);
+    if (moved.length) moved.forEach((item) => commitItem(item));
     else scheduleDraw();
   };
 
@@ -886,32 +1155,54 @@ function WhiteboardPage({ navigate, hashParams }) {
       cameraRef.current,
     );
     if (!point) return;
+    if (editorRef.current) commitEditor();
     event.currentTarget.setPointerCapture?.(event.pointerId);
-    if (toolRef.current === 'move') {
-      const pad = 10 / (cameraRef.current.scale || 1);
-      const hit = topItem(docRef.current.items, point[0], point[1], pad);
-      if (!hit) return;
-      dragRef.current = {
-        id: hit.id,
-        start: point,
-        origin: hit.type === 'stroke'
-          ? { ...hit, points: hit.points.map((pt) => [pt[0], pt[1]]) }
-          : { ...hit },
-        moved: false,
-      };
+    const pad = 10 / (cameraRef.current.scale || 1);
+    const hit = topItem(docRef.current.items, point[0], point[1], pad);
+    if (toolRef.current === 'text') {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+      if (hit && hit.type === 'text') openEditor(hit, false);
+      else {
+        openEditor({
+          id: newId(),
+          x: point[0],
+          y: point[1],
+          text: '',
+          color: colorRef.current,
+          font: fontRef.current,
+          size: TEXT_SIZE,
+        }, true);
+      }
+      return;
+    }
+    if (toolRef.current === 'select') {
+      if (hit) {
+        const ids = selectionRef.current.has(hit.id)
+          ? [...selectionRef.current]
+          : [hit.id];
+        setSelection(ids);
+        if (ids.length === 1 && hit.color) {
+          colorRef.current = hit.color;
+          setColor(hit.color);
+        }
+        if (ids.length === 1 && hit.type === 'text' && hit.font) {
+          fontRef.current = hit.font;
+          setFont(hit.font);
+        }
+        const origins = {};
+        ids.forEach((id) => {
+          const row = (docRef.current.items || []).find((item) => item.id === id);
+          if (row) origins[id] = copyItem(row);
+        });
+        dragRef.current = { ids, start: point, origins, moved: false };
+      } else {
+        setSelection([]);
+        marqueeRef.current = { x0: point[0], y0: point[1], x1: point[0], y1: point[1] };
+      }
       scheduleDraw();
       return;
     }
-    if (toolRef.current === 'eraser') {
-      eraserCursorRef.current = point;
-      const pad = 16 / (cameraRef.current.scale || 1);
-      const hits = docRef.current.items
-        .filter((item) => hitsItem(item, point[0], point[1], pad))
-        .map((item) => item.id);
-      commitRemove(hits);
-      scheduleDraw();
-      return;
-    }
+    if (toolRef.current !== 'pen') return;
     localStrokeRef.current = {
       id: newId(),
       type: 'stroke',
@@ -938,6 +1229,12 @@ function WhiteboardPage({ navigate, hashParams }) {
       metricsRef.current || viewOf(event.currentTarget),
       cameraRef.current,
     );
+    if (marqueeRef.current && point) {
+      marqueeRef.current.x1 = point[0];
+      marqueeRef.current.y1 = point[1];
+      scheduleDraw();
+      return;
+    }
     if (dragRef.current) {
       if (!point) return;
       const drag = dragRef.current;
@@ -946,25 +1243,17 @@ function WhiteboardPage({ navigate, hashParams }) {
       const scale = cameraRef.current.scale || 1;
       if (!drag.moved && (dx * dx + dy * dy) * scale * scale < 9) return;
       drag.moved = true;
-      const next = movedItem(drag.origin, dx, dy);
+      const moved = [];
       const doc = docRef.current;
-      docRef.current = {
-        ...doc,
-        items: doc.items.map((row) => (row.id === next.id ? next : row)),
-      };
-      queueLiveItem(next);
-      scheduleDraw();
-      return;
-    }
-    if (toolRef.current === 'eraser') {
-      eraserCursorRef.current = point;
-      if (point && (event.buttons & 1)) {
-        const pad = 16 / (cameraRef.current.scale || 1);
-        const hits = docRef.current.items
-          .filter((item) => hitsItem(item, point[0], point[1], pad))
-          .map((item) => item.id);
-        commitRemove(hits);
-      }
+      const items = doc.items.map((row) => {
+        const origin = drag.origins[row.id];
+        if (!origin) return row;
+        const next = movedItem(origin, dx, dy);
+        moved.push(next);
+        return next;
+      });
+      docRef.current = { ...doc, items };
+      queueLiveItems(moved);
       scheduleDraw();
       return;
     }
@@ -986,7 +1275,7 @@ function WhiteboardPage({ navigate, hashParams }) {
         points: [point],
       };
     } else {
-      queueLiveItem(stroke);
+      queueLiveItems([stroke]);
     }
     scheduleDraw();
   };
@@ -997,13 +1286,43 @@ function WhiteboardPage({ navigate, hashParams }) {
       scheduleDraw();
       return;
     }
+    if (marqueeRef.current) {
+      const area = boxFromCorners(
+        marqueeRef.current.x0,
+        marqueeRef.current.y0,
+        marqueeRef.current.x1,
+        marqueeRef.current.y1,
+      );
+      const wide = (area.maxX - area.minX) > 4 || (area.maxY - area.minY) > 4;
+      if (wide) {
+        const ids = (docRef.current.items || [])
+          .filter((item) => boundsOverlap(itemBounds(item), area))
+          .map((item) => item.id);
+        setSelection(ids);
+      }
+      marqueeRef.current = null;
+      scheduleDraw();
+      return;
+    }
     if (dragRef.current) {
       finishDrag();
       return;
     }
     if (toolRef.current === 'pen') finishStroke();
-    eraserCursorRef.current = null;
     scheduleDraw();
+  };
+
+  const onDoubleClick = (event) => {
+    if (!ready || toolRef.current !== 'select') return;
+    const point = worldFromEvent(
+      event,
+      metricsRef.current || viewOf(event.currentTarget),
+      cameraRef.current,
+    );
+    if (!point) return;
+    const pad = 10 / (cameraRef.current.scale || 1);
+    const hit = topItem(docRef.current.items, point[0], point[1], pad);
+    if (hit && hit.type === 'text') openEditor(hit, false);
   };
 
   const onPickImage = (event) => {
@@ -1048,8 +1367,8 @@ function WhiteboardPage({ navigate, hashParams }) {
           </div>
           <div className="text-xs text-ink/50 truncate">
             {isOwn
-              ? 'Двое рисуют сразу. Ctrl+V — картинка, колёсико двигает лист.'
-              : 'Можно рисовать вместе. Ctrl+V — картинка, колёсико двигает лист.'}
+              ? 'Выбор, ручка и текст. Рамкой можно сдвинуть сразу несколько. Ctrl+V — картинка.'
+              : 'Можно рисовать вместе. Рамкой можно сдвинуть сразу несколько. Ctrl+V — картинка.'}
           </div>
         </div>
         <button
@@ -1094,39 +1413,89 @@ function WhiteboardPage({ navigate, hashParams }) {
             data-board="academy"
             data-ready={ready ? '1' : '0'}
             data-zoom={viewScale}
-            className={`absolute inset-0 h-full w-full touch-none ${tool === 'hand' ? 'cursor-grab' : tool === 'move' ? 'cursor-move' : tool === 'eraser' ? 'cursor-cell' : 'cursor-crosshair'}`}
+            data-tool={tool}
+            data-color={color}
+            data-font={font}
+            data-selection={selectionIds.join(',')}
+            className={`absolute inset-0 h-full w-full touch-none ${tool === 'hand' ? 'cursor-grab' : tool === 'text' ? 'cursor-text' : tool === 'pen' ? 'cursor-crosshair' : 'cursor-default'}`}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
+            onDoubleClick={onDoubleClick}
             onAuxClick={(event) => event.preventDefault()}
           />
+          {editor && (
+            <textarea
+              key={editor.id}
+              ref={editorNodeRef}
+              autoFocus
+              data-board-text="1"
+              aria-label="Текст на доске"
+              value={editor.text}
+              rows={Math.min(8, Math.max(2, editor.text.split('\n').length))}
+              onChange={(event) => {
+                const text = event.target.value.slice(0, 500);
+                const next = { ...(editorRef.current || editor), text };
+                editorRef.current = next;
+                setEditor(next);
+              }}
+              onBlur={() => {
+                if (ignoreEditorBlurRef.current) return;
+                if (!editorRef.current || editorRef.current.id !== editor.id) return;
+                commitEditor();
+              }}
+              onPointerDown={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                event.stopPropagation();
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  event.currentTarget.blur();
+                }
+              }}
+              className="absolute z-30 resize-none rounded-md bg-white/95 px-1 py-0.5 shadow-soft ring-1 ring-sky-300 outline-none"
+              style={{
+                left: canvasRef.current
+                  ? (editor.x - cameraRef.current.x) * cameraRef.current.scale
+                    + canvasRef.current.getBoundingClientRect().width / 2
+                  : 0,
+                top: canvasRef.current
+                  ? (editor.y - cameraRef.current.y) * cameraRef.current.scale
+                    + canvasRef.current.getBoundingClientRect().height / 2
+                  : 0,
+                width: TEXT_WRAP * (cameraRef.current.scale || 1),
+                fontSize: (editor.size || TEXT_SIZE) * (cameraRef.current.scale || 1),
+                fontFamily: fontCss(editor.font),
+                color: editor.color,
+                lineHeight: 1.35,
+              }}
+            />
+          )}
           <div className="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center gap-2 pointer-events-none">
             <div className="pointer-events-auto flex flex-wrap items-center gap-1 rounded-2xl bg-white/95 p-1 shadow-soft ring-1 ring-black/[0.06]">
+              <button
+                type="button"
+                aria-pressed={tool === 'select'}
+                onClick={() => setTool('select')}
+                className={`h-9 px-3 rounded-xl text-sm font-semibold ${tool === 'select' ? 'bg-sky-50 text-sky-800' : 'text-ink/75 hover:bg-black/[0.04]'}`}
+              >
+                Выбор
+              </button>
               <button
                 type="button"
                 aria-pressed={tool === 'pen'}
                 onClick={() => setTool('pen')}
                 className={`h-9 px-3 rounded-xl text-sm font-semibold ${tool === 'pen' ? 'bg-sky-50 text-sky-800' : 'text-ink/75 hover:bg-black/[0.04]'}`}
               >
-                Карандаш
+                Ручка
               </button>
               <button
                 type="button"
-                aria-pressed={tool === 'eraser'}
-                onClick={() => setTool('eraser')}
-                className={`h-9 px-3 rounded-xl text-sm font-semibold ${tool === 'eraser' ? 'bg-sky-50 text-sky-800' : 'text-ink/75 hover:bg-black/[0.04]'}`}
+                aria-pressed={tool === 'text'}
+                onClick={() => setTool('text')}
+                className={`h-9 px-3 rounded-xl text-sm font-semibold ${tool === 'text' ? 'bg-sky-50 text-sky-800' : 'text-ink/75 hover:bg-black/[0.04]'}`}
               >
-                Ластик
-              </button>
-              <button
-                type="button"
-                aria-pressed={tool === 'move'}
-                title="Перетащить линию или картинку"
-                onClick={() => setTool('move')}
-                className={`h-9 px-3 rounded-xl text-sm font-semibold ${tool === 'move' ? 'bg-sky-50 text-sky-800' : 'text-ink/75 hover:bg-black/[0.04]'}`}
-              >
-                Двигать
+                Текст
               </button>
               <button
                 type="button"
@@ -1152,15 +1521,35 @@ function WhiteboardPage({ navigate, hashParams }) {
                 className="hidden"
                 onChange={onPickImage}
               />
+              {selectionIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={removeSelection}
+                  className="h-9 px-3 rounded-xl text-sm font-semibold text-rose-700 hover:bg-rose-50"
+                >
+                  Удалить
+                </button>
+              )}
               <span className="mx-1 h-6 w-px bg-black/[0.08]" />
+              <select
+                aria-label="Шрифт"
+                value={font}
+                onChange={(event) => applyStyle({ font: event.target.value })}
+                className="h-9 max-w-[9.5rem] rounded-xl bg-transparent px-2 text-sm font-semibold text-ink/80"
+                style={{ fontFamily: fontCss(font) }}
+              >
+                {FONTS.map((row) => (
+                  <option key={row.value} value={row.value}>{row.label}</option>
+                ))}
+              </select>
               {PEN_COLORS.map((swatch) => (
                 <button
                   key={swatch.value}
                   type="button"
                   aria-label={swatch.label}
-                  title={swatch.label}
-                  onClick={() => { setColor(swatch.value); setTool('pen'); }}
-                  className={`h-7 w-7 rounded-full ring-2 ring-offset-2 ${color === swatch.value && tool === 'pen' ? 'ring-sky-500' : 'ring-transparent'}`}
+                  title={`${swatch.label}. Цвет линии и текста`}
+                  onClick={() => applyStyle({ color: swatch.value })}
+                  className={`h-7 w-7 rounded-full ring-2 ring-offset-2 ${color === swatch.value ? 'ring-sky-500' : 'ring-transparent'}`}
                   style={{ background: swatch.value }}
                 />
               ))}
