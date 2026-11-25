@@ -765,7 +765,7 @@ def mini_op_svg(title: str, headers: list[str], rows: list[list[str]], red_row: 
                 f'<text x="{x + size_x / 2}" y="{y + 24}" text-anchor="middle" font-size="15" fill="#1e1b4b" font-family="Segoe UI, Arial, sans-serif">{esc(value)}</text>'
             )
     parts.append("</svg>")
-    return "".join(parts)
+    return "".join(parts) + "\n"
 
 
 def truth_svg(headers: list[str], rows: list[list[str]], title: str) -> str:
