@@ -292,7 +292,7 @@ function ExamTheoryPanel({ lesson, marked, onMark, navigate }) {
       ) : (
         <>
           {window.LessonAttachments && (
-            <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+            <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} statement={lesson.content} />
           )}
           <div
             className="theory-content mt-6"
@@ -357,7 +357,7 @@ function ExamRadioPanel({ lesson, step, attemptId, onUpdated, navigate }) {
     <div>
       <ExamLessonHeader kind="radio" title={lesson.title} label="Один правильный ответ"/>
       {window.LessonAttachments && (
-        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} statement={lesson.question_text} options={lesson.answer_options} />
       )}
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
         <p className="text-[14px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
@@ -452,7 +452,7 @@ function ExamCheckboxPanel({ lesson, step, attemptId, onUpdated, navigate }) {
     <div>
       <ExamLessonHeader kind="checkbox" title={lesson.title} label="Несколько правильных ответов"/>
       {window.LessonAttachments && (
-        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} statement={lesson.question_text} options={lesson.answer_options} />
       )}
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
         <p className="text-[14px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
@@ -540,7 +540,13 @@ function ExamCodingPanel({ lesson, step, attemptId, onUpdated, navigate }) {
     <div>
       <ExamLessonHeader kind="coding" title={lesson.title} label="Задача с кодом"/>
       {window.LessonAttachments && (
-        <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} />
+        <window.LessonAttachments
+          items={lesson.attachments}
+          navigate={navigate}
+          lessonTitle={lesson.title}
+          statement={[lesson.description, lesson.instructions].filter(Boolean).join('\n\n')}
+          tests={lesson.test_cases}
+        />
       )}
       <div className="mt-6 prose prose-sm max-w-none text-ink/75">
         <p>{lesson.description}</p>

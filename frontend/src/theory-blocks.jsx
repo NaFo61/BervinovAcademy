@@ -146,24 +146,63 @@ function prepareTheoryView(lesson) {
   return { blocks, legacyHtml, images };
 }
 
-function BoardButton({ urls, title, navigate }) {
+function theoryExerciseText(view) {
+  const chunks = [];
+  if (view?.blocks) {
+    view.blocks.forEach((block) => {
+      if (!block) return;
+      if (block.type === 'heading' && block.text) chunks.push(block.text);
+      else if ((block.type === 'text' || block.type === 'callout') && block.html) chunks.push(block.html);
+    });
+  } else if (view?.legacyHtml) {
+    chunks.push(view.legacyHtml);
+  }
+  return chunks.join('\n\n');
+}
+
+function BoardButton({ urls, title, navigate, statement, files }) {
   const loggedIn = !!window.getAccessToken?.();
   const enabled = typeof window.whiteboardFeatureEnabled === 'function'
     ? window.whiteboardFeatureEnabled()
     : true;
   const list = (urls || []).filter(Boolean);
+  const [busy, setBusy] = React.useState(false);
   if (!list.length || !enabled || typeof navigate !== 'function') return null;
   if (!loggedIn) {
     return <p className="mt-2 text-[12px] text-ink/45">Войдите, чтобы рисовать на личной доске.</p>;
   }
+  const text = window.buildExerciseBoardText
+    ? window.buildExerciseBoardText({ statement, files })
+    : '';
+  const send = async () => {
+    if (text && window.openTaskSheetOnBoard) {
+      setBusy(true);
+      try {
+        await window.openTaskSheetOnBoard(navigate, { urls: list, title, statement: text });
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    window.openLessonImagesOnBoard(navigate, { urls: list, title });
+  };
   return (
-    <button
-      type="button"
-      onClick={() => window.openLessonImagesOnBoard(navigate, { urls: list, title })}
-      className="mt-3 min-h-11 px-4 rounded-xl text-sm font-semibold text-violet-800 bg-violet-50 ring-1 ring-violet-200 hover:bg-violet-100"
-    >
-      На личную доску
-    </button>
+    <div>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={send}
+        title="Переместить на доску схему, текст урока и связанные части"
+        className="mt-3 min-h-11 px-4 rounded-xl text-sm font-semibold text-violet-800 bg-violet-50 ring-1 ring-violet-200 hover:bg-violet-100 disabled:opacity-60"
+      >
+        {busy ? 'Собираем…' : 'На личную доску'}
+      </button>
+      <p className="mt-2 text-[12px] text-ink/45 leading-relaxed">
+        {text
+          ? 'На доску попадут текст урока и схемы вместе. Можно рисовать сверху. Это черновик, на оценку не влияет.'
+          : 'Картинка откроется на вашей доске. Можно рисовать сверху. Это черновик, на оценку не влияет.'}
+      </p>
+    </div>
   );
 }
 
@@ -246,13 +285,25 @@ function TheoryBlocksView({ lesson, navigate }) {
   const zoomNode = zoom && window.LessonImageZoom
     ? <window.LessonImageZoom src={zoom.src} alt={zoom.alt} onClose={() => setZoom(null)} />
     : null;
+  const relatedFiles = attachments.filter((row) => {
+    const isImage = typeof window.isLessonImageAttachment === 'function'
+      ? window.isLessonImageAttachment
+      : () => false;
+    return !isImage(row);
+  });
   const gallery = (
     <>
       <TheoryShotRow
         images={view.images}
         onOpen={(image) => setZoom({ src: image.src, alt: image.alt || 'Схема' })}
       />
-      <BoardButton urls={imageUrls} title={lesson?.title} navigate={navigate} />
+      <BoardButton
+        urls={imageUrls}
+        title={lesson?.title}
+        navigate={navigate}
+        statement={theoryExerciseText(view)}
+        files={relatedFiles}
+      />
     </>
   );
   if (blocks) {

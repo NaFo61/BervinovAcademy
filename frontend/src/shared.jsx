@@ -1104,10 +1104,55 @@ function plainStatement(value) {
     .trim();
 }
 
+function sheetPlain(value) {
+  return String(value || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6]|tr)>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<[a-zA-Z/!][^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function buildExerciseBoardText({ statement, options, files, tests } = {}) {
+  const parts = [];
+  const task = sheetPlain(statement);
+  if (task) parts.push(task);
+  const choices = (Array.isArray(options) ? options : [])
+    .map((row) => sheetPlain(row && typeof row === 'object' ? row.text : row))
+    .filter(Boolean);
+  if (choices.length) {
+    parts.push(choices.map((text, index) => `${index + 1}. ${text}`).join('\n'));
+  }
+  const names = (Array.isArray(files) ? files : [])
+    .map((row) => sheetPlain(row && typeof row === 'object' ? (row.name || '') : row))
+    .filter(Boolean);
+  if (names.length) parts.push(`Файлы к заданию: ${names.join(', ')}.`);
+  const cases = [];
+  (Array.isArray(tests) ? tests : []).forEach((row, index) => {
+    if (!row || typeof row !== 'object') return;
+    const expected = String(row.expected_output || '');
+    if (expected.trim() === '[Скрытый тест]') return;
+    const input = sheetPlain(row.input_data);
+    const out = sheetPlain(expected);
+    if (!input && !out) return;
+    cases.push(`Тест ${index + 1}. Вход: ${input || '—'}. Ожидается: ${out || '—'}.`);
+  });
+  if (cases.length) parts.push(cases.join('\n'));
+  return parts.join('\n\n');
+}
+
 function wrapCanvasLines(ctx, text, maxWidth) {
-  const words = String(text || '').split(' ').filter(Boolean);
   const lines = [];
-  let line = '';
   const pushLong = (word) => {
     let chunk = '';
     for (const ch of word) {
@@ -1121,16 +1166,24 @@ function wrapCanvasLines(ctx, text, maxWidth) {
     }
     return chunk;
   };
-  for (const word of words) {
-    const next = line ? `${line} ${word}` : word;
-    if (ctx.measureText(next).width <= maxWidth) {
-      line = next;
-      continue;
+  String(text || '').split('\n').forEach((paragraph) => {
+    const words = paragraph.split(' ').filter(Boolean);
+    if (!words.length) {
+      lines.push('');
+      return;
+    }
+    let line = '';
+    for (const word of words) {
+      const next = line ? `${line} ${word}` : word;
+      if (ctx.measureText(next).width <= maxWidth) {
+        line = next;
+        continue;
+      }
+      if (line) lines.push(line);
+      line = ctx.measureText(word).width <= maxWidth ? word : pushLong(word);
     }
     if (line) lines.push(line);
-    line = ctx.measureText(word).width <= maxWidth ? word : pushLong(word);
-  }
-  if (line) lines.push(line);
+  });
   return lines.length ? lines : [''];
 }
 
@@ -1210,20 +1263,23 @@ function layoutSheetImages(images, contentW) {
 }
 
 async function composeTaskSheetBlob({ title, statement, imageUrls }) {
-  const text = plainStatement(statement);
+  const text = sheetPlain(statement);
   const urls = (imageUrls || []).filter(Boolean);
   if (!text || !urls.length || typeof document === 'undefined') return null;
   const images = [];
   for (const url of urls) {
     images.push(await loadDrawableImage(url));
   }
-  const pixel = 2;
   const cssW = 1240;
   const pad = 40;
   const contentW = cssW - pad * 2;
   const measure = document.createElement('canvas').getContext('2d');
   measure.font = `22px ${SHEET_FONT}`;
-  const bodyLines = wrapCanvasLines(measure, text, contentW);
+  let bodyLines = wrapCanvasLines(measure, text, contentW);
+  if (bodyLines.length > 160) {
+    bodyLines = bodyLines.slice(0, 160);
+    bodyLines.push('Дальше текст остаётся на странице урока.');
+  }
   const heading = plainStatement(title);
   measure.font = `700 26px ${SHEET_FONT}`;
   const titleLines = heading ? wrapCanvasLines(measure, heading, contentW) : [];
@@ -1231,6 +1287,7 @@ async function composeTaskSheetBlob({ title, statement, imageUrls }) {
   const titleH = titleLines.length ? titleLines.length * 34 + 8 : 0;
   const bodyH = bodyLines.length * 32;
   const cssH = pad + titleH + bodyH + 28 + layout.height + pad;
+  const pixel = cssH > 7000 ? 1 : 2;
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(cssW * pixel);
   canvas.height = Math.round(cssH * pixel);
@@ -1280,7 +1337,7 @@ async function composeTaskSheetBlob({ title, statement, imageUrls }) {
 
 async function openTaskSheetOnBoard(navigate, { urls, title, statement } = {}) {
   const list = (urls || []).filter(Boolean);
-  const text = plainStatement(statement);
+  const text = sheetPlain(statement);
   if (!list.length || typeof navigate !== 'function') return;
   if (!text) {
     openLessonImagesOnBoard(navigate, { urls: list, title });
@@ -1388,7 +1445,7 @@ function LessonImageZoom({ src, alt, onClose }) {
   return tree;
 }
 
-function LessonAttachments({ items, navigate, lessonTitle, hideImages, statement }) {
+function LessonAttachments({ items, navigate, lessonTitle, hideImages, statement, options, tests }) {
   const [zoom, setZoom] = React.useState(null);
   const [fileBusy, setFileBusy] = React.useState('');
   const [sheetBusy, setSheetBusy] = React.useState(false);
@@ -1398,7 +1455,7 @@ function LessonAttachments({ items, navigate, lessonTitle, hideImages, statement
   if (!images.length && !files.length) return null;
   const loggedIn = !!getAccessToken();
   const canBoard = loggedIn && whiteboardFeatureEnabled() && images.length > 0 && typeof navigate === 'function';
-  const statementText = plainStatement(statement);
+  const statementText = buildExerciseBoardText({ statement, options, files, tests });
   const sendToBoard = async () => {
     const urls = images.map((row) => mediaUrl(row.url) || row.url).filter(Boolean);
     if (!statementText) {
@@ -1445,6 +1502,7 @@ function LessonAttachments({ items, navigate, lessonTitle, hideImages, statement
               type="button"
               disabled={sheetBusy}
               onClick={sendToBoard}
+              title="Переместить на доску схему, условие и связанные части"
               className="mt-3 min-h-11 w-full sm:w-auto px-4 rounded-xl text-sm font-semibold text-violet-800 bg-violet-50 ring-1 ring-violet-200 hover:bg-violet-100 disabled:opacity-60"
             >
               {sheetBusy ? 'Собираем…' : 'На личную доску'}
@@ -1453,7 +1511,7 @@ function LessonAttachments({ items, navigate, lessonTitle, hideImages, statement
           {canBoard && (
             <p className="mt-2 text-[12px] text-ink/45 leading-relaxed">
               {statementText
-                ? 'Условие и схема откроются одной картинкой. Можно рисовать сверху. Это черновик, на оценку не влияет.'
+                ? 'На доску попадёт задание целиком: условие, схема и то, что к ним относится. Можно рисовать сверху. Это черновик, на оценку не влияет.'
                 : 'Картинка откроется на вашей доске. Можно рисовать сверху. Это черновик, на оценку не влияет.'}
             </p>
           )}
@@ -3478,6 +3536,9 @@ Object.assign(window, {
   LessonAttachments,
   isLessonImageAttachment,
   openLessonImagesOnBoard,
+  openTaskSheetOnBoard,
+  buildExerciseBoardText,
+  composeTaskSheetBlob,
   consumeLessonBoardImport,
   whiteboardFeatureEnabled,
   saveUserBoardSnapshot,
