@@ -283,3 +283,36 @@ def test_erased_stroke_is_not_drawn_again(student_user):
         await student.disconnect()
 
     _run(run)
+
+
+@override_settings(WHITEBOARD_ENABLED=True)
+def test_far_stroke_and_picture_fit_on_the_canvas(
+    student_client, student_user
+):
+    stroke = _stroke("strokefar")
+    stroke["points"] = [[-40000, 250000], [80000, -10]]
+    picture = {
+        "id": "imagefar01",
+        "type": "image",
+        "src": "/media/board.png",
+        "x": -12000,
+        "y": 90000,
+        "w": 320,
+        "h": 180,
+    }
+    saved = _put_board(student_client, student_user, [stroke, picture], 0)
+    assert saved.status_code == status.HTTP_200_OK
+    board = UserBoard.objects.get(owner=student_user)
+    stored = {item["id"]: item for item in board.snapshot_json["items"]}
+    assert stored["strokefar"]["points"][0] == [-40000, 250000]
+    assert stored["imagefar01"]["x"] == -12000
+
+    outside = _stroke("strokeout")
+    outside["points"] = [[10_000_000, 0], [0, 0]]
+    rejected = _put_board(
+        student_client,
+        student_user,
+        [outside],
+        board.snapshot_json["revision"],
+    )
+    assert rejected.status_code == status.HTTP_400_BAD_REQUEST

@@ -16,6 +16,8 @@ VERSION = 1
 MAX_ITEMS = 800
 MAX_POINTS = 2500
 MAX_SNAPSHOT_CHARS = 4 * 1024 * 1024
+WORLD_MIN = -1_000_000
+WORLD_MAX = 1_000_000
 
 _ITEM_ID_RE = re.compile(r"^[A-Za-z0-9_-]{6,40}$")
 _COLORS = {
@@ -156,8 +158,18 @@ def validate_item(raw: Any) -> dict:
             "id": item_id,
             "type": "image",
             "src": _src(raw.get("src")),
-            "x": _num(raw.get("x"), -200, 8000, "Неверное место картинки."),
-            "y": _num(raw.get("y"), -200, 8000, "Неверное место картинки."),
+            "x": _num(
+                raw.get("x"),
+                WORLD_MIN,
+                WORLD_MAX,
+                "Неверное место картинки.",
+            ),
+            "y": _num(
+                raw.get("y"),
+                WORLD_MIN,
+                WORLD_MAX,
+                "Неверное место картинки.",
+            ),
             "w": _num(raw.get("w"), 8, 2000, "Неверный размер картинки."),
             "h": _num(raw.get("h"), 8, 2000, "Неверный размер картинки."),
         }
@@ -411,8 +423,8 @@ def _points(value: Any) -> list:
             raise BoardDocumentError("Неверная линия.")
         points.append(
             [
-                _num(pair[0], -200, 8000, "Неверная линия."),
-                _num(pair[1], -200, 8000, "Неверная линия."),
+                _num(pair[0], WORLD_MIN, WORLD_MAX, "Неверная линия."),
+                _num(pair[1], WORLD_MIN, WORLD_MAX, "Неверная линия."),
             ]
         )
     return points
