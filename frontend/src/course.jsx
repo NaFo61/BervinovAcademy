@@ -147,7 +147,12 @@ function CoursePage({ navigate, hashParams }) {
       <div className="max-w-7xl mx-auto px-5 sm:px-8 py-14 grid lg:grid-cols-[1fr_340px] gap-10">
         <div className="space-y-10">
           <CourseHighlights course={course}/>
-          <CourseModulesSection modules={modules} navigate={navigate} course={course}/>
+          <CourseModulesSection
+            modules={apiRow.modules || []}
+            exams={apiRow.exams || []}
+            summary={modules}
+            navigate={navigate}
+            course={course}/>
         </div>
         <div>
           <CourseSidebar course={course} navigate={navigate}
@@ -336,97 +341,52 @@ function CourseHighlights({ course }) {
   );
 }
 
-// ── Modules accordion ─────────────────────────────────────────────────────────
-function CourseModulesSection({ modules, navigate, course }) {
-  const M = FM.motion;
-  const [open, setOpen] = React.useState(new Set([modules[0]?.id]));
+// ── Course program: modules in reading order, nothing to expand ─────────────
+function CourseModulesSection({ modules, exams, summary, navigate, course }) {
+  const Flow = window.CourseModuleFlow;
+  const done = React.useMemo(() => new Set(), []);
+  const totalActivities = (summary || []).reduce((s, m) => s + (m.lessons || 0) + (m.quizzes || 0) + (m.tasks || 0), 0);
 
-  const toggle = (id) => {
-    setOpen((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  const openLearn = (params) => {
+    if (!window.getAccessToken()) {
+      navigate(Routes.AUTH);
+      return;
+    }
+    navigate(Routes.LEARN, params);
   };
-
-  const totalActivities = modules.reduce((s, m) => s + (m.lessons || 0) + (m.quizzes || 0), 0);
 
   return (
     <div>
-      <div className="flex items-end justify-between mb-6">
+      <div className="flex items-end justify-between mb-6 gap-4">
         <h2 className="text-2xl font-extrabold tracking-tight">Программа курса</h2>
-        <div className="text-sm text-ink/50">
-          {modules.length} модулей{totalActivities > 0 ? ` · ${totalActivities} материалов` : ''}
+        <div className="text-sm text-ink/50 text-right">
+          {(summary || modules).length} модулей{totalActivities > 0 ? ` · ${totalActivities} материалов` : ''}
         </div>
       </div>
 
-      <div className="space-y-3">
-        {modules.map((mod, mi) => {
-          const isOpen = open.has(mod.id);
-          const activityCount = (mod.lessons || 0) + (mod.quizzes || 0);
-          return (
-            <M.div key={mod.id}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-50px' }}
-              transition={{ duration: 0.4, delay: mi * 0.06, ease: [0.16, 1, 0.3, 1] }}
-              className="bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft overflow-hidden">
-
-              {/* module header */}
-              <button type="button" onClick={() => toggle(mod.id)}
-                className="w-full text-left px-6 py-5 flex items-center gap-4 hover:bg-black/[0.015] transition-colors group">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl bg-paper shrink-0 ring-1 ring-black/[0.06]">
-                  {mod.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-widest text-ink/40">Модуль {mi + 1}</span>
-                    {activityCount > 0 && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-700 font-semibold">
-                        {activityCount} материалов
-                      </span>
-                    )}
-                  </div>
-                  <div className="font-bold text-[16px] leading-snug truncate">{mod.title}</div>
-                  {(mod.lessons > 0 || mod.quizzes > 0) ? (
-                    <div className="text-xs text-ink/50 mt-1 flex items-center gap-3 flex-wrap">
-                      {mod.lessons > 0 && <span>{mod.lessons} уроков</span>}
-                      {mod.lessons > 0 && mod.quizzes > 0 && <span>·</span>}
-                      {mod.quizzes > 0 && <span>{mod.quizzes} тестов</span>}
-                    </div>
-                  ) : mod.description ? (
-                    <p className="text-xs text-ink/50 mt-1 line-clamp-2">{mod.description}</p>
-                  ) : null}
-                </div>
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all shrink-0
-                  ${isOpen ? 'grad-bg text-white' : 'bg-black/[0.04] text-ink/50 group-hover:bg-black/[0.07]'}`}>
-                  <I.ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}/>
-                </div>
-              </button>
-
-              {/* module items */}
-              <FM.AnimatePresence initial={false}>
-                {isOpen && (
-                  <M.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
-                    <div className="border-t border-black/[0.05]">
-                      <p className="px-6 py-4 text-sm text-ink/65 leading-relaxed">
-                        {mod.description
-                          || (activityCount > 0
-                            ? 'Уроки и тесты откроются в следующих версиях интерфейса.'
-                            : 'Содержимое модуля скоро появится.')}
-                      </p>
-                    </div>
-                  </M.div>
-                )}
-              </FM.AnimatePresence>
-            </M.div>
-          );
-        })}
-      </div>
+      {modules.length === 0 && exams.length === 0 ? (
+        <p className="text-sm text-ink/50">В этом курсе пока нет материалов</p>
+      ) : Flow ? (
+        <Flow
+          modules={modules}
+          exams={exams}
+          currentLesson={null}
+          completed={done}
+          inExamMode={false}
+          examId={null}
+          onOpenLesson={(lesson) => openLearn({
+            course: course.id,
+            module: lesson.modId,
+            lesson: `${lesson.type}-${lesson.id}`,
+          })}
+          onOpenExam={(exam) => openLearn({
+            course: course.id,
+            exam: exam.public_id,
+          })}
+        />
+      ) : (
+        <p className="text-sm text-ink/50">Программа курса загружается…</p>
+      )}
     </div>
   );
 }

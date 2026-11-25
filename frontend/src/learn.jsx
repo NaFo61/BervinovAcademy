@@ -71,7 +71,7 @@ function groupLessonsByUnit(lessons) {
     }
     index.get(key).lessons.push(lesson);
   }
-  if (groups.length < 2) return null;
+  if (!groups.length) return null;
   if (rest.length) groups.push({ key: 'ещё', lessons: rest });
   return groups;
 }
@@ -146,6 +146,159 @@ function buildContentOutline(modules, exams) {
 
 function lessonKey(type, id) { return type + '-' + id; }
 
+function moduleLessonsFlat(mod) {
+  return buildModuleLessonItems(mod).map(({ type, lesson }) => ({
+    type,
+    id: lesson.public_id,
+    title: lesson.title,
+    order: lesson.order_index || 0,
+    modId: mod.public_id,
+    modTitle: mod.title,
+  }));
+}
+
+function publicModuleBlurb(text) {
+  return String(text || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !/^content-pack\s*:/i.test(line))
+    .join(' ')
+    .trim();
+}
+
+function taskGlyph(type) {
+  if (type === 'theory') return '📖';
+  if (type === 'radio') return '?';
+  if (type === 'checkbox') return '☑';
+  if (type === 'short_answer') return '✎';
+  if (type === 'coding') return '>_';
+  return '•';
+}
+
+function TaskSquares({ lessons, currentLesson, completed, onOpen }) {
+  return (
+    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-1.5">
+      {(lessons || []).map((lesson, idx) => {
+        const active = currentLesson
+          && currentLesson.type === lesson.type
+          && currentLesson.id === lesson.id;
+        const done = completed.has(lessonKey(lesson.type, lesson.id));
+        return (
+          <button
+            key={lessonKey(lesson.type, lesson.id)}
+            type="button"
+            onClick={() => onOpen(lesson)}
+            title={`${idx + 1}. ${lesson.title}`}
+            aria-label={`${idx + 1}. ${lesson.title}`}
+            aria-current={active ? 'true' : undefined}
+            className={`relative min-w-[44px] min-h-[44px] w-full rounded-lg ring-1 transition-all select-none
+              ${active ? 'ring-violet-500 bg-violet-50' : 'ring-black/[0.06] bg-white hover:ring-violet-200 hover:bg-violet-50/30'}
+            `}
+          >
+            <div className={`absolute inset-0 rounded-lg ${done ? 'bg-emerald-500/[0.10]' : ''}`}/>
+            <div className="absolute top-0.5 left-1 text-[9px] font-mono text-ink/35">
+              {idx + 1}
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              {done ? (
+                <span className="check-dot" style={{ width: 18, height: 18 }}/>
+              ) : (
+                <span className="font-mono text-[13px] text-ink/70">{taskGlyph(lesson.type)}</span>
+              )}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CourseModuleFlow({ modules, exams, currentLesson, completed, inExamMode, examId, onOpenLesson, onOpenExam }) {
+  const outline = buildContentOutline(modules, exams);
+  if (outline.length === 0) return null;
+
+  return (
+    <div className="mb-8 rounded-2xl bg-white ring-1 ring-black/[0.06]">
+      {outline.map((item, index) => {
+        const divided = index > 0 ? 'border-t border-black/[0.05]' : '';
+        if (item.kind === 'exam') {
+          const exam = item.data;
+          const count = buildExamLessonItems(exam).length;
+          const active = inExamMode && examId === exam.public_id;
+          return (
+            <section key={`exam-${exam.public_id}`} className={`px-3 py-4 sm:px-4 ${divided} ${active ? 'bg-amber-500/[0.06]' : ''}`}>
+              <button
+                type="button"
+                onClick={() => onOpenExam(exam)}
+                className="w-full text-left"
+              >
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-amber-700">Контрольная</div>
+                <div className={`mt-0.5 text-[15px] font-bold leading-snug ${active ? 'text-amber-900' : 'text-ink'}`}>{exam.title}</div>
+                <div className="mt-0.5 text-[12px] text-ink/50">
+                  {exam.duration_minutes} мин · {count} заданий
+                </div>
+              </button>
+            </section>
+          );
+        }
+
+        const mod = item.data;
+        const lessons = moduleLessonsFlat(mod);
+        const units = groupLessonsByUnit(lessons);
+        const done = lessons.filter((lesson) => completed.has(lessonKey(lesson.type, lesson.id))).length;
+        const current = !inExamMode && currentLesson && currentLesson.modId === mod.public_id;
+        const blurb = publicModuleBlurb(mod.description);
+        return (
+          <section
+            key={mod.public_id}
+            className={`px-3 py-4 sm:px-4 ${divided} ${current ? 'bg-violet-500/[0.035]' : ''}`}
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className={`min-w-0 text-[15px] font-bold leading-snug ${current ? 'text-violet-800' : 'text-ink'}`}>
+                {mod.title}
+              </h2>
+              {lessons.length > 0 && (
+                <span className="shrink-0 text-[11px] text-ink/45">{done}/{lessons.length}</span>
+              )}
+            </div>
+            {blurb ? (
+              <p className="mt-1 text-[12px] leading-relaxed text-ink/50 line-clamp-2">{blurb}</p>
+            ) : null}
+            {lessons.length === 0 ? (
+              <p className="mt-2 text-[12px] leading-relaxed text-ink/45">В этом модуле пока нет материалов</p>
+            ) : units ? (
+              <div className="mt-3 space-y-3">
+                {units.map((group) => (
+                  <div key={group.key}>
+                    <div className="mb-1.5 text-[12px] font-semibold leading-snug text-ink/70">
+                      {unitChipLabel(group)}
+                    </div>
+                    <TaskSquares
+                      lessons={group.lessons}
+                      currentLesson={inExamMode ? null : currentLesson}
+                      completed={completed}
+                      onOpen={onOpenLesson}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-3">
+                <TaskSquares
+                  lessons={lessons}
+                  currentLesson={inExamMode ? null : currentLesson}
+                  completed={completed}
+                  onOpen={onOpenLesson}
+                />
+              </div>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 function LearnPage({ navigate, hashParams }) {
@@ -217,8 +370,6 @@ function LearnPage({ navigate, hashParams }) {
 
   // ── sidebar toggle (mobile) ──
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const [openTasks, setOpenTasks] = React.useState(() => new Set());
-  const [mapOpen, setMapOpen] = React.useState(false);
 
   // ── load course ──
   React.useEffect(() => {
@@ -247,20 +398,6 @@ function LearnPage({ navigate, hashParams }) {
   }, [courseData, examParam]);
 
   const inExamMode = !!examParam;
-
-  const moduleLessons = React.useMemo(() => {
-    if (!courseData || !moduleParam) return [];
-    const mod = (courseData.modules || []).find(m => m.public_id === moduleParam) || null;
-    if (!mod) return [];
-    return buildModuleLessonItems(mod).map(({ type, lesson }) => ({
-      type,
-      id: lesson.public_id,
-      title: lesson.title,
-      order: lesson.order_index || 0,
-      modId: mod.public_id,
-      modTitle: mod.title,
-    }));
-  }, [courseData, moduleParam]);
 
   // ── redirect to first tile ──
   React.useEffect(() => {
@@ -314,29 +451,6 @@ function LearnPage({ navigate, hashParams }) {
     if (!id) return null;
     return (courseData.modules || []).find(m => m.public_id === id) || null;
   }, [courseData, moduleParam, currentLesson]);
-  const hasModuleStub = !!currentModule && moduleLessons.length === 0;
-  const lessonUnits = React.useMemo(
-    () => groupLessonsByUnit(moduleLessons),
-    [moduleLessons],
-  );
-  const activeUnit = React.useMemo(() => {
-    if (!lessonUnits) return null;
-    const key = lessonUnitKey(currentLesson?.title || '');
-    return lessonUnits.find((group) => group.key === key) || lessonUnits[0];
-  }, [lessonUnits, currentLesson]);
-  const tiles = activeUnit ? activeUnit.lessons : moduleLessons;
-
-  React.useEffect(() => {
-    if (!currentModule) return undefined;
-    const key = moduleTaskNumber(currentModule) || 'другое';
-    setOpenTasks((prev) => {
-      if (prev.has(key)) return prev;
-      const next = new Set(prev);
-      next.add(key);
-      return next;
-    });
-    return undefined;
-  }, [currentModule]);
 
   // ── keep module param consistent with current lesson ──
   React.useEffect(() => {
@@ -454,6 +568,18 @@ function LearnPage({ navigate, hashParams }) {
     navigate(Routes.LEARN, { course: courseId, module: lesson.modId, lesson: lessonKey(lesson.type, lesson.id) });
     setSidebarOpen(false);
   };
+  const openedWithoutLesson = React.useRef(!lessonParam);
+  React.useEffect(() => {
+    if (courseState !== 'ok' || examParam || !lessonId) return undefined;
+    if (openedWithoutLesson.current) {
+      openedWithoutLesson.current = false;
+      return undefined;
+    }
+    const timer = window.setTimeout(() => {
+      document.getElementById('lesson-work')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+    return () => window.clearTimeout(timer);
+  }, [courseState, lessonType, lessonId, examParam]);
   const goNext = () => {
     if (currentIdx < allLessons.length - 1) goTo(allLessons[currentIdx + 1]);
     else navigate(Routes.COURSE, { id: courseId });
@@ -641,26 +767,17 @@ function LearnPage({ navigate, hashParams }) {
         {/* modules + exams */}
         <div className="flex-1 overflow-y-auto scrollbar-thin py-2">
           {groupModulesByTask((courseData && courseData.modules) || []).map((task) => {
-            const taskOpen = openTasks.has(task.key);
+            const taskLabel = task.key === 'другое' ? '' : `Задание ${task.key}`;
             return (
             <div key={`task-${task.key}`} className="mb-1">
-              <button
-                type="button"
-                onClick={() => setOpenTasks((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(task.key)) next.delete(task.key);
-                  else next.add(task.key);
-                  return next;
-                })}
-                className="w-full px-4 pt-3 pb-1 flex items-center justify-between gap-2 text-left"
-                aria-expanded={taskOpen}
-              >
-                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink/35">
-                  {task.key === 'другое' ? 'Другое' : `Задание ${task.key}`}
-                </span>
-                <I.ChevronRight className={`w-3 h-3 text-ink/30 transition-transform ${taskOpen ? 'rotate-90' : ''}`} />
-              </button>
-              {taskOpen && task.modules.map((mod) => {
+              {taskLabel ? (
+                <div className="px-4 pt-3 pb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink/35">
+                    {taskLabel}
+                  </span>
+                </div>
+              ) : null}
+              {task.modules.map((mod) => {
                 const items = buildModuleLessonItems(mod);
                 const groups = groupLessonsByUnit(items.map(({ type, lesson }) => ({
                   type,
@@ -700,9 +817,7 @@ function LearnPage({ navigate, hashParams }) {
                 }
                 return (
                   <div key={`mod-${mod.public_id}`}>
-                    {task.modules.length > 1 && (
-                      <div className="px-6 pt-1 text-[10px] text-ink/40 truncate">{mod.title}</div>
-                    )}
+                    <div className="px-5 pt-2 text-[11px] font-semibold text-ink/55 truncate">{mod.title}</div>
                     {groups.map((group) => {
                       const first = group.lessons[0];
                       const active = !inExamMode && currentLesson
@@ -843,102 +958,21 @@ function LearnPage({ navigate, hashParams }) {
               </button>
             )}
 
-            {/* module tiles */}
-            {currentModule && (
-              <div className="mb-6 rounded-2xl bg-white ring-1 ring-black/[0.06] px-3 py-3 sm:px-4">
-                <button
-                  type="button"
-                  onClick={() => setMapOpen((open) => !open)}
-                  className="w-full flex items-center gap-3 text-left"
-                  aria-expanded={mapOpen}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[10px] font-semibold uppercase tracking-widest text-ink/40">Модуль</div>
-                    <div className="text-[15px] font-bold text-ink truncate">{currentModule.title}</div>
-                    {!mapOpen && (
-                      <div className="mt-0.5 text-[12px] text-ink/50 truncate">
-                        {activeUnit ? unitChipLabel(activeUnit) : 'Уроки модуля'}
-                        {tiles.length > 0 ? ` · ${tiles.filter(l => completed.has(lessonKey(l.type, l.id))).length}/${tiles.length}` : ''}
-                      </div>
-                    )}
-                  </div>
-                  <span className="shrink-0 text-[12px] font-semibold text-violet-700">
-                    {mapOpen ? 'Свернуть' : 'Развернуть'}
-                  </span>
-                </button>
+            <CourseModuleFlow
+              modules={(courseData && courseData.modules) || []}
+              exams={(courseData && courseData.exams) || []}
+              currentLesson={currentLesson}
+              completed={completed}
+              inExamMode={inExamMode}
+              examId={examParam}
+              onOpenLesson={goTo}
+              onOpenExam={(exam) => {
+                navigate(Routes.LEARN, { course: courseId, exam: exam.public_id });
+                setSidebarOpen(false);
+              }}
+            />
 
-                {mapOpen && tiles.length > 0 && (
-                  <div className="mt-3 text-right text-[11px] text-ink/45">
-                    {tiles.filter(l => completed.has(lessonKey(l.type, l.id))).length}/{tiles.length} {activeUnit ? 'в уроке' : 'в модуле'}
-                  </div>
-                )}
-
-                {mapOpen && activeUnit && (
-                  <div className="flex flex-wrap gap-2 mt-3 mb-3">
-                    {lessonUnits.map((group) => {
-                      const on = group.key === activeUnit.key;
-                      return (
-                        <button
-                          key={group.key}
-                          type="button"
-                          onClick={() => goTo(group.lessons[0])}
-                          className={`h-9 px-3 rounded-lg text-xs font-semibold ring-1 ${on ? 'bg-violet-600 text-white ring-violet-600' : 'bg-white text-ink/70 ring-black/[0.08] hover:bg-violet-50'}`}
-                        >
-                          {unitChipLabel(group)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {mapOpen && hasModuleStub ? (
-                  <div className="rounded-2xl bg-black/[0.02] ring-1 ring-black/[0.06] p-6 text-center text-ink/45">
-                    <div className="text-3xl mb-2">📦</div>
-                    <div className="text-sm font-semibold text-ink/60">В этом модуле пока нет материалов</div>
-                    <div className="text-xs mt-1">Выберите другой модуль слева</div>
-                  </div>
-                ) : mapOpen ? (
-                  <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-1.5">
-                    {tiles.map((l, idx) => {
-                      const active = currentLesson?.type === l.type && currentLesson?.id === l.id;
-                      const done = completed.has(lessonKey(l.type, l.id));
-                      const icon = (
-                        l.type === 'theory' ? '📖'
-                        : l.type === 'radio' ? '?'
-                        : l.type === 'checkbox' ? '☑'
-                        : l.type === 'short_answer' ? '✎'
-                        : l.type === 'coding' ? '>_'
-                        : '•'
-                      );
-                      return (
-                        <button
-                          key={lessonKey(l.type, l.id)}
-                          type="button"
-                          onClick={() => goTo(l)}
-                          title={`${idx + 1}. ${l.title}`}
-                          className={`relative min-w-[44px] min-h-[44px] w-full rounded-lg ring-1 transition-all select-none
-                            ${active ? 'ring-violet-500 bg-violet-50' : 'ring-black/[0.06] bg-white hover:ring-violet-200 hover:bg-violet-50/30'}
-                          `}
-                        >
-                          <div className={`absolute inset-0 rounded-lg ${done ? 'bg-emerald-500/[0.10]' : ''}`}/>
-                          <div className="absolute top-0.5 left-1 text-[9px] font-mono text-ink/35">
-                            {idx + 1}
-                          </div>
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            {done ? (
-                              <span className="check-dot" style={{ width: 18, height: 18 }}/>
-                            ) : (
-                              <span className="font-mono text-[13px] text-ink/70">{icon}</span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </div>
-            )}
-
+            <div id="lesson-work">
             {lessonLoading ? (
               <div className="flex items-center justify-center gap-3 py-24 text-ink/50">
                 <span className="w-6 h-6 rounded-full border-2 border-violet-500 border-t-transparent animate-spin"/>
@@ -1030,10 +1064,10 @@ function LearnPage({ navigate, hashParams }) {
               />
 
             ) : (
-              <div className="text-center py-24 text-ink/40">
+              <div className="text-center py-16 text-ink/40">
                 <div className="text-5xl mb-4">🎓</div>
-                <div className="text-lg font-semibold text-ink/60 mb-2">Выбери урок</div>
-                <div className="text-sm">Нажми на любой урок в боковой панели слева</div>
+                <div className="text-lg font-semibold text-ink/60 mb-2">Выбери задание</div>
+                <div className="text-sm">Нажми на квадрат в программе курса выше</div>
               </div>
             )}
 
@@ -1055,6 +1089,7 @@ function LearnPage({ navigate, hashParams }) {
                 </button>
               </div>
             )}
+            </div>
           </div>
           )}
         </div>
@@ -2050,3 +2085,4 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin, onRefreshLesson, na
 }
 
 window.LearnPage = LearnPage;
+window.CourseModuleFlow = CourseModuleFlow;
