@@ -765,7 +765,7 @@ def mini_op_svg(title: str, headers: list[str], rows: list[list[str]], red_row: 
                 f'<text x="{x + size_x / 2}" y="{y + 24}" text-anchor="middle" font-size="15" fill="#1e1b4b" font-family="Segoe UI, Arial, sans-serif">{esc(value)}</text>'
             )
     parts.append("</svg>")
-    return "".join(parts)
+    return "".join(parts) + "\n"
 
 
 def truth_svg(headers: list[str], rows: list[list[str]], title: str) -> str:
@@ -1043,7 +1043,7 @@ def build_task2(store: dict[str, str]):
     contents = [sections[0] + "\n" + sections[1], sections[2], sections[3]]
     names = {
         "A": "Сколько единиц",
-        "B": "Стрелка «если, то»",
+        "B": "Когда F равна 0 или 1",
         "C": "Буквы столбцов",
     }
     lessons = []
@@ -1052,8 +1052,11 @@ def build_task2(store: dict[str, str]):
         for key, points in (("practice", 3), ("homework", 3)):
             for index, row in enumerate(groups[proto][key], start=1):
                 questions.append(row_lesson(proto, "Задача", index, row, points, key))
-        demo = groups[proto]["demo"]
-        src = fragment_code(demo) if demo["kind"] == "frag" else py_count(demo["py"])
+        src = {
+            "A": exam_count_code(),
+            "B": exam_f1_code(),
+            "C": exam_mixed_code(),
+        }[proto]
         lessons.extend(pack_unit(f"2.{'ABC'.index(proto) + 1}", names[proto], html, questions, src))
     return lessons, "\n".join(item["content"] for item in lessons if item["type"] == "theory")
 
@@ -1209,45 +1212,307 @@ def radios2():
     return out
 
 
-def theory_lesson_2(groups, store) -> dict:
-    demo_a = groups["A"]["demo"]
-    demo_b = groups["B"]["demo"]
-    demo_c = groups["C"]["demo"]
-    store["n2-demo-a.svg"] = truth_svg(*blank_table(demo_a["expr"]), "Пример: столбец F пока пустой")
-    store["n2-demo-b.svg"] = truth_svg(*blank_table(demo_b["expr"]), "Пример со стрелкой: столбец F пустой")
-    store["n2-demo-c.svg"] = fragment_svg(demo_c)
+def exam_f2026(x, y, z, w) -> bool:
+    """(x ∨ y) ∧ ¬(y ≡ z) ∧ ¬w. Демоверсия: единиц ровно три."""
+    return bool((x or y) and (y != z) and (not w))
+
+
+def exam_f2024(w, x, y, z) -> bool:
+    """((w → y) → x) ∨ ¬z. Ноль только в трёх строках."""
+    arrow = (not w) or y
+    return bool(((not arrow) or x) or (not z))
+
+
+def exam_fmixed(x, y, z, w) -> bool:
+    """¬(x → z) ∨ (y ≡ w) ∨ y. Формула с экзамена, снаружи ИЛИ."""
+    arrow = (not x) or z
+    return bool((not arrow) or (y == w) or y)
+
+
+def _column_orders(rows, fn) -> list[str]:
+    """Какие порядки букв xyzw совпадают с фрагментом. None в клетке — пусто."""
+    good = []
+    blanks = [
+        (i, j)
+        for i, row in enumerate(rows)
+        for j, cell in enumerate(row[:4])
+        if cell is None
+    ]
+    for perm in itertools.permutations("xyzw"):
+        hit = False
+        for fill in itertools.product((0, 1), repeat=len(blanks)):
+            grid = [list(row[:4]) for row in rows]
+            for (i, j), bit in zip(blanks, fill):
+                grid[i][j] = bit
+            if len({tuple(line) for line in grid}) != len(rows):
+                continue
+            ok = True
+            for line, src in zip(grid, rows):
+                env = dict(zip(perm, line))
+                got = 1 if fn(env["x"], env["y"], env["z"], env["w"]) else 0
+                if got != src[4]:
+                    ok = False
+                    break
+            if ok:
+                hit = True
+                break
+        if hit:
+            good.append("".join(perm))
+    return good
+
+
+def verify_boundary_example() -> None:
+    """Три примера теории: полная формула, F = 0 и смешанный фрагмент."""
+    ones = [
+        bits
+        for bits in itertools.product((0, 1), repeat=4)
+        if exam_f2026(*bits)
+    ]
+    if ones != [(0, 1, 0, 0), (1, 0, 1, 0), (1, 1, 0, 0)]:
+        raise SystemExit(f"единицы демоверсии изменились: {ones}")
+    fragment_f1 = [
+        (1, None, 1, None, 1),
+        (0, 1, None, 0, 1),
+        (None, 1, 1, 0, 1),
+    ]
+    if _column_orders(fragment_f1, exam_f2026) != ["zyxw"]:
+        raise SystemExit("фрагмент F = 1 разошёлся с zyxw")
+    zeros = []
+    for x, y, z, w in itertools.product((0, 1), repeat=4):
+        if not exam_f2024(w, x, y, z):
+            zeros.append((z, y, w, x, 0))
+    expect = [(1, 0, 0, 0, 0), (1, 1, 0, 0, 0), (1, 1, 1, 0, 0)]
+    if sorted(zeros) != sorted(expect):
+        raise SystemExit(f"нули формулы со стрелкой изменились: {zeros}")
+    shown_zero = [
+        (1, 0, 0, 0, 0),
+        (1, 1, 1, 0, 0),
+        (1, 1, 0, 0, 0),
+    ]
+    if _column_orders(
+        shown_zero, lambda x, y, z, w: exam_f2024(w, x, y, z)
+    ) != ["zywx"]:
+        raise SystemExit("фрагмент F = 0 разошёлся с zywx")
+    mixed = [
+        (0, 0, 1, 1, 0),
+        (0, 0, 1, 0, 1),
+        (0, 1, 1, 1, 1),
+    ]
+    if _column_orders(mixed, exam_fmixed) != ["xyzw"]:
+        raise SystemExit("смешанный фрагмент разошёлся с xyzw")
+
+
+def exam_count_code() -> str:
+    return """def F(x, y, z, w):
+    return 1 if ((x or y) and (not (y == z)) and (not w)) else 0
+
+count = 0
+for x in (0, 1):
+    for y in (0, 1):
+        for z in (0, 1):
+            for w in (0, 1):
+                if F(x, y, z, w):
+                    count += 1
+print(count)
+"""
+
+
+def exam_f1_code() -> str:
+    return """import itertools
+
+def F(x, y, z, w):
+    return 1 if ((x or y) and (not (y == z)) and (not w)) else 0
+
+fragment = [
+    (1, None, 1, None, 1),
+    (0, 1, None, 0, 1),
+    (None, 1, 1, 0, 1),
+]
+blanks = [
+    (i, j)
+    for i, row in enumerate(fragment)
+    for j, cell in enumerate(row[:4])
+    if cell is None
+]
+good = []
+for perm in itertools.permutations("xyzw"):
+    for fill in itertools.product((0, 1), repeat=len(blanks)):
+        grid = [list(row[:4]) for row in fragment]
+        for (i, j), bit in zip(blanks, fill):
+            grid[i][j] = bit
+        if len({tuple(line) for line in grid}) != 3:
+            continue
+        ok = True
+        for line, src in zip(grid, fragment):
+            env = dict(zip(perm, line))
+            if F(env["x"], env["y"], env["z"], env["w"]) != src[4]:
+                ok = False
+                break
+        if ok:
+            good.append("".join(perm))
+            break
+print(good[0])
+"""
+
+
+def exam_mixed_code() -> str:
+    return """import itertools
+
+def F(x, y, z, w):
+    arrow = 1 if ((not x) or z) else 0
+    same = 1 if y == w else 0
+    return 1 if ((not arrow) or same or y) else 0
+
+fragment = [
+    ((0, 0, 1, 1), 0),
+    ((0, 0, 1, 0), 1),
+    ((0, 1, 1, 1), 1),
+]
+good = []
+for perm in itertools.permutations("xyzw"):
+    ok = True
+    for shown, value in fragment:
+        env = dict(zip(perm, shown))
+        if F(env["x"], env["y"], env["z"], env["w"]) != value:
+            ok = False
+            break
+    if ok:
+        good.append("".join(perm))
+print(good[0])
+"""
+
+
+def theory_lesson_2(_groups, store) -> dict:
+    verify_boundary_example()
+    store["n2-eq.svg"] = mini_op_svg(
+        "Равно: 1, когда значения совпали",
+        ["A", "B", "A ≡ B"],
+        [["0", "0", "1"], ["0", "1", "0"], ["1", "0", "0"], ["1", "1", "1"]],
+        None,
+    )
+    store["n2-demo-a.svg"] = mini_op_svg(
+        "Строки, где F = 1",
+        ["x", "y", "z", "w", "F"],
+        [
+            ["0", "1", "0", "0", "1"],
+            ["1", "0", "1", "0", "1"],
+            ["1", "1", "0", "0", "1"],
+        ],
+        None,
+    )
+    store["n2-demo-f1.svg"] = mini_op_svg(
+        "Фрагмент: везде F = 1",
+        ["1", "2", "3", "4", "F"],
+        [
+            ["1", "·", "1", "·", "1"],
+            ["0", "1", "·", "0", "1"],
+            ["·", "1", "1", "0", "1"],
+        ],
+        None,
+    )
+    store["n2-demo-b.svg"] = mini_op_svg(
+        "Фрагмент: везде F = 0",
+        ["1", "2", "3", "4", "F"],
+        [
+            ["1", "0", "0", "0", "0"],
+            ["1", "1", "1", "0", "0"],
+            ["1", "1", "0", "0", "0"],
+        ],
+        None,
+    )
+    store["n2-demo-c.svg"] = mini_op_svg(
+        "Фрагмент: F разная",
+        ["1", "2", "3", "4", "F"],
+        [
+            ["0", "0", "1", "1", "0"],
+            ["0", "0", "1", "0", "1"],
+            ["0", "1", "1", "1", "1"],
+        ],
+        None,
+    )
     body = "\n".join(
         [
             "<h2>Что дают в задании 2</h2>",
-            "<p>Дают логическое выражение. Буквы A, B и C принимают 0 или 1. Иногда на экзамене те же буквы называют x, y и z: считать нужно так же.</p>",
-            "<p>Три действия и одна стрелка.</p>",
-            "<ul><li><strong>И</strong>, знак ∧. Истина, только если оба условия да.</li><li><strong>ИЛИ</strong>, знак ∨. Истина, если хотя бы одно да.</li><li><strong>НЕ</strong>, знак ¬. Меняет 0 и 1 местами.</li><li><strong>Если A, то B</strong>, знак →. Ложь только в одном случае: A да, а B нет.</li></ul>",
+            "<p>Ученик получает формулу. Буквы в ней равны 0 или 1. После урока он сам видит, что писать в ответ.</p>",
+            "<p>В вопросах урока ответ бывает двух видов. Число: сколько строк дали 1. Или три буквы: порядок столбцов. На экзамене букв четыре: w, x, y и z. Ответ пишут четырьмя буквами подряд, слева направо.</p>",
+            "<p>В вопросах после теории буквы A, B и C, таблица короче. Примеры в теории уже как на экзамене: четыре буквы, знак «равно» и фрагмент из трёх строк.</p>",
+            "<p>Четыре действия и знак «равно».</p>",
+            "<ul><li><strong>И</strong>, знак ∧. Результат 1, только если оба условия да.</li><li><strong>ИЛИ</strong>, знак ∨. Результат 1, если хотя бы одно да.</li><li><strong>НЕ</strong>, знак ¬. Меняет 0 и 1 местами.</li><li><strong>Если A, то B</strong>, знак →. Результат 0 только в одном случае: слева 1, справа 0.</li><li><strong>Равно</strong>, знак ≡. Результат 1, когда обе буквы одинаковые: обе 0 или обе 1.</li></ul>",
             fig("n2-and.svg", "Таблица для И"),
             fig("n2-or.svg", "Таблица для ИЛИ"),
             fig("n2-not.svg", "Таблица для НЕ"),
             fig("n2-impl.svg", "Таблица для стрелки, ложная строка выделена"),
-            "<p>Для двух букв строк четыре. Для трёх букв строк восемь: каждый новый разряд удваивает таблицу. Скобки считают первыми, потом НЕ, потом И, потом ИЛИ. Стрелку удобно сразу заменить: A → B это то же самое, что ¬A ∨ B.</p>",
+            fig("n2-eq.svg", "Таблица для знака «равно»"),
+            "<p>Для двух букв строк четыре. Для трёх букв строк восемь. Для четырёх букв строк шестнадцать. Скобки считают первыми, потом НЕ, потом И, потом ИЛИ, потом стрелка, потом знак «равно».</p>",
+            "<p>Стрелку на бумаге быстрее помнить одной ложной строкой. Знак ≡ не переписывают: смотрят, совпали буквы или нет.</p>",
+            "<p>Дальше три приёма. Первый: буквы подписаны, считают единицы по полной формуле. Второй: в показанных строках F везде 0 или везде 1. Третий: в фрагменте F разная, столбец из нулей букву сам не называет.</p>",
             "<h2>Приём 1. Сколько единиц</h2>",
-            "<p>Строят все восемь строк и считают, где результат равен 1. На картинке столбец F пустой: его заполняют сами.</p>",
-            f"<p><strong>Пример.</strong> {esc(demo_a['expr'])}.</p>",
-            fig("n2-demo-a.svg", "Пустая таблица примера"),
-            filled_table(demo_a["expr"], demo_a["fn"]),
-            "<p>Программа делает те же восемь строк. Кнопка «В интерпретатор» откроет её.</p>",
-            code(py_count(demo_a["py"])),
-            "<h2>Приём 2. Есть стрелка</h2>",
-            "<p>Сначала вспоминают единственную ложную строку стрелки: 1 и 0. Потом считают её вместе с остальным выражением, снова по восьми строкам.</p>",
-            f"<p><strong>Пример.</strong> {esc(demo_b['expr'])}.</p>",
-            fig("n2-demo-b.svg", "Пустая таблица примера со стрелкой"),
-            filled_table(demo_b["expr"], demo_b["fn"]),
-            code(py_count(demo_b["py"])),
+            "<p>Это обычный случай. Формула дана целиком, столбцы подписаны. Спрашивают одно число: сколько строк, где F равно 1.</p>",
+            "<p>На экзамене строк шестнадцать. Все выписывать не нужно: формула сама отсекает целые группы.</p>",
+            "<p><strong>Пример.</strong> (x ∨ y) ∧ ¬(y ≡ z) ∧ ¬w. Это формула из демоверсии. Буквы подписаны.</p>",
+            fig("n2-demo-a.svg", "Три строки, где формула равна 1"),
+            ol(
+                [
+                    "Снаружи три части через И. Единица только когда каждая часть равна 1.",
+                    "¬w равно 1, значит w = 0. Все строки с w = 1 дают 0. Таких строк восемь.",
+                    "¬(y ≡ z) равно 1, значит y и z разные.",
+                    "x ∨ y равно 1, значит хотя бы одна из x и y равна 1.",
+                    "Остаются три строки: 0 1 0 0, 1 0 1 0 и 1 1 0 0. В каждой w = 0, y отличается от z, и x или y равно 1.",
+                    "Других единиц нет. В полной таблице 16 строк. Единиц три.",
+                ]
+            ),
+            "<p>Ответ: <strong>3</strong>.</p>",
+            "<p>Программа в конце урока печатает это 3. В вопросах ниже буквы A, B и C, таблица короче. Считают тем же способом.</p>",
+            "<h2>Приём 2. Когда F равна 0 или 1</h2>",
+            "<p>Здесь дают не всю таблицу, а три строки. F в них одинаковая: либо везде 1, либо везде 0. Ноль и единица подсказывают разное. Если их перепутать, столбец назовут не той буквой.</p>",
+            "<p>Сначала смотрят, какое действие стоит снаружи.</p>",
+            "<ul><li>Снаружи И, и F = 1. Каждая часть равна 1. Буква, которая обязана быть 0, стоит в столбце из нулей.</li><li>Снаружи И, и F = 0. Ноль мог прийти из любой части. Столбец из нулей букву сам не называет.</li><li>Снаружи ИЛИ правило наоборот. F = 0 значит ноль в каждой части. F = 1 значит единица хотя бы в одной, и неизвестно в какой.</li></ul>",
+            "<p><strong>Пример, где везде F = 1.</strong> Та же формула, что в первом приёме: (x ∨ y) ∧ ¬(y ≡ z) ∧ ¬w. Столбцы без букв. Точка значит пустую клетку. Других строк с F = 1 у формулы нет.</p>",
+            fig(
+                "n2-demo-f1.svg",
+                "Фрагмент демоверсии, в каждой строке F равно 1",
+            ),
+            ol(
+                [
+                    "F везде равна 1, снаружи стоит И. В каждой строке w = 0, y и z разные, и x или y равно 1.",
+                    "В столбцах 1, 2 и 3 уже есть единица. В столбце 4 заполненные клетки равны 0. Это w. Пустую клетку столбца 4 тоже ставят в 0.",
+                    "Порядок yzxw заполняет пустые клетки так, что вторая и третья строки становятся одинаковыми: 0 1 1 0. Одинаковые строки запрещены.",
+                    "Порядок zyxw заполняет пустые клетки тремя разными строками. В каждой формула равна 1. Других порядков нет.",
+                ]
+            ),
+            "<p>Ответ: <strong>zyxw</strong>.</p>",
+            "<p><strong>Пример, где везде F = 0.</strong> Другая формула: ((w → y) → x) ∨ ¬z. Снаружи ИЛИ. Ноль получается, только когда обе части равны 0. Других нулей у формулы нет. Столбцы снова без букв.</p>",
+            fig("n2-demo-b.svg", "Три строки, где формула равна 0"),
+            ol(
+                [
+                    "F везде равна 0, снаружи ИЛИ. Обе части равны 0. ¬z = 0, значит z = 1. Стрелочная часть тоже равна 0.",
+                    "(w → y) → x равна 0 только когда w → y = 1 и x = 0. Значит x = 0 в каждой из трёх строк.",
+                    "Первый столбец весь из единиц. Это z. Четвёртый весь из нулей. Это x.",
+                    "В последней строке второй столбец 1, третий 0. Если это w и y, стрелка w → y равна 1 → 0 = 0. Нам нужна 1. Такой порядок вычёркивают.",
+                    "Если второй столбец y, а третий w, в последней строке y = 1 и w = 0. Стрелка w → y равна 1. Дальше 1 → x даёт 0, потому что x = 0. Формула равна 0.",
+                    "Первые две строки с тем же порядком тоже дают 0. Ответ: zywx.",
+                ]
+            ),
+            "<p>Ответ: <strong>zywx</strong>.</p>",
+            "<p>zyxw и zywx — разные ответы. Буквы пишут слева направо, как стоят столбцы.</p>",
+            "<p>Программа в конце урока печатает zyxw для фрагмента с единицами. В вопросах ниже буквы уже подписаны и есть стрелка. Там нужно число по короткой таблице.</p>",
             "<h2>Приём 3. Буквы столбцов</h2>",
-            "<p>Дают не всю таблицу, а несколько строк. Столбцы подписаны номерами, а не буквами. Нужно понять, где A, где B и где C. В ответе три буквы подряд, слева направо. Подходит только тот порядок, при котором выражение даёт написанную F в каждой строке фрагмента.</p>",
-            f"<p><strong>Пример.</strong> {esc(demo_c['expr'])}. Столбцы на рисунке.</p>",
-            fig("n2-demo-c.svg", "Фрагмент с неизвестными буквами"),
-            ol(explain_fragment(demo_c)),
-            f"<p>Ответ: <strong>{esc(demo_c['answer'])}</strong>.</p>",
-            code(fragment_code(demo_c)),
-            "<p>Дальше в заданиях картинка над вопросом, разбор открывается после ответа.</p>",
+            "<p>Снова дают три строки, столбцы без букв. F в них разная: где-то 0, где-то 1. Столбец из нулей букву сам не называет. Эти нули просто попали в выбранные строки.</p>",
+            "<p>Ученик подставляет порядок букв и проверяет каждую строку. Подходит один порядок. Его пишут четырьмя буквами подряд, слева направо.</p>",
+            "<p><strong>Пример.</strong> Формула с экзамена, снаружи ИЛИ: ¬(x → z) ∨ (y ≡ w) ∨ y.</p>",
+            fig("n2-demo-c.svg", "Фрагмент, в строках разная F"),
+            ol(
+                [
+                    "Полезная строка та, где F = 0. У ИЛИ ноль значит ноль в каждой части: y = 0, y и w разные, стрелка x → z равна 1.",
+                    "Первая строка 0 0 1 1. y = 0, поэтому y стоит в первом или во втором столбце. w от y отличается, поэтому w стоит там, где в этой строке единица.",
+                    "Первый столбец весь из нулей. Если назвать его y, порядок yxzw на третьей строке даёт 0. В фрагменте стоит 1. Этот порядок вычёркивают.",
+                    "Порядок xyzw. Первая строка: x = 0, y = 0, z = 1, w = 1. Стрелка 0 → 1 равна 1, её НЕ равно 0. y и w разные. y = 0. ИЛИ даёт 0. Совпадает.",
+                    "Вторая строка: x = 0, y = 0, z = 1, w = 0. y и w совпали, среднее слагаемое равно 1. F = 1. Совпадает.",
+                    "Третья строка: x = 0, y = 1, z = 1, w = 1. Само y равно 1, поэтому F = 1. Совпадает. Других порядков нет.",
+                ]
+            ),
+            "<p>Ответ: <strong>xyzw</strong>.</p>",
+            "<p>В вопросах ниже букв три. Порядок ищут так же: подставляют и проверяют каждую строку. Программа этого примера печатает xyzw.</p>",
         ]
     )
     images = [
@@ -1255,15 +1520,17 @@ def theory_lesson_2(groups, store) -> dict:
         "n2-or.svg",
         "n2-not.svg",
         "n2-impl.svg",
+        "n2-eq.svg",
         "n2-demo-a.svg",
         "n2-demo-b.svg",
         "n2-demo-c.svg",
+        "n2-demo-f1.svg",
     ]
     return {
         "type": "theory",
         "title": "Задание 2 ЕГЭ: логика",
         "content": body,
-        "comment": "Три приёма: сколько единиц, стрелка, буквы столбцов.",
+        "comment": "Три приёма: сколько единиц, F равна 0 или 1, буквы столбцов.",
         "images": images,
     }
 
@@ -1725,6 +1992,7 @@ def self_check():
         raise SystemExit(py_or)
     if not eval(py_or, {}, {"A": 1, "B": 0, "C": 0}):
         raise SystemExit(py_or)
+    verify_boundary_example()
     assert count_marks(
         [{"id": 1, "cls": 9}, {"id": 2, "cls": 10}],
         [{"id": 1, "sub": "математика", "g": 5}, {"id": 2, "sub": "математика", "g": 5}],
@@ -1774,7 +2042,7 @@ def main():
             "module_title": "Задание 2 ЕГЭ: Логика",
             "create_module": True,
             "replace_missing": True,
-            "module_description": "Три урока: 2.1 сколько единиц, 2.2 стрелка, 2.3 буквы столбцов.",
+            "module_description": "Три урока: 2.1 сколько единиц, 2.2 когда F равна 0 или 1, 2.3 буквы столбцов.",
         },
         lessons2,
         store2,
