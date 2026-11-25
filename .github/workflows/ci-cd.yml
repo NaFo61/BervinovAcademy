@@ -297,11 +297,32 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Copy deploy files
+        id: copy_deploy
+        continue-on-error: true
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          timeout: 2m
+          source: "deploy/docker-compose.yml,deploy/restart.sh,deploy/full-restart.sh,deploy/ci-deploy.sh,deploy/lib.sh"
+          target: /opt/bervinov-academy
+          strip_components: 1
+          overwrite: true
+          rm: false
+
+      - name: Pause before copying again
+        if: steps.copy_deploy.outcome == 'failure'
+        run: sleep 20
+
+      - name: Copy deploy files again
+        if: steps.copy_deploy.outcome == 'failure'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          timeout: 2m
           source: "deploy/docker-compose.yml,deploy/restart.sh,deploy/full-restart.sh,deploy/ci-deploy.sh,deploy/lib.sh"
           target: /opt/bervinov-academy
           strip_components: 1
@@ -309,11 +330,37 @@ jobs:
           rm: false
 
       - name: Ensure deploy dir layout
+        id: prepare_deploy
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          timeout: 2m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            mkdir -p /opt/bervinov-academy
+            ls -la /opt/bervinov-academy
+            test -f /opt/bervinov-academy/docker-compose.yml
+            test -f /opt/bervinov-academy/restart.sh
+            test -f /opt/bervinov-academy/ci-deploy.sh
+            test -f /opt/bervinov-academy/lib.sh
+            chmod +x /opt/bervinov-academy/restart.sh /opt/bervinov-academy/full-restart.sh /opt/bervinov-academy/ci-deploy.sh
+
+      - name: Pause before preparing again
+        if: steps.prepare_deploy.outcome == 'failure'
+        run: sleep 20
+
+      - name: Ensure deploy dir layout again
+        if: steps.prepare_deploy.outcome == 'failure'
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          timeout: 2m
           script_stop: true
           script: |
             set -euo pipefail
@@ -326,6 +373,8 @@ jobs:
             chmod +x /opt/bervinov-academy/restart.sh /opt/bervinov-academy/full-restart.sh /opt/bervinov-academy/ci-deploy.sh
 
       - name: Deploy over SSH
+        id: run_deploy
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.2.0
         env:
           DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -334,6 +383,31 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          timeout: 2m
+          script_stop: true
+          command_timeout: 30m
+          envs: DOCKERHUB_USER,FRONTEND_URL
+          script: |
+            set -euo pipefail
+            cd /opt/bervinov-academy
+            chmod +x restart.sh full-restart.sh ci-deploy.sh
+            ./ci-deploy.sh
+
+      - name: Pause before deploying again
+        if: steps.run_deploy.outcome == 'failure'
+        run: sleep 20
+
+      - name: Deploy over SSH again
+        if: steps.run_deploy.outcome == 'failure'
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          FRONTEND_URL: https://academy.bervinov-miron.ru
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          timeout: 2m
           script_stop: true
           command_timeout: 30m
           envs: DOCKERHUB_USER,FRONTEND_URL
