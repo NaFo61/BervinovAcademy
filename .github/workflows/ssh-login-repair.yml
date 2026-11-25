@@ -1,8 +1,10 @@
 name: SSH login repair
 
-# Manual check only. Does not deploy and does not touch the database.
+# Read-only SSH check. Does not deploy and does not touch the database.
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
 
 jobs:
   diagnose:
