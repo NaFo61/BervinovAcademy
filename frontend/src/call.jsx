@@ -53,10 +53,9 @@ function getCallShell() {
         if (snap && ['ended', 'ending', 'error', 'auth'].includes(snap.phase)) {
           return false;
         }
-        const LK = window.LivekitClient || window.LiveKit;
-        const connected = LK?.ConnectionState?.Connected;
-        if (connected != null) return room.state === connected;
-        return String(room.state || '').toLowerCase() === 'connected' || room.state === 1;
+        const state = String(room.state ?? '').toLowerCase();
+        if (!state || state === 'disconnected') return false;
+        return true;
       },
     };
   }
@@ -69,6 +68,78 @@ function publishCallShell({ confId, room, snapshot }) {
   shell.room = room || null;
   shell.snapshot = snapshot || null;
   shell.notify();
+  bindCallUnload();
+}
+
+function trackSource(LK, name) {
+  return LK?.Track?.Source?.[name] || name.toLowerCase();
+}
+
+function findLocalPublication(participant, source) {
+  if (!participant || source == null) return null;
+  if (typeof participant.getTrackPublication === 'function') {
+    const found = participant.getTrackPublication(source);
+    if (found) return found;
+  }
+  const maps = [
+    participant.trackPublications,
+    participant.audioTrackPublications,
+    participant.videoTrackPublications,
+  ];
+  for (const map of maps) {
+    if (!map || typeof map.values !== 'function') continue;
+    for (const pub of map.values()) {
+      if (pub?.source === source) return pub;
+    }
+  }
+  return null;
+}
+
+function isPublicationLive(pub) {
+  if (!pub?.track) return false;
+  if (pub.isMuted === true || pub.track.isMuted === true) return false;
+  if (pub.track.mediaStreamTrack?.readyState === 'ended') return false;
+  return true;
+}
+
+function readLocalMedia(room, LK) {
+  const local = room?.localParticipant;
+  const mic = findLocalPublication(local, trackSource(LK, 'Microphone'));
+  const camera = findLocalPublication(local, trackSource(LK, 'Camera'));
+  return {
+    micOn: isPublicationLive(mic),
+    cameraOn: isPublicationLive(camera),
+  };
+}
+
+function bindCallUnload() {
+  if (window.__baCallUnloadBound) return;
+  window.__baCallUnloadBound = true;
+  let documentIsUnloading = false;
+  window.addEventListener('beforeunload', () => {
+    documentIsUnloading = true;
+  });
+  window.addEventListener('pagehide', (event) => {
+    if (event.persisted || !documentIsUnloading) return;
+    const shell = getCallShell();
+    if (!shell.isLive()) return;
+    const token = window.getAccessToken?.();
+    const confId = shell.confId;
+    if (token && confId) {
+      try {
+        window.fetch(
+          `${window.getApiBase()}/api/communication/conferences/${encodeURIComponent(confId)}/leave/`,
+          {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + token },
+            keepalive: true,
+          },
+        ).catch(() => {});
+      } catch (_) { /* вкладка закрывается */ }
+    }
+    try { shell.room?.disconnect?.(); } catch (_) { /* ignore */ }
+    shell.clear();
+  });
 }
 
 function participantName(p) {
@@ -254,6 +325,14 @@ function AudioTrack({ publication }) {
     if (!track || !node) return undefined;
     const el = track.attach();
     el.autoplay = true;
+    // Без controls Chrome прячет audio через display:none и может не играть звук.
+    el.controls = true;
+    el.setAttribute('controls', '');
+    el.style.setProperty('display', 'block', 'important');
+    el.style.width = '1px';
+    el.style.height = '1px';
+    el.style.opacity = '0';
+    el.style.pointerEvents = 'none';
     node.innerHTML = '';
     node.appendChild(el);
     if (el.play) el.play().catch(() => {});
@@ -263,7 +342,14 @@ function AudioTrack({ publication }) {
     };
   }, [publication?.trackSid, publication?.track?.sid]);
 
-  return <div ref={ref} className="hidden" aria-hidden />;
+  return (
+    <div
+      ref={ref}
+      className="fixed left-0 top-0 h-px w-px overflow-hidden opacity-0 pointer-events-none"
+      aria-hidden
+      data-call-audio="1"
+    />
+  );
 }
 
 function CallPage({ navigate, hashParams }) {
@@ -307,6 +393,7 @@ function CallPage({ navigate, hashParams }) {
   const roomRef = React.useRef(null);
   const endSentRef = React.useRef(false);
   const leaveKindRef = React.useRef(null);
+  const intentionalLeaveRef = React.useRef(false);
   const joinedAtRef = React.useRef(null);
   const whiteboardEnabledRef = React.useRef(true);
   const audioRecorderRef = React.useRef(null);
@@ -324,10 +411,11 @@ function CallPage({ navigate, hashParams }) {
     if (!shell.isLive() || shell.confId !== confId) return;
     roomRef.current = shell.room;
     const snap = shell.snapshot || {};
+    const media = readLocalMedia(shell.room, LK);
     if (snap.conference) setConference(snap.conference);
     if (typeof snap.isMentor === 'boolean') setIsMentor(snap.isMentor);
-    if (typeof snap.muted === 'boolean') setMuted(snap.muted);
-    if (typeof snap.videoOff === 'boolean') setVideoOff(snap.videoOff);
+    setMuted(!media.micOn);
+    setVideoOff(!media.cameraOn);
     if (typeof snap.sharing === 'boolean') setSharing(snap.sharing);
     if (snap.joinedAt) joinedAtRef.current = snap.joinedAt;
     setPhase(snap.phase === 'in_call' || snap.phase === 'loading' ? 'in_call' : (snap.phase || 'in_call'));
@@ -621,22 +709,6 @@ function CallPage({ navigate, hashParams }) {
     }
   }, []);
 
-  const notifyLeave = React.useCallback((keepalive = false) => {
-    if (!confId || endSentRef.current) return;
-    const token = window.getAccessToken();
-    if (!token) return;
-    try {
-      window.fetch(
-        `${window.getApiBase()}/api/communication/conferences/${encodeURIComponent(confId)}/leave/`,
-        {
-          method: 'POST',
-          headers: { Authorization: 'Bearer ' + token },
-          keepalive,
-        },
-      ).catch(() => {});
-    } catch (_) { /* ignore */ }
-  }, [confId]);
-
   React.useEffect(() => {
     if (!confId) {
       setPhase('error');
@@ -662,10 +734,11 @@ function CallPage({ navigate, hashParams }) {
         if (shell.isLive() && shell.confId === confId && shell.room) {
           roomRef.current = shell.room;
           const snap = shell.snapshot || {};
+          const media = readLocalMedia(shell.room, LK);
           if (snap.conference) setConference(snap.conference);
           if (typeof snap.isMentor === 'boolean') setIsMentor(snap.isMentor);
-          if (typeof snap.muted === 'boolean') setMuted(snap.muted);
-          if (typeof snap.videoOff === 'boolean') setVideoOff(snap.videoOff);
+          setMuted(!media.micOn);
+          setVideoOff(!media.cameraOn);
           if (typeof snap.sharing === 'boolean') setSharing(snap.sharing);
           if (snap.joinedAt) joinedAtRef.current = snap.joinedAt;
           setPhase('in_call');
@@ -727,6 +800,7 @@ function CallPage({ navigate, hashParams }) {
           });
         }
         room.on(LK.RoomEvent.Disconnected, () => {
+          if (getCallShell().room && getCallShell().room !== room) return;
           getCallShell().clear();
           roomRef.current = null;
           if (!cancelled) {
@@ -735,30 +809,53 @@ function CallPage({ navigate, hashParams }) {
             setPhase('ended');
           }
         });
+        const syncMedia = () => {
+          const media = readLocalMedia(room, LK);
+          setMuted(!media.micOn);
+          setVideoOff(!media.cameraOn);
+          bumpLayout();
+        };
+        [
+          LK.RoomEvent.TrackMuted,
+          LK.RoomEvent.TrackUnmuted,
+          LK.RoomEvent.LocalTrackPublished,
+          LK.RoomEvent.LocalTrackUnpublished,
+        ].filter(Boolean).forEach((eventName) => room.on(eventName, syncMedia));
 
         await room.connect(join.livekit_url, join.token);
-        if (cancelled) {
-          await room.disconnect();
+        if (intentionalLeaveRef.current) {
+          try { await room.disconnect(); } catch (_) { /* ignore */ }
           return;
         }
 
         const warnings = [];
         try {
           await room.localParticipant.setMicrophoneEnabled(true);
-          setMuted(false);
         } catch (_) {
           warnings.push('Микрофон недоступен');
-          setMuted(true);
         }
-        // Входим без камеры; включить можно кнопкой в панели.
         try {
           await room.localParticipant.setCameraEnabled(false);
-          setVideoOff(true);
-        } catch (_) {
-          setVideoOff(true);
-        }
+        } catch (_) { /* камера включается отдельной кнопкой */ }
+        const media = readLocalMedia(room, LK);
+        joinedAtRef.current = joinedAtRef.current || Date.now();
+        publishCallShell({
+          confId,
+          room,
+          snapshot: {
+            conference: join.conference,
+            isMentor: mentor,
+            muted: !media.micOn,
+            videoOff: !media.cameraOn,
+            sharing: false,
+            phase: 'in_call',
+            joinedAt: joinedAtRef.current,
+          },
+        });
+        if (cancelled || intentionalLeaveRef.current) return;
+        setMuted(!media.micOn);
+        setVideoOff(!media.cameraOn);
         if (warnings.length) setMediaWarning(warnings.join(' · '));
-        joinedAtRef.current = Date.now();
         setPhase('in_call');
         bumpLayout();
       } catch (e) {
@@ -778,18 +875,8 @@ function CallPage({ navigate, hashParams }) {
     };
   }, [confId, bumpLayout, LK]);
 
-  React.useEffect(() => {
-    if (phase !== 'in_call') return undefined;
-    const onPageHide = () => {
-      // Закрытие вкладки — выходим из комнаты на сервере.
-      notifyLeave(true);
-      getCallShell().clear();
-    };
-    window.addEventListener('pagehide', onPageHide);
-    return () => window.removeEventListener('pagehide', onPageHide);
-  }, [phase, notifyLeave]);
-
   const leaveCall = async () => {
+    intentionalLeaveRef.current = true;
     leaveKindRef.current = 'self';
     setEndKind('self');
     setConfirmMode(null);
@@ -806,6 +893,7 @@ function CallPage({ navigate, hashParams }) {
 
   const finishCall = async ({ saveBoard = false } = {}) => {
     if (!isMentor) return leaveCall();
+    intentionalLeaveRef.current = true;
     setConfirmMode(null);
     if (saveBoard) {
       await saveWhiteboard();
@@ -827,19 +915,33 @@ function CallPage({ navigate, hashParams }) {
 
   const toggleMute = async () => {
     const room = roomRef.current;
-    if (!room) return;
-    const next = !muted;
-    await room.localParticipant.setMicrophoneEnabled(!next);
-    setMuted(next);
+    if (!room?.localParticipant) return;
+    const micOn = readLocalMedia(room, LK).micOn;
+    try {
+      await room.localParticipant.setMicrophoneEnabled(!micOn);
+      setMediaWarning('');
+    } catch (_) {
+      setMediaWarning('Микрофон недоступен');
+    }
+    const media = readLocalMedia(room, LK);
+    setMuted(!media.micOn);
+    setVideoOff(!media.cameraOn);
     bumpLayout();
   };
 
   const toggleVideo = async () => {
     const room = roomRef.current;
-    if (!room) return;
-    const next = !videoOff;
-    await room.localParticipant.setCameraEnabled(!next);
-    setVideoOff(next);
+    if (!room?.localParticipant) return;
+    const cameraOn = readLocalMedia(room, LK).cameraOn;
+    try {
+      await room.localParticipant.setCameraEnabled(!cameraOn);
+      setMediaWarning('');
+    } catch (_) {
+      setMediaWarning('Камера недоступна');
+    }
+    const media = readLocalMedia(room, LK);
+    setMuted(!media.micOn);
+    setVideoOff(!media.cameraOn);
     bumpLayout();
   };
 
@@ -1200,16 +1302,19 @@ function CallPage({ navigate, hashParams }) {
           <ModeButton active={displayMode === 'focus'} onClick={() => setDisplayMode('focus')}>Крупно</ModeButton>
         </div>
         <CallControl
-          label="На сайт"
-          active={false}
-          onClick={() => navigate(Routes.CATALOG)}
+          label={muted ? 'Микрофон выключен' : 'Микрофон включён'}
+          active={!muted}
+          onClick={toggleMute}
+          mic={muted ? 'off' : 'on'}
         >
-          <I.Book className="w-5 h-5" />
-        </CallControl>
-        <CallControl label={muted ? 'Вкл. звук' : 'Без звука'} active={muted} onClick={toggleMute}>
           <I.Mic className="w-5 h-5" off={muted} />
         </CallControl>
-        <CallControl label={videoOff ? 'Вкл. камеру' : 'Без видео'} active={videoOff} onClick={toggleVideo}>
+        <CallControl
+          label={videoOff ? 'Камера выключена' : 'Камера включена'}
+          active={!videoOff}
+          onClick={toggleVideo}
+          camera={videoOff ? 'off' : 'on'}
+        >
           <I.Video className="w-5 h-5" off={videoOff} />
         </CallControl>
         <CallControl label={sharing ? 'Стоп экран' : 'Экран'} active={sharing} onClick={toggleScreen}>
@@ -1262,6 +1367,7 @@ function VideoTile({ tile, main = false, compact = false, clean = false, fit = '
   const tileLabel = tile?.label || 'Участник';
   const showBoard = isWhiteboard && !compact && (Boolean(main) || isGridMode);
   const hasVideo = Boolean(tile?.publication && !tile.placeholder);
+  const localCamera = Boolean(tile?.isLocal && hasVideo && !tile?.isScreen);
   const shellClass = `relative block text-left overflow-hidden bg-white ${chrome} ${selectedClass} ${rounded} ${base} ${
     showBoard ? '' : 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-300'
   }`;
@@ -1295,7 +1401,8 @@ function VideoTile({ tile, main = false, compact = false, clean = false, fit = '
 
   return (
     <button type="button" onClick={onSelect} aria-label={`Показать: ${tileLabel}`}
-      className={shellClass}>
+      className={shellClass}
+      data-local-camera={localCamera ? 'on' : undefined}>
       {hasVideo ? (
         <MediaTrack publication={tile.publication} muted={tile.isLocal} fit={fit} />
       ) : (
@@ -1361,9 +1468,12 @@ function ModeButton({ active, onClick, children }) {
   );
 }
 
-function CallControl({ children, label, active, onClick, badge = 0 }) {
+function CallControl({ children, label, active, onClick, badge = 0, mic, camera }) {
   return (
     <button type="button" onClick={onClick} title={label}
+      data-mic={mic}
+      data-camera={camera}
+      aria-pressed={mic != null || camera != null ? Boolean(active) : undefined}
       className={`relative flex flex-col items-center gap-1 min-w-[3.5rem] sm:min-w-[72px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-300 rounded-xl ${active ? 'text-sky-800' : 'text-ink/80'}`}>
       <span className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
         active ? 'bg-sky-50 ring-1 ring-sky-200' : 'bg-black/[0.04] hover:bg-black/[0.07]'
@@ -1381,25 +1491,48 @@ function CallControl({ children, label, active, onClick, badge = 0 }) {
 }
 
 /** Звук собеседника, пока открыт каталог/профиль. */
+function remoteAudioPublications(room, LK) {
+  const pubs = [];
+  const seen = new Set();
+  const push = (pub) => {
+    if (!pub?.track) return;
+    const kind = pub.kind || pub.track.kind;
+    const audioKind = LK?.Track?.Kind?.Audio || 'audio';
+    if (kind !== audioKind && kind !== 'audio') return;
+    const key = pub.trackSid || pub.track.sid || pub.source || String(pubs.length);
+    if (seen.has(key)) return;
+    seen.add(key);
+    pubs.push({ key, pub });
+  };
+  room?.remoteParticipants?.forEach((participant) => {
+    [participant.audioTrackPublications, participant.trackPublications].forEach((map) => {
+      if (map && typeof map.forEach === 'function') map.forEach(push);
+    });
+  });
+  return pubs;
+}
+
 function CallAudioBridge() {
   const [tick, setTick] = React.useState(0);
   React.useEffect(() => getCallShell().subscribe(() => setTick((n) => n + 1)), []);
   const shell = getCallShell();
-  if (!shell.isLive()) return null;
-  const room = shell.room;
+  const room = shell.isLive() ? shell.room : null;
+  React.useEffect(() => {
+    if (!room?.on) return undefined;
+    const bump = () => setTick((n) => n + 1);
+    const names = [
+      'trackSubscribed', 'trackUnsubscribed', 'trackMuted', 'trackUnmuted',
+      'localTrackPublished', 'localTrackUnpublished',
+    ];
+    names.forEach((name) => room.on(name, bump));
+    room.startAudio?.().catch(() => {});
+    return () => names.forEach((name) => room.off?.(name, bump));
+  }, [room]);
   const LK = window.LivekitClient || window.LiveKit;
   if (!room || !LK) return null;
-  const pubs = [];
-  room.remoteParticipants?.forEach((p) => {
-    const map = p.audioTrackPublications;
-    if (map && typeof map.forEach === 'function') {
-      map.forEach((pub) => {
-        if (pub?.track) pubs.push({ key: pub.trackSid || pub.track.sid, pub });
-      });
-    }
-  });
+  const pubs = remoteAudioPublications(room, LK);
   return (
-    <div className="hidden" aria-hidden data-call-audio-bridge={tick}>
+    <div aria-hidden data-call-audio-bridge={tick}>
       {pubs.map((item) => <AudioTrack key={item.key} publication={item.pub} />)}
     </div>
   );
@@ -1414,20 +1547,27 @@ function CallFloatingBar({ navigate, route }) {
   if (route === Routes.CALL) return null;
 
   const snap = shell.snapshot || {};
-  const muted = Boolean(snap.muted);
+  const LK = window.LivekitClient || window.LiveKit;
+  const media = readLocalMedia(shell.room, LK);
+  const muted = !media.micOn;
   const confId = shell.confId;
 
   const toggleMute = async () => {
     const room = shell.room;
-    if (!room) return;
-    const next = !muted;
+    if (!room?.localParticipant) return;
     try {
-      await room.localParticipant.setMicrophoneEnabled(!next);
-    } catch (_) { /* ignore */ }
+      await room.localParticipant.setMicrophoneEnabled(muted);
+    } catch (_) { /* состояние ниже читается с дорожки */ }
+    const next = readLocalMedia(room, LK);
     publishCallShell({
       confId,
       room,
-      snapshot: { ...snap, muted: next, phase: 'in_call' },
+      snapshot: {
+        ...snap,
+        muted: !next.micOn,
+        videoOff: !next.cameraOn,
+        phase: 'in_call',
+      },
     });
   };
 
@@ -1444,35 +1584,46 @@ function CallFloatingBar({ navigate, route }) {
   };
 
   return (
-    <div className="fixed bottom-4 left-1/2 z-[60] -translate-x-1/2 max-w-[calc(100vw-1.5rem)]">
-      <div className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-ink shadow-soft ring-1 ring-black/[0.08]">
-        <span className="relative flex h-2.5 w-2.5 shrink-0">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
-        </span>
-        <span className="text-xs font-semibold whitespace-nowrap pr-1">Созвон идёт</span>
-        <button
-          type="button"
-          onClick={() => window.openConferenceCall?.(navigate, confId)}
-          className="h-9 rounded-xl bg-sky-600 px-3 text-xs font-bold text-white hover:bg-sky-500"
-        >
-          Вернуться
-        </button>
-        <button
-          type="button"
-          onClick={toggleMute}
-          className="h-9 rounded-xl bg-black/[0.04] px-3 text-xs font-semibold text-ink hover:bg-black/[0.07]"
-          title={muted ? 'Включить микрофон' : 'Выключить микрофон'}
-        >
-          {muted ? 'Микрофон' : 'Без звука'}
-        </button>
-        <button
-          type="button"
-          onClick={leave}
-          className="h-9 rounded-xl bg-rose-600 px-3 text-xs font-semibold text-white hover:bg-rose-500"
-        >
-          Выйти
-        </button>
+    <div className="fixed inset-x-0 bottom-0 z-[80]" data-call-bar="live">
+      <div className="bg-sky-700 text-white shadow-[0_-10px_30px_rgba(15,23,42,0.18)]">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="relative flex h-3 w-3 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-70" />
+              <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-300" />
+            </span>
+            <div className="min-w-0">
+              <div className="text-base font-bold">Созвон идёт</div>
+              <div className="text-xs text-white/80">
+                {muted ? 'Микрофон выключен' : 'Вас слышно, созвон продолжается'}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleMute}
+              data-call-mic={muted ? 'off' : 'on'}
+              className="h-10 rounded-xl bg-white/15 px-3 text-sm font-semibold hover:bg-white/25"
+            >
+              {muted ? 'Микрофон выключен' : 'Микрофон включён'}
+            </button>
+            <button
+              type="button"
+              onClick={() => window.openConferenceCall?.(navigate, confId)}
+              className="h-10 rounded-xl bg-white px-4 text-sm font-bold text-sky-800 hover:bg-sky-50"
+            >
+              Вернуться в созвон
+            </button>
+            <button
+              type="button"
+              onClick={leave}
+              className="h-10 rounded-xl bg-rose-600 px-3 text-sm font-semibold text-white hover:bg-rose-500"
+            >
+              Выйти
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
