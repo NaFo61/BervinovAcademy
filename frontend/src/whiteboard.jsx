@@ -21,6 +21,19 @@ function emptyBoard() {
   return { kind: 'academy-board', version: 1, revision: 0, items: [] };
 }
 
+function boardSavePayload(doc, removedIds) {
+  return {
+    snapshot: {
+      kind: 'academy-board',
+      version: 1,
+      revision: doc.revision || 0,
+      items: doc.items || [],
+    },
+    base_revision: doc.revision || 0,
+    removed_ids: removedIds || [],
+  };
+}
+
 function readBoard(snapshot) {
   if (!snapshot || typeof snapshot !== 'object') return emptyBoard();
   const raw = snapshot.kind === 'academy-board' ? snapshot : snapshot.academy_board;
@@ -126,6 +139,7 @@ function WhiteboardPage({ navigate, hashParams }) {
   const imagesRef = React.useRef(new Map());
   const genRef = React.useRef(0);
   const saveTimerRef = React.useRef(0);
+  const liveTimerRef = React.useRef(0);
   const retryTimerRef = React.useRef(0);
   const stoppedRef = React.useRef(false);
   const ownerIdRef = React.useRef('');
@@ -193,15 +207,7 @@ function WhiteboardPage({ navigate, hashParams }) {
         const saved = await window.apiJson(snapUrlRef.current, {
           method: 'PUT',
           auth: true,
-          body: {
-            snapshot: {
-              kind: 'academy-board',
-              version: 1,
-              revision: doc.revision,
-              items: doc.items,
-            },
-            base_revision: doc.revision,
-          },
+          body: boardSavePayload(doc, [...pendingRef.current.removes]),
         });
         if (stoppedRef.current || genRef.current !== seen) return;
         pendingRef.current.upserts.clear();
@@ -225,13 +231,24 @@ function WhiteboardPage({ navigate, hashParams }) {
     const remote = readBoard(snapshot);
     const local = docRef.current;
     const pending = pendingRef.current;
+    remoteLiveRef.current = {};
+    const gone = new Set(Array.isArray(snapshot?.removed) ? snapshot.removed : []);
+    gone.forEach((id) => {
+      pending.upserts.delete(id);
+      pending.removes.delete(id);
+    });
     if ((remote.revision || 0) < (local.revision || 0)) {
       const byId = new Map((remote.items || []).map((item) => [item.id, item]));
-      local.items.forEach((item) => byId.set(item.id, item));
+      local.items.forEach((item) => {
+        if (!gone.has(item.id)) byId.set(item.id, item);
+      });
       pending.removes.forEach((id) => byId.delete(id));
+      gone.forEach((id) => byId.delete(id));
       setBoard({ ...local, items: [...byId.values()] });
     } else {
-      let items = (remote.items || []).filter((item) => !pending.removes.has(item.id));
+      let items = (remote.items || []).filter(
+        (item) => !pending.removes.has(item.id) && !gone.has(item.id),
+      );
       pending.upserts.forEach((item) => {
         items = items.filter((row) => row.id !== item.id).concat(item);
       });
@@ -370,15 +387,9 @@ function WhiteboardPage({ navigate, hashParams }) {
     const path = snapUrlRef.current;
     if (!access || !path || !doc) return;
     const url = `${window.getApiBase()}${path}`;
-    const body = JSON.stringify({
-      snapshot: {
-        kind: 'academy-board',
-        version: 1,
-        revision: doc.revision || 0,
-        items: doc.items || [],
-      },
-      base_revision: doc.revision || 0,
-    });
+    const body = JSON.stringify(
+      boardSavePayload(doc, [...pendingRef.current.removes]),
+    );
     fetch(url, {
       method: 'PUT',
       keepalive: true,
@@ -566,7 +577,33 @@ function WhiteboardPage({ navigate, hashParams }) {
     upsertFromServer,
   ]);
 
+  const queueLiveStroke = () => {
+    if (liveTimerRef.current) return;
+    const stroke = localStrokeRef.current;
+    if (!stroke) return;
+    sendJson({
+      event: 'live',
+      payload: {
+        client: clientIdRef.current,
+        item: {
+          id: stroke.id,
+          type: 'stroke',
+          color: stroke.color,
+          size: stroke.size,
+          points: stroke.points.slice(),
+        },
+      },
+    });
+    liveTimerRef.current = window.setTimeout(() => {
+      liveTimerRef.current = 0;
+    }, 40);
+  };
+
   const finishStroke = React.useCallback(() => {
+    if (liveTimerRef.current) {
+      window.clearTimeout(liveTimerRef.current);
+      liveTimerRef.current = 0;
+    }
     const stroke = localStrokeRef.current;
     localStrokeRef.current = null;
     if (!stroke || !(stroke.points || []).length) {
@@ -630,10 +667,7 @@ function WhiteboardPage({ navigate, hashParams }) {
         points: [point],
       };
     } else {
-      sendJson({
-        event: 'live',
-        payload: { client: clientIdRef.current, item: stroke },
-      });
+      queueLiveStroke();
     }
     scheduleDraw();
   };

@@ -189,6 +189,25 @@ class BoardConsumer(AsyncJsonWebsocketConsumer):
                 {"event": "error", "payload": {"detail": str(exc)}}
             )
             return
+        if item is None:
+            item_id = ""
+            raw_item = None
+            if isinstance(payload, dict):
+                raw_item = payload.get("item")
+            if isinstance(raw_item, dict):
+                candidate = raw_item.get("id")
+                if isinstance(candidate, str):
+                    item_id = candidate
+            await self._broadcast(
+                "remove",
+                {
+                    "ids": [item_id] if item_id else [],
+                    "revision": document["revision"],
+                    "client": _client_id(payload),
+                    "author": str(user.public_id),
+                },
+            )
+            return
         await self._broadcast(
             "commit",
             {

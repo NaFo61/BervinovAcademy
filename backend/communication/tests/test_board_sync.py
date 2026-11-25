@@ -178,3 +178,108 @@ def test_stale_put_does_not_drop_newer_stroke(student_client, student_user):
     board = UserBoard.objects.get(owner=student_user)
     ids = [item["id"] for item in board.snapshot_json["items"]]
     assert ids == ["stroke-a", "stroke-b"]
+
+
+def _snap_url(user):
+    return "/api/communication/whiteboard/users/" f"{user.public_id}/snapshot/"
+
+
+def _put_board(client, user, items, base, removed=None):
+    body = {
+        "snapshot": {
+            "kind": "academy-board",
+            "version": 1,
+            "revision": base,
+            "items": items,
+        },
+        "base_revision": base,
+        "removed_ids": removed or [],
+    }
+    return client.put(_snap_url(user), body, format="json")
+
+
+@override_settings(WHITEBOARD_ENABLED=True)
+def test_put_keeps_stroke_the_client_never_saw(student_client, student_user):
+    """Копия с той же версией не должна стирать чужой штрих."""
+    first = _put_board(student_client, student_user, [_stroke("stroke-a")], 0)
+    assert first.status_code == status.HTTP_200_OK
+    board = UserBoard.objects.get(owner=student_user)
+    revision = board.snapshot_json["revision"]
+    second = _put_board(
+        student_client,
+        student_user,
+        [_stroke("stroke-b")],
+        revision,
+    )
+    assert second.status_code == status.HTTP_200_OK
+    board.refresh_from_db()
+    ids = [item["id"] for item in board.snapshot_json["items"]]
+    assert ids == ["stroke-a", "stroke-b"]
+
+
+@override_settings(WHITEBOARD_ENABLED=True)
+def test_removed_ids_do_not_come_back(student_client, student_user):
+    saved = _put_board(
+        student_client,
+        student_user,
+        [_stroke("stroke-a"), _stroke("stroke-b")],
+        0,
+    )
+    assert saved.status_code == status.HTTP_200_OK
+    board = UserBoard.objects.get(owner=student_user)
+    revision = board.snapshot_json["revision"]
+    erased = _put_board(
+        student_client,
+        student_user,
+        [_stroke("stroke-a")],
+        revision,
+        removed=["stroke-b"],
+    )
+    assert erased.status_code == status.HTTP_200_OK
+    board.refresh_from_db()
+    ids = [item["id"] for item in board.snapshot_json["items"]]
+    assert ids == ["stroke-a"]
+
+    stale = _put_board(
+        student_client,
+        student_user,
+        [_stroke("stroke-a"), _stroke("stroke-b")],
+        0,
+    )
+    assert stale.status_code == status.HTTP_200_OK
+    board.refresh_from_db()
+    ids = [item["id"] for item in board.snapshot_json["items"]]
+    assert ids == ["stroke-a"]
+
+
+@override_settings(WHITEBOARD_ENABLED=True)
+def test_erased_stroke_is_not_drawn_again(student_user):
+    async def run():
+        student = WebsocketCommunicator(
+            application, _ws_path(student_user, student_user)
+        )
+        connected, _ = await student.connect()
+        assert connected
+        await student.receive_json_from()
+        await student.send_json_to(
+            {
+                "event": "remove",
+                "payload": {"client": "tab-student", "ids": ["stroke01"]},
+            }
+        )
+        removed = await student.receive_json_from()
+        assert removed["event"] == "remove"
+        await student.send_json_to(
+            {
+                "event": "commit",
+                "payload": {"client": "tab-student", "item": _stroke()},
+            }
+        )
+        again = await student.receive_json_from()
+        assert again["event"] == "remove"
+        assert again["payload"]["ids"] == ["stroke01"]
+        board = await sync_to_async(UserBoard.objects.get)(owner=student_user)
+        assert board.snapshot_json["items"] == []
+        await student.disconnect()
+
+    _run(run)

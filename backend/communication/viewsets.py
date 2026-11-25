@@ -168,6 +168,7 @@ class UserBoardSnapshotView(APIView):
                 request.user,
                 raw,
                 base_revision=request.data.get("base_revision"),
+                removed_ids=request.data.get("removed_ids") or [],
             )
         except BoardDocumentError as exc:
             return Response(

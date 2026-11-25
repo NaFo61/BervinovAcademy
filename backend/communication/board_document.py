@@ -36,6 +36,7 @@ def empty_document() -> dict[str, Any]:
         "version": VERSION,
         "revision": 0,
         "items": [],
+        "removed": [],
     }
 
 
@@ -58,13 +59,15 @@ def load_document(owner) -> dict[str, Any]:
     return academy_board_from_snapshot(board.snapshot_json)
 
 
-def commit_item(owner, actor, item: dict) -> tuple[dict, dict]:
-    """Добавить или заменить фигуру. Возвращает (документ, фигура)."""
+def commit_item(owner, actor, item: dict) -> tuple[dict, dict | None]:
+    """Добавить фигуру. None — её уже стёрли, повторять не нужно."""
     clean = validate_item(item)
     with transaction.atomic():
         board = _locked_board(owner, actor)
         prev = _dict(board.snapshot_json)
         doc = academy_board_from_snapshot(prev)
+        if clean["id"] in _removed_set(doc):
+            return doc, None
         items = _upsert(list(doc["items"]), clean)
         _ensure_item_count(items)
         doc = _with_items(doc, items, bump=True)
@@ -83,9 +86,16 @@ def remove_items(owner, actor, ids: list) -> dict:
         prev = _dict(board.snapshot_json)
         doc = academy_board_from_snapshot(prev)
         items = [it for it in doc["items"] if it.get("id") not in drop]
-        if len(items) == len(doc["items"]):
+        removed = _remember_removed(doc["removed"], drop)
+        items_changed = len(items) != len(doc["items"])
+        if not items_changed and removed == doc["removed"]:
             return doc
-        doc = _with_items(doc, items, bump=True)
+        doc = _with_items(
+            doc,
+            items,
+            bump=items_changed,
+            removed=removed,
+        )
         board.snapshot_json = _pack(prev, doc)
         _ensure_size(board.snapshot_json)
         board.updated_by = actor
@@ -93,15 +103,30 @@ def remove_items(owner, actor, ids: list) -> dict:
     return doc
 
 
-def save_snapshot_put(owner, actor, raw: dict, base_revision=None):
-    """Сохранить PUT снимка. Формат tldraw не затирает рисунок школы."""
+def save_snapshot_put(
+    owner,
+    actor,
+    raw: dict,
+    base_revision=None,
+    removed_ids=None,
+):
+    """Сохранить PUT снимка. Формат tldraw не затирает рисунок школы.
+
+    Список фигур не подменяет доску целиком: чужой штрих, которого нет
+    в этой копии, остаётся. Стирание приходит только списком removed_ids.
+    """
     if not isinstance(raw, dict):
         raise BoardDocumentError("Нужен объект snapshot.")
     with transaction.atomic():
         board = _locked_board(owner, actor)
         prev = _dict(board.snapshot_json)
         if raw.get("kind") == KIND:
-            stored = _merge_academy_put(prev, raw, base_revision)
+            stored = _merge_academy_put(
+                prev,
+                raw,
+                base_revision,
+                removed_ids=removed_ids,
+            )
         else:
             stored = _preserve_academy(prev, raw)
         _ensure_size(stored)
@@ -139,19 +164,37 @@ def validate_item(raw: Any) -> dict:
     raise BoardDocumentError("Неизвестный тип фигуры.")
 
 
-def _merge_academy_put(prev: dict, raw: dict, base_revision) -> dict:
+def _merge_academy_put(
+    prev: dict,
+    raw: dict,
+    base_revision,
+    removed_ids=None,
+) -> dict:
     current = academy_board_from_snapshot(prev)
     incoming = _coerce_document(raw, strict=True)
     cur_rev = int(current["revision"])
-    base = cur_rev if base_revision is None else _as_revision(base_revision)
-    if base < cur_rev:
-        incoming["items"] = _union(current["items"], incoming["items"])
-        incoming["revision"] = cur_rev
-    elif _same_items(current["items"], incoming["items"]):
-        incoming["revision"] = cur_rev
+    if base_revision is not None:
+        _as_revision(base_revision)
+    if removed_ids is None:
+        drop: set[str] = set()
+    elif not isinstance(removed_ids, list):
+        raise BoardDocumentError("Нужен список удалённых фигур.")
     else:
-        incoming["revision"] = cur_rev + 1
-    return _pack(prev, incoming)
+        drop = _clean_ids(removed_ids)
+    blocked = _removed_set(current) | drop
+    items = _union(current["items"], incoming["items"], blocked)
+    if drop:
+        items = [it for it in items if it.get("id") not in drop]
+    removed = _remember_removed(current["removed"], drop)
+    changed = not _same_items(current["items"], items)
+    merged = {
+        "kind": KIND,
+        "version": VERSION,
+        "revision": cur_rev + (1 if changed else 0),
+        "items": items,
+        "removed": removed,
+    }
+    return _pack(prev, merged)
 
 
 def _preserve_academy(prev: dict, incoming: dict) -> dict:
@@ -163,6 +206,7 @@ def _preserve_academy(prev: dict, incoming: dict) -> dict:
             "version": VERSION,
             "revision": academy["revision"],
             "items": academy["items"],
+            "removed": list(academy.get("removed") or []),
         }
     return stored
 
@@ -174,6 +218,7 @@ def _pack(prev: dict, doc: dict) -> dict:
         "version": VERSION,
         "revision": int(doc["revision"]),
         "items": list(doc["items"]),
+        "removed": list(doc.get("removed") or []),
     }
     if not isinstance(document, dict):
         return body
@@ -206,18 +251,27 @@ def _coerce_document(raw: dict, strict: bool = False) -> dict[str, Any]:
         "version": VERSION,
         "revision": revision,
         "items": clean,
+        "removed": _clean_removed(raw.get("removed")),
     }
 
 
-def _with_items(doc: dict, items: list, bump: bool) -> dict:
+def _with_items(
+    doc: dict,
+    items: list,
+    bump: bool,
+    removed: list | None = None,
+) -> dict:
     revision = int(doc["revision"])
     if bump:
         revision += 1
+    if removed is None:
+        removed = list(doc.get("removed") or [])
     return {
         "kind": KIND,
         "version": VERSION,
         "revision": revision,
         "items": items,
+        "removed": list(removed),
     }
 
 
@@ -230,12 +284,56 @@ def _upsert(items: list, item: dict) -> list:
     return items
 
 
-def _union(current: list, incoming: list) -> list:
+def _union(
+    current: list,
+    incoming: list,
+    blocked: set[str] | None = None,
+) -> list:
+    """Сложить фигуры. Стёртый id не возвращается чужой копией."""
+    blocked = blocked or set()
+    present = {item.get("id") for item in current}
     merged = list(current)
     for item in incoming:
+        item_id = item.get("id")
+        if item_id in blocked and item_id not in present:
+            continue
         merged = _upsert(merged, item)
     _ensure_item_count(merged)
     return merged
+
+
+def _clean_removed(raw: Any) -> list[str]:
+    if not isinstance(raw, list):
+        return []
+    clean: list[str] = []
+    seen: set[str] = set()
+    for item_id in raw:
+        if (
+            isinstance(item_id, str)
+            and _ITEM_ID_RE.fullmatch(item_id)
+            and item_id not in seen
+        ):
+            seen.add(item_id)
+            clean.append(item_id)
+        if len(clean) >= MAX_ITEMS:
+            break
+    return clean
+
+
+def _removed_set(doc: dict) -> set[str]:
+    return set(doc.get("removed") or [])
+
+
+def _remember_removed(existing: list, drop: set[str]) -> list:
+    removed = list(existing)
+    seen = set(removed)
+    for item_id in drop:
+        if item_id not in seen:
+            removed.append(item_id)
+            seen.add(item_id)
+    if len(removed) > MAX_ITEMS:
+        removed = removed[-MAX_ITEMS:]
+    return removed
 
 
 def _same_items(left: list, right: list) -> bool:
