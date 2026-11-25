@@ -69,10 +69,42 @@ function stripAppBase(pathname) {
   return path;
 }
 
+function whiteboardHashQuery(rawHash) {
+  const raw = String(rawHash || '').replace(/^#/, '');
+  const qi = raw.indexOf('?');
+  const routePart = ((qi >= 0 ? raw.slice(0, qi) : raw) || '').replace(/^\/+|\/+$/g, '');
+  if (routePart.split('/')[0] !== Routes.WHITEBOARD) return null;
+  return new URLSearchParams(qi >= 0 ? raw.slice(qi + 1) : '');
+}
+
+/** Доска остаётся на /#/whiteboard. Путь /whiteboard — это папка пакета, обновление её не открывает доску. */
+function whiteboardHashUrl(queryString) {
+  const base = getAppBase();
+  const hash = `#/whiteboard${queryString ? `?${queryString}` : ''}`;
+  return `${base || ''}/${hash}`.replace(/([^:])\/{2,}/g, '$1/');
+}
+
+function readWhiteboardHash() {
+  if (typeof location === 'undefined') return null;
+  const params = whiteboardHashQuery(location.hash);
+  if (!params) return null;
+  return { path: Routes.WHITEBOARD, params };
+}
+
+function keepWhiteboardOnHash() {
+  if (typeof location === 'undefined') return;
+  if (readWhiteboardHash()) return;
+  const trimmed = stripAppBase(location.pathname).replace(/^\/+|\/+$/g, '');
+  if (trimmed.split('/')[0] !== Routes.WHITEBOARD) return;
+  const qs = location.search.startsWith('?') ? location.search.slice(1) : '';
+  history.replaceState(null, '', whiteboardHashUrl(qs));
+}
+
 /** Старые закладки /#/catalog → /catalog */
 function migrateLegacyHashRoute() {
   if (typeof location === 'undefined') return;
   if (!location.hash.startsWith('#/')) return;
+  if (readWhiteboardHash()) return;
   const raw = location.hash.slice(2);
   const qi = raw.indexOf('?');
   const routePart = ((qi >= 0 ? raw.slice(0, qi) : raw) || '').replace(/^\/+|\/+$/g, '');
@@ -85,6 +117,9 @@ function migrateLegacyHashRoute() {
 }
 
 function parsePathRoute() {
+  keepWhiteboardOnHash();
+  const board = readWhiteboardHash();
+  if (board) return board;
   migrateLegacyHashRoute();
   const trimmed = stripAppBase(location.pathname).replace(/^\/+|\/+$/g, '');
   const routeId = trimmed ? trimmed.split('/')[0] : Routes.LANDING;
@@ -110,8 +145,12 @@ function useAppRoute() {
           ? query.replace(/^\?/, '')
           : new URLSearchParams(query).toString();
     }
-    const url = pathForRoute(r) + (qs ? `?${qs}` : '');
-    const current = `${location.pathname}${location.search}`;
+    const url = r === Routes.WHITEBOARD
+      ? whiteboardHashUrl(qs)
+      : pathForRoute(r) + (qs ? `?${qs}` : '');
+    const current = r === Routes.WHITEBOARD
+      ? `${location.pathname}${location.hash}`
+      : `${location.pathname}${location.search}`;
     if (current !== url) {
       history.pushState(null, '', url);
     }
