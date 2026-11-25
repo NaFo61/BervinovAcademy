@@ -365,15 +365,42 @@ function WhiteboardPage({ navigate, hashParams }) {
     };
   }, [ready]);
 
+  const flushSnapshot = React.useCallback((doc) => {
+    const access = window.getAccessToken();
+    const path = snapUrlRef.current;
+    if (!access || !path || !doc) return;
+    const url = `${window.getApiBase()}${path}`;
+    const body = JSON.stringify({
+      snapshot: {
+        kind: 'academy-board',
+        version: 1,
+        revision: doc.revision || 0,
+        items: doc.items || [],
+      },
+      base_revision: doc.revision || 0,
+    });
+    fetch(url, {
+      method: 'PUT',
+      keepalive: true,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${access}`,
+      },
+      body,
+    }).catch(() => {});
+  }, []);
+
   const commitItem = React.useCallback((item) => {
     markDirty();
     pendingRef.current.removes.delete(item.id);
     pendingRef.current.upserts.set(item.id, item);
     const doc = docRef.current;
-    setBoard({
+    const next = {
       ...doc,
       items: doc.items.filter((row) => row.id !== item.id).concat(item),
-    });
+    };
+    setBoard(next);
+    flushSnapshot(next);
     const sent = sendJson({
       event: 'commit',
       payload: { client: clientIdRef.current, item },
@@ -382,7 +409,7 @@ function WhiteboardPage({ navigate, hashParams }) {
       setStatus('Нет связи — сохраняем на сервере');
       persistSoon();
     }
-  }, [markDirty, persistSoon, sendJson, setBoard]);
+  }, [flushSnapshot, markDirty, persistSoon, sendJson, setBoard]);
 
   const commitRemove = React.useCallback((ids) => {
     if (!ids.length) return;
@@ -394,13 +421,15 @@ function WhiteboardPage({ navigate, hashParams }) {
       delete remoteLiveRef.current[id];
     });
     const doc = docRef.current;
-    setBoard({ ...doc, items: doc.items.filter((item) => !drop.has(item.id)) });
+    const next = { ...doc, items: doc.items.filter((item) => !drop.has(item.id)) };
+    setBoard(next);
+    flushSnapshot(next);
     const sent = sendJson({
       event: 'remove',
       payload: { client: clientIdRef.current, ids },
     });
     if (!sent) persistSoon();
-  }, [markDirty, persistSoon, sendJson, setBoard]);
+  }, [flushSnapshot, markDirty, persistSoon, sendJson, setBoard]);
 
   const placeImage = React.useCallback(async (src, x, y) => {
     const size = await loadImageSize(src);
@@ -509,7 +538,12 @@ function WhiteboardPage({ navigate, hashParams }) {
       }
     })();
 
+    const saveOnLeave = () => flushSnapshot(docRef.current);
+    window.addEventListener('pagehide', saveOnLeave);
+
     return () => {
+      saveOnLeave();
+      window.removeEventListener('pagehide', saveOnLeave);
       cancelled = true;
       stoppedRef.current = true;
       window.clearTimeout(saveTimerRef.current);
@@ -524,6 +558,7 @@ function WhiteboardPage({ navigate, hashParams }) {
     token,
     ownerFromQuery,
     applyRemoteHello,
+    flushSnapshot,
     placeImage,
     removeFromServer,
     scheduleDraw,
