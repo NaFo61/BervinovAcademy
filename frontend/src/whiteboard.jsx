@@ -470,9 +470,9 @@ function loadImageSize(src) {
   });
 }
 
-function WhiteboardPage({ navigate, hashParams }) {
+function WhiteboardPage({ navigate, hashParams, embedded = false, ownerPublicId = '' }) {
   const token = window.getAccessToken();
-  const ownerFromQuery = hashParams?.get('user') || '';
+  const ownerFromQuery = ownerPublicId || hashParams?.get('user') || '';
   const canvasRef = React.useRef(null);
   const metricsRef = React.useRef(null);
   const docRef = React.useRef(emptyBoard());
@@ -653,6 +653,28 @@ function WhiteboardPage({ navigate, hashParams }) {
       revision: Math.max(doc.revision || 0, Number(revision) || 0),
     });
   }, [setBoard]);
+
+  React.useEffect(() => {
+    if (!embedded) return undefined;
+    const exportPng = () => new Promise((resolve, reject) => {
+      const canvas = canvasRef.current;
+      if (!canvas || canvas.width < 2) {
+        reject(new Error('Доска ещё не загружена'));
+        return;
+      }
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error('Не удалось сделать снимок'));
+      }, 'image/png');
+    });
+    const exportDoc = () => docRef.current;
+    window.exportAcademyBoardPng = exportPng;
+    window.exportAcademyBoardSnapshot = exportDoc;
+    return () => {
+      if (window.exportAcademyBoardPng === exportPng) delete window.exportAcademyBoardPng;
+      if (window.exportAcademyBoardSnapshot === exportDoc) delete window.exportAcademyBoardSnapshot;
+    };
+  }, [embedded]);
 
   React.useEffect(() => {
     toolRef.current = tool;
@@ -1694,8 +1716,8 @@ function WhiteboardPage({ navigate, hashParams }) {
     : 'Ctrl+Z отменяет действие. Ctrl+V вставляет картинку.';
 
   return (
-    <div className="h-full min-h-0 bg-[#F6F8FC] flex flex-col">
-      <div className="shrink-0 h-14 px-3 sm:px-5 flex items-center gap-3 border-b border-black/[0.08] bg-white">
+    <div className={`${embedded ? 'absolute inset-0' : 'h-full'} min-h-0 bg-[#F6F8FC] flex flex-col`} data-board-embed={embedded ? '1' : '0'}>
+      {!embedded && <div className="shrink-0 h-14 px-3 sm:px-5 flex items-center gap-3 border-b border-black/[0.08] bg-white">
         <button
           type="button"
           onClick={() => {
@@ -1724,7 +1746,7 @@ function WhiteboardPage({ navigate, hashParams }) {
         >
           Созвоны
         </button>
-      </div>
+      </div>}
       <div className="relative flex-1 min-h-0 overflow-hidden flex flex-col lg:flex-row">
         {sideImages.length > 0 && (
           <div className="shrink-0 lg:w-[42%] max-h-[38vh] lg:max-h-none lg:h-full overflow-auto bg-white border-b lg:border-b-0 lg:border-r border-black/[0.08] p-3">

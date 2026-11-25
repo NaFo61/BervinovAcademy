@@ -139,13 +139,12 @@ function ReplyQuote({ reply, mine, onJumpTo }) {
 }
 function ConferenceSystemBubble({ message, navigate, inCall, onOpenWhiteboard, onOpenLessonSummary }) {
   const conf = message.conference; const canJoin = conf && ['waiting', 'active'].includes(conf.status) && !inCall;
-  const dark = inCall;
-  return <div className="my-4 flex justify-center px-2"><div className={`w-full max-w-md rounded-2xl px-4 py-3 text-center ring-1 ${dark ? 'bg-white/[.06] text-white/85 ring-white/10' : 'bg-violet-500/[.06] text-ink/75 ring-violet-500/15'}`}>
+  return <div className="my-4 flex justify-center px-2"><div className="w-full max-w-md rounded-2xl bg-violet-500/[.06] px-4 py-3 text-center text-ink/75 ring-1 ring-violet-500/15">
     <div className="mb-1 text-[11px] font-bold uppercase tracking-widest opacity-60">Созвон</div><div className="text-sm font-medium">{message.body}</div>
-    {conf?.status === 'completed' && (conf?.has_lesson_summary || conf?.lesson_summary_status === 'pending') && onOpenLessonSummary && <button type="button" onClick={() => onOpenLessonSummary(conf.public_id)} className={`mt-3 h-9 rounded-lg px-4 text-xs font-semibold ${dark ? 'bg-white/10' : 'bg-white ring-1 ring-black/[.08]'}`}>{conf?.lesson_summary_status === 'pending' ? 'Конспект…' : 'Конспект урока'}</button>}
-    {conf?.status === 'completed' && conf?.has_whiteboard && onOpenWhiteboard && <button type="button" onClick={() => onOpenWhiteboard(conf.public_id)} className={`mt-3 h-9 rounded-lg px-4 text-xs font-semibold ${dark ? 'bg-white/10' : 'bg-white ring-1 ring-black/[.08]'}`}>Снимок доски</button>}
+    {conf?.status === 'completed' && (conf?.has_lesson_summary || conf?.lesson_summary_status === 'pending') && onOpenLessonSummary && <button type="button" onClick={() => onOpenLessonSummary(conf.public_id)} className="mt-3 h-9 rounded-lg bg-white px-4 text-xs font-semibold ring-1 ring-black/[.08]">{conf?.lesson_summary_status === 'pending' ? 'Конспект…' : 'Конспект урока'}</button>}
+    {conf?.status === 'completed' && conf?.has_whiteboard && onOpenWhiteboard && <button type="button" onClick={() => onOpenWhiteboard(conf.public_id)} className="mt-3 h-9 rounded-lg bg-white px-4 text-xs font-semibold ring-1 ring-black/[.08]">Снимок доски</button>}
     {canJoin && <button type="button" onClick={() => window.openConferenceCall(navigate, conf.public_id)} className="btn-grad mt-3 h-9 rounded-lg px-4 text-xs font-semibold text-white">Войти в созвон</button>}
-    <div className={`mt-2 text-[10px] ${dark ? 'text-white/45' : 'text-ink/40'}`}>{formatChatTime(message.created_at)}</div>
+    <div className="mt-2 text-[10px] text-ink/40">{formatChatTime(message.created_at)}</div>
   </div></div>;
 }
 function MessageMenu({ mine, message, onReply, onForward, onEdit, onDelete }) {

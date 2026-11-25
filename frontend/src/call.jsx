@@ -283,11 +283,7 @@ function CallPage({ navigate, hashParams }) {
   const [selectedTileKey, setSelectedTileKey] = React.useState(null);
   const [displayMode, setDisplayMode] = React.useState('focus');
   const [isFullscreen, setIsFullscreen] = React.useState(false);
-  const [whiteboardSyncToken, setWhiteboardSyncToken] = React.useState('');
-  const [whiteboardRoomId, setWhiteboardRoomId] = React.useState('');
-  const [whiteboardLicenseKey, setWhiteboardLicenseKey] = React.useState('');
   const [whiteboardOwnerId, setWhiteboardOwnerId] = React.useState('');
-  const [whiteboardSnapshot, setWhiteboardSnapshot] = React.useState(null);
   const [whiteboardNotice, setWhiteboardNotice] = React.useState('');
   const [whiteboardSaving, setWhiteboardSaving] = React.useState(false);
   const [whiteboardSaved, setWhiteboardSaved] = React.useState(false);
@@ -413,11 +409,7 @@ function CallPage({ navigate, hashParams }) {
 
   React.useEffect(() => {
     if (!WHITEBOARD_FEATURE_ENABLED || !confId || phase !== 'in_call') {
-      setWhiteboardSyncToken('');
-      setWhiteboardRoomId('');
-      setWhiteboardLicenseKey('');
       setWhiteboardOwnerId('');
-      setWhiteboardSnapshot(null);
       return undefined;
     }
 
@@ -430,21 +422,9 @@ function CallPage({ navigate, hashParams }) {
           `/api/communication/conferences/${encodeURIComponent(confId)}/whiteboard/token/`,
           { method: 'POST', auth: true },
         );
-        if (!cancelled) {
-          setWhiteboardSyncToken(data.token || '');
-          setWhiteboardRoomId(data.room_id || '');
-          setWhiteboardLicenseKey(data.license_key || '');
-          setWhiteboardOwnerId(data.owner_public_id || '');
-          setWhiteboardSnapshot(data.snapshot || null);
-        }
+        if (!cancelled) setWhiteboardOwnerId(data.owner_public_id || '');
       } catch (_) {
-        if (!cancelled) {
-          setWhiteboardSyncToken('');
-          setWhiteboardRoomId('');
-          setWhiteboardLicenseKey('');
-          setWhiteboardOwnerId('');
-          setWhiteboardSnapshot(null);
-        }
+        if (!cancelled) setWhiteboardOwnerId('');
       }
     };
 
@@ -456,23 +436,6 @@ function CallPage({ navigate, hashParams }) {
       if (timerId) clearInterval(timerId);
     };
   }, [confId, phase]);
-
-  React.useEffect(() => {
-    if (phase !== 'in_call' || !whiteboardOwnerId) return undefined;
-    const save = () => {
-      if (window.saveUserBoardSnapshot) window.saveUserBoardSnapshot(whiteboardOwnerId);
-    };
-    const timerId = setInterval(save, 20000);
-    const onHide = () => {
-      if (document.visibilityState === 'hidden') save();
-    };
-    document.addEventListener('visibilitychange', onHide);
-    return () => {
-      clearInterval(timerId);
-      document.removeEventListener('visibilitychange', onHide);
-      save();
-    };
-  }, [phase, whiteboardOwnerId]);
 
   // Тихая запись аудио у ментора для AI-конспекта.
   React.useEffect(() => {
@@ -535,21 +498,19 @@ function CallPage({ navigate, hashParams }) {
 
   const saveWhiteboard = React.useCallback(async () => {
     if (!confId || whiteboardSaving) return;
-    const api = window.BervinovWhiteboard;
-    if (!api?.exportPngBlob) {
+    if (!window.exportAcademyBoardPng) {
       setWhiteboardNotice('Доска ещё не загружена');
       return;
     }
     setWhiteboardSaving(true);
     try {
-      const blob = await api.exportPngBlob();
+      const blob = await window.exportAcademyBoardPng();
       const form = new FormData();
       form.append('image', blob, 'whiteboard.png');
-      if (api.exportSnapshotJson) {
+      if (window.exportAcademyBoardSnapshot) {
         try {
-          const snapshot = api.exportSnapshotJson();
-          form.append('snapshot', JSON.stringify(snapshot));
-        } catch (_) { /* snapshot optional */ }
+          form.append('snapshot', JSON.stringify(window.exportAcademyBoardSnapshot()));
+        } catch (_) { /* картинка важнее файла доски */ }
       }
       await window.fetchApiForm(
         `/api/communication/conferences/${encodeURIComponent(confId)}/whiteboard/export/`,
@@ -1046,11 +1007,10 @@ function CallPage({ navigate, hashParams }) {
   }
 
   const { tiles: mediaTiles, audioPubs } = buildTiles(roomRef.current, LK);
-  const boardRoomId = whiteboardRoomId || confId;
   const whiteboardTile = whiteboardEnabled ? {
     key: WHITEBOARD_TILE_KEY,
     type: 'whiteboard',
-    label: 'Доска ученика',
+    label: 'Доска',
     isLocal: false,
     isScreen: false,
     placeholder: false,
@@ -1058,7 +1018,8 @@ function CallPage({ navigate, hashParams }) {
   const visibleTiles = whiteboardTile ? [...mediaTiles, whiteboardTile] : mediaTiles;
   const screenTile = visibleTiles.find((tile) => tile.isScreen && !tile.placeholder);
   const selectedTile = visibleTiles.find((tile) => tile.key === selectedTileKey);
-  const mainTile = selectedTile || screenTile || visibleTiles.find((tile) => !tile.isLocal && !tile.placeholder) || visibleTiles[0];
+  const boardTile = visibleTiles.find((tile) => tile.type === 'whiteboard');
+  const mainTile = selectedTile || screenTile || boardTile || visibleTiles.find((tile) => !tile.isLocal && !tile.placeholder) || visibleTiles[0];
   const sideTiles = visibleTiles.filter((tile) => tile.key !== mainTile?.key);
   const isCleanMode = displayMode === 'clean' || isFullscreen;
   const isGridMode = displayMode === 'grid';
@@ -1068,7 +1029,7 @@ function CallPage({ navigate, hashParams }) {
 
   return (
     <div ref={callRootRef} data-screen-label="Call"
-      className={`${isFullscreen ? 'h-screen max-h-screen' : 'h-full max-h-full min-h-0'} overflow-hidden bg-[#070b18] text-white flex flex-col relative`}>
+      className={`${isFullscreen ? 'h-screen max-h-screen' : 'h-full max-h-full min-h-0'} overflow-hidden bg-[#F6F8FC] text-ink flex flex-col relative`}>
       {window.ConfirmDialog && (
         <window.ConfirmDialog
           open={confirmMode === 'leave'}
@@ -1107,49 +1068,56 @@ function CallPage({ navigate, hashParams }) {
         />
       )}
       {chatThread && ChatThreadView && phase === 'in_call' && (
-        <aside className={`absolute inset-y-0 right-0 z-30 w-full sm:w-[min(100%,380px)] shadow-2xl border-l border-white/10 flex flex-col min-h-0 ${
-          chatOpen ? '' : 'hidden'
+        <aside className={`absolute inset-y-0 right-0 z-30 w-full sm:w-[min(100%,380px)] min-h-0 flex-col border-l border-black/[0.08] bg-white shadow-soft ${
+          chatOpen ? 'flex' : 'hidden'
         }`}>
-          <ChatThreadView
-            thread={chatThread}
-            compact
-            embedded
-            inCall
-            navigate={navigate}
-            markReadOnView={chatOpen}
-            onBack={() => setChatOpen(false)}
-            onOpenWhiteboard={(id) => setCallWhiteboardPreview(id)}
-            onOpenLessonSummary={(id) => setCallSummaryPreview(id)}
-            onUnreadMessage={() => setCallChatUnread((n) => n + 1)}
-            onMarkedRead={() => {
-              setCallChatUnread(0);
-              window.refreshChatUnread?.();
-            }}
-          />
+          <div className="flex shrink-0 items-center justify-between border-b border-black/[0.06] px-4 py-2">
+            <div className="text-sm font-semibold text-ink">Чат урока</div>
+            <button type="button" onClick={() => setChatOpen(false)} className="h-8 rounded-lg px-3 text-xs font-semibold text-ink/70 hover:bg-black/[0.04]">
+              Закрыть
+            </button>
+          </div>
+          <div className="min-h-0 flex-1">
+            <ChatThreadView
+              thread={chatThread}
+              compact
+              inCall
+              navigate={navigate}
+              markReadOnView={chatOpen}
+              onBack={() => setChatOpen(false)}
+              onOpenWhiteboard={(id) => setCallWhiteboardPreview(id)}
+              onOpenLessonSummary={(id) => setCallSummaryPreview(id)}
+              onUnreadMessage={() => setCallChatUnread((n) => n + 1)}
+              onMarkedRead={() => {
+                setCallChatUnread(0);
+                window.refreshChatUnread?.();
+              }}
+            />
+          </div>
         </aside>
       )}
       {!chatOpen && phase === 'in_call' && !chatThread && chatLoadError && (
-        <aside className="absolute inset-y-0 right-0 z-30 w-full sm:w-[min(100%,380px)] bg-[#0a1020] border-l border-white/10 p-4 flex items-center justify-center text-sm text-red-300">
+        <aside className="absolute inset-y-0 right-0 z-30 flex w-full items-center justify-center border-l border-black/[0.08] bg-white p-4 text-sm text-rose-700 sm:w-[min(100%,380px)]">
           {chatLoadError}
         </aside>
       )}
       {!isCleanMode && (
-        <div className="px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-white/[0.03]">
+        <div className="px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2 border-b border-black/[0.08] bg-white">
           <div className="min-w-0">
             <div className="font-semibold truncate">{title}</div>
-            <div className="text-xs text-white/50">
+            <div className="text-xs text-ink/50">
               {STATUS_LABELS[conference?.status] || 'Созвон'}
               {screenTile ? ' · идёт демонстрация экрана' : ''}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button type="button" onClick={() => setConfirmMode('leave')}
-              className="h-11 px-3 sm:px-4 rounded-lg bg-white/10 hover:bg-white/15 text-sm font-semibold">
+              className="h-10 px-3 sm:px-4 rounded-xl bg-white ring-1 ring-black/[0.08] text-sm font-semibold text-ink hover:bg-black/[0.03]">
               Выйти
             </button>
             {isMentor && (
               <button type="button" onClick={() => setConfirmMode('end')}
-                className="h-11 px-3 sm:px-4 rounded-lg bg-rose-600 hover:bg-rose-500 text-sm font-semibold">
+                className="h-10 px-3 sm:px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-sm font-semibold text-white">
                 <span className="sm:hidden">Всем</span>
                 <span className="hidden sm:inline">Завершить для всех</span>
               </button>
@@ -1159,13 +1127,13 @@ function CallPage({ navigate, hashParams }) {
       )}
 
       {mediaWarning && !isCleanMode && (
-        <div className="mx-4 mt-3 px-4 py-2 rounded-xl bg-amber-500/15 text-amber-100 text-xs border border-amber-400/30">
+        <div className="mx-4 mt-3 px-4 py-2 rounded-xl bg-amber-50 text-amber-900 text-xs ring-1 ring-amber-200">
           {mediaWarning}
         </div>
       )}
 
       {whiteboardNotice && !isCleanMode && (
-        <div className="mx-4 mt-3 px-4 py-2 rounded-xl bg-emerald-500/15 text-emerald-100 text-xs border border-emerald-400/30">
+        <div className="mx-4 mt-3 px-4 py-2 rounded-xl bg-emerald-50 text-emerald-800 text-xs ring-1 ring-emerald-200">
           {whiteboardNotice}
         </div>
       )}
@@ -1179,11 +1147,8 @@ function CallPage({ navigate, hashParams }) {
                 tile={tile}
                 main
                 fit="contain"
-                roomId={boardRoomId}
-                syncToken={whiteboardSyncToken}
-                licenseKey={whiteboardLicenseKey}
-                initialSnapshot={whiteboardSnapshot}
                 ownerId={whiteboardOwnerId}
+                navigate={navigate}
                 selected={tile.key === selectedTileKey}
                 onSelect={() => selectTile(tile.key)}
                 isGridMode
@@ -1197,11 +1162,8 @@ function CallPage({ navigate, hashParams }) {
               main
               clean={isCleanMode}
               fit="contain"
-              roomId={boardRoomId}
-              syncToken={whiteboardSyncToken}
-              licenseKey={whiteboardLicenseKey}
-              initialSnapshot={whiteboardSnapshot}
               ownerId={whiteboardOwnerId}
+              navigate={navigate}
               isGridMode={false}
               onSelect={() => selectTile(mainTile?.key)}
             />
@@ -1217,11 +1179,8 @@ function CallPage({ navigate, hashParams }) {
                     compact={isCleanMode}
                     clean={isCleanMode}
                     fit="contain"
-                    roomId={boardRoomId}
-                    syncToken={whiteboardSyncToken}
-                    licenseKey={whiteboardLicenseKey}
-                    initialSnapshot={whiteboardSnapshot}
                     ownerId={whiteboardOwnerId}
+                    navigate={navigate}
                     isGridMode={false}
                     selected={tile.key === selectedTileKey}
                     onSelect={() => selectTile(tile.key)}
@@ -1235,10 +1194,10 @@ function CallPage({ navigate, hashParams }) {
 
       {audioPubs.map((item) => <AudioTrack key={item.key} publication={item.pub} />)}
 
-        <div className={`${isCleanMode ? 'fixed bottom-4 left-1/2 -translate-x-1/2 z-20 rounded-2xl bg-black/45 backdrop-blur-xl px-3 py-3 max-w-[calc(100vw-1.5rem)]' : 'p-3 sm:p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]'} flex flex-wrap items-center justify-center gap-2 sm:gap-3`}>
-        <div className="flex items-center gap-1 rounded-full bg-white/10 p-1">
+      <div className={`${isCleanMode ? 'fixed bottom-4 left-1/2 z-20 max-w-[calc(100vw-1.5rem)] -translate-x-1/2 rounded-2xl bg-white px-3 py-3 shadow-soft ring-1 ring-black/[0.08]' : 'border-t border-black/[0.08] bg-white p-3 sm:p-4 pb-[max(1rem,env(safe-area-inset-bottom))]'} flex flex-wrap items-center justify-center gap-2 sm:gap-3`}>
+        <div className="flex items-center gap-1 rounded-full bg-black/[0.04] p-1">
           <ModeButton active={displayMode === 'grid'} onClick={() => setDisplayMode('grid')}>Мозаика</ModeButton>
-          <ModeButton active={displayMode === 'focus'} onClick={() => setDisplayMode('focus')}>Важное</ModeButton>
+          <ModeButton active={displayMode === 'focus'} onClick={() => setDisplayMode('focus')}>Крупно</ModeButton>
         </div>
         <CallControl
           label="На сайт"
@@ -1290,35 +1249,28 @@ function CallPage({ navigate, hashParams }) {
   );
 }
 
-function VideoTile({ tile, main = false, compact = false, clean = false, fit = 'cover', selected = false, onSelect, roomId, syncToken, licenseKey, initialSnapshot = null, ownerId = '', isGridMode = false }) {
+function VideoTile({ tile, main = false, compact = false, clean = false, fit = 'cover', selected = false, onSelect, ownerId = '', navigate, isGridMode = false }) {
   const base = compact
     ? 'h-28 cursor-pointer'
     : main
       ? 'h-full min-h-0'
       : 'h-36 sm:h-40 cursor-pointer';
   const rounded = clean ? 'rounded-none' : (main ? 'rounded-2xl' : 'rounded-xl');
-  const chrome = clean ? 'ring-0 border-0' : 'ring-1 ring-white/10';
-  const selectedClass = clean ? '' : (selected ? 'ring-2 ring-cyan-300' : 'hover:ring-white/30');
+  const chrome = clean ? 'ring-0 border-0' : 'ring-1 ring-black/[0.08]';
+  const selectedClass = clean ? '' : (selected ? 'ring-2 ring-sky-400' : 'hover:ring-sky-200');
   const isWhiteboard = tile?.type === 'whiteboard';
   const tileLabel = tile?.label || 'Участник';
-  const whiteboardActive = isWhiteboard && main && !isGridMode;
-  const shellClass = `relative block text-left overflow-hidden bg-[#111827] ${chrome} ${selectedClass} ${rounded} ${base} ${
-    whiteboardActive ? '' : 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-300'
+  const showBoard = isWhiteboard && !compact && (Boolean(main) || isGridMode);
+  const hasVideo = Boolean(tile?.publication && !tile.placeholder);
+  const shellClass = `relative block text-left overflow-hidden bg-white ${chrome} ${selectedClass} ${rounded} ${base} ${
+    showBoard ? '' : 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-300'
   }`;
 
   if (isWhiteboard) {
-    if (whiteboardActive) {
+    if (showBoard) {
       return (
-        <div className={shellClass} aria-label={tileLabel}>
-          <WhiteboardTile roomId={roomId} syncToken={syncToken} licenseKey={licenseKey} initialSnapshot={initialSnapshot} ownerId={ownerId} />
-          {!clean && (
-            <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent pointer-events-none z-10">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] px-2 py-0.5 rounded bg-white text-slate-900">доска</span>
-                <span className={`${main ? 'text-sm' : 'text-xs'} font-semibold truncate`}>{tileLabel}</span>
-              </div>
-            </div>
-          )}
+        <div className={shellClass} aria-label={tileLabel} data-call-board="academy">
+          <WhiteboardTile ownerId={ownerId} navigate={navigate} />
         </div>
       );
     }
@@ -1330,21 +1282,13 @@ function VideoTile({ tile, main = false, compact = false, clean = false, fit = '
         onClick={onSelect}
         aria-label={`Показать: ${tileLabel}`}
       >
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-white to-slate-100 text-slate-700 gap-2 px-3 text-center">
-          <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white text-ink gap-2 px-3 text-center">
+          <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-800 flex items-center justify-center">
             <I.Layers className="w-5 h-5" />
           </div>
-          <div className="text-xs font-semibold">Доска ученика</div>
-          <div className="text-[10px] text-slate-500">Та же, что в кабинете. Не стирается</div>
+          <div className="text-xs font-semibold">Доска</div>
+          <div className="text-[11px] text-ink/50">Нажмите, чтобы рисовать</div>
         </div>
-        {!clean && (
-          <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent pointer-events-none z-10">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] px-2 py-0.5 rounded bg-white text-slate-900">доска</span>
-              <span className={`${main ? 'text-sm' : 'text-xs'} font-semibold truncate`}>{tileLabel}</span>
-            </div>
-          </div>
-        )}
       </button>
     );
   }
@@ -1352,93 +1296,65 @@ function VideoTile({ tile, main = false, compact = false, clean = false, fit = '
   return (
     <button type="button" onClick={onSelect} aria-label={`Показать: ${tileLabel}`}
       className={shellClass}>
-      {tile?.publication && !tile.placeholder ? (
+      {hasVideo ? (
         <MediaTrack publication={tile.publication} muted={tile.isLocal} fit={fit} />
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-white to-slate-50">
           <div className="flex flex-col items-center gap-3 px-4 text-center">
-            <div className={`${main ? 'w-24 h-24 text-3xl' : 'w-12 h-12 text-base'} rounded-full bg-white/10 flex items-center justify-center font-bold`}>
+            <div className={`${main ? 'w-24 h-24 text-3xl' : 'w-12 h-12 text-base'} rounded-full bg-sky-50 text-sky-800 flex items-center justify-center font-bold`}>
               {(tile?.label || 'У').slice(0, 1).toUpperCase()}
             </div>
             {main && (
               <div>
-                <div className="text-xl sm:text-2xl font-bold">{tile?.label || 'Участник'}</div>
-                <div className="text-sm text-white/45 mt-1">Камера выключена</div>
+                <div className="text-xl sm:text-2xl font-bold text-ink">{tile?.label || 'Участник'}</div>
+                <div className="text-sm text-ink/50 mt-1">Камера выключена</div>
               </div>
             )}
           </div>
         </div>
       )}
-      {!clean && <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent">
-        <div className="flex items-center gap-2">
-          {tile?.isScreen && <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-400/20 text-cyan-100">экран</span>}
-          {isWhiteboard && <span className="text-[10px] px-2 py-0.5 rounded bg-white text-slate-900">доска</span>}
-          <span className={`${main ? 'text-sm' : 'text-xs'} font-semibold truncate`}>{tile?.label || 'Участник'}</span>
+      {!clean && (
+        <div className={`absolute inset-x-0 bottom-0 p-3 ${hasVideo ? 'bg-gradient-to-t from-black/70 to-transparent text-white' : 'text-ink'}`}>
+          <div className="flex items-center gap-2">
+            {tile?.isScreen && <span className={`text-[10px] px-2 py-0.5 rounded ${hasVideo ? 'bg-white/20' : 'bg-sky-50 text-sky-800'}`}>экран</span>}
+            <span className={`${main ? 'text-sm' : 'text-xs'} font-semibold truncate`}>{tile?.label || 'Участник'}</span>
+          </div>
         </div>
-      </div>}
+      )}
     </button>
   );
 }
 
-function WhiteboardTile({ roomId, syncToken, licenseKey, initialSnapshot, ownerId }) {
-  const hostRef = React.useRef(null);
-  const [bundleError, setBundleError] = React.useState('');
-
-  React.useEffect(() => {
-    const host = hostRef.current;
-    if (!host || !roomId || !syncToken) return undefined;
-    let cancelled = false;
-    (async () => {
-      try {
-        const api = window.ensureWhiteboardBundle
-          ? await window.ensureWhiteboardBundle()
-          : window.BervinovWhiteboard;
-        if (cancelled || !api?.mount) return;
-        api.mount(host, {
-          roomId,
-          syncToken,
-          licenseKey,
-          initialSnapshot: initialSnapshot || null,
-        });
-      } catch (err) {
-        if (!cancelled) {
-          setBundleError(err?.message || 'Доска не загрузилась');
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-      if (ownerId && window.saveUserBoardSnapshot) {
-        window.saveUserBoardSnapshot(ownerId);
-      }
-      window.BervinovWhiteboard?.unmount?.(host);
-    };
-  }, [roomId, syncToken, licenseKey, ownerId]);
-
-  if (!syncToken) {
+function WhiteboardTile({ ownerId, navigate }) {
+  const Board = window.WhiteboardPage;
+  if (!ownerId) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-white text-slate-600 text-xs px-4 text-center">
-        Получение доступа…
+      <div className="absolute inset-0 flex items-center justify-center bg-[#F6F8FC] text-sm text-ink/60 px-4 text-center">
+        Открываем доску…
       </div>
     );
   }
-
+  if (!Board) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center bg-[#F6F8FC] text-sm text-rose-600 px-4 text-center">
+        Доска не загрузилась
+      </div>
+    );
+  }
   return (
-    <div ref={hostRef} className="absolute inset-0 bg-[#f6f8fc] z-[1] pointer-events-auto touch-none">
-      {bundleError ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-white text-slate-600 text-xs px-4 text-center">
-          {bundleError}
-        </div>
-      ) : null}
-    </div>
+    <Board
+      navigate={navigate}
+      embedded
+      ownerPublicId={ownerId}
+    />
   );
 }
 
 function ModeButton({ active, onClick, children }) {
   return (
     <button type="button" onClick={onClick}
-      className={`h-9 px-3 rounded-full text-xs font-semibold transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-300 ${
-        active ? 'bg-cyan-400 text-slate-950' : 'text-white/70 hover:bg-white/10'
+      className={`h-9 px-3 rounded-full text-xs font-semibold transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-300 ${
+        active ? 'bg-white text-sky-800 shadow-sm' : 'text-ink/60 hover:bg-white/70'
       }`}>
       {children}
     </button>
@@ -1448,9 +1364,9 @@ function ModeButton({ active, onClick, children }) {
 function CallControl({ children, label, active, onClick, badge = 0 }) {
   return (
     <button type="button" onClick={onClick} title={label}
-      className={`relative flex flex-col items-center gap-1 min-w-[3.5rem] sm:min-w-[72px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-300 rounded-xl ${active ? 'text-cyan-200' : 'text-white/90'}`}>
+      className={`relative flex flex-col items-center gap-1 min-w-[3.5rem] sm:min-w-[72px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-300 rounded-xl ${active ? 'text-sky-800' : 'text-ink/80'}`}>
       <span className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-        active ? 'bg-cyan-500/70' : 'bg-white/12 hover:bg-white/20'
+        active ? 'bg-sky-50 ring-1 ring-sky-200' : 'bg-black/[0.04] hover:bg-black/[0.07]'
       }`}>
         {children}
         {badge > 0 && (
@@ -1459,7 +1375,7 @@ function CallControl({ children, label, active, onClick, badge = 0 }) {
           </span>
         )}
       </span>
-      <span className="text-[10px] text-white/60">{label}</span>
+      <span className="text-[10px] text-ink/55">{label}</span>
     </button>
   );
 }
@@ -1529,7 +1445,7 @@ function CallFloatingBar({ navigate, route }) {
 
   return (
     <div className="fixed bottom-4 left-1/2 z-[60] -translate-x-1/2 max-w-[calc(100vw-1.5rem)]">
-      <div className="flex items-center gap-2 rounded-2xl bg-[#0b1224]/95 px-3 py-2 text-white shadow-2xl ring-1 ring-white/15 backdrop-blur-xl">
+      <div className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-ink shadow-soft ring-1 ring-black/[0.08]">
         <span className="relative flex h-2.5 w-2.5 shrink-0">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
           <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
@@ -1538,14 +1454,14 @@ function CallFloatingBar({ navigate, route }) {
         <button
           type="button"
           onClick={() => window.openConferenceCall?.(navigate, confId)}
-          className="h-9 rounded-xl bg-cyan-500 px-3 text-xs font-bold text-slate-950 hover:bg-cyan-400"
+          className="h-9 rounded-xl bg-sky-600 px-3 text-xs font-bold text-white hover:bg-sky-500"
         >
           Вернуться
         </button>
         <button
           type="button"
           onClick={toggleMute}
-          className="h-9 rounded-xl bg-white/10 px-3 text-xs font-semibold hover:bg-white/15"
+          className="h-9 rounded-xl bg-black/[0.04] px-3 text-xs font-semibold text-ink hover:bg-black/[0.07]"
           title={muted ? 'Включить микрофон' : 'Выключить микрофон'}
         >
           {muted ? 'Микрофон' : 'Без звука'}
@@ -1553,7 +1469,7 @@ function CallFloatingBar({ navigate, route }) {
         <button
           type="button"
           onClick={leave}
-          className="h-9 rounded-xl bg-rose-600/90 px-3 text-xs font-semibold hover:bg-rose-500"
+          className="h-9 rounded-xl bg-rose-600 px-3 text-xs font-semibold text-white hover:bg-rose-500"
         >
           Выйти
         </button>

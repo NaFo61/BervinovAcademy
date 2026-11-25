@@ -1670,8 +1670,6 @@ function WhiteboardPreviewModal({ conferenceId, title, onClose }) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [board, setBoard] = React.useState(null);
-  const [viewMode, setViewMode] = React.useState('auto');
-  const viewerRef = React.useRef(null);
 
   React.useEffect(() => {
     if (!conferenceId) return undefined;
@@ -1681,10 +1679,7 @@ function WhiteboardPreviewModal({ conferenceId, title, onClose }) {
       setError('');
       try {
         const data = await fetchConferenceWhiteboard(conferenceId);
-        if (!cancelled) {
-          setBoard(data);
-          setViewMode(data?.has_snapshot ? 'board' : 'image');
-        }
+        if (!cancelled) setBoard(data);
       } catch (e) {
         if (!cancelled) setError(e.message || 'Не удалось загрузить снимок');
       } finally {
@@ -1695,37 +1690,12 @@ function WhiteboardPreviewModal({ conferenceId, title, onClose }) {
   }, [conferenceId]);
 
   React.useEffect(() => {
-    const host = viewerRef.current;
-    if (!host || !board?.has_snapshot || viewMode !== 'board') {
-      return undefined;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const api = await ensureWhiteboardBundle();
-        if (cancelled || !api?.mountReadOnly) return;
-        api.mountReadOnly(host, {
-          snapshot: board.snapshot_json,
-          licenseKey: board.license_key || '',
-        });
-      } catch (_) { /* keep image fallback */ }
-    })();
-    return () => {
-      cancelled = true;
-      window.BervinovWhiteboard?.unmount?.(host);
-    };
-  }, [board, viewMode]);
-
-  React.useEffect(() => {
     const onKey = (event) => {
       if (event.key === 'Escape') onClose?.();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
-
-  const showBoard = !loading && !error && viewMode === 'board' && board?.has_snapshot;
-  const showImage = !loading && !error && viewMode === 'image' && board?.image_url;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
@@ -1738,37 +1708,20 @@ function WhiteboardPreviewModal({ conferenceId, title, onClose }) {
             <div className="font-bold text-lg">Снимок доски</div>
             {title && <div className="text-sm text-ink/55 mt-0.5">{title}</div>}
           </div>
-          <div className="flex items-center gap-2">
-            {board?.has_snapshot && board?.image_url && (
-              <div className="flex rounded-lg ring-1 ring-black/[0.08] p-0.5 text-xs font-semibold">
-                <button type="button" onClick={() => setViewMode('board')}
-                  className={`px-3 py-1.5 rounded-md ${viewMode === 'board' ? 'bg-violet-500/10 text-violet-600' : 'text-ink/55'}`}>
-                  Доска
-                </button>
-                <button type="button" onClick={() => setViewMode('image')}
-                  className={`px-3 py-1.5 rounded-md ${viewMode === 'image' ? 'bg-violet-500/10 text-violet-600' : 'text-ink/55'}`}>
-                  PNG
-                </button>
-              </div>
-            )}
-            <button type="button" onClick={onClose}
-              className="w-10 h-10 rounded-xl ring-1 ring-black/[0.08] hover:bg-black/[0.03] flex items-center justify-center">
-              <I.X className="w-5 h-5"/>
-            </button>
-          </div>
+          <button type="button" onClick={onClose}
+            className="w-10 h-10 rounded-xl ring-1 ring-black/[0.08] hover:bg-black/[0.03] flex items-center justify-center">
+            <I.X className="w-5 h-5"/>
+          </button>
         </div>
         <div className="flex-1 min-h-0 overflow-auto bg-slate-50 p-4 sm:p-6">
           {loading && <div className="py-16 text-center text-sm text-ink/50">Загрузка…</div>}
           {!loading && error && (
             <div className="py-16 text-center text-sm text-red-600">{error}</div>
           )}
-          {!loading && !error && !board?.has_snapshot && !board?.image_url && (
+          {!loading && !error && !board?.image_url && (
             <div className="py-16 text-center text-sm text-ink/50">Снимок ещё не сохранён</div>
           )}
-          {showBoard && (
-            <div ref={viewerRef} className="relative w-full min-h-[min(60vh,520px)] rounded-xl ring-1 ring-black/[0.06] bg-white overflow-hidden"/>
-          )}
-          {showImage && (
+          {!loading && !error && board?.image_url && (
             <img src={board.image_url} alt="Снимок доски"
               className="w-full h-auto rounded-xl ring-1 ring-black/[0.06] bg-white"/>
           )}
