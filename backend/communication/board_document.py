@@ -22,9 +22,17 @@ WORLD_MAX = 1_000_000
 _ITEM_ID_RE = re.compile(r"^[A-Za-z0-9_-]{6,40}$")
 _COLORS = {
     "#0B1226": "#0B1226",
+    "#64748B": "#64748B",
     "#2563EB": "#2563EB",
-    "#E11D48": "#E11D48",
+    "#0EA5E9": "#0EA5E9",
     "#059669": "#059669",
+    "#65A30D": "#65A30D",
+    "#EAB308": "#EAB308",
+    "#F97316": "#F97316",
+    "#E11D48": "#E11D48",
+    "#DB2777": "#DB2777",
+    "#7C3AED": "#7C3AED",
+    "#92400E": "#92400E",
 }
 _FONTS = {"sans", "serif", "hand", "mono"}
 _MAX_TEXT = 500
@@ -63,18 +71,33 @@ def load_document(owner) -> dict[str, Any]:
     return academy_board_from_snapshot(board.snapshot_json)
 
 
-def commit_item(owner, actor, item: dict) -> tuple[dict, dict | None]:
-    """Добавить фигуру. None — её уже стёрли, повторять не нужно."""
+def commit_item(
+    owner,
+    actor,
+    item: dict,
+    restore: bool = False,
+) -> tuple[dict, dict | None]:
+    """Добавить фигуру. None — её уже стёрли, повторять не нужно.
+
+    Обычный commit не поднимает стёртую фигуру: так старая отправка
+    не возвращает удалённый штрих. restore=True — это отмена или повтор:
+    фигуру кладём обратно и снимаем пометку.
+    """
     clean = validate_item(item)
     with transaction.atomic():
         board = _locked_board(owner, actor)
         prev = _dict(board.snapshot_json)
         doc = academy_board_from_snapshot(prev)
+        removed = list(doc.get("removed") or [])
         if clean["id"] in _removed_set(doc):
-            return doc, None
+            if not restore:
+                return doc, None
+            removed = [
+                item_id for item_id in removed if item_id != clean["id"]
+            ]
         items = _upsert(list(doc["items"]), clean)
         _ensure_item_count(items)
-        doc = _with_items(doc, items, bump=True)
+        doc = _with_items(doc, items, bump=True, removed=removed)
         board.snapshot_json = _pack(prev, doc)
         _ensure_size(board.snapshot_json)
         board.updated_by = actor

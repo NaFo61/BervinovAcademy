@@ -9,9 +9,17 @@ const MAX_SCALE = 4;
 const DOT = 32;
 const PEN_COLORS = [
   { value: '#0B1226', label: 'Чёрный' },
+  { value: '#64748B', label: 'Серый' },
   { value: '#2563EB', label: 'Синий' },
-  { value: '#E11D48', label: 'Красный' },
+  { value: '#0EA5E9', label: 'Голубой' },
   { value: '#059669', label: 'Зелёный' },
+  { value: '#65A30D', label: 'Салатовый' },
+  { value: '#EAB308', label: 'Жёлтый' },
+  { value: '#F97316', label: 'Оранжевый' },
+  { value: '#E11D48', label: 'Красный' },
+  { value: '#DB2777', label: 'Розовый' },
+  { value: '#7C3AED', label: 'Фиолетовый' },
+  { value: '#92400E', label: 'Коричневый' },
 ];
 const FONTS = [
   { value: 'sans', label: 'Обычный', css: 'system-ui, "Segoe UI", sans-serif' },
@@ -46,15 +54,16 @@ function wrapText(ctx, text, maxWidth) {
   return lines.length ? lines : [''];
 }
 
-function layoutText(item) {
+function layoutText(item, maxWidth) {
   const size = Number(item.size) || TEXT_SIZE;
-  const key = `${item.font}|${size}|${item.text}`;
+  const wrap = Math.max(32, Number(maxWidth) || Number(item.w) || TEXT_WRAP);
+  const key = `${item.font}|${size}|${Math.round(wrap)}|${item.text}`;
   const cached = layoutCache.get(key);
   if (cached) return cached;
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   ctx.font = `${size}px ${fontCss(item.font)}`;
-  const lines = wrapText(ctx, item.text || '', TEXT_WRAP);
+  const lines = wrapText(ctx, item.text || '', wrap);
   const lineH = size * 1.35;
   let width = 8;
   lines.forEach((line) => {
@@ -63,12 +72,28 @@ function layoutText(item) {
   const result = {
     lines,
     lineH,
-    w: Math.min(4000, Math.max(8, Math.round(width + 8))),
+    w: Math.min(4000, wrap),
+    contentW: Math.min(4000, Math.max(32, Math.round(width + 8))),
     h: Math.min(4000, Math.max(8, Math.round(lines.length * lineH + 4))),
   };
   layoutCache.set(key, result);
   if (layoutCache.size > 200) layoutCache.delete(layoutCache.keys().next().value);
   return result;
+}
+
+function toolCursor(name) {
+  if (name === 'hand') return 'grab';
+  if (name === 'text') return 'text';
+  if (name === 'pen') return 'crosshair';
+  return 'default';
+}
+
+function Icon({ children }) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {children}
+    </svg>
+  );
 }
 
 function copyItem(item) {
@@ -300,6 +325,139 @@ function movedItem(origin, dx, dy) {
   };
 }
 
+function paddedBox(box, scale) {
+  const gap = 8 / (scale || 1);
+  return {
+    minX: box.minX - gap,
+    minY: box.minY - gap,
+    maxX: box.maxX + gap,
+    maxY: box.maxY + gap,
+  };
+}
+
+function handlePoints(box) {
+  const midX = (box.minX + box.maxX) / 2;
+  const midY = (box.minY + box.maxY) / 2;
+  return {
+    nw: [box.minX, box.minY],
+    n: [midX, box.minY],
+    ne: [box.maxX, box.minY],
+    e: [box.maxX, midY],
+    se: [box.maxX, box.maxY],
+    s: [midX, box.maxY],
+    sw: [box.minX, box.maxY],
+    w: [box.minX, midY],
+  };
+}
+
+const HANDLE_CURSOR = {
+  nw: 'nwse-resize',
+  se: 'nwse-resize',
+  ne: 'nesw-resize',
+  sw: 'nesw-resize',
+  n: 'ns-resize',
+  s: 'ns-resize',
+  e: 'ew-resize',
+  w: 'ew-resize',
+};
+
+function hitHandle(point, box, scale) {
+  if (!point || !box) return null;
+  const reach = 14 / (scale || 1);
+  const points = handlePoints(box);
+  let best = null;
+  let bestD = reach * reach;
+  Object.keys(points).forEach((name) => {
+    const pt = points[name];
+    const dx = point[0] - pt[0];
+    const dy = point[1] - pt[1];
+    const dist = dx * dx + dy * dy;
+    if (dist <= bestD) {
+      best = name;
+      bestD = dist;
+    }
+  });
+  return best;
+}
+
+function pointInBox(point, box) {
+  if (!point || !box) return false;
+  return point[0] >= box.minX && point[0] <= box.maxX
+    && point[1] >= box.minY && point[1] <= box.maxY;
+}
+
+function scaleFactor(origin, anchor, next) {
+  const span = origin - anchor;
+  if (Math.abs(span) < 1) return 1;
+  let factor = (next - anchor) / span;
+  if (factor < 0.15) factor = 0.15;
+  if (factor > 8) factor = 8;
+  return factor;
+}
+
+function scaleItem(origin, ax, ay, sx, sy, movingX, movingY) {
+  const useSx = movingX ? sx : 1;
+  const useSy = movingY ? sy : 1;
+  if (origin.type === 'image') {
+    const x = movingX ? ax + (origin.x - ax) * useSx : origin.x;
+    const y = movingY ? ay + (origin.y - ay) * useSy : origin.y;
+    return {
+      ...origin,
+      x: clampWorld(x),
+      y: clampWorld(y),
+      w: round1(Math.max(8, Math.min(2000, origin.w * useSx))),
+      h: round1(Math.max(8, Math.min(2000, origin.h * useSy))),
+    };
+  }
+  if (origin.type === 'text') {
+    const x = movingX ? ax + (origin.x - ax) * useSx : origin.x;
+    const y = movingY ? ay + (origin.y - ay) * useSy : origin.y;
+    const w = round1(Math.max(32, Math.min(4000, (origin.w || 80) * useSx)));
+    const size = movingY
+      ? round1(Math.max(16, Math.min(72, (origin.size || TEXT_SIZE) * useSy)))
+      : (origin.size || TEXT_SIZE);
+    const next = { ...origin, x: clampWorld(x), y: clampWorld(y), w, size };
+    next.h = layoutText(next, w).h;
+    return next;
+  }
+  const size = round1(Math.max(2, Math.min(24, (origin.size || 5) * ((useSx + useSy) / 2))));
+  return {
+    ...origin,
+    size,
+    points: (origin.points || []).map((pt) => [
+      clampWorld(movingX ? ax + (pt[0] - ax) * useSx : pt[0]),
+      clampWorld(movingY ? ay + (pt[1] - ay) * useSy : pt[1]),
+    ]),
+  };
+}
+
+function resizedItems(origins, bounds, handle, pointer) {
+  const movingX = handle === 'e' || handle === 'w' || handle.length === 2;
+  const movingY = handle === 'n' || handle === 's' || handle.length === 2;
+  let sx = 1;
+  let sy = 1;
+  if (movingX) {
+    const originX = handle.includes('w') ? bounds.minX : bounds.maxX;
+    const anchorX = handle.includes('w') ? bounds.maxX : bounds.minX;
+    sx = scaleFactor(originX, anchorX, pointer[0]);
+  }
+  if (movingY) {
+    const originY = handle.includes('n') ? bounds.minY : bounds.maxY;
+    const anchorY = handle.includes('n') ? bounds.maxY : bounds.minY;
+    sy = scaleFactor(originY, anchorY, pointer[1]);
+  }
+  const list = Object.values(origins);
+  const only = list.length === 1 ? list[0] : null;
+  if (only && movingX && movingY && (only.type === 'image' || only.type === 'text')) {
+    const uniform = Math.max(sx, sy);
+    sx = uniform;
+    sy = uniform;
+  }
+  const ax = movingX ? (handle.includes('w') ? bounds.maxX : bounds.minX) : bounds.minX;
+  const ay = movingY ? (handle.includes('n') ? bounds.maxY : bounds.minY) : bounds.minY;
+  return list.map((origin) => scaleItem(origin, ax, ay, sx, sy, movingX, movingY));
+}
+
 function loadImageSize(src) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -331,6 +489,10 @@ function WhiteboardPage({ navigate, hashParams }) {
   const editorRef = React.useRef(null);
   const editorNodeRef = React.useRef(null);
   const ignoreEditorBlurRef = React.useRef(false);
+  const historyRef = React.useRef({ undo: [], redo: [] });
+  const recordingRef = React.useRef(true);
+  const resizeRef = React.useRef(null);
+  const [historyTick, setHistoryTick] = React.useState(0);
   const imagesRef = React.useRef(new Map());
   const genRef = React.useRef(0);
   const saveTimerRef = React.useRef(0);
@@ -494,7 +656,12 @@ function WhiteboardPage({ navigate, hashParams }) {
 
   React.useEffect(() => {
     toolRef.current = tool;
-  }, [tool]);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const cursor = toolCursor(tool);
+    canvas.style.cursor = cursor;
+    canvas.dataset.cursor = cursor;
+  }, [tool, ready]);
 
   React.useEffect(() => {
     colorRef.current = color;
@@ -596,21 +763,31 @@ function WhiteboardPage({ navigate, hashParams }) {
       };
       const drawFrame = (box, fill) => {
         if (!box) return;
-        const gap = 6 / camera.scale;
         ctx.save();
-        ctx.strokeStyle = 'rgba(37, 99, 235, 0.95)';
-        ctx.lineWidth = 1.5 / camera.scale;
-        ctx.setLineDash([7 / camera.scale, 5 / camera.scale]);
+        ctx.strokeStyle = '#2563EB';
+        ctx.lineWidth = (fill ? 1.5 : 1.75) / camera.scale;
         if (fill) {
-          ctx.fillStyle = 'rgba(37, 99, 235, 0.08)';
+          ctx.fillStyle = 'rgba(37, 99, 235, 0.16)';
           ctx.fillRect(box.minX, box.minY, box.maxX - box.minX, box.maxY - box.minY);
         }
-        ctx.strokeRect(
-          box.minX - (fill ? 0 : gap),
-          box.minY - (fill ? 0 : gap),
-          box.maxX - box.minX + (fill ? 0 : gap * 2),
-          box.maxY - box.minY + (fill ? 0 : gap * 2),
-        );
+        ctx.strokeRect(box.minX, box.minY, box.maxX - box.minX, box.maxY - box.minY);
+        ctx.restore();
+      };
+      const drawSelection = (box) => {
+        if (!box) return;
+        const frame = paddedBox(box, camera.scale);
+        drawFrame(frame, false);
+        const size = 8 / camera.scale;
+        ctx.save();
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#2563EB';
+        ctx.lineWidth = 1.6 / camera.scale;
+        Object.values(handlePoints(frame)).forEach(([x, y]) => {
+          ctx.beginPath();
+          ctx.rect(x - size / 2, y - size / 2, size, size);
+          ctx.fill();
+          ctx.stroke();
+        });
         ctx.restore();
       };
       const live = remoteLiveRef.current;
@@ -631,7 +808,9 @@ function WhiteboardPage({ navigate, hashParams }) {
         drawFrame(area, true);
         selected = itemsNow.filter((item) => boundsOverlap(itemBounds(item), area));
       }
-      drawFrame(unionBounds(selected), false);
+      const chosen = unionBounds(selected);
+      drawSelection(chosen);
+      canvas.dataset.handles = chosen && !marqueeRef.current ? '1' : '0';
       const editing = editorRef.current;
       const node = editorNodeRef.current;
       if (editing && node) {
@@ -680,7 +859,7 @@ function WhiteboardPage({ navigate, hashParams }) {
     }).catch(() => {});
   }, []);
 
-  const commitItem = React.useCallback((item) => {
+  const commitItem = React.useCallback((item, options) => {
     markDirty();
     pendingRef.current.removes.delete(item.id);
     pendingRef.current.upserts.set(item.id, item);
@@ -690,12 +869,16 @@ function WhiteboardPage({ navigate, hashParams }) {
       items: doc.items.filter((row) => row.id !== item.id).concat(item),
     };
     setBoard(next);
-    flushSnapshot(next);
     const sent = sendJson({
       event: 'commit',
-      payload: { client: clientIdRef.current, item },
+      payload: {
+        client: clientIdRef.current,
+        item,
+        restore: !!(options && options.restore),
+      },
     });
     if (!sent) {
+      flushSnapshot(next);
       setStatus('Нет связи — сохраняем на сервере');
       persistSoon();
     }
@@ -713,13 +896,57 @@ function WhiteboardPage({ navigate, hashParams }) {
     const doc = docRef.current;
     const next = { ...doc, items: doc.items.filter((item) => !drop.has(item.id)) };
     setBoard(next);
-    flushSnapshot(next);
     const sent = sendJson({
       event: 'remove',
       payload: { client: clientIdRef.current, ids },
     });
-    if (!sent) persistSoon();
+    if (!sent) {
+      flushSnapshot(next);
+      persistSoon();
+    }
   }, [flushSnapshot, markDirty, persistSoon, sendJson, setBoard]);
+
+  const remember = React.useCallback((before, after) => {
+    if (!recordingRef.current) return;
+    const prior = (before || []).filter(Boolean).map(copyItem);
+    const next = (after || []).filter(Boolean).map(copyItem);
+    if (JSON.stringify(prior) === JSON.stringify(next)) return;
+    const history = historyRef.current;
+    history.undo.push({ before: prior, after: next });
+    if (history.undo.length > 50) history.undo.shift();
+    history.redo = [];
+    setHistoryTick((value) => value + 1);
+  }, []);
+
+  const applyHistory = React.useCallback((before, after) => {
+    recordingRef.current = false;
+    try {
+      const keep = new Set(before.map((item) => item.id));
+      const drop = after.map((item) => item.id).filter((id) => !keep.has(id));
+      if (drop.length) commitRemove(drop);
+      before.forEach((item) => commitItem(copyItem(item), { restore: true }));
+    } finally {
+      recordingRef.current = true;
+    }
+  }, [commitItem, commitRemove]);
+
+  const undo = React.useCallback(() => {
+    const entry = historyRef.current.undo.pop();
+    if (!entry) return;
+    historyRef.current.redo.push(entry);
+    setHistoryTick((value) => value + 1);
+    applyHistory(entry.before, entry.after);
+    setSelection(entry.before.map((item) => item.id));
+  }, [applyHistory, setSelection]);
+
+  const redo = React.useCallback(() => {
+    const entry = historyRef.current.redo.pop();
+    if (!entry) return;
+    historyRef.current.undo.push(entry);
+    setHistoryTick((value) => value + 1);
+    applyHistory(entry.after, entry.before);
+    setSelection(entry.after.map((item) => item.id));
+  }, [applyHistory, setSelection]);
 
   const commitEditor = React.useCallback(() => {
     const current = editorRef.current;
@@ -728,13 +955,17 @@ function WhiteboardPage({ navigate, hashParams }) {
     setEditor(null);
     const text = String(current.text || '').replace(/\u0000/g, '').trim();
     if (!text) {
-      if (!current.isNew) commitRemove([current.id]);
+      if (!current.isNew && current.previous) {
+        remember([current.previous], []);
+        commitRemove([current.id]);
+      }
       setSelection(selectionRef.current.has(current.id)
         ? [...selectionRef.current].filter((id) => id !== current.id)
         : [...selectionRef.current]);
       scheduleDraw();
       return;
     }
+    const wrap = current.previous && current.previous.w ? current.previous.w : TEXT_WRAP;
     const item = {
       id: current.id,
       type: 'text',
@@ -745,11 +976,18 @@ function WhiteboardPage({ navigate, hashParams }) {
       font: current.font || fontRef.current,
       size: current.size || TEXT_SIZE,
     };
-    const box = layoutText(item);
-    commitItem({ ...item, w: box.w, h: box.h });
-    setSelection([item.id]);
+    const box = layoutText(item, wrap);
+    const saved = {
+      ...item,
+      w: current.previous && current.previous.w ? current.previous.w : box.contentW,
+      h: box.h,
+    };
+    if (current.isNew) remember([], [saved]);
+    else remember([current.previous], [saved]);
+    commitItem(saved);
+    setSelection([saved.id]);
     scheduleDraw();
-  }, [commitItem, commitRemove, scheduleDraw, setSelection]);
+  }, [commitItem, commitRemove, remember, scheduleDraw, setSelection]);
 
   const openEditor = React.useCallback((item, isNew) => {
     const next = {
@@ -760,7 +998,9 @@ function WhiteboardPage({ navigate, hashParams }) {
       color: item.color || colorRef.current,
       font: item.font || fontRef.current,
       size: item.size || TEXT_SIZE,
+      w: item.w,
       isNew: !!isNew,
+      previous: isNew ? null : copyItem(item),
     };
     ignoreEditorBlurRef.current = true;
     editorRef.current = next;
@@ -793,36 +1033,44 @@ function WhiteboardPage({ navigate, hashParams }) {
     }
     const ids = selectionRef.current;
     if (!ids.size || editorRef.current) return;
+    const before = [];
+    const after = [];
     (docRef.current.items || []).forEach((item) => {
       if (!ids.has(item.id)) return;
       if (patch.color && (item.type === 'stroke' || item.type === 'text')) {
         const updated = { ...copyItem(item), color: patch.color };
-        if (updated.type === 'text') {
-          const box = layoutText(updated);
-          updated.w = box.w;
-          updated.h = box.h;
-        }
-        commitItem(updated);
+        if (updated.type === 'text') updated.h = layoutText(updated).h;
+        before.push(copyItem(item));
+        after.push(updated);
       } else if (patch.font && item.type === 'text') {
-        const updated = { ...item, font: patch.font };
-        const box = layoutText(updated);
-        commitItem({ ...updated, w: box.w, h: box.h });
+        const updated = { ...copyItem(item), font: patch.font };
+        updated.h = layoutText(updated).h;
+        before.push(copyItem(item));
+        after.push(updated);
       }
     });
-  }, [commitItem]);
+    if (!after.length) return;
+    remember(before, after);
+    after.forEach((item) => commitItem(item));
+  }, [commitItem, remember]);
 
   const removeSelection = React.useCallback(() => {
     const ids = [...selectionRef.current];
     if (!ids.length) return;
+    const before = ids
+      .map((id) => (docRef.current.items || []).find((item) => item.id === id))
+      .filter(Boolean)
+      .map(copyItem);
     setSelection([]);
+    remember(before, []);
     commitRemove(ids);
-  }, [commitRemove, setSelection]);
+  }, [commitRemove, remember, setSelection]);
 
   const placeImage = React.useCallback(async (src, x, y, center = false) => {
     const size = await loadImageSize(src);
     if (!size) return false;
     const fitted = fittedSize(size);
-    commitItem({
+    const item = {
       id: newId(),
       type: 'image',
       src,
@@ -830,9 +1078,11 @@ function WhiteboardPage({ navigate, hashParams }) {
       y: clampWorld(center ? y - fitted.h / 2 : y),
       w: fitted.w,
       h: fitted.h,
-    });
+    };
+    remember([], [item]);
+    commitItem(item);
     return true;
-  }, [commitItem]);
+  }, [commitItem, remember]);
 
   const addImageFile = React.useCallback(async (file) => {
     if (!file || !String(file.type || '').startsWith('image/')) {
@@ -994,6 +1244,12 @@ function WhiteboardPage({ navigate, hashParams }) {
       return tag === 'INPUT' || tag === 'TEXTAREA' || event.target?.isContentEditable;
     };
     const down = (event) => {
+      if ((event.ctrlKey || event.metaKey) && !typing(event) && (event.code === 'KeyZ' || event.code === 'KeyY')) {
+        event.preventDefault();
+        if (event.code === 'KeyY' || event.shiftKey) redo();
+        else undo();
+        return;
+      }
       if (typing(event)) return;
       if (event.code === 'Space') {
         spaceRef.current = true;
@@ -1014,7 +1270,7 @@ function WhiteboardPage({ navigate, hashParams }) {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
     };
-  }, [removeSelection]);
+  }, [redo, removeSelection, undo]);
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -1097,8 +1353,9 @@ function WhiteboardPage({ navigate, hashParams }) {
       scheduleDraw();
       return;
     }
+    remember([], [stroke]);
     commitItem(stroke);
-  }, [commitItem, scheduleDraw]);
+  }, [commitItem, remember, scheduleDraw]);
 
   const finishDrag = () => {
     if (liveTimerRef.current) {
@@ -1109,15 +1366,41 @@ function WhiteboardPage({ navigate, hashParams }) {
     dragRef.current = null;
     liveItemRef.current = null;
     if (!drag || !drag.moved) {
+      if (drag && drag.hitId && (drag.ids || []).length > 1) setSelection([drag.hitId]);
       scheduleDraw();
       return;
     }
     const ids = drag.ids || (drag.id ? [drag.id] : []);
+    const before = ids.map((id) => drag.origins[id]).filter(Boolean);
     const moved = ids
       .map((id) => (docRef.current.items || []).find((row) => row.id === id))
       .filter(Boolean);
-    if (moved.length) moved.forEach((item) => commitItem(item));
-    else scheduleDraw();
+    if (moved.length) {
+      remember(before, moved);
+      moved.forEach((item) => commitItem(item));
+    } else scheduleDraw();
+  };
+
+  const finishResize = () => {
+    if (liveTimerRef.current) {
+      window.clearTimeout(liveTimerRef.current);
+      liveTimerRef.current = 0;
+    }
+    const resize = resizeRef.current;
+    resizeRef.current = null;
+    if (!resize || !resize.moved) {
+      scheduleDraw();
+      return;
+    }
+    const ids = Object.keys(resize.origins);
+    const before = ids.map((id) => resize.origins[id]).filter(Boolean);
+    const after = ids
+      .map((id) => (docRef.current.items || []).find((row) => row.id === id))
+      .filter(Boolean);
+    if (after.length) {
+      remember(before, after);
+      after.forEach((item) => commitItem(item));
+    } else scheduleDraw();
   };
 
   const zoomBy = (factor) => {
@@ -1146,6 +1429,8 @@ function WhiteboardPage({ navigate, hashParams }) {
     if (wantsPan) {
       if (button === 1) event.preventDefault();
       panRef.current = { x: event.clientX, y: event.clientY };
+      event.currentTarget.style.cursor = 'grabbing';
+      event.currentTarget.dataset.cursor = 'grabbing';
       event.currentTarget.setPointerCapture?.(event.pointerId);
       return;
     }
@@ -1176,25 +1461,37 @@ function WhiteboardPage({ navigate, hashParams }) {
       return;
     }
     if (toolRef.current === 'select') {
-      if (hit) {
-        const ids = selectionRef.current.has(hit.id)
-          ? [...selectionRef.current]
-          : [hit.id];
+      const selectedNow = (docRef.current.items || []).filter((item) => selectionRef.current.has(item.id));
+      const rawFrame = unionBounds(selectedNow);
+      const frame = rawFrame ? paddedBox(rawFrame, cameraRef.current.scale || 1) : null;
+      const hasSelection = !!frame;
+      const handle = hasSelection ? hitHandle(point, frame, cameraRef.current.scale || 1) : null;
+      if (handle) {
+        const origins = {};
+        selectedNow.forEach((item) => { origins[item.id] = copyItem(item); });
+        resizeRef.current = { handle, origins, bounds: frame, start: point, moved: false };
+        scheduleDraw();
+        return;
+      }
+      const inside = hasSelection && pointInBox(point, frame);
+      if (hit || inside) {
+        const ids = hit && !selectionRef.current.has(hit.id) ? [hit.id] : [...selectionRef.current];
         setSelection(ids);
-        if (ids.length === 1 && hit.color) {
-          colorRef.current = hit.color;
-          setColor(hit.color);
+        const picked = hit && ids.length === 1 ? hit : null;
+        if (picked && picked.color) {
+          colorRef.current = picked.color;
+          setColor(picked.color);
         }
-        if (ids.length === 1 && hit.type === 'text' && hit.font) {
-          fontRef.current = hit.font;
-          setFont(hit.font);
+        if (picked && picked.type === 'text' && picked.font) {
+          fontRef.current = picked.font;
+          setFont(picked.font);
         }
         const origins = {};
         ids.forEach((id) => {
           const row = (docRef.current.items || []).find((item) => item.id === id);
           if (row) origins[id] = copyItem(row);
         });
-        dragRef.current = { ids, start: point, origins, moved: false };
+        dragRef.current = { ids, start: point, origins, moved: false, hitId: hit ? hit.id : null };
       } else {
         setSelection([]);
         marqueeRef.current = { x0: point[0], y0: point[1], x1: point[0], y1: point[1] };
@@ -1229,6 +1526,24 @@ function WhiteboardPage({ navigate, hashParams }) {
       metricsRef.current || viewOf(event.currentTarget),
       cameraRef.current,
     );
+    if (resizeRef.current && point) {
+      const resize = resizeRef.current;
+      const dx = point[0] - resize.start[0];
+      const dy = point[1] - resize.start[1];
+      const scale = cameraRef.current.scale || 1;
+      if (!resize.moved && (dx * dx + dy * dy) * scale * scale < 9) return;
+      resize.moved = true;
+      const moved = resizedItems(resize.origins, resize.bounds, resize.handle, point);
+      const byId = new Map(moved.map((item) => [item.id, item]));
+      const doc = docRef.current;
+      docRef.current = {
+        ...doc,
+        items: doc.items.map((row) => byId.get(row.id) || row),
+      };
+      queueLiveItems(moved);
+      scheduleDraw();
+      return;
+    }
     if (marqueeRef.current && point) {
       marqueeRef.current.x1 = point[0];
       marqueeRef.current.y1 = point[1];
@@ -1257,6 +1572,15 @@ function WhiteboardPage({ navigate, hashParams }) {
       scheduleDraw();
       return;
     }
+    if (point && !localStrokeRef.current && toolRef.current === 'select') {
+      const selectedNow = (docRef.current.items || []).filter((item) => selectionRef.current.has(item.id));
+      const raw = unionBounds(selectedNow);
+      const frame = raw ? paddedBox(raw, cameraRef.current.scale || 1) : null;
+      const handle = hitHandle(point, frame, cameraRef.current.scale || 1);
+      const cursor = handle ? HANDLE_CURSOR[handle] : 'default';
+      event.currentTarget.style.cursor = cursor;
+      event.currentTarget.dataset.cursor = cursor;
+    }
     const stroke = localStrokeRef.current;
     if (!stroke || !point) return;
     const last = stroke.points[stroke.points.length - 1];
@@ -1280,10 +1604,20 @@ function WhiteboardPage({ navigate, hashParams }) {
     scheduleDraw();
   };
 
-  const onPointerUp = () => {
+  const onPointerUp = (event) => {
+    const canvas = event.currentTarget;
+    if (canvas && canvas.dataset) {
+      const cursor = toolCursor(toolRef.current);
+      canvas.style.cursor = cursor;
+      canvas.dataset.cursor = cursor;
+    }
     if (panRef.current) {
       panRef.current = null;
       scheduleDraw();
+      return;
+    }
+    if (resizeRef.current) {
+      finishResize();
       return;
     }
     if (marqueeRef.current) {
@@ -1347,6 +1681,18 @@ function WhiteboardPage({ navigate, hashParams }) {
     );
   }
 
+  const canUndo = historyTick >= 0 && historyRef.current.undo.length > 0;
+  const canRedo = historyRef.current.redo.length > 0;
+  const showFont = tool === 'text' || !!editor || (docRef.current.items || []).some(
+    (item) => item.type === 'text' && selectionIds.includes(item.id),
+  );
+  const iconBtn = (active) => `h-9 w-9 rounded-xl inline-flex items-center justify-center ${active ? 'bg-sky-50 text-sky-800' : 'text-ink/70 hover:bg-black/[0.04]'} disabled:opacity-30`;
+  const hint = tool === 'select'
+    ? (selectionIds.length
+      ? 'Перетащите синюю рамку — сдвинется всё внутри. Уголки меняют размер.'
+      : 'Потяните по пустому месту: появится рамка вокруг объектов.')
+    : 'Ctrl+Z отменяет действие. Ctrl+V вставляет картинку.';
+
   return (
     <div className="h-full min-h-0 bg-[#F6F8FC] flex flex-col">
       <div className="shrink-0 h-14 px-3 sm:px-5 flex items-center gap-3 border-b border-black/[0.08] bg-white">
@@ -1367,8 +1713,8 @@ function WhiteboardPage({ navigate, hashParams }) {
           </div>
           <div className="text-xs text-ink/50 truncate">
             {isOwn
-              ? 'Выбор, ручка и текст. Рамкой можно сдвинуть сразу несколько. Ctrl+V — картинка.'
-              : 'Можно рисовать вместе. Рамкой можно сдвинуть сразу несколько. Ctrl+V — картинка.'}
+              ? 'Ctrl+Z отменяет. Ctrl+V — картинка. Колёсико двигает лист.'
+              : 'Можно рисовать вместе. Ctrl+Z отменяет. Ctrl+V — картинка.'}
           </div>
         </div>
         <button
@@ -1417,7 +1763,7 @@ function WhiteboardPage({ navigate, hashParams }) {
             data-color={color}
             data-font={font}
             data-selection={selectionIds.join(',')}
-            className={`absolute inset-0 h-full w-full touch-none ${tool === 'hand' ? 'cursor-grab' : tool === 'text' ? 'cursor-text' : tool === 'pen' ? 'cursor-crosshair' : 'cursor-default'}`}
+            className="absolute inset-0 h-full w-full touch-none"
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
@@ -1463,7 +1809,7 @@ function WhiteboardPage({ navigate, hashParams }) {
                   ? (editor.y - cameraRef.current.y) * cameraRef.current.scale
                     + canvasRef.current.getBoundingClientRect().height / 2
                   : 0,
-                width: TEXT_WRAP * (cameraRef.current.scale || 1),
+                width: (editor.w || TEXT_WRAP) * (cameraRef.current.scale || 1),
                 fontSize: (editor.size || TEXT_SIZE) * (cameraRef.current.scale || 1),
                 fontFamily: fontCss(editor.font),
                 color: editor.color,
@@ -1473,117 +1819,76 @@ function WhiteboardPage({ navigate, hashParams }) {
           )}
           <div className="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center gap-2 pointer-events-none">
             <div className="pointer-events-auto flex flex-wrap items-center gap-1 rounded-2xl bg-white/95 p-1 shadow-soft ring-1 ring-black/[0.06]">
-              <button
-                type="button"
-                aria-pressed={tool === 'select'}
-                onClick={() => setTool('select')}
-                className={`h-9 px-3 rounded-xl text-sm font-semibold ${tool === 'select' ? 'bg-sky-50 text-sky-800' : 'text-ink/75 hover:bg-black/[0.04]'}`}
-              >
-                Выбор
+              <button type="button" title="Отменить (Ctrl+Z)" aria-label="Отменить" disabled={!canUndo} onClick={undo} className={iconBtn(false)}>
+                <Icon><path d="M8 8H4v4" /><path d="M4 11a8 8 0 1 0 2.5-5.5L4 8" /></Icon>
               </button>
-              <button
-                type="button"
-                aria-pressed={tool === 'pen'}
-                onClick={() => setTool('pen')}
-                className={`h-9 px-3 rounded-xl text-sm font-semibold ${tool === 'pen' ? 'bg-sky-50 text-sky-800' : 'text-ink/75 hover:bg-black/[0.04]'}`}
-              >
-                Ручка
+              <button type="button" title="Повторить (Ctrl+Y)" aria-label="Повторить" disabled={!canRedo} onClick={redo} className={iconBtn(false)}>
+                <Icon><path d="M16 8h4v4" /><path d="M20 11a8 8 0 1 1-2.5-5.5L20 8" /></Icon>
               </button>
-              <button
-                type="button"
-                aria-pressed={tool === 'text'}
-                onClick={() => setTool('text')}
-                className={`h-9 px-3 rounded-xl text-sm font-semibold ${tool === 'text' ? 'bg-sky-50 text-sky-800' : 'text-ink/75 hover:bg-black/[0.04]'}`}
-              >
-                Текст
+              <span className="mx-1 h-6 w-px bg-black/[0.08]" />
+              <button type="button" title="Выбор" aria-label="Выбор" aria-pressed={tool === 'select'} onClick={() => setTool('select')} className={iconBtn(tool === 'select')}>
+                <Icon><path d="M5 4l7 16 1.8-6.2L20 12z" /></Icon>
               </button>
-              <button
-                type="button"
-                aria-pressed={tool === 'hand'}
-                title="Сдвинуть лист"
-                onClick={() => setTool('hand')}
-                className={`h-9 px-3 rounded-xl text-sm font-semibold ${tool === 'hand' ? 'bg-sky-50 text-sky-800' : 'text-ink/75 hover:bg-black/[0.04]'}`}
-              >
-                Рука
+              <button type="button" title="Ручка" aria-label="Ручка" aria-pressed={tool === 'pen'} onClick={() => setTool('pen')} className={iconBtn(tool === 'pen')}>
+                <Icon><path d="M4 20l4.2-.8L19 8.4 15.6 5 4.8 15.8z" /><path d="M13.5 7l3.5 3.5" /></Icon>
               </button>
-              <button
-                type="button"
-                title="Поставить картинку. Ещё можно Ctrl+V"
-                onClick={() => fileRef.current?.click()}
-                className="h-9 px-3 rounded-xl text-sm font-semibold text-ink/75 hover:bg-black/[0.04]"
-              >
-                Картинка
+              <button type="button" title="Текст" aria-label="Текст" aria-pressed={tool === 'text'} onClick={() => setTool('text')} className={iconBtn(tool === 'text')}>
+                <Icon><path d="M5 6h14" /><path d="M12 6v12" /><path d="M8 18h8" /></Icon>
               </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                className="hidden"
-                onChange={onPickImage}
-              />
+              <button type="button" title="Рука — сдвинуть лист" aria-label="Рука" aria-pressed={tool === 'hand'} onClick={() => setTool('hand')} className={iconBtn(tool === 'hand')}>
+                <Icon><path d="M8 11V6.5a1.5 1.5 0 0 1 3 0V11" /><path d="M11 10V5.5a1.5 1.5 0 0 1 3 0V11" /><path d="M14 11V7.5a1.5 1.5 0 0 1 3 0V14a5 5 0 0 1-5 5h-1.5A5.5 5.5 0 0 1 5 13.5V11a1.5 1.5 0 0 1 3 0" /></Icon>
+              </button>
+              <button type="button" title="Картинка. Ещё можно Ctrl+V" aria-label="Картинка" onClick={() => fileRef.current?.click()} className={iconBtn(false)}>
+                <Icon><rect x="4" y="5" width="16" height="14" rx="2" /><circle cx="9" cy="10" r="1.3" /><path d="M4 16l4.2-3.6 2.8 2.4L15 11l5 5" /></Icon>
+              </button>
+              <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={onPickImage} />
               {selectionIds.length > 0 && (
-                <button
-                  type="button"
-                  onClick={removeSelection}
-                  className="h-9 px-3 rounded-xl text-sm font-semibold text-rose-700 hover:bg-rose-50"
-                >
-                  Удалить
+                <button type="button" title="Удалить выделенное" aria-label="Удалить" onClick={removeSelection} className={`${iconBtn(false)} text-rose-700`}>
+                  <Icon><path d="M5 7h14" /><path d="M9 7V5h6v2" /><path d="M8 7l1 12h6l1-12" /></Icon>
                 </button>
               )}
+              {showFont && (
+                <select
+                  aria-label="Шрифт"
+                  title="Шрифт"
+                  value={font}
+                  onChange={(event) => applyStyle({ font: event.target.value })}
+                  className="h-9 max-w-[9.5rem] rounded-xl bg-transparent px-2 text-sm font-semibold text-ink/80"
+                  style={{ fontFamily: fontCss(font) }}
+                >
+                  {FONTS.map((row) => (
+                    <option key={row.value} value={row.value}>{row.label}</option>
+                  ))}
+                </select>
+              )}
               <span className="mx-1 h-6 w-px bg-black/[0.08]" />
-              <select
-                aria-label="Шрифт"
-                value={font}
-                onChange={(event) => applyStyle({ font: event.target.value })}
-                className="h-9 max-w-[9.5rem] rounded-xl bg-transparent px-2 text-sm font-semibold text-ink/80"
-                style={{ fontFamily: fontCss(font) }}
-              >
-                {FONTS.map((row) => (
-                  <option key={row.value} value={row.value}>{row.label}</option>
-                ))}
-              </select>
               {PEN_COLORS.map((swatch) => (
                 <button
                   key={swatch.value}
                   type="button"
+                  data-swatch={swatch.value}
                   aria-label={swatch.label}
-                  title={`${swatch.label}. Цвет линии и текста`}
+                  title={swatch.label}
                   onClick={() => applyStyle({ color: swatch.value })}
-                  className={`h-7 w-7 rounded-full ring-2 ring-offset-2 ${color === swatch.value ? 'ring-sky-500' : 'ring-transparent'}`}
+                  className={`h-6 w-6 rounded-full ring-2 ring-offset-1 ${color === swatch.value ? 'ring-sky-500' : 'ring-transparent'}`}
                   style={{ background: swatch.value }}
                 />
               ))}
               <span className="mx-1 h-6 w-px bg-black/[0.08]" />
-              <button
-                type="button"
-                title="Отдалить"
-                aria-label="Отдалить"
-                onClick={() => zoomBy(1 / 1.2)}
-                className="h-9 w-9 rounded-xl text-sm font-semibold text-ink/75 hover:bg-black/[0.04]"
-              >
-                −
+              <button type="button" title="Отдалить" aria-label="Отдалить" onClick={() => zoomBy(1 / 1.2)} className={iconBtn(false)}>
+                <Icon><path d="M6 12h12" /></Icon>
               </button>
-              <span className="min-w-[3rem] text-center text-xs font-semibold text-ink/60">
-                {Math.round(viewScale * 100)}%
-              </span>
-              <button
-                type="button"
-                title="Приблизить"
-                aria-label="Приблизить"
-                onClick={() => zoomBy(1.2)}
-                className="h-9 w-9 rounded-xl text-sm font-semibold text-ink/75 hover:bg-black/[0.04]"
-              >
-                +
+              <span className="min-w-[3rem] text-center text-xs font-semibold text-ink/60">{Math.round(viewScale * 100)}%</span>
+              <button type="button" title="Приблизить" aria-label="Приблизить" onClick={() => zoomBy(1.2)} className={iconBtn(false)}>
+                <Icon><path d="M12 6v12" /><path d="M6 12h12" /></Icon>
               </button>
-              <button
-                type="button"
-                title="Показать весь рисунок"
-                onClick={showAll}
-                className="h-9 px-3 rounded-xl text-sm font-semibold text-ink/75 hover:bg-black/[0.04]"
-              >
-                Всё
+              <button type="button" title="Показать всё" aria-label="Показать всё" onClick={showAll} className={iconBtn(false)}>
+                <Icon><path d="M9 4H4v5" /><path d="M15 4h5v5" /><path d="M9 20H4v-5" /><path d="M15 20h5v-5" /></Icon>
               </button>
             </div>
+          </div>
+          <div data-board-hint className="pointer-events-none absolute bottom-3 left-3 z-20 max-w-[22rem] rounded-full bg-white/95 px-3 py-1.5 text-[12px] text-ink/70 ring-1 ring-black/[0.06]">
+            {hint}
           </div>
           <div
             data-board-status={status}

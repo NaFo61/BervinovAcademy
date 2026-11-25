@@ -280,6 +280,23 @@ def test_erased_stroke_is_not_drawn_again(student_user):
         assert again["payload"]["ids"] == ["stroke01"]
         board = await sync_to_async(UserBoard.objects.get)(owner=student_user)
         assert board.snapshot_json["items"] == []
+        await student.send_json_to(
+            {
+                "event": "commit",
+                "payload": {
+                    "client": "tab-student",
+                    "item": _stroke(),
+                    "restore": True,
+                },
+            }
+        )
+        restored = await student.receive_json_from()
+        assert restored["event"] == "commit"
+        assert restored["payload"]["item"]["id"] == "stroke01"
+        board = await sync_to_async(UserBoard.objects.get)(owner=student_user)
+        ids = [item["id"] for item in board.snapshot_json["items"]]
+        assert ids == ["stroke01"]
+        assert "stroke01" not in board.snapshot_json["removed"]
         await student.disconnect()
 
     _run(run)
@@ -392,3 +409,23 @@ def test_two_people_see_the_same_text(mentor_user, student_user):
         await mentor.disconnect()
 
     _run(run)
+
+
+@override_settings(WHITEBOARD_ENABLED=True)
+def test_palette_color_is_saved(student_client, student_user):
+    stroke = _stroke("orangeline")
+    stroke["color"] = "#F97316"
+    saved = _put_board(student_client, student_user, [stroke], 0)
+    assert saved.status_code == status.HTTP_200_OK
+    board = UserBoard.objects.get(owner=student_user)
+    assert board.snapshot_json["items"][0]["color"] == "#F97316"
+
+    bad = _stroke("badcolor1")
+    bad["color"] = "#123456"
+    rejected = _put_board(
+        student_client,
+        student_user,
+        [bad],
+        board.snapshot_json["revision"],
+    )
+    assert rejected.status_code == status.HTTP_400_BAD_REQUEST

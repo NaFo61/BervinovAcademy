@@ -260,8 +260,13 @@ class BoardConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def _save_item(self, user, payload):
         owner = self._owner_or_error(user)
-        item = (payload or {}).get("item")
-        return commit_item(owner, user, item)
+        body = payload or {}
+        return commit_item(
+            owner,
+            user,
+            body.get("item"),
+            restore=bool(body.get("restore")),
+        )
 
     @database_sync_to_async
     def _drop_items(self, user, payload):
