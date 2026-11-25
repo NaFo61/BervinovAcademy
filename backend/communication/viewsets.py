@@ -15,6 +15,11 @@ from rest_framework.views import APIView
 from mentoring.permissions import IsAdminRole, IsMentorOrAdmin
 
 from . import services
+from .board_document import (
+    BoardDocumentError,
+    academy_board_from_snapshot,
+    save_snapshot_put,
+)
 from .livekit_tokens import LiveKitNotConfiguredError, issue_room_token
 from .models import (
     BoardAsset,
@@ -48,9 +53,6 @@ User = get_user_model()
 def _display_name(user) -> str:
     full = f"{user.first_name or ''} {user.last_name or ''}".strip()
     return full or user.email or str(user.public_id)
-
-
-_BOARD_SNAPSHOT_MAX_CHARS = 4 * 1024 * 1024
 
 
 def _whiteboard_disabled_response():
@@ -160,23 +162,24 @@ class UserBoardSnapshotView(APIView):
                 {"detail": "Нужен объект snapshot."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        encoded = json.dumps(raw, separators=(",", ":"))
-        if len(encoded) > _BOARD_SNAPSHOT_MAX_CHARS:
+        try:
+            board = save_snapshot_put(
+                owner,
+                request.user,
+                raw,
+                base_revision=request.data.get("base_revision"),
+            )
+        except BoardDocumentError as exc:
             return Response(
-                {"detail": "Снимок доски слишком большой."},
+                {"detail": str(exc)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        board, _created = UserBoard.objects.update_or_create(
-            owner=owner,
-            defaults={
-                "snapshot_json": raw,
-                "updated_by": request.user,
-            },
-        )
+        document = academy_board_from_snapshot(board.snapshot_json)
         return Response(
             {
                 "owner_public_id": str(owner.public_id),
                 "updated_at": board.updated_at.isoformat(),
+                "revision": document["revision"],
             }
         )
 

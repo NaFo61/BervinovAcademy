@@ -8,4 +8,8 @@ websocket_urlpatterns = [
         rf"^ws/chat/threads/(?P<thread_public_id>{UUID_LOOKUP_REGEX})/$",
         consumers.ChatConsumer.as_asgi(),
     ),
+    re_path(
+        rf"^ws/whiteboard/(?P<user_public_id>{UUID_LOOKUP_REGEX})/$",
+        consumers.BoardConsumer.as_asgi(),
+    ),
 ]
