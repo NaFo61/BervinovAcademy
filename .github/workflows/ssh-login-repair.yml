@@ -45,10 +45,16 @@ jobs:
             journalctl --since "-24h" -t sshd --no-pager | grep -E 'drop connection|Unable to negotiate|Connection closed|fatal:|error:|maximum authentication|Did not receive identification|banner exchange|Timeout before authentication|Failed publickey' | tail -n 120 || true
             echo "--- iptables ssh ---"
             iptables -S | grep -Ei 'f2b|dport 22' | head -n 40 || true
-            echo "--- personal history ---"
-            journalctl --since "-30d" -t sshd --no-pager | grep -E '185\.77\.218\.|178\.155\.115\.' | awk '{print $1,$2,$3,$5}' | tail -n 40 || true
-            echo "--- personal last accept ---"
-            journalctl --since "-30d" -t sshd --no-pager | grep "Accepted publickey" | grep -E '185\.77\.218\.|178\.155\.115\.' | tail -n 10 || true
+            echo "--- volgograd sshd ---"
+            journalctl --since "-21d" -t sshd --no-pager | grep -oE '178\.155\.[0-9]+\.[0-9]+' | sort | uniq -c | sort -nr || true
+            echo "--- volgograd lines ---"
+            journalctl --since "-21d" -t sshd --no-pager | grep '178.155.' | tail -n 30 || true
+            echo "--- volgograd bans ---"
+            grep '178.155.' /var/log/fail2ban.log | tail -n 30 || true
+            echo "--- f2b chain ---"
+            nft list chain inet f2b-table f2b-chain || true
+            echo "--- input policy ---"
+            iptables -L INPUT -n -v --line-numbers | head -n 40 || true
             echo "--- nft tables ---"
             nft list tables || true
             echo "--- nft f2b elements ---"
