@@ -124,9 +124,9 @@ function ExamLanding({ exam, access, starting, startError, onStart, onBack, embe
           Контрольная работа
         </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{exam.title}</h1>
-        {exam.description && (
-          <p className="mt-3 text-sm text-ink/65 leading-relaxed">{exam.description}</p>
-        )}
+        {window.studentFacingText && window.studentFacingText(exam.description) ? (
+          <p className="mt-3 text-sm text-ink/65 leading-relaxed">{window.studentFacingText(exam.description)}</p>
+        ) : null}
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <div className="rounded-xl bg-violet-500/[0.06] p-4">
@@ -544,12 +544,14 @@ function ExamCodingPanel({ lesson, step, attemptId, onUpdated, navigate }) {
           items={lesson.attachments}
           navigate={navigate}
           lessonTitle={lesson.title}
-          statement={[lesson.description, lesson.instructions].filter(Boolean).join('\n\n')}
+          statement={[window.studentFacingText ? window.studentFacingText(lesson.description) : lesson.description, lesson.instructions].filter(Boolean).join('\n\n')}
           tests={lesson.test_cases}
         />
       )}
       <div className="mt-6 prose prose-sm max-w-none text-ink/75">
-        <p>{lesson.description}</p>
+        {window.studentFacingText && window.studentFacingText(lesson.description) ? (
+          <p>{window.studentFacingText(lesson.description)}</p>
+        ) : null}
         {lesson.instructions && <p className="whitespace-pre-wrap">{lesson.instructions}</p>}
       </div>
       <div className="mt-6">

@@ -344,8 +344,17 @@ function CourseHighlights({ course }) {
 // ── Course program: modules in reading order, nothing to expand ─────────────
 function CourseModulesSection({ modules, exams, summary, navigate, course }) {
   const Flow = window.CourseModuleFlow;
-  const done = React.useMemo(() => new Set(), []);
+  const [done, setDone] = React.useState(() => new Set());
   const totalActivities = (summary || []).reduce((s, m) => s + (m.lessons || 0) + (m.quizzes || 0) + (m.tasks || 0), 0);
+
+  React.useEffect(() => {
+    if (!course?.id || !window.getAccessToken() || !window.fetchCourseProgress) return undefined;
+    let cancel = false;
+    window.fetchCourseProgress(course.id)
+      .then((data) => { if (!cancel) setDone(new Set(data?.completed || [])); })
+      .catch(() => {});
+    return () => { cancel = true; };
+  }, [course?.id]);
 
   const openLearn = (params) => {
     if (!window.getAccessToken()) {
@@ -383,6 +392,8 @@ function CourseModulesSection({ modules, exams, summary, navigate, course }) {
             course: course.id,
             exam: exam.public_id,
           })}
+          showModuleList
+          openOnSelect={false}
         />
       ) : (
         <p className="text-sm text-ink/50">Программа курса загружается…</p>

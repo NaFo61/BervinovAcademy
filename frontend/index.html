@@ -392,6 +392,43 @@
     background: linear-gradient(135deg, #22C55E, #16A34A);
     box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
   }
+
+  /* Курс: модули слева, уроки и задания выбранного модуля справа. */
+  .course-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .course-split-side {
+    border-bottom: 1px solid rgba(11, 18, 38, 0.08);
+  }
+  @media (min-width: 640px) {
+    .course-split {
+      grid-template-columns: 14.5rem minmax(0, 1fr);
+    }
+    .course-split-side {
+      border-bottom: 0;
+      border-right: 1px solid rgba(11, 18, 38, 0.08);
+    }
+  }
+  .task-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  @media (min-width: 640px) {
+    .task-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  }
+  @media (min-width: 768px) {
+    .task-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  }
+  .task-square {
+    aspect-ratio: 1;
+    min-height: 44px;
+  }
+  .task-locked {
+    border: 1px dashed rgba(11, 18, 38, 0.22);
+    background: rgba(11, 18, 38, 0.03);
+  }
   .cross-dot {
     width: 16px; height: 16px; border-radius: 999px;
     background: linear-gradient(135deg, #EF4444, #DC2626);

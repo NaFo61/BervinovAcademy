@@ -11,7 +11,12 @@ function mentorDisplayName(mentor) {
 function lessonStatementFromData(lessonType, lessonData) {
   if (!lessonData) return '';
   const chunks = [];
-  if (lessonData.description) chunks.push(String(lessonData.description));
+  if (lessonData.description) {
+    const clean = window.studentFacingText
+      ? window.studentFacingText(lessonData.description)
+      : String(lessonData.description);
+    if (clean) chunks.push(clean);
+  }
   if (lessonData.content) chunks.push(String(lessonData.content));
   if (lessonData.question_text) chunks.push(String(lessonData.question_text));
   if (lessonData.instructions) chunks.push(String(lessonData.instructions));

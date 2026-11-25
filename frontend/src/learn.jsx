@@ -154,58 +154,98 @@ function moduleLessonsFlat(mod) {
     order: lesson.order_index || 0,
     modId: mod.public_id,
     modTitle: mod.title,
+    locked: !!(lesson.locked || lesson.is_locked),
   }));
 }
 
-function publicModuleBlurb(text) {
-  return String(text || '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line && !/^content-pack\s*:/i.test(line))
-    .join(' ')
+function visibleText(value) {
+  if (window.studentFacingText) return window.studentFacingText(value);
+  return String(value || '')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/\bcontent-pack\s*:\s*[a-z0-9_-]+/gi, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
-function taskGlyph(type) {
-  if (type === 'theory') return '📖';
-  if (type === 'radio') return '?';
-  if (type === 'checkbox') return '☑';
-  if (type === 'short_answer') return '✎';
-  if (type === 'coding') return '>_';
-  return '•';
+function ruPieces(n, one, few, many) {
+  const n10 = n % 10;
+  const n100 = n % 100;
+  if (n10 === 1 && n100 !== 11) return `${n} ${one}`;
+  if (n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14)) return `${n} ${few}`;
+  return `${n} ${many}`;
+}
+
+function lessonGroupsOf(mod) {
+  const lessons = moduleLessonsFlat(mod);
+  const units = groupLessonsByUnit(lessons);
+  if (units) {
+    return units.map((group) => ({
+      key: group.key,
+      label: unitChipLabel(group),
+      lessons: group.lessons,
+    }));
+  }
+  if (!lessons.length) return [];
+  return [{ key: 'all', label: 'Задания', lessons }];
+}
+
+function taskVisualState(lesson, completed) {
+  if (!lesson || !lesson.id || lesson.locked || lesson.is_locked) return 'locked';
+  if (completed && completed.has(lessonKey(lesson.type, lesson.id))) return 'done';
+  return 'open';
+}
+
+const TASK_STATE_LABEL = {
+  done: 'Сделано',
+  open: 'Открыто',
+  locked: 'Закрыто',
+};
+
+function TaskStateIcon({ state }) {
+  if (state === 'done') return <I.Check className="w-4 h-4" />;
+  if (state === 'locked') return <I.Lock className="w-4 h-4" />;
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="7.5" />
+      <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none" />
+    </svg>
+  );
 }
 
 function TaskSquares({ lessons, currentLesson, completed, onOpen }) {
   return (
-    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-1.5">
+    <div className="task-grid">
       {(lessons || []).map((lesson, idx) => {
         const active = currentLesson
           && currentLesson.type === lesson.type
           && currentLesson.id === lesson.id;
-        const done = completed.has(lessonKey(lesson.type, lesson.id));
+        const state = taskVisualState(lesson, completed);
+        const stateLabel = TASK_STATE_LABEL[state] || TASK_STATE_LABEL.open;
+        const face = state === 'done'
+          ? 'bg-emerald-500 text-white ring-1 ring-emerald-500'
+          : state === 'locked'
+            ? 'task-locked bg-slate-50 text-ink/40 cursor-not-allowed'
+            : active
+              ? 'bg-violet-50 text-violet-700 ring-2 ring-violet-500'
+              : 'bg-white text-violet-700 ring-1 ring-violet-200 hover:bg-violet-50';
         return (
           <button
-            key={lessonKey(lesson.type, lesson.id)}
+            key={lessonKey(lesson.type, lesson.id) || `locked-${idx}`}
             type="button"
-            onClick={() => onOpen(lesson)}
-            title={`${idx + 1}. ${lesson.title}`}
-            aria-label={`${idx + 1}. ${lesson.title}`}
+            disabled={state === 'locked'}
+            onClick={() => { if (state !== 'locked') onOpen(lesson); }}
+            title={`${stateLabel}. ${idx + 1}. ${lesson.title || 'Пустое задание'}`}
+            aria-label={`${stateLabel}. ${idx + 1}. ${lesson.title || 'Пустое задание'}`}
             aria-current={active ? 'true' : undefined}
-            className={`relative min-w-[44px] min-h-[44px] w-full rounded-lg ring-1 transition-all select-none
-              ${active ? 'ring-violet-500 bg-violet-50' : 'ring-black/[0.06] bg-white hover:ring-violet-200 hover:bg-violet-50/30'}
-            `}
+            data-state={state}
+            className={`task-square relative w-full rounded-lg transition-all select-none ${face}`}
           >
-            <div className={`absolute inset-0 rounded-lg ${done ? 'bg-emerald-500/[0.10]' : ''}`}/>
-            <div className="absolute top-0.5 left-1 text-[9px] font-mono text-ink/35">
+            <span className={`absolute top-1 left-1.5 text-xs font-mono leading-none ${state === 'done' ? 'text-white' : 'text-ink/40'}`}>
               {idx + 1}
-            </div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              {done ? (
-                <span className="check-dot" style={{ width: 18, height: 18 }}/>
-              ) : (
-                <span className="font-mono text-[13px] text-ink/70">{taskGlyph(lesson.type)}</span>
-              )}
-            </div>
+            </span>
+            <span className="absolute inset-0 flex items-center justify-center">
+              <TaskStateIcon state={state} />
+            </span>
           </button>
         );
       })}
@@ -213,88 +253,193 @@ function TaskSquares({ lessons, currentLesson, completed, onOpen }) {
   );
 }
 
-function CourseModuleFlow({ modules, exams, currentLesson, completed, inExamMode, examId, onOpenLesson, onOpenExam }) {
-  const outline = buildContentOutline(modules, exams);
-  if (outline.length === 0) return null;
-
+function EmptyModuleNote() {
   return (
-    <div className="mb-8 rounded-2xl bg-white ring-1 ring-black/[0.06]">
-      {outline.map((item, index) => {
-        const divided = index > 0 ? 'border-t border-black/[0.05]' : '';
-        if (item.kind === 'exam') {
-          const exam = item.data;
-          const count = buildExamLessonItems(exam).length;
-          const active = inExamMode && examId === exam.public_id;
-          return (
-            <section key={`exam-${exam.public_id}`} className={`px-3 py-4 sm:px-4 ${divided} ${active ? 'bg-amber-500/[0.06]' : ''}`}>
-              <button
-                type="button"
-                onClick={() => onOpenExam(exam)}
-                className="w-full text-left"
-              >
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-amber-700">Контрольная</div>
-                <div className={`mt-0.5 text-[15px] font-bold leading-snug ${active ? 'text-amber-900' : 'text-ink'}`}>{exam.title}</div>
-                <div className="mt-0.5 text-[12px] text-ink/50">
-                  {exam.duration_minutes} мин · {count} заданий
-                </div>
-              </button>
-            </section>
-          );
-        }
+    <div className="mt-4 rounded-2xl border border-dashed border-black/15 bg-black/[0.02] px-4 py-8 text-center">
+      <div className="mx-auto mb-2 grid h-11 w-11 place-items-center rounded-xl bg-black/[0.04] text-ink/40">
+        <I.Lock className="w-5 h-5" />
+      </div>
+      <div className="text-sm font-semibold text-ink/60">В этом модуле пока нет материалов</div>
+    </div>
+  );
+}
 
-        const mod = item.data;
-        const lessons = moduleLessonsFlat(mod);
-        const units = groupLessonsByUnit(lessons);
-        const done = lessons.filter((lesson) => completed.has(lessonKey(lesson.type, lesson.id))).length;
-        const current = !inExamMode && currentLesson && currentLesson.modId === mod.public_id;
-        const blurb = publicModuleBlurb(mod.description);
-        return (
-          <section
-            key={mod.public_id}
-            className={`px-3 py-4 sm:px-4 ${divided} ${current ? 'bg-violet-500/[0.035]' : ''}`}
-          >
-            <div className="flex items-baseline justify-between gap-3">
-              <h2 className={`min-w-0 text-[15px] font-bold leading-snug ${current ? 'text-violet-800' : 'text-ink'}`}>
-                {mod.title}
-              </h2>
-              {lessons.length > 0 && (
-                <span className="shrink-0 text-[11px] text-ink/45">{done}/{lessons.length}</span>
-              )}
-            </div>
-            {blurb ? (
-              <p className="mt-1 text-[12px] leading-relaxed text-ink/50 line-clamp-2">{blurb}</p>
-            ) : null}
-            {lessons.length === 0 ? (
-              <p className="mt-2 text-[12px] leading-relaxed text-ink/45">В этом модуле пока нет материалов</p>
-            ) : units ? (
-              <div className="mt-3 space-y-3">
-                {units.map((group) => (
-                  <div key={group.key}>
-                    <div className="mb-1.5 text-[12px] font-semibold leading-snug text-ink/70">
-                      {unitChipLabel(group)}
-                    </div>
-                    <TaskSquares
-                      lessons={group.lessons}
-                      currentLesson={inExamMode ? null : currentLesson}
-                      completed={completed}
-                      onOpen={onOpenLesson}
-                    />
-                  </div>
-                ))}
+function CourseModuleFlow({
+  modules,
+  exams,
+  currentLesson,
+  completed,
+  inExamMode,
+  examId,
+  onOpenLesson,
+  onOpenExam,
+  showModuleList,
+  openOnSelect,
+}) {
+  const moduleRows = modules || [];
+  const examRows = exams || [];
+  const [pickedModuleId, setPickedModuleId] = React.useState(null);
+  const [pickedGroup, setPickedGroup] = React.useState(null);
+  const [pickedExamId, setPickedExamId] = React.useState(null);
+
+  const selectedModuleId = (!inExamMode && currentLesson && currentLesson.modId)
+    || pickedModuleId
+    || moduleRows[0]?.public_id
+    || null;
+  const selectedModule = moduleRows.find((mod) => mod.public_id === selectedModuleId) || moduleRows[0] || null;
+  const groups = selectedModule ? lessonGroupsOf(selectedModule) : [];
+  const currentGroupKey = (
+    !inExamMode
+    && currentLesson
+    && selectedModule
+    && currentLesson.modId === selectedModule.public_id
+  ) ? (lessonUnitKey(currentLesson.title) || 'all') : '';
+  const selectedGroup = groups.find((group) => group.key === (currentGroupKey || pickedGroup)) || groups[0] || null;
+  const showExam = !selectedModule && examRows.length > 0
+    ? examRows[0]
+    : examRows.find((exam) => exam.public_id === (pickedExamId || (inExamMode ? examId : ''))) || null;
+  const examFocus = inExamMode && examId
+    ? examRows.find((exam) => exam.public_id === examId) || null
+    : (pickedExamId ? showExam : null);
+  const blurb = selectedModule ? visibleText(selectedModule.description) : '';
+  const doneCount = selectedModule
+    ? moduleLessonsFlat(selectedModule).filter((lesson) => completed && completed.has(lessonKey(lesson.type, lesson.id))).length
+    : 0;
+  const lessonTotal = selectedModule ? moduleLessonsFlat(selectedModule).length : 0;
+
+  const chooseModule = (mod) => {
+    setPickedExamId(null);
+    setPickedModuleId(mod.public_id);
+    setPickedGroup(null);
+    if (!openOnSelect) return;
+    const first = (lessonGroupsOf(mod)[0] || {}).lessons?.[0];
+    if (first) onOpenLesson(first);
+  };
+
+  const chooseGroup = (group) => {
+    setPickedGroup(group.key);
+    if (openOnSelect && group.lessons[0]) onOpenLesson(group.lessons[0]);
+  };
+
+  const chooseExam = (exam) => {
+    setPickedExamId(exam.public_id);
+    setPickedModuleId(null);
+    if (openOnSelect) onOpenExam(exam);
+  };
+
+  if (moduleRows.length === 0 && examRows.length === 0) return null;
+
+  const main = examFocus ? (
+    <div className="min-w-0 p-4 sm:p-5">
+      <div className="text-[10px] font-semibold uppercase tracking-widest text-amber-700">Контрольная</div>
+      <h3 className="mt-1 text-[16px] font-bold leading-snug text-ink">{examFocus.title}</h3>
+      {visibleText(examFocus.description) ? (
+        <p className="mt-1 text-[13px] leading-relaxed text-ink/55">{visibleText(examFocus.description)}</p>
+      ) : null}
+      <p className="mt-1 text-[12px] text-ink/45">
+        {examFocus.duration_minutes} мин · {ruPieces(buildExamLessonItems(examFocus).length, 'задание', 'задания', 'заданий')}
+      </p>
+      <button
+        type="button"
+        onClick={() => onOpenExam(examFocus)}
+        className="mt-4 h-10 px-4 rounded-xl bg-amber-500 text-white text-sm font-semibold"
+      >
+        Открыть контрольную
+      </button>
+    </div>
+  ) : (
+    <div className="min-w-0 p-4 sm:p-5">
+      {selectedModule ? (
+        <>
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 className="min-w-0 text-[16px] font-bold leading-snug text-ink">{selectedModule.title}</h3>
+            {lessonTotal > 0 && (
+              <span className="shrink-0 text-[11px] text-ink/45">{doneCount}/{lessonTotal}</span>
+            )}
+          </div>
+          {blurb ? (
+            <p className="mt-1 text-[13px] leading-relaxed text-ink/55 line-clamp-3">{blurb}</p>
+          ) : null}
+          {groups.length === 0 ? <EmptyModuleNote /> : (
+            <>
+              <div className="mt-4 text-[10px] font-semibold uppercase tracking-widest text-ink/40">Уроки</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {groups.map((group) => {
+                  const on = selectedGroup && selectedGroup.key === group.key;
+                  return (
+                    <button
+                      key={group.key}
+                      type="button"
+                      onClick={() => chooseGroup(group)}
+                      aria-pressed={on}
+                      className={`h-9 px-3 rounded-lg text-xs font-semibold ring-1 ${on ? 'bg-violet-600 text-white ring-violet-600' : 'bg-white text-ink/70 ring-black/[0.08] hover:bg-violet-50'}`}
+                    >
+                      {group.label}
+                    </button>
+                  );
+                })}
               </div>
-            ) : (
-              <div className="mt-3">
+              <div className="mt-4 text-[10px] font-semibold uppercase tracking-widest text-ink/40">Задания</div>
+              <div className="mt-2">
                 <TaskSquares
-                  lessons={lessons}
+                  lessons={selectedGroup ? selectedGroup.lessons : []}
                   currentLesson={inExamMode ? null : currentLesson}
-                  completed={completed}
+                  completed={completed || new Set()}
                   onOpen={onOpenLesson}
                 />
               </div>
-            )}
-          </section>
-        );
-      })}
+            </>
+          )}
+        </>
+      ) : <EmptyModuleNote />}
+    </div>
+  );
+
+  if (!showModuleList) {
+    return <div className="mb-8 rounded-2xl bg-white ring-1 ring-black/[0.06]">{main}</div>;
+  }
+
+  return (
+    <div className="course-split rounded-2xl bg-white ring-1 ring-black/[0.06] overflow-hidden">
+      <div className="course-split-side bg-slate-50 p-2 sm:p-3">
+        <div className="px-2 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-widest text-ink/40">Модули</div>
+        <div className="space-y-1">
+          {moduleRows.map((mod) => {
+            const on = !examFocus && selectedModule && selectedModule.public_id === mod.public_id;
+            const count = moduleLessonsFlat(mod).length;
+            return (
+              <button
+                key={mod.public_id}
+                type="button"
+                onClick={() => chooseModule(mod)}
+                aria-pressed={on}
+                className={`w-full rounded-xl px-3 py-2.5 text-left transition-colors ${on ? 'bg-white text-violet-800 shadow-sm ring-1 ring-violet-200' : 'text-ink/75 hover:bg-white/80'}`}
+              >
+                <div className={`text-[13px] leading-snug ${on ? 'font-bold' : 'font-semibold'}`}>{mod.title}</div>
+                <div className="mt-0.5 text-[11px] text-ink/40">
+                  {count > 0 ? ruPieces(count, 'задание', 'задания', 'заданий') : 'Пока пусто'}
+                </div>
+              </button>
+            );
+          })}
+          {examRows.map((exam) => {
+            const on = examFocus && examFocus.public_id === exam.public_id;
+            return (
+              <button
+                key={exam.public_id}
+                type="button"
+                onClick={() => chooseExam(exam)}
+                aria-pressed={!!on}
+                className={`w-full rounded-xl px-3 py-2.5 text-left transition-colors ${on ? 'bg-white text-amber-900 shadow-sm ring-1 ring-amber-200' : 'text-ink/75 hover:bg-white/80'}`}
+              >
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-amber-700">Контрольная</div>
+                <div className={`text-[13px] leading-snug ${on ? 'font-bold' : 'font-semibold'}`}>{exam.title}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {main}
     </div>
   );
 }
@@ -568,6 +713,15 @@ function LearnPage({ navigate, hashParams }) {
     navigate(Routes.LEARN, { course: courseId, module: lesson.modId, lesson: lessonKey(lesson.type, lesson.id) });
     setSidebarOpen(false);
   };
+  const openModule = (mod) => {
+    const first = (lessonGroupsOf(mod)[0] || {}).lessons?.[0];
+    if (first) {
+      goTo(first);
+      return;
+    }
+    navigate(Routes.LEARN, { course: courseId, module: mod.public_id });
+    setSidebarOpen(false);
+  };
   const openedWithoutLesson = React.useRef(!lessonParam);
   React.useEffect(() => {
     if (courseState !== 'ok' || examParam || !lessonId) return undefined;
@@ -766,88 +920,24 @@ function LearnPage({ navigate, hashParams }) {
 
         {/* modules + exams */}
         <div className="flex-1 overflow-y-auto scrollbar-thin py-2">
-          {groupModulesByTask((courseData && courseData.modules) || []).map((task) => {
-            const taskLabel = task.key === 'другое' ? '' : `Задание ${task.key}`;
+          <div className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-ink/35">Модули</div>
+          {((courseData && courseData.modules) || []).map((mod) => {
+            const active = !inExamMode && (currentLesson?.modId === mod.public_id || moduleParam === mod.public_id);
+            const count = moduleLessonsFlat(mod).length;
             return (
-            <div key={`task-${task.key}`} className="mb-1">
-              {taskLabel ? (
-                <div className="px-4 pt-3 pb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink/35">
-                    {taskLabel}
-                  </span>
-                </div>
-              ) : null}
-              {task.modules.map((mod) => {
-                const items = buildModuleLessonItems(mod);
-                const groups = groupLessonsByUnit(items.map(({ type, lesson }) => ({
-                  type,
-                  id: lesson.public_id,
-                  title: lesson.title,
-                  lesson,
-                })));
-                if (!groups) {
-                  const active = !inExamMode && currentLesson?.modId === mod.public_id;
-                  const first = items[0] || null;
-                  return (
-                    <button
-                      key={`mod-${mod.public_id}`}
-                      type="button"
-                      onClick={() => {
-                        if (first) {
-                          goTo({
-                            type: first.type,
-                            id: first.lesson.public_id,
-                            title: first.lesson.title,
-                            modId: mod.public_id,
-                            modTitle: mod.title,
-                          });
-                        } else {
-                          navigate(Routes.LEARN, { course: courseId, module: mod.public_id });
-                          setSidebarOpen(false);
-                        }
-                      }}
-                      className={`w-full pl-6 pr-4 py-2.5 flex items-center gap-2 text-left transition-colors
-                        ${active ? 'bg-violet-500/[0.07]' : 'hover:bg-black/[0.025]'}`}
-                    >
-                      <span className={`text-[13px] leading-snug truncate ${active ? 'font-semibold text-violet-700' : 'font-semibold text-ink'}`}>
-                        {mod.title}
-                      </span>
-                    </button>
-                  );
-                }
-                return (
-                  <div key={`mod-${mod.public_id}`}>
-                    <div className="px-5 pt-2 text-[11px] font-semibold text-ink/55 truncate">{mod.title}</div>
-                    {groups.map((group) => {
-                      const first = group.lessons[0];
-                      const active = !inExamMode && currentLesson
-                        && currentLesson.modId === mod.public_id
-                        && lessonUnitKey(currentLesson.title) === group.key;
-                      return (
-                        <button
-                          key={`${mod.public_id}-${group.key}`}
-                          type="button"
-                          onClick={() => goTo({
-                            type: first.type,
-                            id: first.id,
-                            title: first.title,
-                            modId: mod.public_id,
-                            modTitle: mod.title,
-                          })}
-                          className={`w-full pl-5 pr-4 py-2 flex items-center gap-2 text-left transition-colors
-                            ${active ? 'bg-violet-500/[0.07]' : 'hover:bg-black/[0.025]'}`}
-                        >
-                          <span className={`w-8 shrink-0 text-[11px] font-bold ${active ? 'text-violet-700' : 'text-ink/40'}`}>{group.key}</span>
-                          <span className={`min-w-0 flex-1 text-[13px] leading-snug truncate ${active ? 'font-semibold text-violet-700' : 'text-ink'}`}>
-                            {unitChipLabel(group).replace(/^\d+\.\d+\s*/, '')}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
+              <button
+                key={`mod-${mod.public_id}`}
+                type="button"
+                onClick={() => openModule(mod)}
+                aria-pressed={active}
+                className={`w-full px-4 py-2.5 flex items-center gap-2 text-left transition-colors
+                  ${active ? 'bg-violet-500/[0.07]' : 'hover:bg-black/[0.025]'}`}
+              >
+                <span className={`min-w-0 flex-1 text-[13px] leading-snug ${active ? 'font-semibold text-violet-700' : 'font-semibold text-ink'}`}>
+                  {mod.title}
+                </span>
+                <span className="shrink-0 text-[10px] text-ink/35">{count || '—'}</span>
+              </button>
             );
           })}
           {contentOutline.map((item) => {
@@ -965,6 +1055,8 @@ function LearnPage({ navigate, hashParams }) {
               completed={completed}
               inExamMode={inExamMode}
               examId={examParam}
+              showModuleList={false}
+              openOnSelect
               onOpenLesson={goTo}
               onOpenExam={(exam) => {
                 navigate(Routes.LEARN, { course: courseId, exam: exam.public_id });
@@ -1937,14 +2029,14 @@ function CodingLesson({ lesson, isDone, onComplete, onLogin, onRefreshLesson, na
           items={lesson.attachments}
           navigate={navigate}
           lessonTitle={lesson.title}
-          statement={[lesson.description, lesson.instructions].filter(Boolean).join('\n\n')}
+          statement={[visibleText(lesson.description), lesson.instructions].filter(Boolean).join('\n\n')}
           tests={lesson.test_cases}
         />
       )}
 
-      {lesson.description && (
+      {visibleText(lesson.description) && (
         <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft whitespace-pre-wrap text-[15px] text-ink/80 leading-relaxed">
-          {lesson.description}
+          {visibleText(lesson.description)}
         </div>
       )}
 

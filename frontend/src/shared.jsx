@@ -322,6 +322,15 @@ const COURSE_PALETTE = [
   ['#0EA5E9', '#22C55E'],
 ];
 
+/** Текст для ученика: без HTML-комментариев и служебных меток пакетов. */
+function studentFacingText(value) {
+  return String(value || '')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/\bcontent-pack\s*:\s*[a-z0-9_-]+/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function coursePaletteFromId(publicId) {
   const h = String(publicId || '').split('').reduce((s, c) => s + c.charCodeAt(0), 0);
   return COURSE_PALETTE[Math.abs(h) % COURSE_PALETTE.length];
@@ -340,7 +349,7 @@ function mapApiCourseToCard(row) {
     publicId: row.public_id,
     slug: row.slug,
     title: row.title,
-    desc: (row.description || '').trim()
+    desc: studentFacingText(row.description)
       || (tags.length ? `Технологии: ${tags.join(', ')}.` : 'Курс Академии Бервинова.'),
     tags: tags.length ? tags : ['Курс'],
     cat,
@@ -365,7 +374,7 @@ function mapApiCourseToCourse(row) {
   const tags = (row.technology || []).map((t) => t.name || '').filter(Boolean);
   const [gradFrom, gradTo] = coursePaletteFromId(row.public_id);
   const moduleCount = (row.modules || []).length;
-  const description = (row.description || '').trim();
+  const description = studentFacingText(row.description);
   return {
     id: row.public_id,
     slug: row.slug,
@@ -406,7 +415,7 @@ function mapApiModules(modules) {
       hours: 0,
       tasks: coding.length,
       items: [],
-      description: mod.description || '',
+      description: studentFacingText(mod.description),
     };
   });
 }
@@ -3510,6 +3519,7 @@ Object.assign(window, {
   hasReferenceSolutionMaterial,
   computeSolutionUnlocked,
   SOLUTION_FAIL_THRESHOLD,
+  studentFacingText,
   mapApiCourseToCard,
   mapApiCourseToCourse,
   mapApiModules,
