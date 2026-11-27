@@ -360,7 +360,7 @@ function ExamRadioPanel({ lesson, step, attemptId, onUpdated, navigate }) {
         <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} statement={lesson.question_text} options={lesson.answer_options} />
       )}
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
-        <p className="text-[14px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
+        <p className="text-[14px] text-ink/80 leading-relaxed">{window.studentFacingText ? window.studentFacingText(lesson.question_text) : lesson.question_text}</p>
       </div>
       <div className="mt-5 space-y-3">
         {(lesson.answer_options || []).map((opt) => {
@@ -455,7 +455,7 @@ function ExamCheckboxPanel({ lesson, step, attemptId, onUpdated, navigate }) {
         <window.LessonAttachments items={lesson.attachments} navigate={navigate} lessonTitle={lesson.title} statement={lesson.question_text} options={lesson.answer_options} />
       )}
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
-        <p className="text-[14px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
+        <p className="text-[14px] text-ink/80 leading-relaxed">{window.studentFacingText ? window.studentFacingText(lesson.question_text) : lesson.question_text}</p>
       </div>
       <div className="mt-5 space-y-3">
         {(lesson.answer_options || []).map((opt) => {

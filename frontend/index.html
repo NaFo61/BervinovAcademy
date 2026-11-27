@@ -393,7 +393,7 @@
     box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
   }
 
-  /* Курс: модули слева, уроки и задания выбранного модуля справа. */
+  /* Курс: слева выпадающий список модулей, справа уроки и мелкие задания. */
   .course-split {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -403,27 +403,58 @@
   }
   @media (min-width: 640px) {
     .course-split {
-      grid-template-columns: 14.5rem minmax(0, 1fr);
+      grid-template-columns: 15rem minmax(0, 1fr);
     }
     .course-split-side {
       border-bottom: 0;
       border-right: 1px solid rgba(11, 18, 38, 0.08);
     }
   }
+  .course-module-pick {
+    display: block;
+    width: 100%;
+    height: 2.5rem;
+    margin-top: 0.5rem;
+    padding: 0 0.6rem;
+    border-radius: 0.75rem;
+    background: #fff;
+    color: #0B1226;
+    font-size: 0.875rem;
+    font-weight: 600;
+    box-shadow: inset 0 0 0 1px rgba(11, 18, 38, 0.1);
+  }
   .task-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.5rem;
-  }
-  @media (min-width: 640px) {
-    .task-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  }
-  @media (min-width: 768px) {
-    .task-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
   }
   .task-square {
-    aspect-ratio: 1;
-    min-height: 44px;
+    position: relative;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    padding: 0;
+  }
+  .task-num {
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    font-size: 9px;
+    line-height: 1;
+    font-family: ui-monospace, monospace;
+    font-weight: 600;
+  }
+  .task-ico {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 7px;
+  }
+  .task-square svg {
+    width: 14px;
+    height: 14px;
   }
   .task-locked {
     border: 1px dashed rgba(11, 18, 38, 0.22);

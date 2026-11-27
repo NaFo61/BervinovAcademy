@@ -341,7 +341,7 @@ function CourseHighlights({ course }) {
   );
 }
 
-// ── Course program: modules in reading order, nothing to expand ─────────────
+// ── Course program: module dropdown, then that module's lessons and tasks ──
 function CourseModulesSection({ modules, exams, summary, navigate, course }) {
   const Flow = window.CourseModuleFlow;
   const [done, setDone] = React.useState(() => new Set());

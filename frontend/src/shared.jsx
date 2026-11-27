@@ -32,13 +32,14 @@ const KNOWN_ROUTES = new Set(Object.values(Routes));
 /** Sanitize HTML before dangerouslySetInnerHTML (DOMPurify CDN). */
 function sanitizeHtml(dirty) {
   if (!dirty) return '';
+  const raw = String(dirty).replace(/<!--[\s\S]*?-->/g, '');
   const purify = window.DOMPurify;
   if (!purify || typeof purify.sanitize !== 'function') {
-    return String(dirty)
+    return raw
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
   }
-  return purify.sanitize(String(dirty), {
+  return purify.sanitize(raw, {
     USE_PROFILES: { html: true },
     ADD_ATTR: ['target', 'rel'],
     ADD_TAGS: ['mark'],

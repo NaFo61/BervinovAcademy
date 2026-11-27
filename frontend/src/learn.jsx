@@ -238,12 +238,12 @@ function TaskSquares({ lessons, currentLesson, completed, onOpen }) {
             aria-label={`${stateLabel}. ${idx + 1}. ${lesson.title || 'Пустое задание'}`}
             aria-current={active ? 'true' : undefined}
             data-state={state}
-            className={`task-square relative w-full rounded-lg transition-all select-none ${face}`}
+            className={`task-square rounded-lg transition-all select-none ${face}`}
           >
-            <span className={`absolute top-1 left-1.5 text-xs font-mono leading-none ${state === 'done' ? 'text-white' : 'text-ink/40'}`}>
+            <span className={`task-num ${state === 'done' ? 'text-white' : 'text-ink/40'}`}>
               {idx + 1}
             </span>
-            <span className="absolute inset-0 flex items-center justify-center">
+            <span className="task-ico">
               <TaskStateIcon state={state} />
             </span>
           </button>
@@ -399,45 +399,40 @@ function CourseModuleFlow({
     return <div className="mb-8 rounded-2xl bg-white ring-1 ring-black/[0.06]">{main}</div>;
   }
 
+  const modulePickValue = examFocus ? `exam:${examFocus.public_id}` : (selectedModule ? selectedModule.public_id : '');
+  const onModulePick = (event) => {
+    const value = event.target.value;
+    if (value.startsWith('exam:')) {
+      const exam = examRows.find((row) => row.public_id === value.slice(5));
+      if (exam) chooseExam(exam);
+      return;
+    }
+    const mod = moduleRows.find((row) => row.public_id === value);
+    if (mod) chooseModule(mod);
+  };
+
   return (
     <div className="course-split rounded-2xl bg-white ring-1 ring-black/[0.06] overflow-hidden">
-      <div className="course-split-side bg-slate-50 p-2 sm:p-3">
-        <div className="px-2 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-widest text-ink/40">Модули</div>
-        <div className="space-y-1">
-          {moduleRows.map((mod) => {
-            const on = !examFocus && selectedModule && selectedModule.public_id === mod.public_id;
-            const count = moduleLessonsFlat(mod).length;
-            return (
-              <button
-                key={mod.public_id}
-                type="button"
-                onClick={() => chooseModule(mod)}
-                aria-pressed={on}
-                className={`w-full rounded-xl px-3 py-2.5 text-left transition-colors ${on ? 'bg-white text-violet-800 shadow-sm ring-1 ring-violet-200' : 'text-ink/75 hover:bg-white/80'}`}
-              >
-                <div className={`text-[13px] leading-snug ${on ? 'font-bold' : 'font-semibold'}`}>{mod.title}</div>
-                <div className="mt-0.5 text-[11px] text-ink/40">
-                  {count > 0 ? ruPieces(count, 'задание', 'задания', 'заданий') : 'Пока пусто'}
-                </div>
-              </button>
-            );
-          })}
-          {examRows.map((exam) => {
-            const on = examFocus && examFocus.public_id === exam.public_id;
-            return (
-              <button
-                key={exam.public_id}
-                type="button"
-                onClick={() => chooseExam(exam)}
-                aria-pressed={!!on}
-                className={`w-full rounded-xl px-3 py-2.5 text-left transition-colors ${on ? 'bg-white text-amber-900 shadow-sm ring-1 ring-amber-200' : 'text-ink/75 hover:bg-white/80'}`}
-              >
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-amber-700">Контрольная</div>
-                <div className={`text-[13px] leading-snug ${on ? 'font-bold' : 'font-semibold'}`}>{exam.title}</div>
-              </button>
-            );
-          })}
-        </div>
+      <div className="course-split-side bg-slate-50 p-3 sm:p-4">
+        <label htmlFor="course-module-pick" className="block text-[10px] font-semibold uppercase tracking-widest text-ink/40">
+          Модуль
+        </label>
+        <select
+          id="course-module-pick"
+          className="course-module-pick"
+          value={modulePickValue}
+          onChange={onModulePick}
+          aria-label="Выберите модуль"
+        >
+          {moduleRows.map((mod) => (
+            <option key={mod.public_id} value={mod.public_id}>{mod.title}</option>
+          ))}
+          {examRows.map((exam) => (
+            <option key={exam.public_id} value={`exam:${exam.public_id}`}>
+              {`Контрольная: ${exam.title}`}
+            </option>
+          ))}
+        </select>
       </div>
       {main}
     </div>
@@ -1351,7 +1346,7 @@ function RadioLesson({ lesson, selected, setSelected, submitted, result, loading
       )}
 
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
-        <p className="text-[14px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
+        <p className="text-[14px] text-ink/80 leading-relaxed">{visibleText(lesson.question_text)}</p>
       </div>
 
       <window.LessonInstructorNote text={lesson.comment} />
@@ -1488,7 +1483,7 @@ function CheckboxLesson({ lesson, selected, setSelected, submitted, result, load
       )}
 
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
-        <p className="text-[14px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
+        <p className="text-[14px] text-ink/80 leading-relaxed">{visibleText(lesson.question_text)}</p>
       </div>
 
       <window.LessonInstructorNote text={lesson.comment} />
@@ -1613,7 +1608,7 @@ function ShortAnswerLesson({
       )}
 
       <div className="mt-6 p-6 bg-white rounded-2xl ring-1 ring-black/[0.05] shadow-soft">
-        <p className="text-[14px] text-ink/80 leading-relaxed">{lesson.question_text}</p>
+        <p className="text-[14px] text-ink/80 leading-relaxed">{visibleText(lesson.question_text)}</p>
       </div>
 
       <window.LessonInstructorNote text={lesson.comment} />
